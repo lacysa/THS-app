@@ -1,15 +1,150 @@
-.housekeeping-row {
-  display: grid;
-  grid-template-columns:
-    190px
-    125px
-    115px
-    115px
-    180px
-    70px
-    70px
-    minmax(180px, 1fr);
+/* ============================================================
+   HOUSEKEEPING BOARD
+   Table alignment + consistent row sizing
+   ============================================================ */
 
-  align-items: center;
+.hsk-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.hsk-table th,
+.hsk-table td {
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+.hsk-table th {
+  padding: 10px 8px;
+
+  color: var(--ths-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  border-bottom: 1px solid var(--ths-line);
+}
+
+.hsk-table td {
   min-height: 58px;
+
+  padding: 8px;
+
+  border-bottom: 1px solid var(--ths-line);
+}
+
+.hsk-table tbody tr {
+  height: 58px;
+}
+
+.hsk-table input,
+.hsk-table select {
+  width: 100%;
+  min-height: 40px;
+
+  box-sizing: border-box;
+
+  margin: 0;
+}
+
+.hsk-table input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+
+  display: block;
+
+  margin: 0 auto;
+}
+
+/* Room */
+.hsk-table th:nth-child(1),
+.hsk-table td:nth-child(1) {
+  width: 190px;
+}
+
+/* Status */
+.hsk-table th:nth-child(2),
+.hsk-table td:nth-child(2) {
+  width: 130px;
+}
+
+/* Out / RF */
+.hsk-table th:nth-child(3),
+.hsk-table td:nth-child(3) {
+  width: 130px;
+}
+
+/* Strip / Hold */
+.hsk-table th:nth-child(4),
+.hsk-table td:nth-child(4) {
+  width: 125px;
+}
+
+/* Staff */
+.hsk-table th:nth-child(5),
+.hsk-table td:nth-child(5) {
+  width: 190px;
+}
+
+/* Order */
+.hsk-table th:nth-child(6),
+.hsk-table td:nth-child(6) {
+  width: 80px;
+}
+
+/* Complete */
+.hsk-table th:nth-child(7),
+.hsk-table td:nth-child(7) {
+  width: 85px;
+  text-align: center;
+}
+
+/* RF */
+.hsk-table th:nth-child(8),
+.hsk-table td:nth-child(8) {
+  width: 70px;
+  text-align: center;
+}
+
+/* Everything after RF, like notes / room condition */
+.hsk-table th:nth-child(n+9),
+.hsk-table td:nth-child(n+9) {
+  min-width: 160px;
+}
+
+.hsk-room-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.hsk-room-cell strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hsk-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+
+  border: 1px solid var(--ths-line);
+  border-radius: 8px;
+
+  background: white;
+}
+
+/* Keep header aligned while scrolling vertically */
+.hsk-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  background: #f7f5f0;
 }
