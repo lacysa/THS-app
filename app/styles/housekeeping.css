@@ -1,0 +1,15 @@
+.housekeeping-row {
+  display: grid;
+  grid-template-columns:
+    190px
+    125px
+    115px
+    115px
+    180px
+    70px
+    70px
+    minmax(180px, 1fr);
+
+  align-items: center;
+  min-height: 58px;
+}
