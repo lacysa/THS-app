@@ -790,3 +790,361 @@
     display: none;
   }
 }
+/* ============================================================
+   THS SHELL LAYOUT REPAIR
+   Overrides legacy fixed-sidebar / margin layout and old
+   account-theme shell colors.
+   ============================================================ */
+
+/* The branded shell owns the page layout now. */
+.staff-ops-app.ops-app {
+  width: 100%;
+  min-height: 100vh;
+
+  display: grid !important;
+  grid-template-columns:
+    var(--ths-sidebar-width)
+    minmax(0, 1fr);
+
+  align-items: stretch;
+
+  background: var(--ths-ivory);
+}
+
+/* ------------------------------------------------------------
+   SIDEBAR
+   Remove the old fixed-position layout.
+   ------------------------------------------------------------ */
+
+.staff-ops-app .staff-ops-sidebar,
+html[data-theme] .staff-ops-app .staff-ops-sidebar,
+html[data-theme] .ops-sidebar {
+  width: auto !important;
+  height: 100vh;
+
+  margin: 0 !important;
+
+  position: sticky !important;
+  top: 0 !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  inset: auto !important;
+
+  align-self: start;
+
+  overflow-y: auto;
+
+  background: var(--ths-black) !important;
+  color: white !important;
+}
+
+/* Keep THS branding white regardless of saved account theme. */
+html[data-theme] .ops-logo,
+html[data-theme="light"] .ops-logo {
+  color: white !important;
+}
+
+html[data-theme] .ops-logo strong,
+html[data-theme="light"] .ops-logo strong {
+  color: white !important;
+}
+
+html[data-theme] .ops-logo span,
+html[data-theme="light"] .ops-logo span {
+  color: #a7a49d !important;
+}
+
+html[data-theme] .ops-logo-mark,
+html[data-theme="light"] .ops-logo-mark {
+  background: transparent !important;
+  color: white !important;
+
+  border-color:
+    rgba(255, 255, 255, 0.72) !important;
+
+  box-shadow: none !important;
+}
+
+/* Sidebar navigation should remain on-brand even in Light theme. */
+html[data-theme] .staff-ops-nav a,
+html[data-theme] .ops-sidebar-bottom button,
+html[data-theme] .ops-sidebar-bottom a,
+html[data-theme="light"] .staff-ops-nav a,
+html[data-theme="light"] .ops-sidebar-bottom button,
+html[data-theme="light"] .ops-sidebar-bottom a {
+  color: #bbb8b1 !important;
+}
+
+html[data-theme]
+  .staff-ops-nav
+  a:hover,
+html[data-theme]
+  .ops-sidebar-bottom
+  button:hover,
+html[data-theme="light"]
+  .staff-ops-nav
+  a:hover,
+html[data-theme="light"]
+  .ops-sidebar-bottom
+  button:hover {
+  background:
+    rgba(255, 255, 255, 0.065) !important;
+
+  color: white !important;
+}
+
+html[data-theme]
+  .staff-ops-nav
+  a.active,
+html[data-theme="light"]
+  .staff-ops-nav
+  a.active {
+  background: #f1efe9 !important;
+  color: var(--ths-black) !important;
+
+  box-shadow: none !important;
+}
+
+html[data-theme]
+  .staff-ops-nav
+  a.active
+  svg,
+html[data-theme="light"]
+  .staff-ops-nav
+  a.active
+  svg {
+  color: var(--ths-black) !important;
+}
+
+/* ------------------------------------------------------------
+   MAIN PANE
+   Kill the old margin-left:250px layout.
+   ------------------------------------------------------------ */
+
+.staff-ops-app .staff-ops-main,
+html[data-theme]
+  .staff-ops-app
+  .staff-ops-main {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100vh;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  position: relative;
+
+  background: var(--ths-ivory) !important;
+  color: var(--ths-text) !important;
+}
+
+/* ------------------------------------------------------------
+   TOP BAR
+   It should be the FIRST thing at the top of the main pane.
+   ------------------------------------------------------------ */
+
+.staff-ops-app .staff-ops-topbar,
+html[data-theme]
+  .staff-ops-app
+  .staff-ops-topbar {
+  width: 100% !important;
+
+  min-height: 72px !important;
+  height: auto !important;
+
+  margin: 0 !important;
+
+  position: sticky !important;
+  top: 0 !important;
+  left: auto !important;
+  right: auto !important;
+
+  z-index: 50;
+
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 18px;
+
+  padding: 10px 30px !important;
+
+  background:
+    rgba(255, 255, 255, 0.97) !important;
+
+  border: 0 !important;
+  border-bottom:
+    1px solid var(--ths-line) !important;
+
+  box-shadow:
+    0 1px 0
+    rgba(30, 30, 27, 0.02);
+
+  backdrop-filter: blur(14px);
+}
+
+/* Prevent theme CSS from turning top-bar text white. */
+html[data-theme]
+  .staff-ops-topbar
+  .staff-page-title
+  strong {
+  color: var(--ths-text) !important;
+}
+
+html[data-theme]
+  .staff-ops-topbar
+  .staff-page-title
+  span {
+  color: var(--ths-muted) !important;
+}
+
+/* ------------------------------------------------------------
+   SEARCH
+   ------------------------------------------------------------ */
+
+html[data-theme]
+  .staff-ops-topbar
+  .ops-search {
+  background: #f2f0eb !important;
+
+  border:
+    1px solid #dfdbd2 !important;
+
+  color: #88847c !important;
+}
+
+html[data-theme]
+  .staff-ops-topbar
+  .ops-search
+  input {
+  background: transparent !important;
+  color: var(--ths-text) !important;
+}
+
+html[data-theme]
+  .staff-ops-topbar
+  .ops-search
+  input::placeholder {
+  color: #96928a !important;
+}
+
+/* ------------------------------------------------------------
+   TOP-RIGHT USER
+   ------------------------------------------------------------ */
+
+html[data-theme]
+  .staff-user-area
+  .ops-icon-btn {
+  background: white !important;
+  color: var(--ths-charcoal) !important;
+
+  border:
+    1px solid var(--ths-line) !important;
+}
+
+html[data-theme]
+  .staff-user-area
+  .ops-avatar {
+  background:
+    var(--ths-charcoal) !important;
+
+  color: white !important;
+
+  box-shadow: none !important;
+}
+
+html[data-theme]
+  .staff-user-area
+  .ops-user-copy
+  strong {
+  color: var(--ths-text) !important;
+}
+
+html[data-theme]
+  .staff-user-area
+  .ops-user-copy
+  span {
+  color: var(--ths-muted) !important;
+}
+
+/* ------------------------------------------------------------
+   PAGE CONTENT
+   Starts directly underneath the header.
+   ------------------------------------------------------------ */
+
+.staff-ops-app .staff-page-content,
+html[data-theme]
+  .staff-ops-app
+  .staff-page-content {
+  width: 100% !important;
+  max-width: 1500px !important;
+
+  margin: 0 auto !important;
+
+  padding:
+    30px
+    34px
+    60px !important;
+
+  background:
+    var(--ths-ivory) !important;
+
+  color:
+    var(--ths-text) !important;
+}
+
+/* ------------------------------------------------------------
+   RESPONSIVE
+   ------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+
+  .staff-ops-app.ops-app {
+    display: block !important;
+  }
+
+  .staff-ops-app
+    .staff-ops-main {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .staff-ops-app
+    .staff-ops-sidebar {
+    position: fixed !important;
+
+    left:
+      calc(
+        var(--ths-sidebar-width) * -1
+      ) !important;
+
+    top: 0 !important;
+
+    width:
+      var(--ths-sidebar-width) !important;
+
+    z-index: 100;
+  }
+
+}
+
+@media (max-width: 700px) {
+
+  .staff-ops-app
+    .staff-ops-topbar {
+    min-height: 62px !important;
+
+    padding:
+      8px
+      14px !important;
+  }
+
+  .staff-ops-app
+    .staff-page-content {
+    padding:
+      22px
+      16px
+      44px !important;
+  }
+
+}
