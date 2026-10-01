@@ -1,11 +1,16 @@
 import './globals.css'
+import './brand.css'
 
 export const metadata = {
-  title: 'THS Breakfast App',
-  description: 'Breakfast scheduling and kitchen operations for The Hotel Saugatuck'
+  title: 'THS Operations Hub',
+  description: 'Operations platform for The Hotel Saugatuck'
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
       <body>{children}</body>
