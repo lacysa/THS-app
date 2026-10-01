@@ -1295,3 +1295,71 @@ html[data-theme]
     min-height: 0;
   }
 }
+/* ============================================================
+   WORKSPACE SEARCH
+   ============================================================ */
+
+.staff-global-search {
+  position: relative;
+  overflow: visible;
+}
+
+.workspace-search-results {
+  position: absolute;
+
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+
+  z-index: 100;
+
+  overflow: hidden;
+
+  border: 1px solid var(--ths-line);
+  border-radius: 7px;
+
+  background: white;
+
+  box-shadow:
+    0 12px 30px
+    rgba(26, 26, 24, 0.12);
+}
+
+.workspace-search-results button {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 11px 12px;
+
+  border: 0;
+  border-bottom: 1px solid #eeeae2;
+
+  background: white;
+  color: var(--ths-text);
+
+  text-align: left;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.workspace-search-results button:last-child {
+  border-bottom: 0;
+}
+
+.workspace-search-results button:hover {
+  background: #f4f2ed;
+}
+
+.workspace-search-empty {
+  padding: 12px;
+
+  color: var(--ths-muted);
+
+  font-size: 12px;
+}
