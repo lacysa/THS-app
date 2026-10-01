@@ -1,0 +1,142 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { formatTime24, generateTimeSlots } from '@/lib/time'
+
+export const dynamic = 'force-dynamic'
+
+export async function GET(req:NextRequest) {
+  const supabase = await createSupabaseServerClient()
+  const { data:{user} } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({message:'Unauthorized'},{status:401})
+
+  const date = req.nextUrl.searchParams.get('date')
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({message:'Invalid date'},{status:400})
+
+  const { data:bookings,error:bookingError } = await supabase
+    .from('breakfast_bookings')
+    .select(`
+      id,service_date,last_name,time_slot,status,menu_submitted,latest_submission_id,guest_token,
+      rooms(id,name,sort_order)
+    `)
+    .eq('service_date',date)
+    .eq('status','scheduled')
+    .order('time_slot')
+
+  if (bookingError) return NextResponse.json({message:bookingError.message},{status:500})
+
+  const bookingIds = (bookings || []).map((b:any)=>b.id)
+
+  // Native in-app orders link directly to breakfast_bookings.
+  let nativeOrders:any[] = []
+  if (bookingIds.length) {
+    const {data,error} = await supabase
+      .from('breakfast_guest_orders')
+      .select('*')
+      .in('booking_id',bookingIds)
+      .order('guest_number')
+    if (error) return NextResponse.json({message:error.message},{status:500})
+    nativeOrders = data || []
+  }
+
+  const nativeByBooking = new Map<string,any[]>()
+  for (const order of nativeOrders) {
+    if (!order.booking_id) continue
+    const current = nativeByBooking.get(order.booking_id) || []
+    current.push(order)
+    nativeByBooking.set(order.booking_id,current)
+  }
+
+  // Keep legacy Tally submissions readable so old breakfast history still works.
+  const { data:submissions,error:submissionError } = await supabase
+    .from('breakfast_submissions')
+    .select('id,booking_id,tally_submission_id,room_name,last_name,submitted_at,created_at')
+    .eq('service_date',date)
+    .order('submitted_at',{ascending:false})
+    .order('created_at',{ascending:false})
+
+  if (submissionError) return NextResponse.json({message:submissionError.message},{status:500})
+
+  const submissionIds = (submissions || []).map((s:any)=>s.id)
+  let legacyOrders:any[] = []
+
+  if (submissionIds.length) {
+    const { data,error } = await supabase
+      .from('breakfast_guest_orders')
+      .select('*')
+      .in('submission_id',submissionIds)
+      .order('guest_number')
+    if (error) return NextResponse.json({message:error.message},{status:500})
+    legacyOrders = data || []
+  }
+
+  const ordersBySubmission = new Map<string,any[]>()
+  for (const order of legacyOrders) {
+    if (!order.submission_id) continue
+    const existing = ordersBySubmission.get(order.submission_id) || []
+    existing.push(order)
+    ordersBySubmission.set(order.submission_id,existing)
+  }
+
+  const submissionsByBooking = new Map<string,any[]>()
+  const unmatched:any[] = []
+  for (const submission of submissions || []) {
+    if (!submission.booking_id) { unmatched.push(submission); continue }
+    const existing = submissionsByBooking.get(submission.booking_id) || []
+    existing.push(submission)
+    submissionsByBooking.set(submission.booking_id,existing)
+  }
+
+  const decorated = (bookings || []).map((b:any)=>({
+    ...b,
+    menu_submitted:Boolean((nativeByBooking.get(b.id)||[]).length || (submissionsByBooking.get(b.id)||[]).length || b.menu_submitted),
+    displayTime:formatTime24(String(b.time_slot).slice(0,5))
+  }))
+
+  const groups:any[] = decorated.map((b:any)=>{
+    const native = nativeByBooking.get(b.id) || []
+    const candidates = submissionsByBooking.get(b.id) || []
+    const latestLegacy = candidates.find((s:any)=>s.tally_submission_id === b.latest_submission_id) || candidates[0]
+    const legacy = latestLegacy ? (ordersBySubmission.get(latestLegacy.id) || []) : []
+    const orders = native.length ? native : legacy
+
+    return {
+      groupKey:`booking:${b.id}`,
+      bookingId:b.id,
+      submissionId:latestLegacy?.id || null,
+      room:b.rooms?.name || 'Room',
+      lastName:b.last_name,
+      timeSlot:String(b.time_slot).slice(0,5),
+      displayTime:b.displayTime,
+      menuSubmitted:Boolean(orders.length || b.menu_submitted),
+      unmatched:false,
+      source:native.length ? 'native' : (legacy.length ? 'legacy' : null),
+      orders
+    }
+  })
+
+  // Legacy unmatched submissions remain visible instead of disappearing.
+  for (const s of unmatched) {
+    groups.push({
+      groupKey:`submission:${s.id}`,
+      bookingId:null,
+      submissionId:s.id,
+      room:s.room_name || 'Unknown room',
+      lastName:s.last_name || '',
+      timeSlot:null,
+      displayTime:'Unscheduled',
+      menuSubmitted:true,
+      unmatched:true,
+      source:'legacy',
+      orders:ordersBySubmission.get(s.id) || []
+    })
+  }
+
+  return NextResponse.json({
+    bookings:decorated,
+    groups,
+    unmatchedSubmissions:unmatched.map((s:any)=>({
+      id:s.id, room:s.room_name, lastName:s.last_name, submittedAt:s.submitted_at || s.created_at
+    })),
+    slots:generateTimeSlots().map(value=>({value,label:formatTime24(value)}))
+  })
+}
