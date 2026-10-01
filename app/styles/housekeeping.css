@@ -7,6 +7,7 @@
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 1280px;
 }
 
 .hsk-table th,
@@ -144,7 +145,7 @@
 .hsk-table thead th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 3;
 
-  background: #f7f5f0;
+  background: var(--ths-ivory);
 }
