@@ -1,58 +1,85 @@
-/* The Hotel Saugatuck — staff shell, sidebar, top bar, and workspace search */
+/* ============================================================
+   THE HOTEL SAUGATUCK — APP SHELL
+   Owns:
+   - sidebar
+   - top header
+   - user identity
+   - workspace search
+   - overall staff-page layout
+   ============================================================ */
+
+:root {
+  --ths-sidebar-width: 236px;
+  --ths-header-height: 76px;
+}
+
+/* ============================================================
+   APP FRAME
+   ============================================================ */
 
 .ops-app,
-.staff-ops-app.ops-app {
+.staff-ops-app {
   width: 100%;
   min-height: 100vh;
-  display: grid !important;
-  grid-template-columns: var(--ths-sidebar-width) minmax(0, 1fr) !important;
-  column-gap: 0 !important;
+
+  display: grid;
+  grid-template-columns:
+    var(--ths-sidebar-width)
+    minmax(0, 1fr);
+
   align-items: stretch;
+
   background: var(--ths-ivory);
   color: var(--ths-text);
 }
 
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+
 .ops-sidebar,
-.staff-ops-app .staff-ops-sidebar,
-html[data-theme] .staff-ops-app .staff-ops-sidebar {
-  width: var(--ths-sidebar-width) !important;
-  height: 100vh !important;
-  min-height: 100vh !important;
-  position: sticky !important;
-  top: 0 !important;
-  left: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  inset: auto !important;
-  align-self: start;
+.staff-ops-sidebar {
+  width: var(--ths-sidebar-width);
+  height: 100vh;
+  min-height: 100vh;
+
+  position: sticky;
+  top: 0;
+
   display: flex;
   flex-direction: column;
-  padding: 18px 12px 14px !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  scrollbar-width: none;
-  background: #1b1b19 !important;
-  color: white !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.055) !important;
-  z-index: 20;
+
+  padding: 18px 12px 14px;
+
+  overflow: hidden;
+
+  background: #1b1b19;
+  color: white;
+
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+
+  box-sizing: border-box;
 }
 
-.staff-ops-app .staff-ops-sidebar::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
+/* ============================================================
+   BRAND
+   ============================================================ */
 
 .sidebar-brand {
-  padding-bottom: 10px;
+  flex: 0 0 auto;
+
+  padding-bottom: 8px;
 }
 
-.ops-logo,
-.staff-ops-app .ops-logo {
+.ops-logo {
   display: flex;
   align-items: center;
+
   gap: 10px;
-  padding: 4px 8px 14px !important;
-  color: white !important;
+
+  padding: 4px 8px 14px;
+
+  color: white;
   text-decoration: none;
 }
 
@@ -60,54 +87,79 @@ html[data-theme] .staff-ops-app .staff-ops-sidebar {
   color: white;
 }
 
-.ops-logo-mark,
-.staff-ops-app .ops-logo-mark,
-html[data-theme] .ops-logo-mark {
+.ops-logo-mark {
   width: 38px;
   height: 38px;
+
   flex: 0 0 38px;
+
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.54) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 2px;
-  background: transparent !important;
-  color: white !important;
+
+  background: transparent;
+  color: white;
+
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.08em;
-  box-shadow: none !important;
 }
 
 .ops-logo-copy {
   min-width: 0;
 }
 
-.ops-logo-copy strong,
-html[data-theme] .ops-logo strong {
+.ops-logo-copy strong {
   display: block;
-  color: white !important;
+
+  color: white;
+
   font-size: 11px;
-  line-height: 1.1;
-  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1.15;
+
   letter-spacing: 0.045em;
+  text-transform: uppercase;
 }
 
-.ops-logo-copy span,
-html[data-theme] .ops-logo span {
+.ops-logo-copy span {
   display: block;
+
   margin-top: 3px;
-  color: #8f8c84 !important;
+
+  color: #918e87;
+
   font-size: 9px;
-  letter-spacing: 0.04em;
 }
 
-.ops-nav {
-  display: block;
+/* ============================================================
+   SIDEBAR NAVIGATION
+   ============================================================ */
+
+.ops-nav,
+.staff-ops-nav {
+  flex: 1 1 auto;
+
+  min-height: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
   padding-right: 0;
+
+  scrollbar-width: none;
+}
+
+.ops-nav::-webkit-scrollbar,
+.staff-ops-nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .ops-nav-section {
-  margin-top: 17px;
+  margin-top: 16px;
 }
 
 .ops-nav-section:first-child {
@@ -115,119 +167,148 @@ html[data-theme] .ops-logo span {
 }
 
 .ops-nav-label {
-  padding: 0 10px;
   margin-bottom: 5px;
-  color: #77746d !important;
+
+  padding: 0 10px;
+
+  color: #77746d;
+
   font-size: 8px;
   font-weight: 800;
+
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
-.ops-nav a,
-.ops-sidebar-bottom button {
+.staff-ops-nav a {
   width: 100%;
   min-width: 0;
-  min-height: 39px;
+  min-height: 38px;
+
   display: flex;
   align-items: center;
+
   gap: 9px;
-  padding: 0 10px !important;
+
   margin: 1px 0;
-  border: 0;
-  border-radius: 5px !important;
-  background: transparent;
-  color: #bcb8b0 !important;
+
+  padding: 0 10px;
+
+  border-radius: 5px;
+
+  color: #bcb8b0;
+
   text-decoration: none;
-  text-align: left;
+
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
+
   box-sizing: border-box;
-  transition: background 0.16s ease, color 0.16s ease;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.staff-ops-nav a:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: white;
 }
 
 .sidebar-link-icon {
   width: 20px;
+
   flex: 0 0 20px;
+
   display: grid;
   place-items: center;
-  color: #8f8b83;
+
+  color: #918d86;
 }
 
 .sidebar-link-label {
   min-width: 0;
+
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.staff-ops-app .staff-ops-nav a:hover,
-html[data-theme] .staff-ops-nav a:hover,
-.ops-sidebar-bottom button:hover {
-  background: rgba(255, 255, 255, 0.045) !important;
-  color: white !important;
+.staff-ops-nav a:hover .sidebar-link-icon {
+  color: #d9d5cd;
 }
 
-.staff-ops-app .staff-ops-nav a:hover .sidebar-link-icon {
-  color: #d8d4cc;
+.staff-ops-nav a.active {
+  background: #eeeae2;
+  color: #1a1a18;
 }
 
-.staff-ops-app .staff-ops-nav a.active,
-html[data-theme] .staff-ops-nav a.active,
-.ops-nav a.active {
-  background: #ede9e1 !important;
-  color: #1a1a18 !important;
-  box-shadow: none !important;
+.staff-ops-nav a.active .sidebar-link-icon {
+  color: #1a1a18;
 }
 
-.staff-ops-app .staff-ops-nav a.active .sidebar-link-icon,
-html[data-theme] .staff-ops-nav a.active svg,
-.ops-nav a.active svg {
-  color: #1a1a18 !important;
-}
-
-.preview-badge,
-.staff-ops-app .preview-badge {
+.preview-badge {
   margin-left: auto;
+
   flex: 0 0 auto;
+
   padding: 2px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 999px;
+
   background: rgba(255, 255, 255, 0.035);
-  color: #8e8a82 !important;
+  color: #8e8a82;
+
   font-size: 7px;
   font-style: normal;
   font-weight: 800;
+
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
+/* ============================================================
+   SIDEBAR PROFILE / FOOTER
+   ============================================================ */
+
 .ops-sidebar-bottom {
-  margin-top: auto;
+  flex: 0 0 auto;
+
   display: grid;
   gap: 3px;
+
   padding-top: 11px;
+  margin-top: 10px;
+
   border-top: 1px solid rgba(255, 255, 255, 0.075);
 }
 
 .ops-sidebar-profile {
-  min-width: 0;
   display: flex;
   align-items: center;
+
   gap: 9px;
+
+  min-width: 0;
+
   padding: 3px 8px 10px;
 }
 
 .ops-sidebar-avatar {
   width: 32px;
   height: 32px;
+
   flex: 0 0 32px;
+
   display: grid;
   place-items: center;
+
   border-radius: 50%;
-  background: #ece8df !important;
-  color: #1a1a18 !important;
+
+  background: #ece8df;
+  color: #1a1a18;
+
   font-size: 9px;
   font-weight: 800;
 }
@@ -236,24 +317,30 @@ html[data-theme] .staff-ops-nav a.active svg,
   min-width: 0;
 }
 
-.ops-sidebar-profile-copy strong,
-.ops-sidebar-profile-copy span {
+.ops-sidebar-profile-copy strong {
   display: block;
-  max-width: 155px;
+
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
 
-.ops-sidebar-profile-copy strong {
-  color: #f3f0e9 !important;
+  color: #f3f0e9;
+
   font-size: 10px;
   font-weight: 700;
 }
 
 .ops-sidebar-profile-copy span {
+  display: block;
+
   margin-top: 2px;
-  color: #86827b !important;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #86827b;
+
   font-size: 8px;
 }
 
@@ -266,73 +353,111 @@ html[data-theme] .staff-ops-nav a.active svg,
   margin: 0;
 }
 
-.staff-ops-app .sidebar-footer-actions button {
+.sidebar-footer-actions button,
+.ops-sidebar-bottom > button {
+  width: 100%;
   min-height: 36px;
-  padding: 0 9px;
+
+  display: flex;
+  align-items: center;
+
   gap: 9px;
+
+  padding: 0 9px;
+
+  border: 0;
   border-radius: 5px;
-  color: #aaa69f !important;
+
+  background: transparent;
+  color: #aaa69f;
+
   font-size: 11px;
+  font-weight: 600;
+
+  text-align: left;
+
+  cursor: pointer;
 }
 
-.staff-ops-app .sidebar-footer-actions button:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: white !important;
+.sidebar-footer-actions button:hover,
+.ops-sidebar-bottom > button:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: white;
 }
+
+/* ============================================================
+   MAIN PANE
+   ============================================================ */
 
 .ops-main,
-.staff-ops-app .staff-ops-main,
-html[data-theme] .staff-ops-app .staff-ops-main {
-  width: 100% !important;
-  min-width: 0 !important;
+.staff-ops-main {
+  width: 100%;
+  min-width: 0;
   min-height: 100vh;
-  margin: 0 !important;
-  padding: 0 !important;
-  position: relative;
-  border-left: 0 !important;
-  box-shadow: none !important;
-  background: var(--ths-ivory) !important;
-  color: var(--ths-text) !important;
+
+  margin: 0;
+  padding: 0;
+
+  background: var(--ths-ivory);
+
+  border: 0;
 }
 
+/* ============================================================
+   HEADER
+   ============================================================ */
+
 .ops-topbar,
-.staff-ops-app .staff-ops-topbar,
-html[data-theme] .staff-ops-app .staff-ops-topbar {
-  width: 100% !important;
-  min-height: 72px !important;
-  height: auto !important;
-  margin: 0 !important;
-  position: sticky !important;
-  top: 0 !important;
+.staff-ops-topbar {
+  width: 100%;
+  min-height: var(--ths-header-height);
+
+  position: sticky;
+  top: 0;
   z-index: 50;
-  display: flex !important;
-  align-items: center !important;
+
+  display: flex;
+  align-items: center;
+
   gap: 18px;
-  padding: 10px 24px !important;
-  background: rgba(255, 255, 255, 0.97) !important;
-  border: 0 !important;
-  border-bottom: 1px solid var(--ths-line) !important;
-  box-shadow: 0 1px 0 rgba(30, 30, 27, 0.02);
+
+  margin: 0;
+
+  padding: 10px 24px;
+
+  background: rgba(255, 255, 255, 0.98);
+
+  border: 0;
+  border-bottom: 1px solid var(--ths-line);
+
+  box-sizing: border-box;
+
   backdrop-filter: blur(14px);
 }
 
 .staff-page-title {
-  min-width: 200px;
+  min-width: 220px;
 }
 
 .staff-page-title span {
   display: block;
-  color: var(--ths-muted) !important;
-  font-size: 9px;
+
+  color: var(--ths-muted);
+
+  font-size: 8px;
   font-weight: 800;
-  letter-spacing: 0.15em;
+
+  letter-spacing: 0.17em;
   text-transform: uppercase;
 }
 
 .staff-page-title strong {
   display: block;
-  margin-top: 3px;
-  color: var(--ths-text) !important;
+
+  margin-top: 4px;
+
+  color: var(--ths-text);
+
   font-size: 18px;
   font-weight: 700;
 }
@@ -341,64 +466,95 @@ html[data-theme] .staff-ops-app .staff-ops-topbar {
   flex: 1;
 }
 
-.ops-search,
-.staff-global-search {
-  width: min(390px, 38vw);
-  flex: 0 1 390px;
+/* ============================================================
+   SEARCH
+   ============================================================ */
+
+.staff-global-search,
+.ops-search {
+  width: min(405px, 38vw);
+
+  flex: 0 1 405px;
+
   position: relative;
+
   display: flex;
   align-items: center;
+
   gap: 9px;
+
   padding: 0 13px;
-  overflow: visible;
-  background: #f2f0eb !important;
-  border: 1px solid #dfdbd2 !important;
+
+  border: 1px solid #dedad1;
   border-radius: 6px;
-  color: #88847c !important;
+
+  background: #f3f1ec;
+  color: #8b877f;
+
+  box-sizing: border-box;
 }
 
-.ops-search input,
-html[data-theme] .staff-ops-topbar .ops-search input {
+.staff-global-search input,
+.ops-search input {
   width: 100%;
+
+  padding: 11px 0;
+
   border: 0;
   outline: 0;
+
+  background: transparent;
+  color: var(--ths-text);
+
   box-shadow: none;
-  padding: 10px 0;
-  background: transparent !important;
-  color: var(--ths-text) !important;
 }
 
-.ops-search input::placeholder,
-html[data-theme] .staff-ops-topbar .ops-search input::placeholder {
-  color: #96928a !important;
+.staff-global-search input::placeholder,
+.ops-search input::placeholder {
+  color: #96928a;
 }
 
 .workspace-search-results {
   position: absolute;
+
   top: calc(100% + 8px);
   left: 0;
   right: 0;
+
   z-index: 100;
+
   overflow: hidden;
+
   border: 1px solid var(--ths-line);
   border-radius: 7px;
+
   background: white;
-  box-shadow: 0 12px 30px rgba(26, 26, 24, 0.12);
+
+  box-shadow:
+    0 14px 34px rgba(26, 26, 24, 0.13);
 }
 
 .workspace-search-results button {
   width: 100%;
+
   display: flex;
   align-items: center;
+
   gap: 9px;
+
   padding: 11px 12px;
+
   border: 0;
   border-bottom: 1px solid #eeeae2;
+
   background: white;
   color: var(--ths-text);
-  text-align: left;
+
   font-size: 12px;
   font-weight: 600;
+
+  text-align: left;
+
   cursor: pointer;
 }
 
@@ -412,126 +568,166 @@ html[data-theme] .staff-ops-topbar .ops-search input::placeholder {
 
 .workspace-search-empty {
   padding: 12px;
+
   color: var(--ths-muted);
+
   font-size: 12px;
 }
 
-.ops-top-actions,
-.staff-user-area {
-  margin-left: auto;
+/* ============================================================
+   TOP-RIGHT USER AREA
+   ============================================================ */
+
+.staff-user-area,
+.ops-top-actions {
+  margin-left: 0;
+
   display: flex;
   align-items: center;
+
   gap: 10px;
+
+  flex: 0 0 auto;
 }
 
-.ops-icon-btn,
-html[data-theme] .staff-user-area .ops-icon-btn {
-  width: 40px;
-  height: 40px;
+.ops-icon-btn {
+  width: 42px;
+  height: 42px;
+
   display: grid;
   place-items: center;
-  border: 1px solid var(--ths-line) !important;
+
+  border: 1px solid var(--ths-line);
   border-radius: 6px;
-  background: white !important;
-  color: var(--ths-charcoal) !important;
+
+  background: white;
+  color: var(--ths-charcoal);
+
   cursor: pointer;
 }
 
 .ops-icon-btn:hover {
-  background: #f1efe9 !important;
+  background: #f3f1ec;
 }
 
-.ops-avatar,
-html[data-theme] .staff-user-area .ops-avatar {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+.ops-avatar {
+  width: 42px;
+  height: 42px;
+
+  flex: 0 0 42px;
+
   display: grid;
   place-items: center;
+
   border-radius: 50%;
-  background: var(--ths-charcoal) !important;
-  color: white !important;
-  font-size: 12px;
+
+  background: var(--ths-charcoal);
+  color: white;
+
+  font-size: 10px;
   font-weight: 800;
-  box-shadow: none !important;
 }
 
 .ops-user-copy {
-  min-width: 120px;
+  min-width: 125px;
 }
 
-.ops-user-copy strong,
-.ops-user-copy span {
+.ops-user-copy strong {
   display: block;
-}
 
-.ops-user-copy strong,
-html[data-theme] .staff-user-area .ops-user-copy strong {
-  color: var(--ths-text) !important;
-  font-size: 13px;
+  color: var(--ths-text);
+
+  font-size: 11px;
   font-weight: 700;
 }
 
-.ops-user-copy span,
-html[data-theme] .staff-user-area .ops-user-copy span {
+.ops-user-copy span {
+  display: block;
+
   margin-top: 2px;
-  color: var(--ths-muted) !important;
-  font-size: 10px;
+
+  color: var(--ths-muted);
+
+  font-size: 9px;
 }
 
-.ops-content,
-.staff-ops-app .staff-page-content,
-html[data-theme] .staff-ops-app .staff-page-content {
-  width: 100% !important;
-  max-width: 1500px !important;
-  margin: 0 auto !important;
-  padding: 26px 28px 54px !important;
-  background: var(--ths-ivory) !important;
-  color: var(--ths-text) !important;
+/* ============================================================
+   STAFF PAGE CONTENT
+   ============================================================ */
+
+.staff-page-content,
+.ops-content {
+  width: 100%;
+  max-width: 1500px;
+
+  margin: 0 auto;
+
+  padding: 26px 28px 54px;
+
+  background: var(--ths-ivory);
+
+  box-sizing: border-box;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1100px) {
+  :root {
+    --ths-sidebar-width: 218px;
+  }
+
+  .staff-page-title {
+    min-width: 190px;
+  }
+
+  .staff-global-search,
+  .ops-search {
+    width: min(330px, 34vw);
+    flex-basis: 330px;
+  }
 }
 
 @media (max-width: 900px) {
   .ops-app,
-  .staff-ops-app.ops-app {
-    display: block !important;
-    grid-template-columns: 1fr !important;
+  .staff-ops-app {
+    display: block;
   }
 
   .ops-sidebar,
-  .staff-ops-app .staff-ops-sidebar {
-    position: fixed !important;
-    left: calc(var(--ths-sidebar-width) * -1) !important;
-    top: 0 !important;
-    width: var(--ths-sidebar-width) !important;
+  .staff-ops-sidebar {
+    width: var(--ths-sidebar-width);
+
+    position: fixed;
+
+    left: calc(var(--ths-sidebar-width) * -1);
+    top: 0;
+
     z-index: 100;
+
     transition: left 0.2s ease;
   }
 
-  .ops-sidebar.open {
-    left: 0 !important;
+  .ops-sidebar.open,
+  .staff-ops-sidebar.open {
+    left: 0;
   }
 
-  .ops-sidebar-scrim {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 99;
-    border: 0;
-    background: rgba(0, 0, 0, 0.52);
-  }
-
-  .staff-ops-app .staff-ops-main {
-    width: 100% !important;
-    margin: 0 !important;
+  .ops-main,
+  .staff-ops-main {
+    width: 100%;
   }
 }
 
 @media (max-width: 700px) {
   .ops-topbar,
-  .staff-ops-app .staff-ops-topbar {
-    min-height: 62px !important;
-    padding: 8px 14px !important;
+  .staff-ops-topbar {
+    min-height: 62px;
+
     gap: 9px;
+
+    padding: 8px 14px;
   }
 
   .staff-page-title {
@@ -546,27 +742,17 @@ html[data-theme] .staff-ops-app .staff-page-content {
     font-size: 15px;
   }
 
-  .ops-search,
-  .staff-global-search {
+  .staff-global-search,
+  .ops-search {
     display: none;
   }
 
   .ops-user-copy {
-    min-width: 0;
-  }
-
-  .ops-user-copy span {
     display: none;
   }
 
-  .ops-content,
-  .staff-ops-app .staff-page-content {
-    padding: 22px 16px 44px !important;
-  }
-}
-
-@media (max-width: 470px) {
-  .ops-user-copy {
-    display: none;
+  .staff-page-content,
+  .ops-content {
+    padding: 22px 16px 44px;
   }
 }
