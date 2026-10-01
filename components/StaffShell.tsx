@@ -224,6 +224,17 @@ export default function StaffShell({
     access?.roleName ||
     'Staff'
 
+  function openResult(item: ModuleRow) {
+    const href =
+      hrefFallback[item.module_key] ||
+      item.href ||
+      '#'
+
+    setSearch('')
+    setSearchOpen(false)
+    router.push(href)
+  }
+
   const renderNavLink = (item: ModuleRow) => {
     const Icon =
       iconMap[item.module_key] || LayoutGrid
@@ -246,8 +257,13 @@ export default function StaffShell({
         href={href}
         className={active ? 'active' : ''}
       >
-        <Icon size={18} />
-        <span>{item.label || item.title}</span>
+        <span className="sidebar-link-icon">
+          <Icon size={17} />
+        </span>
+
+        <span className="sidebar-link-label">
+          {item.label || item.title}
+        </span>
 
         {preview && (
           <em className="preview-badge">
@@ -258,40 +274,33 @@ export default function StaffShell({
     )
   }
 
-  function openResult(item: ModuleRow) {
-    const href =
-      hrefFallback[item.module_key] ||
-      item.href ||
-      '#'
-
-    setSearch('')
-    setSearchOpen(false)
-    router.push(href)
-  }
-
   return (
     <main className="ops-app staff-ops-app">
 
       <aside className="ops-sidebar staff-ops-sidebar">
 
-        <Link
-          className="ops-logo"
-          href="/dashboard"
-        >
-          <div className="ops-logo-mark">
-            THS
-          </div>
+        <div className="sidebar-brand">
 
-          <div className="ops-logo-copy">
-            <strong>
-              The Hotel Saugatuck
-            </strong>
+          <Link
+            className="ops-logo"
+            href="/dashboard"
+          >
+            <div className="ops-logo-mark">
+              THS
+            </div>
 
-            <span>
-              Operations Hub
-            </span>
-          </div>
-        </Link>
+            <div className="ops-logo-copy">
+              <strong>
+                The Hotel Saugatuck
+              </strong>
+
+              <span>
+                Operations Hub
+              </span>
+            </div>
+          </Link>
+
+        </div>
 
         <nav className="ops-nav staff-ops-nav">
 
@@ -311,8 +320,13 @@ export default function StaffShell({
                     : ''
                 }
               >
-                <LayoutGrid size={18} />
-                <span>Dashboard</span>
+                <span className="sidebar-link-icon">
+                  <LayoutGrid size={17} />
+                </span>
+
+                <span className="sidebar-link-label">
+                  Dashboard
+                </span>
               </Link>
             )}
           </div>
@@ -369,25 +383,29 @@ export default function StaffShell({
 
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              window.location.assign('/settings')
-            }
-          >
-            <Settings size={18} />
-            <span>Settings</span>
-          </button>
+          <div className="sidebar-footer-actions">
 
-          <form
-            action="/auth/signout"
-            method="post"
-          >
-            <button type="submit">
-              <LogOut size={18} />
-              <span>Sign out</span>
+            <button
+              type="button"
+              onClick={() =>
+                window.location.assign('/settings')
+              }
+            >
+              <Settings size={17} />
+              <span>Settings</span>
             </button>
-          </form>
+
+            <form
+              action="/auth/signout"
+              method="post"
+            >
+              <button type="submit">
+                <LogOut size={17} />
+                <span>Sign out</span>
+              </button>
+            </form>
+
+          </div>
 
         </div>
 
@@ -409,10 +427,7 @@ export default function StaffShell({
 
           <div className="staff-topbar-spacer" />
 
-          <div
-            className="ops-search staff-global-search"
-            style={{ position: 'relative' }}
-          >
+          <div className="ops-search staff-global-search">
             <Search size={17} />
 
             <input
