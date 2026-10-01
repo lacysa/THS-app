@@ -13,7 +13,7 @@
   padding: 22px;
   border: 1px solid var(--ths-line);
   border-radius: 8px;
-  background: white;
+  background: var(--ths-surface);
   box-shadow:
     0 1px 2px rgba(26, 26, 24, 0.02),
     0 10px 26px rgba(26, 26, 24, 0.035);
@@ -34,8 +34,8 @@
   display: grid;
   place-items: center;
   border-radius: 6px;
-  background: #efede7;
-  color: var(--ths-charcoal);
+  background: var(--ths-surface-3);
+  color: var(--ths-text);
 }
 
 .settings-card-heading h2 {
@@ -72,7 +72,7 @@
   border: 1px solid #d4d0c7;
   border-radius: 6px;
   padding: 0 11px;
-  background: white;
+  background: var(--ths-surface);
   color: var(--ths-text);
 }
 
@@ -84,7 +84,7 @@
 }
 
 .settings-grid input:disabled {
-  background: #f2f0eb;
+  background: var(--ths-surface-2);
   color: #918d84;
 }
 
@@ -112,8 +112,8 @@
 
 .settings-primary {
   border: 1px solid var(--ths-charcoal);
-  background: var(--ths-charcoal);
-  color: white;
+  background: var(--ths-primary);
+  color: var(--ths-primary-text);
 }
 
 .settings-primary:hover {
@@ -123,13 +123,13 @@
 .settings-secondary,
 .settings-inline button {
   border: 1px solid #d2cec5;
-  background: white;
-  color: var(--ths-charcoal);
+  background: var(--ths-surface);
+  color: var(--ths-text);
 }
 
 .settings-secondary:hover,
 .settings-inline button:hover {
-  background: #f3f1ec;
+  background: var(--ths-surface-2);
 }
 
 .settings-secondary:disabled {
@@ -172,7 +172,7 @@
   padding: 0 11px;
   border: 1px solid #d4d0c7;
   border-radius: 6px;
-  background: white;
+  background: var(--ths-surface);
   color: #8a867f;
 }
 
@@ -194,8 +194,8 @@
   padding: 10px 13px;
   border: 1px solid #d7d2c8;
   border-radius: 6px;
-  background: white;
-  color: var(--ths-charcoal);
+  background: var(--ths-surface);
+  color: var(--ths-text);
   box-shadow: 0 8px 20px rgba(26, 26, 24, 0.07);
 }
 
@@ -210,7 +210,7 @@
   padding: 9px;
   border: 1px solid var(--ths-line);
   border-radius: 7px;
-  background: white;
+  background: var(--ths-surface);
   color: var(--ths-text);
   text-align: left;
   cursor: pointer;
@@ -221,7 +221,7 @@
 }
 
 .theme-picker > button.selected {
-  border-color: var(--ths-charcoal);
+  border-color: var(--ths-text);
   box-shadow: 0 0 0 2px rgba(31, 31, 29, 0.08);
 }
 
@@ -326,7 +326,7 @@
 .switch-label input[type='checkbox'] {
   width: 34px;
   height: 18px;
-  accent-color: var(--ths-charcoal);
+  accent-color: var(--ths-text);
   cursor: pointer;
 }
 

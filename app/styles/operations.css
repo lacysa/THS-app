@@ -1,0 +1,63 @@
+/* THS Operations modules — Housekeeping + Maintenance */
+
+.ops-module { display:grid; gap:18px; color:var(--ths-text); }
+.module-toolbar { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; }
+.module-toolbar h1 { margin:2px 0 4px; font-size:28px; }
+.module-toolbar p { margin:0; color:var(--ths-muted); font-size:13px; }
+.module-kicker { color:var(--ths-muted); font-size:9px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+.toolbar-actions { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; }
+.date-control { display:grid; gap:5px; color:var(--ths-muted); font-size:10px; font-weight:700; }
+.date-control input { min-height:40px; }
+.ops-primary-btn,.ops-secondary-btn { min-height:40px; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:0 14px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; }
+.ops-primary-btn { border:1px solid var(--ths-primary); background:var(--ths-primary); color:var(--ths-primary-text); }
+.ops-secondary-btn { border:1px solid var(--ths-line); background:var(--ths-surface); color:var(--ths-text); }
+.ops-primary-btn:disabled { opacity:.55; cursor:not-allowed; }
+.module-message { padding:10px 12px; border:1px solid var(--ths-line); border-radius:6px; background:var(--ths-surface); color:var(--ths-muted); font-size:12px; }
+.metric-row { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.metric-card { padding:14px 16px; border:1px solid var(--ths-line); border-radius:7px; background:var(--ths-surface); }
+.metric-card span { display:block; color:var(--ths-muted); font-size:11px; }
+.metric-card strong { display:block; margin-top:4px; font-size:26px; }
+.module-empty { grid-column:1/-1; padding:28px; border:1px dashed var(--ths-line); border-radius:8px; background:var(--ths-surface); color:var(--ths-muted); text-align:center; }
+
+.hsk-table-wrap { overflow:auto; border:1px solid var(--ths-line); border-radius:8px; background:var(--ths-surface); }
+.hsk-table { width:100%; min-width:1500px; border-collapse:collapse; }
+.hsk-table th { position:sticky; top:0; z-index:2; padding:10px 9px; background:var(--ths-surface-2); color:var(--ths-muted); border-bottom:1px solid var(--ths-line); font-size:9px; letter-spacing:.08em; text-transform:uppercase; text-align:left; }
+.hsk-table td { padding:7px 7px; border-bottom:1px solid var(--ths-line); vertical-align:middle; }
+.hsk-table tbody tr:last-child td { border-bottom:0; }
+.hsk-table select,.hsk-table input { width:100%; min-height:36px; padding:7px 8px; border:1px solid var(--ths-line); border-radius:5px; background:var(--ths-surface); color:var(--ths-text); font-size:11px; box-sizing:border-box; }
+.hsk-table .room-cell { min-width:140px; display:flex; align-items:center; gap:7px; }
+.hsk-table .order-input { width:62px; }
+.hsk-table .check-cell { text-align:center; }
+.hsk-table .check-cell input { width:18px; min-height:18px; accent-color:var(--ths-primary); }
+
+.ops-panel { padding:18px; border:1px solid var(--ths-line); border-radius:8px; background:var(--ths-surface); }
+.panel-heading { display:flex; align-items:flex-start; gap:10px; padding-bottom:14px; border-bottom:1px solid var(--ths-line); }
+.panel-heading h2 { margin:0; font-size:17px; }
+.panel-heading p { margin:3px 0 0; color:var(--ths-muted); font-size:11px; }
+.ticket-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+.ticket-form-grid label { display:grid; gap:5px; color:var(--ths-text); font-size:10px; font-weight:700; }
+.ticket-form-grid .wide { grid-column:1/-1; }
+.ticket-form-grid input,.ticket-form-grid select,.ticket-form-grid textarea { width:100%; box-sizing:border-box; min-height:40px; padding:9px 10px; border:1px solid var(--ths-line); border-radius:6px; background:var(--ths-surface); color:var(--ths-text); }
+.ticket-form-grid textarea { min-height:80px; resize:vertical; }
+.panel-actions { display:flex; justify-content:flex-end; margin-top:12px; }
+.ticket-list-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.segmented { display:flex; gap:5px; flex-wrap:wrap; }
+.segmented button,.ticket-actions button { border:1px solid var(--ths-line); border-radius:999px; background:var(--ths-surface); color:var(--ths-muted); padding:6px 9px; font-size:10px; font-weight:700; cursor:pointer; }
+.segmented button.active,.ticket-actions button.active { background:var(--ths-primary); color:var(--ths-primary-text); border-color:var(--ths-primary); }
+.maintenance-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.maintenance-ticket { padding:16px; border:1px solid var(--ths-line); border-left-width:4px; border-radius:8px; background:var(--ths-surface); }
+.maintenance-ticket.priority-normal { border-left-color:var(--ths-accent); }
+.maintenance-ticket.priority-high { border-left-color:var(--ths-warning); }
+.maintenance-ticket.priority-urgent { border-left-color:var(--ths-danger); }
+.ticket-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+.ticket-top h3 { margin:4px 0 0; font-size:17px; }
+.ticket-location { color:var(--ths-muted); font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.maintenance-ticket p { color:var(--ths-muted); font-size:12px; line-height:1.45; }
+.priority-pill { flex:0 0 auto; padding:5px 8px; border-radius:999px; font-size:9px; font-weight:800; }
+.priority-pill.normal { background:var(--ths-accent-soft); color:var(--ths-accent); }
+.priority-pill.high { background:var(--ths-warning-bg); color:var(--ths-warning); }
+.priority-pill.urgent { background:var(--ths-danger-bg); color:var(--ths-danger); }
+.ticket-meta { display:flex; gap:14px; flex-wrap:wrap; color:var(--ths-muted); font-size:10px; }
+.ticket-actions { display:flex; gap:5px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--ths-line); }
+
+@media(max-width:1050px){.metric-row{grid-template-columns:repeat(2,1fr)}.maintenance-grid{grid-template-columns:1fr}}

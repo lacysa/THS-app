@@ -1,36 +1,88 @@
-/* The Hotel Saugatuck — shared design tokens */
+/* The Hotel Saugatuck — shared design tokens and account themes */
 
-:root {
-  --ths-black: #171716;
-  --ths-charcoal: #252522;
-  --ths-charcoal-soft: #32322e;
-
-  --ths-ivory: #f7f5f0;
-  --ths-paper: #ffffff;
-  --ths-stone: #ece9e2;
-  --ths-line: #ddd9d0;
-
+:root,
+html[data-theme="light"] {
+  --ths-page-bg: #f7f5f0;
+  --ths-surface: #ffffff;
+  --ths-surface-2: #f2f0eb;
+  --ths-surface-3: #ece9e2;
   --ths-text: #20201e;
   --ths-muted: #77746d;
   --ths-muted-light: #aaa69d;
-
+  --ths-line: #ddd9d0;
+  --ths-black: #171716;
+  --ths-charcoal: #252522;
+  --ths-charcoal-soft: #32322e;
+  --ths-sidebar-bg: #1b1b19;
+  --ths-sidebar-text: #f3f0e9;
+  --ths-sidebar-muted: #918e87;
+  --ths-primary: #252522;
+  --ths-primary-text: #ffffff;
   --ths-accent: #646b70;
   --ths-accent-soft: #e8eaeb;
-
   --ths-success: #45624e;
   --ths-success-bg: #e8f0ea;
-
   --ths-warning: #876e35;
   --ths-warning-bg: #f4eedf;
-
   --ths-danger: #8d4741;
   --ths-danger-bg: #f7e8e6;
-
   --ths-sidebar-width: 232px;
 }
 
+html[data-theme="blue"] {
+  --ths-page-bg: #eef2f8;
+  --ths-surface: #ffffff;
+  --ths-surface-2: #e8edf6;
+  --ths-surface-3: #dbe3f0;
+  --ths-text: #182230;
+  --ths-muted: #667085;
+  --ths-muted-light: #98a2b3;
+  --ths-line: #d6deeb;
+  --ths-black: #111827;
+  --ths-charcoal: #20283a;
+  --ths-charcoal-soft: #2f3a52;
+  --ths-sidebar-bg: #20283a;
+  --ths-sidebar-text: #f8fafc;
+  --ths-sidebar-muted: #aab4c7;
+  --ths-primary: #5966d9;
+  --ths-primary-text: #ffffff;
+  --ths-accent: #6673e5;
+  --ths-accent-soft: #e8ebff;
+  --ths-success: #3f6a54;
+  --ths-success-bg: #e6f2eb;
+  --ths-warning: #8a6b2f;
+  --ths-warning-bg: #f6eed9;
+  --ths-danger: #974b48;
+  --ths-danger-bg: #f8e9e7;
+}
+
+html[data-theme="dark"] {
+  --ths-page-bg: #0f1115;
+  --ths-surface: #191c22;
+  --ths-surface-2: #20242b;
+  --ths-surface-3: #282d35;
+  --ths-text: #f5f6f7;
+  --ths-muted: #a8adb7;
+  --ths-muted-light: #7f8794;
+  --ths-line: #343842;
+  --ths-black: #08090b;
+  --ths-charcoal: #d7dae0;
+  --ths-charcoal-soft: #bfc4cc;
+  --ths-sidebar-bg: #090a0c;
+  --ths-sidebar-text: #f7f7f6;
+  --ths-sidebar-muted: #9298a2;
+  --ths-primary: #d7dae0;
+  --ths-primary-text: #111318;
+  --ths-accent: #aeb5c1;
+  --ths-accent-soft: #2b3039;
+  --ths-success: #a8d4b7;
+  --ths-success-bg: #203029;
+  --ths-warning: #e4c277;
+  --ths-warning-bg: #332b1c;
+  --ths-danger: #efa6a1;
+  --ths-danger-bg: #382321;
+}
+
 @media (max-width: 1100px) {
-  :root {
-    --ths-sidebar-width: 218px;
-  }
+  :root { --ths-sidebar-width: 218px; }
 }

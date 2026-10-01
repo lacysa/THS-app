@@ -60,7 +60,7 @@
 
 .ops-card:hover {
   transform: translateY(-2px);
-  background: white;
+  background: var(--ths-surface);
   border-color: #bcb8ae;
   box-shadow:
     0 1px 2px rgba(26, 26, 24, 0.035),
@@ -83,8 +83,8 @@
   place-items: center;
   margin-bottom: 19px;
   border-radius: 6px;
-  background: #efede7;
-  color: var(--ths-charcoal);
+  background: var(--ths-surface-3);
+  color: var(--ths-text);
   box-shadow: none;
 }
 
@@ -137,7 +137,7 @@
 }
 
 .ops-status.coming-soon {
-  background: #efede8;
+  background: var(--ths-surface-3);
   color: #7d7971;
 }
 
@@ -157,7 +157,7 @@
   padding: 28px;
   border: 1px solid var(--ths-line);
   border-radius: 8px;
-  background: white;
+  background: var(--ths-surface);
   color: var(--ths-text);
   box-shadow: 0 8px 24px rgba(26, 26, 24, 0.035);
 }
