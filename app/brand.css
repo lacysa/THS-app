@@ -1148,3 +1148,150 @@ html[data-theme]
   }
 
 }
+/* ============================================================
+   GUEST BREAKFAST — SCHEDULED CARD / STATUS PILL REPAIR
+   Keeps status pills fully inside cards and readable.
+   ============================================================ */
+
+.guest-page-content .scheduled-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(240px, 1fr));
+
+  gap: 12px;
+}
+
+.guest-page-content .scheduled-card {
+  min-width: 0;
+  min-height: 110px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr);
+
+  align-content: space-between;
+
+  gap: 14px;
+
+  padding: 16px;
+
+  overflow: hidden;
+}
+
+/* Room + time area */
+.guest-page-content .scheduled-card > div {
+  min-width: 0;
+}
+
+.guest-page-content .scheduled-card > div strong {
+  display: block;
+
+  color: var(--ths-text);
+
+  font-size: 15px;
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  overflow-wrap: break-word;
+}
+
+/* Status stays contained inside the card */
+.guest-page-content .scheduled-card .status-chip {
+  width: fit-content;
+  max-width: 100%;
+
+  justify-self: start;
+
+  display: inline-flex;
+  align-items: center;
+
+  padding: 6px 9px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+
+  white-space: normal;
+
+  overflow-wrap: anywhere;
+
+  text-align: left;
+}
+
+/* Submitted / locked */
+.guest-page-content
+  .scheduled-card
+  .status-chip.done {
+  background: #e8f0ea;
+  color: #45624e;
+
+  border: 1px solid #cfddd2;
+}
+
+/* Scheduled but menu still needed */
+.guest-page-content
+  .scheduled-card
+  .status-chip.pending {
+  background: #f4eedf;
+  color: #876e35;
+
+  border: 1px solid #dfd1aa;
+}
+
+/* Locked cards should still be fully readable */
+.guest-page-content
+  .scheduled-card-locked {
+  opacity: 1;
+  cursor: default;
+
+  background: #fbfaf7;
+}
+
+/* A locked card should not look disabled/faded */
+.guest-page-content
+  .scheduled-card-locked
+  .muted {
+  color: #7c786f;
+}
+
+/* Prevent hover from implying locked cards are clickable */
+.guest-page-content
+  .scheduled-card-locked:hover {
+  transform: none;
+
+  border-color: var(--ths-line);
+
+  box-shadow: none;
+}
+
+/* Slightly wider layout when room is available */
+@media (min-width: 1050px) {
+  .guest-page-content .scheduled-grid {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .guest-page-content .scheduled-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Mobile */
+@media (max-width: 560px) {
+  .guest-page-content .scheduled-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-page-content .scheduled-card {
+    min-height: 0;
+  }
+}
