@@ -16,3 +16,17 @@
   table{width:100%!important;table-layout:fixed}
   th,td{overflow-wrap:anywhere}
 }
+/* Front Desk → Kitchen room jump */
+
+.kitchen-ticket-target {
+  outline: 3px solid #b7a77c;
+  outline-offset: 3px;
+
+  box-shadow:
+    0 0 0 6px
+    rgba(183, 167, 124, 0.12);
+
+  transition:
+    outline-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
