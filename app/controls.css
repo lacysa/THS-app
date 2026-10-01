@@ -1,0 +1,199 @@
+/* The Hotel Saugatuck — shared controls, cards, stats, pills, notices, and toolbars */
+
+.staff-page-content .field {
+  display: grid;
+  gap: 6px;
+}
+
+.staff-page-content label {
+  color: var(--ths-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.staff-page-content input,
+.staff-page-content select,
+.staff-page-content textarea {
+  width: 100%;
+  border: 1px solid #d4d0c7;
+  border-radius: 6px;
+  background: white;
+  color: var(--ths-text);
+  padding: 11px 12px;
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.staff-page-content input:focus,
+.staff-page-content select:focus,
+.staff-page-content textarea:focus {
+  outline: none;
+  border-color: #918d84;
+  box-shadow: 0 0 0 3px rgba(95, 92, 85, 0.09);
+}
+
+.staff-page-content input:disabled {
+  background: #f1efe9;
+  color: #8f8b82;
+  cursor: not-allowed;
+}
+
+.staff-page-content .btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--ths-charcoal);
+  border-radius: 6px;
+  background: var(--ths-charcoal);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.staff-page-content .btn:hover:not(:disabled) {
+  background: #11110f;
+  border-color: #11110f;
+}
+
+.staff-page-content .btn.secondary {
+  background: white;
+  color: var(--ths-charcoal);
+  border-color: #d2cec5;
+}
+
+.staff-page-content .btn.secondary:hover:not(:disabled) {
+  background: #f3f1ec;
+  border-color: #bcb7ad;
+}
+
+.staff-page-content .btn.sage {
+  background: var(--ths-charcoal);
+  border-color: var(--ths-charcoal);
+}
+
+.staff-page-content .btn.danger {
+  background: white;
+  color: var(--ths-danger);
+  border-color: #dcbfbb;
+}
+
+.staff-page-content .btn.danger:hover:not(:disabled) {
+  background: var(--ths-danger-bg);
+  border-color: #c99891;
+}
+
+.staff-page-content .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.staff-page-content .pill {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid #d7d3ca;
+  border-radius: 999px;
+  background: #f5f3ee;
+  color: #64615b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.staff-page-content .pill.warning {
+  background: var(--ths-warning-bg);
+  color: var(--ths-warning);
+  border-color: #ded0a8;
+}
+
+.staff-page-content .notice {
+  padding: 12px 13px;
+  border: 1px solid #d8d3c8;
+  border-radius: 6px;
+  background: #f3f1ec;
+  color: #625f58;
+}
+
+.staff-page-content .notice.error {
+  background: var(--ths-danger-bg);
+  color: var(--ths-danger);
+  border-color: #e0beb9;
+}
+
+.staff-page-content .notice.success {
+  background: var(--ths-success-bg);
+  color: var(--ths-success);
+  border-color: #c8d9cd;
+}
+
+.staff-page-content .card,
+.staff-page-content .stat,
+.staff-page-content .ticket {
+  background: white;
+  color: var(--ths-text);
+  border: 1px solid var(--ths-line);
+  box-shadow:
+    0 1px 2px rgba(26, 26, 24, 0.02),
+    0 8px 24px rgba(26, 26, 24, 0.035);
+}
+
+.staff-page-content .card {
+  border-radius: 8px;
+}
+
+.staff-page-content .stat {
+  border-radius: 7px;
+  padding: 15px;
+}
+
+.staff-page-content .ticket {
+  border-radius: 7px;
+}
+
+.staff-page-content h1,
+.staff-page-content h2,
+.staff-page-content h3,
+.staff-page-content .ticket-room,
+.staff-page-content .stat strong {
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ths-text);
+}
+
+.staff-page-content h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.staff-page-content .ticket-room {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.staff-page-content .stat strong {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.staff-page-content .muted {
+  color: var(--ths-muted);
+}
+
+.staff-page-content .order-row {
+  border-top-color: #ddd9d0;
+}
+
+.staff-page-content .toolbar {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ths-line);
+}
+
+.staff-page-content .toolbar-left,
+.staff-page-content .toolbar-right {
+  gap: 8px;
+}
