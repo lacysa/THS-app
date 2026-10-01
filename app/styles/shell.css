@@ -2,8 +2,8 @@
 :root{--ths-sidebar-width:236px;--ths-header-height:76px}
 html,body{margin:0;min-height:100%}
 body{overflow-x:auto}
-.ops-app,.staff-ops-app{width:100%;min-width:980px;min-height:100vh;display:grid;grid-template-columns:var(--ths-sidebar-width) minmax(0,1fr);background:var(--ths-ivory);color:var(--ths-text)}
-.ops-sidebar,.staff-ops-sidebar{width:var(--ths-sidebar-width);height:100vh;position:sticky;top:0;align-self:start;display:flex;flex-direction:column;box-sizing:border-box;padding:18px 12px 14px;overflow:hidden;background:#1b1b19;color:#fff;border-right:1px solid rgba(255,255,255,.06);z-index:60}
+.ops-app,.staff-ops-app{width:100%;min-width:980px;min-height:100vh;display:grid!important;grid-template-columns:var(--ths-sidebar-width) minmax(0,1fr)!important;background:var(--ths-ivory);color:var(--ths-text)}
+.ops-sidebar,.staff-ops-sidebar{width:var(--ths-sidebar-width);height:100vh;position:sticky;top:0;align-self:start;display:flex;flex-direction:column;box-sizing:border-box;padding:18px 12px 14px;overflow:hidden;background:#1b1b19!important;color:#fff!important;border-right:1px solid rgba(255,255,255,.06);z-index:60}
 .sidebar-brand{flex:0 0 auto;padding-bottom:8px}
 .ops-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 14px;color:#fff;text-decoration:none}.ops-logo:hover{color:#fff}
 .ops-logo-mark{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.55);border-radius:2px;background:transparent;color:#fff;font-size:10px;font-weight:900;letter-spacing:.08em}
