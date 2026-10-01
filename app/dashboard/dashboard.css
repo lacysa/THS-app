@@ -1,0 +1,206 @@
+/* The Hotel Saugatuck — dashboard and module cards */
+
+.ops-heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.ops-kicker {
+  margin-bottom: 7px;
+  color: var(--ths-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ops-heading-row h1 {
+  margin: 0 0 7px;
+  color: var(--ths-text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 34px;
+  line-height: 1.08;
+  font-weight: 700;
+}
+
+.ops-heading-row p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--ths-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ops-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ops-card {
+  min-height: 215px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid var(--ths-line);
+  border-radius: 8px;
+  background: var(--ths-paper);
+  color: var(--ths-text);
+  box-shadow:
+    0 1px 2px rgba(26, 26, 24, 0.025),
+    0 8px 24px rgba(26, 26, 24, 0.045);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.ops-card:hover {
+  transform: translateY(-2px);
+  background: white;
+  border-color: #bcb8ae;
+  box-shadow:
+    0 1px 2px rgba(26, 26, 24, 0.035),
+    0 14px 32px rgba(26, 26, 24, 0.075);
+}
+
+.ops-card.disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.ops-card.disabled:hover {
+  transform: none;
+}
+
+.ops-card-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 19px;
+  border-radius: 6px;
+  background: #efede7;
+  color: var(--ths-charcoal);
+  box-shadow: none;
+}
+
+.ops-card-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.ops-card-eyebrow {
+  color: #928e86;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.ops-card h2 {
+  margin: 5px 0 7px;
+  color: var(--ths-text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ops-card p {
+  margin: 0;
+  color: var(--ths-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ops-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 18px;
+}
+
+.ops-status {
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ops-status.live {
+  background: var(--ths-success-bg);
+  color: var(--ths-success);
+}
+
+.ops-status.coming-soon {
+  background: #efede8;
+  color: #7d7971;
+}
+
+.ops-card-footer svg {
+  color: #65625c;
+}
+
+.ops-empty {
+  padding: 36px;
+  border: 1px dashed #c8c4bc;
+  border-radius: 8px;
+  color: var(--ths-muted);
+  text-align: center;
+}
+
+.preview-module-card {
+  padding: 28px;
+  border: 1px solid var(--ths-line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ths-text);
+  box-shadow: 0 8px 24px rgba(26, 26, 24, 0.035);
+}
+
+.preview-module-card > span {
+  color: var(--ths-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.preview-module-card h2 {
+  margin: 7px 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.preview-module-card p {
+  max-width: 650px;
+  margin: 0;
+  color: var(--ths-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 1180px) {
+  .ops-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .ops-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .ops-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-heading-row h1 {
+    font-size: 29px;
+  }
+}
