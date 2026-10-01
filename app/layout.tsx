@@ -1,5 +1,10 @@
 import './globals.css'
-import './brand.css'
+import './styles/brand.css'
+import './styles/shell.css'
+import './styles/dashboard.css'
+import './styles/controls.css'
+import './styles/settings.css'
+import './styles/breakfast.css'
 
 export const metadata = {
   title: 'THS Operations Hub',
