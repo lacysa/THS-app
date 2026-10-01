@@ -244,10 +244,16 @@ export default function StaffShell({
       item.href ||
       '#'
 
-    const active =
-      pathname === href ||
-      (href !== '/dashboard' &&
-        pathname.startsWith(`${href}/`))
+    const exactOnlyRoutes = new Set([
+  '/dashboard',
+  '/breakfast'
+])
+
+const active =
+  exactOnlyRoutes.has(href)
+    ? pathname === href
+    : pathname === href ||
+      pathname.startsWith(`${href}/`)
 
     const preview = item.published === false
 
