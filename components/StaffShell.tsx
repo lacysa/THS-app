@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutGrid,
   ConciergeBell,
@@ -125,9 +125,12 @@ export default function StaffShell({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
 
   const [access, setAccess] = useState<Access | null>(null)
   const [modules, setModules] = useState<ModuleRow[]>([])
+  const [search, setSearch] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/me')
@@ -191,6 +194,26 @@ export default function StaffShell({
       !operationsModules.has(item.module_key)
   )
 
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase()
+
+    if (!q) return []
+
+    return nav
+      .filter(item => {
+        const title = item.title?.toLowerCase() || ''
+        const label = item.label?.toLowerCase() || ''
+        const key = item.module_key?.toLowerCase() || ''
+
+        return (
+          title.includes(q) ||
+          label.includes(q) ||
+          key.includes(q)
+        )
+      })
+      .slice(0, 8)
+  }, [search, nav])
+
   const displayName =
     access?.name ||
     access?.preferredName ||
@@ -233,6 +256,17 @@ export default function StaffShell({
         )}
       </Link>
     )
+  }
+
+  function openResult(item: ModuleRow) {
+    const href =
+      hrefFallback[item.module_key] ||
+      item.href ||
+      '#'
+
+    setSearch('')
+    setSearchOpen(false)
+    router.push(href)
   }
 
   return (
@@ -375,13 +409,70 @@ export default function StaffShell({
 
           <div className="staff-topbar-spacer" />
 
-          <div className="ops-search staff-global-search">
+          <div
+            className="ops-search staff-global-search"
+            style={{ position: 'relative' }}
+          >
             <Search size={17} />
 
             <input
+              value={search}
+              onChange={e => {
+                setSearch(e.target.value)
+                setSearchOpen(true)
+              }}
+              onFocus={() => setSearchOpen(true)}
+              onKeyDown={e => {
+                if (
+                  e.key === 'Enter' &&
+                  searchResults.length > 0
+                ) {
+                  e.preventDefault()
+                  openResult(searchResults[0])
+                }
+
+                if (e.key === 'Escape') {
+                  setSearchOpen(false)
+                }
+              }}
               placeholder="Search workspace"
-              disabled
             />
+
+            {searchOpen && search.trim() && (
+              <div className="workspace-search-results">
+                {searchResults.length > 0 ? (
+                  searchResults.map(item => {
+                    const Icon =
+                      iconMap[item.module_key] ||
+                      LayoutGrid
+
+                    return (
+                      <button
+                        key={item.module_key}
+                        type="button"
+                        onMouseDown={e =>
+                          e.preventDefault()
+                        }
+                        onClick={() =>
+                          openResult(item)
+                        }
+                      >
+                        <Icon size={16} />
+
+                        <span>
+                          {item.label ||
+                            item.title}
+                        </span>
+                      </button>
+                    )
+                  })
+                ) : (
+                  <div className="workspace-search-empty">
+                    No matching tools.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="staff-user-area">
