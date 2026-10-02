@@ -3,36 +3,55 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState
 } from 'react'
 
 import {
   RefreshCw,
   Save,
-  BedDouble
+  BedDouble,
+  Search,
+  Check,
+  ChevronDown,
+  UtensilsCrossed
 } from 'lucide-react'
+
+type BreakfastStatus = 'none' | 'needed' | 'received' | 'declined'
 
 type RoomRow = {
   roomId: string
   roomName: string
   sortOrder: number
-
   reservationStatus: string
   serviceType: string
   stripHold: string
   assignedTo: string
   cleanOrder: number | null
-
   complete: boolean
   readyForInspection: boolean
   inspected: boolean
-
   completedAt?: string | null
   inspectedAt?: string | null
-
   roomCondition: string
   nextShiftCondition: string
   notes: string
+  haSignedBy?: string | null
+  haSignedName?: string | null
+  haSignedAt?: string | null
+  fohSignedBy?: string | null
+  fohSignedName?: string | null
+  fohSignedAt?: string | null
+  breakfast: {
+    serviceDate: string
+    status: BreakfastStatus
+    timeSlot?: string | null
+  }
+}
+
+type StaffOption = {
+  id: string
+  name: string
 }
 
 type Access = {
@@ -43,149 +62,102 @@ type Access = {
   isAdmin?: boolean
 }
 
-const reservationOptions = [
-  '',
-  'Checkout',
-  'Out/In',
-  'Stayover',
-  'Arrival',
-  'Blocked'
-]
+type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
-const stripOptions = [
-  '',
-  'Strip',
-  'Hold'
-]
-
-const conditionOptions = [
-  '',
-  'Occupied',
-  'Cleaning',
-  'Ready for Inspection',
-  'Vacant (Clean)',
-  'Vacant (Dirty)',
-  'Vacant (Blocked)',
-  'Out of Order'
-]
-
-const nextShiftOptions = [
-  '',
-  'Occupied',
-  'Vacant (Clean)',
-  'Vacant (Dirty)',
-  'Vacant (Blocked)',
-  'Out of Order'
-]
+const reservationOptions = ['', 'Checkout', 'Out/In', 'Stayover', 'Arrival', 'Blocked']
+const stripOptions = ['', 'Strip', 'Hold']
+const conditionOptions = ['', 'Occupied', 'Cleaning', 'Ready for Inspection', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
+const nextShiftOptions = ['', 'Occupied', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
 
 function todayDetroit() {
-  return new Intl.DateTimeFormat(
-    'en-CA',
-    {
-      timeZone: 'America/Detroit',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }
-  ).format(new Date())
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Detroit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date())
 }
 
-function normalize(
-  value: string | null | undefined
-) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
+function normalize(value: string | null | undefined) {
+  return String(value || '').trim().toLowerCase()
 }
 
-function getManagerInitials(
-  access: Access | null
-) {
+function getManagerInitials(access: Access | null) {
   if (!access) return ''
 
   const combined = normalize(
-    `${access.name || ''} ${
-      access.preferredName || ''
-    } ${access.email || ''}`
+    `${access.name || ''} ${access.preferredName || ''} ${access.email || ''}`
   )
 
-  if (
-    combined.includes('sarah') ||
-    combined.includes('lacysa')
-  ) {
-    return 'SL'
-  }
+  if (combined.includes('sarah') || combined.includes('lacysa')) return 'SL'
+  if (combined.includes('brittany') || combined.includes('brittanyahollingshead')) return 'BH'
+  if (combined.includes('david') || combined.includes('davidheiser')) return 'DH'
 
-  if (
-    combined.includes('brittany') ||
-    combined.includes(
-      'brittanyahollingshead'
-    )
-  ) {
-    return 'BH'
-  }
-
-  if (
-    combined.includes('david') ||
-    combined.includes('davidheiser')
-  ) {
-    return 'DH'
-  }
-
-  const rawName =
-    access.name ||
-    access.preferredName ||
-    ''
-
-  const pieces = rawName
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-
+  const rawName = access.name || access.preferredName || ''
+  const pieces = rawName.trim().split(/\s+/).filter(Boolean)
   if (pieces.length >= 2) {
-    return (
-      pieces[0][0] +
-      pieces[
-        pieces.length - 1
-      ][0]
-    ).toUpperCase()
+    return `${pieces[0][0]}${pieces[pieces.length - 1][0]}`.toUpperCase()
   }
-
   return ''
 }
 
+function formatShortTime(value: string | null | undefined) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Detroit',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(date)
+}
+
+function splitAssigned(value: string) {
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function saveStatusLabel(state: SaveState) {
+  if (state === 'saving') return 'Saving…'
+  if (state === 'saved') return 'Saved ✓'
+  if (state === 'error') return 'Save failed'
+  return 'All changes saved'
+}
+
 export default function HousekeepingBoard() {
-  const [date, setDate] =
-    useState(todayDetroit())
-
-  const [rows, setRows] =
-    useState<RoomRow[]>([])
-
-  const [loading, setLoading] =
-    useState(true)
-
-  const [saving, setSaving] =
-    useState(false)
-
-  const [message, setMessage] =
-    useState('')
-
-  const [access, setAccess] =
-    useState<Access | null>(null)
-
-  const [canInspect, setCanInspect] =
-    useState(false)
+  const [date, setDate] = useState(todayDetroit())
+  const [rows, setRows] = useState<RoomRow[]>([])
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+  const [access, setAccess] = useState<Access | null>(null)
+  const [canHaSignoff, setCanHaSignoff] = useState(false)
+  const [canFohSignoff, setCanFohSignoff] = useState(false)
+  const [breakfastDate, setBreakfastDate] = useState('')
+  const [menuNeededRooms, setMenuNeededRooms] = useState<string[]>([])
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [dirty, setDirty] = useState(false)
+  const [openStaffRoomId, setOpenStaffRoomId] = useState<string | null>(null)
+  const [staffSearch, setStaffSearch] = useState('')
+  const rowsRef = useRef<RoomRow[]>([])
+  const dateRef = useRef(date)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    fetch('/api/me', {
-      cache: 'no-store'
-    })
-      .then(r =>
-        r.ok ? r.json() : null
-      )
+    rowsRef.current = rows
+  }, [rows])
+
+  useEffect(() => {
+    dateRef.current = date
+  }, [date])
+
+  useEffect(() => {
+    fetch('/api/me', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
       .then(d => {
-        if (!d) return
-        setAccess(d.access || null)
+        if (d) setAccess(d.access || null)
       })
       .catch(() => {})
   }, [])
@@ -193,37 +165,32 @@ export default function HousekeepingBoard() {
   async function load() {
     setLoading(true)
     setMessage('')
+    setDirty(false)
+    setSaveState('idle')
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
 
     try {
-      const r = await fetch(
-        `/api/housekeeping/day?date=${encodeURIComponent(
-          date
-        )}`,
-        {
-          cache: 'no-store'
-        }
-      )
-
-      const d =
-        await r
-          .json()
-          .catch(() => ({}))
+      const r = await fetch(`/api/housekeeping/day?date=${encodeURIComponent(date)}`, {
+        cache: 'no-store'
+      })
+      const d = await r.json().catch(() => ({}))
 
       if (!r.ok) {
-        setMessage(
-          d.error ||
-            'Could not load housekeeping board.'
-        )
-      } else {
-        setRows(d.rows || [])
-        setCanInspect(
-          Boolean(d.canInspect)
-        )
+        setMessage(d.error || 'Could not load housekeeping board.')
+        return
       }
+
+      const loadedRows = d.rows || []
+      setRows(loadedRows)
+      rowsRef.current = loadedRows
+      setStaffOptions(d.staffOptions || [])
+      setCanHaSignoff(Boolean(d.signoffAccess?.canHaSignoff))
+      setCanFohSignoff(Boolean(d.signoffAccess?.canFohSignoff))
+      setBreakfastDate(d.breakfast?.serviceDate || '')
+      setMenuNeededRooms(d.breakfast?.menuNeededRooms || [])
     } catch {
-      setMessage(
-        'Could not load housekeeping board.'
-      )
+      setMessage('Could not load housekeeping board.')
     } finally {
       setLoading(false)
     }
@@ -231,720 +198,383 @@ export default function HousekeepingBoard() {
 
   useEffect(() => {
     void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date])
 
-  function patch(
-    roomId: string,
-    update: Partial<RoomRow>
-  ) {
-    setRows(current =>
-      current.map(row =>
-        row.roomId === roomId
-          ? {
-              ...row,
-              ...update
-            }
-          : row
-      )
-    )
-  }
-
-  async function save() {
-    setSaving(true)
-    setMessage('Saving…')
+  async function saveRows(sourceRows = rowsRef.current, showMessage = false) {
+    setSaveState('saving')
+    if (showMessage) setMessage('Saving…')
 
     try {
-      const r = await fetch(
-        '/api/housekeeping/day',
-        {
-          method: 'POST',
-          headers: {
-            'content-type':
-              'application/json'
-          },
-          body: JSON.stringify({
-            serviceDate: date,
-            rows
-          })
-        }
-      )
-
-      const d =
-        await r
-          .json()
-          .catch(() => ({}))
+      const r = await fetch('/api/housekeeping/day', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          serviceDate: dateRef.current,
+          rows: sourceRows
+        })
+      })
+      const d = await r.json().catch(() => ({}))
 
       if (!r.ok) {
-        setMessage(
-          d.error ||
-            'Could not save housekeeping board.'
-        )
+        setSaveState('error')
+        setMessage(d.error || 'Could not save housekeeping board.')
+        return false
+      }
 
+      setDirty(false)
+      setSaveState('saved')
+      if (showMessage) setMessage('Housekeeping board saved.')
+      return true
+    } catch {
+      setSaveState('error')
+      setMessage('Could not save housekeeping board.')
+      return false
+    }
+  }
+
+  useEffect(() => {
+    if (!dirty || loading) return
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+
+    saveTimerRef.current = setTimeout(() => {
+      void saveRows(rowsRef.current, false)
+    }, 700)
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, dirty, loading])
+
+  function patch(roomId: string, update: Partial<RoomRow>) {
+    setRows(current => {
+      const next = current.map(row => row.roomId === roomId ? { ...row, ...update } : row)
+      rowsRef.current = next
+      return next
+    })
+    setDirty(true)
+    setSaveState('idle')
+  }
+
+  const canInitialEnvelope = Boolean(
+    access?.isAdmin ||
+    normalize(access?.roleName) === 'owner' ||
+    normalize(access?.roleName) === 'manager'
+  )
+
+  const managerInitials = getManagerInitials(access)
+
+  function markOut(row: RoomRow) {
+    patch(row.roomId, { serviceType: 'OUT' })
+  }
+
+  function markRefresh(row: RoomRow) {
+    patch(row.roomId, { serviceType: 'RF' })
+  }
+
+  function clearOutRf(row: RoomRow) {
+    patch(row.roomId, { serviceType: '' })
+  }
+
+  function initialEnvelope(row: RoomRow) {
+    if (!canInitialEnvelope || !managerInitials) {
+      setMessage('Manager initials could not be determined from your profile.')
+      return
+    }
+    if (!String(row.serviceType || '').toUpperCase().startsWith('OUT')) {
+      setMessage('Mark the room OUT before initialing the envelope.')
+      return
+    }
+    patch(row.roomId, { serviceType: `OUT-${managerInitials}` })
+  }
+
+  function toggleComplete(row: RoomRow, checked: boolean) {
+    if (!checked) {
+      patch(row.roomId, {
+        complete: false,
+        readyForInspection: false,
+        inspected: false,
+        haSignedBy: null,
+        haSignedName: null,
+        haSignedAt: null,
+        fohSignedBy: null,
+        fohSignedName: null,
+        fohSignedAt: null
+      })
+      return
+    }
+
+    patch(row.roomId, {
+      complete: true,
+      readyForInspection: true,
+      inspected: false,
+      roomCondition: row.roomCondition || 'Ready for Inspection'
+    })
+  }
+
+  function toggleStaff(row: RoomRow, name: string) {
+    const current = splitAssigned(row.assignedTo)
+    const next = current.includes(name)
+      ? current.filter(item => item !== name)
+      : [...current, name]
+    patch(row.roomId, { assignedTo: next.join(', ') })
+  }
+
+  async function signOff(row: RoomRow, kind: 'ha' | 'foh') {
+    if (!row.complete) {
+      setMessage('Mark the room complete before signing off.')
+      return
+    }
+
+    const saved = await saveRows(rowsRef.current, false)
+    if (!saved) return
+
+    try {
+      const r = await fetch('/api/housekeeping/signoff', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          serviceDate: dateRef.current,
+          roomId: row.roomId,
+          kind
+        })
+      })
+      const d = await r.json().catch(() => ({}))
+
+      if (!r.ok) {
+        setMessage(d.error || 'Could not save room sign-off.')
         return
       }
 
-      let savedMessage =
-        'Housekeeping board saved.'
-
-      if (
-        Array.isArray(d.warnings) &&
-        d.warnings.length > 0
-      ) {
-        savedMessage +=
-          ` ${d.warnings.join(' ')}`
-      }
-
-      setMessage(savedMessage)
-
-      await load()
+      patch(row.roomId, kind === 'ha'
+        ? {
+            haSignedBy: d.signedBy,
+            haSignedName: d.signedName,
+            haSignedAt: d.signedAt
+          }
+        : {
+            fohSignedBy: d.signedBy,
+            fohSignedName: d.signedName,
+            fohSignedAt: d.signedAt
+          }
+      )
+      setDirty(false)
+      setSaveState('saved')
+      setMessage(`${kind === 'ha' ? 'Hospitality Assistant' : 'FOH'} sign-off saved for ${row.roomName}.`)
     } catch {
-      setMessage(
-        'Could not save housekeeping board.'
-      )
-    } finally {
-      setSaving(false)
+      setMessage('Could not save room sign-off.')
     }
   }
 
-  const canInitialEnvelope =
-    Boolean(
-      access?.isAdmin ||
-      normalize(
-        access?.roleName
-      ) === 'owner' ||
-      normalize(
-        access?.roleName
-      ) === 'manager'
-    )
+  const summary = useMemo(() => {
+    const fullCleans = rows.filter(row => ['Checkout', 'Out/In', 'Blocked'].includes(row.reservationStatus)).length
+    const refreshes = rows.filter(row => row.serviceType === 'RF').length
+    const checkedOut = rows.filter(row => String(row.serviceType || '').toUpperCase().startsWith('OUT')).length
+    const complete = rows.filter(row => row.complete).length
+    const haChecked = rows.filter(row => Boolean(row.haSignedBy)).length
+    const fullyChecked = rows.filter(row => Boolean(row.haSignedBy && row.fohSignedBy)).length
+    return { fullCleans, refreshes, checkedOut, complete, haChecked, fullyChecked }
+  }, [rows])
 
-  const managerInitials =
-    getManagerInitials(access)
-
-  function markOut(
-    row: RoomRow
-  ) {
-    patch(
-      row.roomId,
-      {
-        serviceType: 'OUT'
-      }
-    )
-  }
-
-  function markRefresh(
-    row: RoomRow
-  ) {
-    patch(
-      row.roomId,
-      {
-        serviceType: 'RF'
-      }
-    )
-  }
-
-  function clearOutRf(
-    row: RoomRow
-  ) {
-    patch(
-      row.roomId,
-      {
-        serviceType: ''
-      }
-    )
-  }
-
-  function initialEnvelope(
-    row: RoomRow
-  ) {
-    if (
-      !canInitialEnvelope ||
-      !managerInitials
-    ) {
-      setMessage(
-        'Manager initials could not be determined from your profile.'
-      )
-
-      return
-    }
-
-    if (
-      !String(
-        row.serviceType || ''
-      )
-        .toUpperCase()
-        .startsWith('OUT')
-    ) {
-      setMessage(
-        'Mark the room OUT before initialing the envelope.'
-      )
-
-      return
-    }
-
-    patch(
-      row.roomId,
-      {
-        serviceType:
-          `OUT-${managerInitials}`
-      }
-    )
-  }
-
-  function toggleComplete(
-    row: RoomRow,
-    checked: boolean
-  ) {
-    if (!checked) {
-      patch(
-        row.roomId,
-        {
-          complete: false,
-          readyForInspection: false,
-          inspected: false
-        }
-      )
-
-      return
-    }
-
-    patch(
-      row.roomId,
-      {
-        complete: true,
-        readyForInspection: true,
-        inspected: false,
-        roomCondition:
-          row.roomCondition ||
-          'Ready for Inspection'
-      }
-    )
-  }
-
-  function toggleInspected(
-    row: RoomRow,
-    checked: boolean
-  ) {
-    if (!canInspect) {
-      return
-    }
-
-    if (
-      checked &&
-      !row.complete
-    ) {
-      setMessage(
-        'A room must be marked complete before it can be marked inspected.'
-      )
-
-      return
-    }
-
-    patch(
-      row.roomId,
-      {
-        inspected:
-          checked,
-
-        readyForInspection:
-          checked
-            ? false
-            : row.complete,
-
-        roomCondition:
-          checked
-            ? 'Vacant (Clean)'
-            : row.complete
-            ? 'Ready for Inspection'
-            : row.roomCondition
-      }
-    )
-  }
-
-  const summary =
-    useMemo(() => {
-      const fullCleans =
-        rows.filter(row =>
-          [
-            'Checkout',
-            'Out/In',
-            'Blocked'
-          ].includes(
-            row.reservationStatus
-          )
-        ).length
-
-      const refreshes =
-        rows.filter(
-          row =>
-            row.serviceType ===
-            'RF'
-        ).length
-
-      const checkedOut =
-        rows.filter(
-          row =>
-            String(
-              row.serviceType || ''
-            )
-              .toUpperCase()
-              .startsWith('OUT')
-        ).length
-
-      const complete =
-        rows.filter(
-          row => row.complete
-        ).length
-
-      const readyForInspection =
-        rows.filter(
-          row =>
-            row.complete &&
-            !row.inspected
-        ).length
-
-      const inspected =
-        rows.filter(
-          row => row.inspected
-        ).length
-
-      return {
-        fullCleans,
-        refreshes,
-        checkedOut,
-        complete,
-        readyForInspection,
-        inspected
-      }
-    }, [rows])
+  const filteredStaff = useMemo(() => {
+    const q = staffSearch.trim().toLowerCase()
+    if (!q) return staffOptions
+    return staffOptions.filter(option => option.name.toLowerCase().includes(q))
+  }, [staffOptions, staffSearch])
 
   return (
     <div className="ops-module hsk-module">
-
-      <div className="module-toolbar">
-
-        <div>
-
-          <div className="module-kicker">
-            Housekeeping
-          </div>
-
-          <h1>
-            Daily Room Board
-          </h1>
-
-          <p>
-            Daily housekeeping assignments,
-            checkout confirmation, refreshes,
-            room completion, inspection, and
-            room condition.
-          </p>
-
+      <div className="module-toolbar hsk-sticky-toolbar">
+        <div className="hsk-title-block">
+          <div className="module-kicker">Housekeeping</div>
+          <h1>Daily Room Board</h1>
+          <p>Assignments, room status, completion, checks, and next-shift condition.</p>
         </div>
 
-        <div className="toolbar-actions">
+        <div className="toolbar-actions hsk-toolbar-actions">
+          <div className={`hsk-save-indicator hsk-save-${saveState}`}>
+            {saveStatusLabel(saveState)}
+          </div>
 
           <label className="date-control">
-
             Date
-
             <input
               type="date"
               value={date}
-              onChange={e =>
-                setDate(
-                  e.target.value
-                )
-              }
+              onChange={e => setDate(e.target.value)}
             />
-
           </label>
 
-          <button
-            className="ops-secondary-btn"
-            onClick={load}
-          >
+          <button className="ops-secondary-btn" onClick={load} type="button">
             <RefreshCw size={16} />
             Refresh
           </button>
 
           <button
             className="ops-primary-btn"
-            onClick={save}
-            disabled={saving}
+            onClick={() => void saveRows(rowsRef.current, true)}
+            disabled={saveState === 'saving'}
+            type="button"
           >
             <Save size={16} />
-
-            {saving
-              ? 'Saving…'
-              : 'Save changes'}
+            Save all
           </button>
-
         </div>
-
       </div>
 
-      {message && (
-        <div className="module-message">
-          {message}
+      {message && <div className="module-message">{message}</div>}
+
+      <div className="hsk-breakfast-strip">
+        <div className="hsk-breakfast-title">
+          <UtensilsCrossed size={16} />
+          <strong>Breakfast · {breakfastDate || 'Tomorrow'}</strong>
         </div>
-      )}
+        {menuNeededRooms.length ? (
+          <div>
+            <span className="hsk-warning-dot">!</span>
+            Menu needed: <strong>{menuNeededRooms.join(', ')}</strong>
+          </div>
+        ) : (
+          <div className="hsk-breakfast-clear">No submitted breakfast bookings are waiting on a menu.</div>
+        )}
+      </div>
 
-      <div className="metric-row">
-
-        <div className="metric-card">
-          <span>
-            Full cleans
-          </span>
-          <strong>
-            {summary.fullCleans}
-          </strong>
-        </div>
-
-        <div className="metric-card">
-          <span>
-            Refreshes
-          </span>
-          <strong>
-            {summary.refreshes}
-          </strong>
-        </div>
-
-        <div className="metric-card">
-          <span>
-            Checked out
-          </span>
-          <strong>
-            {summary.checkedOut}
-          </strong>
-        </div>
-
-        <div className="metric-card">
-          <span>
-            Complete
-          </span>
-          <strong>
-            {summary.complete}
-          </strong>
-        </div>
-
-        <div className="metric-card">
-          <span>
-            Ready to inspect
-          </span>
-          <strong>
-            {summary.readyForInspection}
-          </strong>
-        </div>
-
-        <div className="metric-card">
-          <span>
-            Inspected
-          </span>
-          <strong>
-            {summary.inspected}
-          </strong>
-        </div>
-
+      <div className="metric-row hsk-metric-row">
+        <div className="metric-card"><span>Full cleans</span><strong>{summary.fullCleans}</strong></div>
+        <div className="metric-card"><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
+        <div className="metric-card"><span>Checked out</span><strong>{summary.checkedOut}</strong></div>
+        <div className="metric-card"><span>Complete</span><strong>{summary.complete}</strong></div>
+        <div className="metric-card"><span>HA checked</span><strong>{summary.haChecked}</strong></div>
+        <div className="metric-card"><span>Fully checked</span><strong>{summary.fullyChecked}</strong></div>
       </div>
 
       {loading ? (
-
-        <div className="module-empty">
-          Loading rooms…
-        </div>
-
+        <div className="module-empty">Loading rooms…</div>
       ) : (
-
         <div className="hsk-table-wrapper">
-
           <table className="hsk-table">
-
             <thead>
               <tr>
-                <th>Room</th>
+                <th className="hsk-sticky-room">Room</th>
                 <th>Status</th>
                 <th>Out / RF</th>
-                <th>Strip / Hold</th>
+                <th>Strip</th>
                 <th>Staff</th>
                 <th>Order</th>
                 <th>Complete</th>
-                <th>Inspected</th>
-                <th>Room condition</th>
-                <th>Next shift</th>
+                <th>Room checks</th>
+                <th>Condition</th>
+                <th>Next</th>
                 <th>Notes</th>
               </tr>
             </thead>
 
             <tbody>
-
               {rows.map(row => {
-
-                const outRf =
-                  String(
-                    row.serviceType ||
-                    ''
-                  ).toUpperCase()
-
-                const isOut =
-                  outRf.startsWith(
-                    'OUT'
-                  )
-
-                const isRefresh =
-                  outRf === 'RF'
-
-                const envelopeInitialed =
-                  /^OUT-[A-Z]{2,4}$/.test(
-                    outRf
-                  )
+                const outRf = String(row.serviceType || '').toUpperCase()
+                const isOut = outRf.startsWith('OUT')
+                const isRefresh = outRf === 'RF'
+                const envelopeInitialed = /^OUT-[A-Z]{2,4}$/.test(outRf)
+                const selectedStaff = splitAssigned(row.assignedTo)
 
                 return (
                   <tr key={row.roomId}>
-
-                    <td>
+                    <td className="hsk-sticky-room hsk-room-column">
                       <div className="hsk-room-cell">
                         <BedDouble size={15} />
-                        <strong>
-                          {row.roomName}
-                        </strong>
+                        <strong>{row.roomName}</strong>
                       </div>
+                      {row.breakfast.status !== 'none' && (
+                        <span className={`hsk-breakfast-badge hsk-breakfast-${row.breakfast.status}`}>
+                          {row.breakfast.status === 'needed' && 'Breakfast · menu needed'}
+                          {row.breakfast.status === 'received' && 'Breakfast · menu ✓'}
+                          {row.breakfast.status === 'declined' && 'Breakfast · declined'}
+                        </span>
+                      )}
                     </td>
 
                     <td>
                       <select
-                        value={
-                          row.reservationStatus
-                        }
-                        onChange={e =>
-                          patch(
-                            row.roomId,
-                            {
-                              reservationStatus:
-                                e.target.value
-                            }
-                          )
-                        }
+                        value={row.reservationStatus}
+                        onChange={e => patch(row.roomId, { reservationStatus: e.target.value })}
                       >
-                        {reservationOptions.map(
-                          value => (
-                            <option
-                              key={value}
-                              value={value}
-                            >
-                              {value || '—'}
-                            </option>
-                          )
-                        )}
+                        {reservationOptions.map(value => (
+                          <option key={value} value={value}>{value || '—'}</option>
+                        ))}
                       </select>
                     </td>
 
                     <td>
-
-                      <div
-                        style={{
-                          display: 'grid',
-                          gap: 5
-                        }}
-                      >
-
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns:
-                              'repeat(3, minmax(0, 1fr))',
-                            gap: 4
-                          }}
-                        >
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              clearOutRf(
-                                row
-                              )
-                            }
-                            style={{
-                              minHeight: 32,
-                              border:
-                                '1px solid var(--ths-line)',
-                              borderRadius: 5,
-                              background:
-                                !outRf
-                                  ? 'var(--ths-charcoal)'
-                                  : 'white',
-                              color:
-                                !outRf
-                                  ? 'white'
-                                  : 'var(--ths-text)',
-                              cursor:
-                                'pointer',
-                              fontSize: 10,
-                              fontWeight: 700
-                            }}
-                          >
-                            —
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              markOut(
-                                row
-                              )
-                            }
-                            style={{
-                              minHeight: 32,
-                              border:
-                                '1px solid var(--ths-line)',
-                              borderRadius: 5,
-                              background:
-                                isOut
-                                  ? 'var(--ths-charcoal)'
-                                  : 'white',
-                              color:
-                                isOut
-                                  ? 'white'
-                                  : 'var(--ths-text)',
-                              cursor:
-                                'pointer',
-                              fontSize: 10,
-                              fontWeight: 800
-                            }}
-                          >
-                            OUT
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              markRefresh(
-                                row
-                              )
-                            }
-                            style={{
-                              minHeight: 32,
-                              border:
-                                '1px solid var(--ths-line)',
-                              borderRadius: 5,
-                              background:
-                                isRefresh
-                                  ? 'var(--ths-charcoal)'
-                                  : 'white',
-                              color:
-                                isRefresh
-                                  ? 'white'
-                                  : 'var(--ths-text)',
-                              cursor:
-                                'pointer',
-                              fontSize: 10,
-                              fontWeight: 800
-                            }}
-                          >
-                            RF
-                          </button>
-
+                      <div className="hsk-out-controls">
+                        <div className="hsk-out-buttons">
+                          <button type="button" onClick={() => clearOutRf(row)} className={!outRf ? 'is-active' : ''}>—</button>
+                          <button type="button" onClick={() => markOut(row)} className={isOut ? 'is-active' : ''}>OUT</button>
+                          <button type="button" onClick={() => markRefresh(row)} className={isRefresh ? 'is-active' : ''}>RF</button>
                         </div>
-
                         {isOut && (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 5
-                            }}
-                          >
-
-                            <strong
-                              style={{
-                                fontSize: 10,
-                                whiteSpace:
-                                  'nowrap'
-                              }}
-                            >
-                              {outRf}
-                            </strong>
-
-                            {canInitialEnvelope &&
-                              !envelopeInitialed && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    initialEnvelope(
-                                      row
-                                    )
-                                  }
-                                  style={{
-                                    minHeight: 26,
-                                    padding:
-                                      '0 7px',
-                                    border:
-                                      '1px solid var(--ths-line)',
-                                    borderRadius: 5,
-                                    background:
-                                      '#f3f1ec',
-                                    color:
-                                      'var(--ths-text)',
-                                    cursor:
-                                      'pointer',
-                                    fontSize: 9,
-                                    fontWeight: 700
-                                  }}
-                                >
-                                  Initial envelope
-                                </button>
-                              )}
-
+                          <div className="hsk-envelope-row">
+                            <strong>{outRf}</strong>
+                            {canInitialEnvelope && !envelopeInitialed && (
+                              <button type="button" onClick={() => initialEnvelope(row)}>Initial</button>
+                            )}
                           </div>
                         )}
-
                       </div>
-
                     </td>
 
                     <td>
-                      <select
-                        value={
-                          row.stripHold
-                        }
-                        onChange={e =>
-                          patch(
-                            row.roomId,
-                            {
-                              stripHold:
-                                e.target.value
-                            }
-                          )
-                        }
-                      >
-                        {stripOptions.map(
-                          value => (
-                            <option
-                              key={value}
-                              value={value}
-                            >
-                              {value || '—'}
-                            </option>
-                          )
-                        )}
+                      <select value={row.stripHold} onChange={e => patch(row.roomId, { stripHold: e.target.value })}>
+                        {stripOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
                       </select>
                     </td>
 
-                    <td>
-                      <input
-                        value={
-                          row.assignedTo
-                        }
-                        onChange={e =>
-                          patch(
-                            row.roomId,
-                            {
-                              assignedTo:
-                                e.target.value
-                            }
-                          )
-                        }
-                        placeholder="Staff"
-                      />
+                    <td className="hsk-staff-cell">
+                      <div className="hsk-staff-picker">
+                        <button
+                          type="button"
+                          className="hsk-staff-trigger"
+                          onClick={() => {
+                            const opening = openStaffRoomId !== row.roomId
+                            setOpenStaffRoomId(opening ? row.roomId : null)
+                            setStaffSearch('')
+                          }}
+                        >
+                          <span>{selectedStaff.length ? selectedStaff.join(', ') : 'Select staff'}</span>
+                          <ChevronDown size={14} />
+                        </button>
+
+                        {openStaffRoomId === row.roomId && (
+                          <div className="hsk-staff-popover">
+                            <div className="hsk-staff-search">
+                              <Search size={14} />
+                              <input
+                                autoFocus
+                                value={staffSearch}
+                                onChange={e => setStaffSearch(e.target.value)}
+                                placeholder="Search current staff"
+                              />
+                            </div>
+                            <div className="hsk-staff-options">
+                              {filteredStaff.map(option => {
+                                const checked = selectedStaff.includes(option.name)
+                                return (
+                                  <button
+                                    type="button"
+                                    key={option.id}
+                                    className={checked ? 'is-selected' : ''}
+                                    onClick={() => toggleStaff(row, option.name)}
+                                  >
+                                    <span className="hsk-staff-check">{checked && <Check size={13} />}</span>
+                                    {option.name}
+                                  </button>
+                                )
+                              })}
+                              {!filteredStaff.length && <div className="hsk-no-staff">No matching active staff.</div>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                     <td>
@@ -952,155 +582,73 @@ export default function HousekeepingBoard() {
                         className="order-input"
                         type="number"
                         min="1"
-                        value={
-                          row.cleanOrder ??
-                          ''
-                        }
-                        onChange={e =>
-                          patch(
-                            row.roomId,
-                            {
-                              cleanOrder:
-                                e.target.value
-                                  ? Number(
-                                      e.target.value
-                                    )
-                                  : null
-                            }
-                          )
-                        }
+                        value={row.cleanOrder ?? ''}
+                        onChange={e => patch(row.roomId, {
+                          cleanOrder: e.target.value ? Number(e.target.value) : null
+                        })}
                       />
                     </td>
 
                     <td className="check-cell">
                       <input
                         type="checkbox"
-                        checked={
-                          row.complete
-                        }
-                        onChange={e =>
-                          toggleComplete(
-                            row,
-                            e.target.checked
-                          )
-                        }
+                        checked={row.complete}
+                        onChange={e => toggleComplete(row, e.target.checked)}
                       />
                     </td>
 
-                    <td className="check-cell">
-                      <input
-                        type="checkbox"
-                        checked={
-                          Boolean(
-                            row.inspected
-                          )
-                        }
-                        disabled={
-                          !canInspect ||
-                          !row.complete
-                        }
-                        onChange={e =>
-                          toggleInspected(
-                            row,
-                            e.target.checked
-                          )
-                        }
-                        title={
-                          !canInspect
-                            ? 'You do not have permission to inspect rooms.'
-                            : !row.complete
-                            ? 'Room must be complete before inspection.'
-                            : 'Mark room inspected'
-                        }
-                      />
+                    <td className="hsk-signoff-cell">
+                      <div className="hsk-signoff-stack">
+                        <div className={row.haSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
+                          <span className="hsk-signoff-label">HA</span>
+                          {row.haSignedBy ? (
+                            <span className="hsk-signoff-value">✓ {row.haSignedName} {formatShortTime(row.haSignedAt)}</span>
+                          ) : canHaSignoff && row.complete ? (
+                            <button type="button" onClick={() => void signOff(row, 'ha')}>Sign</button>
+                          ) : (
+                            <span className="hsk-signoff-pending">Pending</span>
+                          )}
+                        </div>
+
+                        <div className={row.fohSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
+                          <span className="hsk-signoff-label">FOH</span>
+                          {row.fohSignedBy ? (
+                            <span className="hsk-signoff-value">✓ {row.fohSignedName} {formatShortTime(row.fohSignedAt)}</span>
+                          ) : canFohSignoff && row.complete ? (
+                            <button type="button" onClick={() => void signOff(row, 'foh')}>Sign</button>
+                          ) : (
+                            <span className="hsk-signoff-pending">Pending</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
 
                     <td>
-                      <select
-                        value={
-                          row.roomCondition
-                        }
-                        onChange={e =>
-                          patch(
-                            row.roomId,
-                            {
-                              roomCondition:
-                                e.target.value
-                            }
-                          )
-                        }
-                      >
-                        {conditionOptions.map(
-                          value => (
-                            <option
-                              key={value}
-                              value={value}
-                            >
-                              {value || '—'}
-                            </option>
-                          )
-                        )}
+                      <select value={row.roomCondition} onChange={e => patch(row.roomId, { roomCondition: e.target.value })}>
+                        {conditionOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
                       </select>
                     </td>
 
                     <td>
-                      <select
-                        value={
-                          row.nextShiftCondition
-                        }
-                        onChange={e =>
-                          patch(
-                            row.roomId,
-                            {
-                              nextShiftCondition:
-                                e.target.value
-                            }
-                          )
-                        }
-                      >
-                        {nextShiftOptions.map(
-                          value => (
-                            <option
-                              key={value}
-                              value={value}
-                            >
-                              {value || '—'}
-                            </option>
-                          )
-                        )}
+                      <select value={row.nextShiftCondition} onChange={e => patch(row.roomId, { nextShiftCondition: e.target.value })}>
+                        {nextShiftOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
                       </select>
                     </td>
 
                     <td>
                       <input
-                        value={
-                          row.notes
-                        }
-                        onChange={e =>
-                          patch(
-                            row.roomId,
-                            {
-                              notes:
-                                e.target.value
-                            }
-                          )
-                        }
+                        value={row.notes}
+                        onChange={e => patch(row.roomId, { notes: e.target.value })}
                         placeholder="Notes"
                       />
                     </td>
-
                   </tr>
                 )
               })}
-
             </tbody>
-
           </table>
-
         </div>
-
       )}
-
     </div>
   )
 }
