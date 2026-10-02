@@ -73,7 +73,8 @@ const MODULE_PERMISSION:Record<string,string|undefined> = {
   housekeeping:'housekeeping.dashboard.view',
   room_checks:'room_checks.view',
   projects:'projects.view',
-  maintenance:'projects.view'
+  maintenance:undefined,
+  shift_reports:undefined
 }
 
 export async function canUseModule(moduleKey:string) {

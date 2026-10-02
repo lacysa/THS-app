@@ -36,16 +36,16 @@ export default async function LoginPage({
             <div className="notice error">Phone sign-in is not configured on the server yet. Add SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY in Vercel. Email sign-in still works.</div>
           )}
 
-          {params.error === 'phone_not_found' && (
-            <div className="notice error">That phone number is not attached to an active staff profile.</div>
+          {['phone_not_found','identifier_not_found'].includes(params.error || '') && (
+            <div className="notice error">That username, phone number, or email is not attached to an active staff account.</div>
           )}
 
-          {params.error && !['phone_config','phone_not_found'].includes(params.error) && (
-            <div className="notice error">We could not sign you in with that phone number/email and password.</div>
+          {params.error && !['phone_config','phone_not_found','identifier_not_found'].includes(params.error) && (
+            <div className="notice error">We could not sign you in with that username, phone/email, and password.</div>
           )}
 
           <div className="field">
-            <label>Phone number or email</label>
+            <label>Username, phone number, or email</label>
             <input type="text" name="identifier" required autoComplete="username" />
           </div>
 

@@ -16,7 +16,8 @@ import {
   LogOut,
   Bell,
   Search,
-  ShieldCheck
+  ShieldCheck,
+  ScrollText
 } from 'lucide-react'
 
 type ModuleRow = {
@@ -67,6 +68,7 @@ const iconMap: Record<string, any> = {
   room_checks: ShieldCheck,
   projects: FolderKanban,
   maintenance: Wrench,
+  shift_reports: ScrollText,
   breakfast_guest: UtensilsCrossed
 }
 
@@ -80,7 +82,8 @@ const permissionByModule: Record<string, string | undefined> = {
   housekeeping: 'housekeeping.dashboard.view',
   room_checks: 'room_checks.view',
   projects: 'projects.view',
-  maintenance: 'projects.view',
+  maintenance: undefined,
+  shift_reports: undefined,
   breakfast_guest: undefined
 }
 
@@ -95,6 +98,7 @@ const hrefFallback: Record<string, string> = {
   room_checks: '/room-checks',
   projects: '/projects',
   maintenance: '/maintenance',
+  shift_reports: '/shift-reports',
   breakfast_guest: '/breakfast'
 }
 
@@ -110,6 +114,7 @@ const operationsModules = new Set([
   'housekeeping',
   'room_checks',
   'projects',
+  'shift_reports',
   'maintenance'
 ])
 

@@ -39,6 +39,18 @@ async function resolveAuthEmailFromStaffProfile(identifier:string) {
     return data.user?.email || null
   }
 
+  const { data:staffMember } = await admin
+    .from('staff_members')
+    .select('auth_user_id,active')
+    .ilike('username', identifier.trim())
+    .eq('active', true)
+    .maybeSingle()
+
+  if (staffMember?.auth_user_id) {
+    const { data, error:userError } = await admin.auth.admin.getUserById(staffMember.auth_user_id)
+    if (!userError && data.user?.email) return data.user.email
+  }
+
   const wanted = normalizePhone(identifier)
   const { data:profiles, error } = await admin
     .from('staff_profiles')
@@ -87,13 +99,13 @@ export async function POST(req: NextRequest) {
     return loginRedirect(req, 'invalid_credentials')
   }
 
-  // Phone login intentionally uses staff_profiles.phone as an alias to the existing
-  // Supabase Auth account. It does NOT modify auth.users.phone and does NOT require SMS.
+  // Username / phone login resolves to the existing Supabase Auth email. Phone uses
+  // staff_profiles.phone as an alias and does not require SMS. Username uses staff_members.username.
   if (!hasAdminKey()) return loginRedirect(req, 'phone_config')
 
   try {
     const authEmail = await resolveAuthEmailFromStaffProfile(identifier)
-    if (!authEmail) return loginRedirect(req, 'phone_not_found')
+    if (!authEmail) return loginRedirect(req, 'identifier_not_found')
 
     const alias = await supabase.auth.signInWithPassword({ email:authEmail, password })
     if (alias.error) return loginRedirect(req, 'invalid_credentials')
