@@ -45,6 +45,17 @@ type Access = {
   isAdmin: boolean
 }
 
+type NotificationRow = {
+  id: string
+  notification_type: string
+  title: string
+  message: string
+  room_id: string | null
+  service_date: string | null
+  read_at: string | null
+  created_at: string
+}
+
 const iconMap: Record<string, any> = {
   dashboard: LayoutGrid,
   front_desk: ConciergeBell,
@@ -117,6 +128,20 @@ function initials(name: string) {
   return `${pieces[0][0]}${pieces[pieces.length - 1][0]}`.toUpperCase()
 }
 
+function notificationTime(value: string) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Detroit',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).format(new Date(value))
+  } catch {
+    return ''
+  }
+}
+
 export default function StaffShell({
   title,
   children
@@ -132,6 +157,18 @@ export default function StaffShell({
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
 
+  const [notifications, setNotifications] =
+    useState<NotificationRow[]>([])
+
+  const [unreadCount, setUnreadCount] =
+    useState(0)
+
+  const [notificationsOpen, setNotificationsOpen] =
+    useState(false)
+
+  const [notificationsLoading, setNotificationsLoading] =
+    useState(false)
+
   useEffect(() => {
     fetch('/api/me')
       .then(r => (r.ok ? r.json() : null))
@@ -146,6 +183,101 @@ export default function StaffShell({
       })
       .catch(() => {})
   }, [])
+
+  async function loadNotifications(showLoading = false) {
+    if (showLoading) {
+      setNotificationsLoading(true)
+    }
+
+    try {
+      const r = await fetch('/api/notifications', {
+        cache: 'no-store'
+      })
+
+      const d = await r.json().catch(() => ({}))
+
+      if (!r.ok) return
+
+      setNotifications(d.notifications || [])
+      setUnreadCount(Number(d.unread || 0))
+    } finally {
+      if (showLoading) {
+        setNotificationsLoading(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    void loadNotifications()
+
+    const timer = window.setInterval(() => {
+      void loadNotifications()
+    }, 30000)
+
+    return () => {
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  async function markNotificationRead(id: string) {
+    const target = notifications.find(n => n.id === id)
+
+    if (!target || target.read_at) {
+      return
+    }
+
+    const r = await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ id })
+    })
+
+    if (!r.ok) return
+
+    setNotifications(current =>
+      current.map(item =>
+        item.id === id
+          ? {
+              ...item,
+              read_at: new Date().toISOString()
+            }
+          : item
+      )
+    )
+
+    setUnreadCount(current =>
+      Math.max(0, current - 1)
+    )
+  }
+
+  async function markAllNotificationsRead() {
+    if (unreadCount === 0) return
+
+    const r = await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        markAllRead: true
+      })
+    })
+
+    if (!r.ok) return
+
+    const now = new Date().toISOString()
+
+    setNotifications(current =>
+      current.map(item => ({
+        ...item,
+        read_at: item.read_at || now
+      }))
+    )
+
+    setUnreadCount(0)
+  }
 
   const nav = useMemo(
     () =>
@@ -244,11 +376,16 @@ export default function StaffShell({
       item.href ||
       '#'
 
-    const exactOnlyRoutes = new Set(['/dashboard','/breakfast'])
+    const exactOnlyRoutes =
+      new Set(['/dashboard', '/breakfast'])
+
     const active =
       exactOnlyRoutes.has(href)
         ? pathname === href
-        : pathname === href || pathname.startsWith(`${href}/`)
+        : (
+            pathname === href ||
+            pathname.startsWith(`${href}/`)
+          )
 
     const preview = item.published === false
 
@@ -493,13 +630,123 @@ export default function StaffShell({
 
           <div className="staff-user-area">
 
-            <button
-              className="ops-icon-btn"
-              aria-label="Notifications"
-              type="button"
-            >
-              <Bell size={18} />
-            </button>
+            <div className="notification-center">
+
+              <button
+                className="ops-icon-btn notification-bell-btn"
+                aria-label={
+                  unreadCount > 0
+                    ? `Notifications, ${unreadCount} unread`
+                    : 'Notifications'
+                }
+                type="button"
+                onClick={() => {
+                  const next =
+                    !notificationsOpen
+
+                  setNotificationsOpen(next)
+
+                  if (next) {
+                    void loadNotifications(true)
+                  }
+                }}
+              >
+                <Bell size={18} />
+
+                {unreadCount > 0 && (
+                  <span className="notification-count">
+                    {unreadCount > 99
+                      ? '99+'
+                      : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="notification-panel">
+
+                  <div className="notification-panel-head">
+                    <div>
+                      <strong>
+                        Notifications
+                      </strong>
+
+                      <span>
+                        {unreadCount > 0
+                          ? `${unreadCount} unread`
+                          : 'All caught up'}
+                      </span>
+                    </div>
+
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void markAllNotificationsRead()
+                        }
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="notification-list">
+
+                    {notificationsLoading &&
+                      notifications.length === 0 && (
+                        <div className="notification-empty">
+                          Loading notifications…
+                        </div>
+                      )}
+
+                    {!notificationsLoading &&
+                      notifications.length === 0 && (
+                        <div className="notification-empty">
+                          No notifications yet.
+                        </div>
+                      )}
+
+                    {notifications.map(notification => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        className={
+                          notification.read_at
+                            ? 'notification-item'
+                            : 'notification-item unread'
+                        }
+                        onClick={() =>
+                          void markNotificationRead(
+                            notification.id
+                          )
+                        }
+                      >
+                        <span className="notification-item-dot" />
+
+                        <span className="notification-item-copy">
+                          <strong>
+                            {notification.title}
+                          </strong>
+
+                          <span>
+                            {notification.message}
+                          </span>
+
+                          <small>
+                            {notificationTime(
+                              notification.created_at
+                            )}
+                          </small>
+                        </span>
+                      </button>
+                    ))}
+
+                  </div>
+
+                </div>
+              )}
+
+            </div>
 
             <div className="ops-avatar">
               {initials(displayName)}

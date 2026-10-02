@@ -6,6 +6,8 @@ import './styles/controls.css'
 import './styles/settings.css'
 import './styles/breakfast.css'
 import './styles/operations.css'
+import './styles/housekeeping.css'
+import './styles/notifications.css'
 
 export const metadata = {
   title: 'THS Operations Hub',
@@ -19,7 +21,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+      </body>
     </html>
   )
 }
