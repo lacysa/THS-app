@@ -93,6 +93,7 @@ export default async function DashboardPage() {
 
   let housekeeping = (housekeepingRes.data || []).map((row:any)=>({
     id:String(row.id),
+    roomId:String(row.room_id || ''),
     roomName:roomName(row.room_id,roomMap),
     reservationStatus:String(row.reservation_status || ''),
     serviceType:String(row.service_type || ''),
