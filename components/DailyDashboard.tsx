@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import {
   BedDouble,
   BellRing,
@@ -15,6 +16,7 @@ type BreakfastRow = {
   timeSlot:string
   status:string
   menuSubmitted:boolean
+  note?:string
 }
 
 type HousekeepingRow = {
@@ -78,6 +80,10 @@ function titleCase(value:string) {
   return value.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())
 }
 
+function inventoryHref(department:string) {
+  return `/inventory/${department.replace(/_/g,'-')}`
+}
+
 export default function DailyDashboard({
   displayName,
   todayLabel,
@@ -108,27 +114,31 @@ export default function DailyDashboard({
       label:'Housekeeping',
       value:`${hkComplete.length}/${housekeeping.length}`,
       sub:'rooms complete',
-      icon:BedDouble
+      icon:BedDouble,
+      href:'/housekeeping'
     } : null,
     showBreakfast ? {
       label:'Breakfast',
       value:String(breakfastScheduled.length),
       sub:`${missingMenus.length} missing menu${missingMenus.length===1?'':'s'}`,
-      icon:UtensilsCrossed
+      icon:UtensilsCrossed,
+      href:'/front-desk'
     } : null,
     showMaintenance ? {
       label:'Maintenance',
       value:String(maintenanceOpen.length),
       sub:`${urgentMaintenance.length} urgent`,
-      icon:Wrench
+      icon:Wrench,
+      href:'/maintenance'
     } : null,
     showInventory ? {
       label:'Inventory',
       value:String(openInventory.length),
       sub:'open order requests',
-      icon:Package
+      icon:Package,
+      href:openInventory[0] ? inventoryHref(openInventory[0].department) : '/dashboard'
     } : null
-  ].filter(Boolean) as Array<{label:string;value:string;sub:string;icon:any}>
+  ].filter(Boolean) as Array<{label:string;value:string;sub:string;icon:any;href:string}>
 
   return (
     <div className="daily-dashboard">
@@ -146,15 +156,15 @@ export default function DailyDashboard({
 
       {metrics.length > 0 && (
         <div className="daily-metric-grid">
-          {metrics.map(({label,value,sub,icon:Icon})=>(
-            <section className="daily-metric-card" key={label}>
+          {metrics.map(({label,value,sub,icon:Icon,href})=>(
+            <Link className="daily-metric-card daily-link-card" href={href} key={label}>
               <span className="daily-metric-icon"><Icon size={17}/></span>
               <div>
                 <span>{label}</span>
                 <strong>{value}</strong>
                 <small>{sub}</small>
               </div>
-            </section>
+            </Link>
           ))}
         </div>
       )}
@@ -162,21 +172,21 @@ export default function DailyDashboard({
       <div className="daily-dashboard-grid">
         {showHousekeeping && (
           <section className="daily-panel">
-            <div className="daily-panel-head">
+            <Link href="/housekeeping" className="daily-panel-head daily-panel-link">
               <div><BedDouble size={17}/><strong>Housekeeping today</strong></div>
               <span>{housekeeping.length} assigned</span>
-            </div>
+            </Link>
             <div className="daily-list">
               {housekeeping.length===0 && <div className="daily-empty">No housekeeping rooms assigned.</div>}
               {housekeeping.map(row=>(
-                <div className="daily-list-row" key={row.id}>
+                <Link href="/housekeeping" className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-main">
                     <strong>{row.roomName}</strong>
                     <span>{[row.reservationStatus,row.serviceType,row.assignedTo].filter(Boolean).join(' · ') || 'Assigned clean'}</span>
                     {row.notes && <small>{row.notes}</small>}
                   </div>
                   <span className={row.complete?'daily-state done':'daily-state'}>{row.complete?'Complete':'Open'}</span>
-                </div>
+                </Link>
               ))}
             </div>
           </section>
@@ -184,23 +194,24 @@ export default function DailyDashboard({
 
         {showBreakfast && (
           <section className="daily-panel">
-            <div className="daily-panel-head">
+            <Link href="/front-desk" className="daily-panel-head daily-panel-link">
               <div><UtensilsCrossed size={17}/><strong>Breakfast</strong></div>
               <span>Service {breakfastDate}</span>
-            </div>
+            </Link>
             <div className="daily-list">
               {breakfastScheduled.length===0 && <div className="daily-empty">No breakfast rooms scheduled.</div>}
               {breakfastScheduled.map(row=>(
-                <div className="daily-list-row" key={row.id}>
+                <Link href="/front-desk" className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-time">{formatTime(row.timeSlot)}</div>
                   <div className="daily-row-main">
                     <strong>{row.roomName}</strong>
                     <span>{row.lastName || 'Guest'}</span>
+                    {row.note && <small>{row.note}</small>}
                   </div>
                   <span className={row.menuSubmitted?'daily-state done':'daily-state warning'}>
                     {row.menuSubmitted?'Menu received':'Menu needed'}
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           </section>
@@ -208,20 +219,20 @@ export default function DailyDashboard({
 
         {showMaintenance && (
           <section className="daily-panel">
-            <div className="daily-panel-head">
+            <Link href="/maintenance" className="daily-panel-head daily-panel-link">
               <div><Wrench size={17}/><strong>Maintenance</strong></div>
               <span>{maintenanceOpen.length} open</span>
-            </div>
+            </Link>
             <div className="daily-list">
               {maintenanceOpen.length===0 && <div className="daily-empty">No open maintenance items.</div>}
               {maintenanceOpen.slice(0,10).map(row=>(
-                <div className="daily-list-row" key={row.id}>
+                <Link href="/maintenance" className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-main">
                     <strong>{row.location}</strong>
                     <span>{row.title}</span>
                   </div>
                   <span className={`daily-state ${row.priority==='urgent'?'danger':''}`}>{titleCase(row.priority)}</span>
-                </div>
+                </Link>
               ))}
             </div>
           </section>
@@ -236,14 +247,14 @@ export default function DailyDashboard({
             <div className="daily-list">
               {openInventory.length===0 && <div className="daily-empty">No outstanding inventory requests.</div>}
               {openInventory.slice(0,12).map(row=>(
-                <div className="daily-list-row" key={row.id}>
+                <Link href={inventoryHref(row.department)} className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-main">
                     <strong>{row.itemName}</strong>
                     <span>{titleCase(row.department)}{row.quantity?` · ${row.quantity}`:''}</span>
                     {row.note && <small>{row.note}</small>}
                   </div>
                   <span className="daily-state">{titleCase(row.status)}</span>
-                </div>
+                </Link>
               ))}
             </div>
           </section>
@@ -257,16 +268,16 @@ export default function DailyDashboard({
             </div>
             <div className="daily-notes-grid">
               {showLaundry && (
-                <div className="daily-note-block">
+                <Link href="/laundry" className="daily-note-block daily-note-link">
                   <strong>Laundry</strong>
                   <p>{laundryNote || 'No laundry shift note entered yet.'}</p>
-                </div>
+                </Link>
               )}
               {showLobby && (
-                <div className="daily-note-block">
+                <Link href="/lobby" className="daily-note-block daily-note-link">
                   <strong>Lobby</strong>
                   <p>{lobbyNote || 'No lobby shift note entered yet.'}</p>
-                </div>
+                </Link>
               )}
             </div>
           </section>
