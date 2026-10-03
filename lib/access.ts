@@ -16,6 +16,8 @@ export type StaffAccess = {
   canManageModules:boolean
   permissions:string[]
   capabilities:string[]
+  staffMemberId:string|null
+  moduleAccessOverrides:Record<string,boolean>
 }
 
 export async function getStaffAccess():Promise<StaffAccess|null> {
@@ -34,6 +36,7 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
 
   let permissions:string[] = []
   let capabilities:string[] = []
+  let moduleAccessOverrides:Record<string,boolean> = {}
   if ((profile as any).role_id) {
     const { data:rows } = await supabase
       .from('role_permissions')
@@ -54,11 +57,21 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     .maybeSingle()
 
   if (member?.id) {
-    const { data:capRows } = await supabase
-      .from('staff_member_capabilities')
-      .select('capability_key')
-      .eq('staff_member_id',member.id)
+    const [{ data:capRows },{ data:accessRows }] = await Promise.all([
+      supabase
+        .from('staff_member_capabilities')
+        .select('capability_key')
+        .eq('staff_member_id',member.id),
+      supabase
+        .from('staff_module_access')
+        .select('module_key,allowed')
+        .eq('staff_member_id',member.id)
+    ])
+
     capabilities = (capRows || []).map((row:any)=>row.capability_key).filter(Boolean)
+    moduleAccessOverrides = Object.fromEntries(
+      (accessRows || []).map((row:any)=>[String(row.module_key),Boolean(row.allowed)])
+    )
   }
 
   return {
@@ -76,7 +89,9 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     canPreviewUnpublished:Boolean(roleRaw?.can_preview_unpublished),
     canManageModules:Boolean(roleRaw?.can_manage_modules),
     permissions,
-    capabilities
+    capabilities,
+    staffMemberId:member?.id || null,
+    moduleAccessOverrides
   }
 }
 
@@ -102,6 +117,10 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   if (module.published === false && !access.canPreviewUnpublished) return false
 
   const key = String(module.module_key || '')
+
+  if (Object.prototype.hasOwnProperty.call(access.moduleAccessOverrides,key)) {
+    return access.moduleAccessOverrides[key]
+  }
 
   if (key === 'laundry' || key === 'laundry_inventory') {
     return access.isAdmin || hasAnyCapability(access,[
