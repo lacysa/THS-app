@@ -168,6 +168,7 @@ export async function GET(req: NextRequest) {
           ? (peopleById.get(String(savedRow.foh_signed_by)) as any)?.name || 'Staff'
           : null,
         fohSignedAt: savedRow.foh_signed_at || null,
+        housekeeperAttested: Boolean(savedRow.housekeeper_attested_by),
         housekeeperAttestedBy: savedRow.housekeeper_attested_by || null,
         housekeeperAttestedName: savedRow.housekeeper_attested_by
           ? (peopleById.get(String(savedRow.housekeeper_attested_by)) as any)?.name || 'Staff'
