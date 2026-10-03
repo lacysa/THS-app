@@ -21,7 +21,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Package,
-  Building2
+  Building2,
+  BookOpen
 } from 'lucide-react'
 
 type ModuleRow = {
