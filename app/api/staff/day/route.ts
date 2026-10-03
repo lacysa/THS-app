@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { formatTime24, generateTimeSlots } from '@/lib/time'
 
 export const dynamic = 'force-dynamic'
@@ -28,11 +29,13 @@ export async function GET(req:NextRequest) {
 
   let menuNotes:any[] = []
   if (bookingIds.length) {
-    const {data,error} = await supabase
+    const admin = createSupabaseAdmin()
+    const {data,error} = await admin
       .from('breakfast_menu_notes')
       .select('booking_id,note,updated_at')
       .in('booking_id',bookingIds)
-    if (!error) menuNotes = data || []
+    if (error) return NextResponse.json({message:error.message},{status:500})
+    menuNotes = data || []
   }
   const noteByBooking = new Map<string,string>((menuNotes || []).map((row:any)=>[row.booking_id,row.note || '']))
 
