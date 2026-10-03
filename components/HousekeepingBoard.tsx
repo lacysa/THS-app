@@ -527,201 +527,190 @@ export default function HousekeepingBoard() {
       {loading ? (
         <div className="module-empty">Loading rooms…</div>
       ) : (
-        <div className="hsk-table-wrapper">
-          <table className="hsk-table">
-            <thead>
-              <tr>
-                <th className="hsk-sticky-room">Room</th>
-                <th>Status</th>
-                <th>Out / RF</th>
-                <th>Strip</th>
-                <th>Staff</th>
-                <th>Order</th>
-                <th>Complete</th>
-                <th>Room checks</th>
-                <th>Condition</th>
-                <th>Next</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
+        <div className="hsk-manager-grid">
+          {rows.map(row => {
+            const outRf = String(row.serviceType || '').toUpperCase()
+            const isOut = outRf.startsWith('OUT')
+            const isRefresh = outRf === 'RF'
+            const envelopeInitialed = /^OUT-[A-Z]{2,4}$/.test(outRf)
+            const selectedStaff = splitAssigned(row.assignedTo)
 
-            <tbody>
-              {rows.map(row => {
-                const outRf = String(row.serviceType || '').toUpperCase()
-                const isOut = outRf.startsWith('OUT')
-                const isRefresh = outRf === 'RF'
-                const envelopeInitialed = /^OUT-[A-Z]{2,4}$/.test(outRf)
-                const selectedStaff = splitAssigned(row.assignedTo)
+            return (
+              <article id={`room-${row.roomId}`} className={`hsk-manager-card ${row.complete ? 'complete' : ''}`} key={row.roomId}>
+                <div className="hsk-manager-card-head">
+                  <div>
+                    <div className="hsk-room-cell">
+                      <BedDouble size={16} />
+                      <strong>{row.roomName}</strong>
+                    </div>
+                    {row.breakfast.status !== 'none' && (
+                      <span className={`hsk-breakfast-badge hsk-breakfast-${row.breakfast.status}`}>
+                        {row.breakfast.status === 'needed' && 'Breakfast · menu needed'}
+                        {row.breakfast.status === 'received' && 'Breakfast · menu ✓'}
+                        {row.breakfast.status === 'declined' && 'Breakfast · declined'}
+                      </span>
+                    )}
+                  </div>
 
-                return (
-                  <tr key={row.roomId}>
-                    <td className="hsk-sticky-room hsk-room-column">
-                      <div className="hsk-room-cell">
-                        <BedDouble size={15} />
-                        <strong>{row.roomName}</strong>
-                      </div>
-                      {row.breakfast.status !== 'none' && (
-                        <span className={`hsk-breakfast-badge hsk-breakfast-${row.breakfast.status}`}>
-                          {row.breakfast.status === 'needed' && 'Breakfast · menu needed'}
-                          {row.breakfast.status === 'received' && 'Breakfast · menu ✓'}
-                          {row.breakfast.status === 'declined' && 'Breakfast · declined'}
-                        </span>
+                  <label className="hsk-complete-toggle">
+                    <input
+                      type="checkbox"
+                      checked={row.complete}
+                      onChange={e => toggleComplete(row, e.target.checked)}
+                    />
+                    <span>{row.complete ? 'Complete' : 'Open'}</span>
+                  </label>
+                </div>
+
+                <div className="hsk-manager-core">
+                  <label>
+                    Status
+                    <select value={row.reservationStatus} onChange={e => patch(row.roomId, { reservationStatus: e.target.value })}>
+                      {reservationOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
+                    </select>
+                  </label>
+
+                  <label>
+                    Strip / Hold
+                    <select value={row.stripHold} onChange={e => patch(row.roomId, { stripHold: e.target.value })}>
+                      {stripOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
+                    </select>
+                  </label>
+
+                  <label>
+                    Order
+                    <input
+                      className="order-input"
+                      type="number"
+                      min="1"
+                      value={row.cleanOrder ?? ''}
+                      onChange={e => patch(row.roomId, {
+                        cleanOrder: e.target.value ? Number(e.target.value) : null
+                      })}
+                    />
+                  </label>
+                </div>
+
+                <div className="hsk-manager-service-row">
+                  <span className="hsk-field-label">Service</span>
+                  <div className="hsk-out-buttons">
+                    <button type="button" onClick={() => clearOutRf(row)} className={!outRf ? 'is-active' : ''}>—</button>
+                    <button type="button" onClick={() => markOut(row)} className={isOut ? 'is-active' : ''}>OUT</button>
+                    <button type="button" onClick={() => markRefresh(row)} className={isRefresh ? 'is-active' : ''}>RF</button>
+                  </div>
+                  {isOut && (
+                    <div className="hsk-envelope-row">
+                      <strong>{outRf}</strong>
+                      {canInitialEnvelope && !envelopeInitialed && (
+                        <button type="button" onClick={() => initialEnvelope(row)}>Initial tip envelope</button>
                       )}
-                    </td>
+                    </div>
+                  )}
+                </div>
 
-                    <td>
-                      <select
-                        value={row.reservationStatus}
-                        onChange={e => patch(row.roomId, { reservationStatus: e.target.value })}
-                      >
-                        {reservationOptions.map(value => (
-                          <option key={value} value={value}>{value || '—'}</option>
-                        ))}
-                      </select>
-                    </td>
+                <div className="hsk-manager-staff-row">
+                  <span className="hsk-field-label">Assigned staff</span>
+                  <div className="hsk-staff-picker">
+                    <button
+                      type="button"
+                      className="hsk-staff-trigger"
+                      onClick={() => {
+                        const opening = openStaffRoomId !== row.roomId
+                        setOpenStaffRoomId(opening ? row.roomId : null)
+                        setStaffSearch('')
+                      }}
+                    >
+                      <span>{selectedStaff.length ? selectedStaff.join(', ') : 'Select staff'}</span>
+                      <ChevronDown size={14} />
+                    </button>
 
-                    <td>
-                      <div className="hsk-out-controls">
-                        <div className="hsk-out-buttons">
-                          <button type="button" onClick={() => clearOutRf(row)} className={!outRf ? 'is-active' : ''}>—</button>
-                          <button type="button" onClick={() => markOut(row)} className={isOut ? 'is-active' : ''}>OUT</button>
-                          <button type="button" onClick={() => markRefresh(row)} className={isRefresh ? 'is-active' : ''}>RF</button>
+                    {openStaffRoomId === row.roomId && (
+                      <div className="hsk-staff-popover">
+                        <div className="hsk-staff-search">
+                          <Search size={14} />
+                          <input
+                            autoFocus
+                            value={staffSearch}
+                            onChange={e => setStaffSearch(e.target.value)}
+                            placeholder="Search current staff"
+                          />
                         </div>
-                        {isOut && (
-                          <div className="hsk-envelope-row">
-                            <strong>{outRf}</strong>
-                            {canInitialEnvelope && !envelopeInitialed && (
-                              <button type="button" onClick={() => initialEnvelope(row)}>Initial</button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-
-                    <td>
-                      <select value={row.stripHold} onChange={e => patch(row.roomId, { stripHold: e.target.value })}>
-                        {stripOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
-                      </select>
-                    </td>
-
-                    <td className="hsk-staff-cell">
-                      <div className="hsk-staff-picker">
-                        <button
-                          type="button"
-                          className="hsk-staff-trigger"
-                          onClick={() => {
-                            const opening = openStaffRoomId !== row.roomId
-                            setOpenStaffRoomId(opening ? row.roomId : null)
-                            setStaffSearch('')
-                          }}
-                        >
-                          <span>{selectedStaff.length ? selectedStaff.join(', ') : 'Select staff'}</span>
-                          <ChevronDown size={14} />
-                        </button>
-
-                        {openStaffRoomId === row.roomId && (
-                          <div className="hsk-staff-popover">
-                            <div className="hsk-staff-search">
-                              <Search size={14} />
-                              <input
-                                autoFocus
-                                value={staffSearch}
-                                onChange={e => setStaffSearch(e.target.value)}
-                                placeholder="Search current staff"
-                              />
-                            </div>
-                            <div className="hsk-staff-options">
-                              {filteredStaff.map(option => {
-                                const checked = selectedStaff.includes(option.name)
-                                return (
-                                  <button
-                                    type="button"
-                                    key={option.id}
-                                    className={checked ? 'is-selected' : ''}
-                                    onClick={() => toggleStaff(row, option.name)}
-                                  >
-                                    <span className="hsk-staff-check">{checked && <Check size={13} />}</span>
-                                    {option.name}
-                                  </button>
-                                )
-                              })}
-                              {!filteredStaff.length && <div className="hsk-no-staff">No matching active staff.</div>}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-
-                    <td>
-                      <input
-                        className="order-input"
-                        type="number"
-                        min="1"
-                        value={row.cleanOrder ?? ''}
-                        onChange={e => patch(row.roomId, {
-                          cleanOrder: e.target.value ? Number(e.target.value) : null
-                        })}
-                      />
-                    </td>
-
-                    <td className="check-cell">
-                      <input
-                        type="checkbox"
-                        checked={row.complete}
-                        onChange={e => toggleComplete(row, e.target.checked)}
-                      />
-                    </td>
-
-                    <td className="hsk-signoff-cell">
-                      <div className="hsk-signoff-stack">
-                        <div className={row.haSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
-                          <span className="hsk-signoff-label">HA</span>
-                          {row.haSignedBy ? (
-                            <span className="hsk-signoff-value">✓ {row.haSignedName} {formatShortTime(row.haSignedAt)}</span>
-                          ) : canHaSignoff && row.complete ? (
-                            <button type="button" onClick={() => void signOff(row, 'ha')}>Sign</button>
-                          ) : (
-                            <span className="hsk-signoff-pending">Pending</span>
-                          )}
-                        </div>
-
-                        <div className={row.fohSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
-                          <span className="hsk-signoff-label">FOH</span>
-                          {row.fohSignedBy ? (
-                            <span className="hsk-signoff-value">✓ {row.fohSignedName} {formatShortTime(row.fohSignedAt)}</span>
-                          ) : canFohSignoff && row.complete ? (
-                            <button type="button" onClick={() => void signOff(row, 'foh')}>Sign</button>
-                          ) : (
-                            <span className="hsk-signoff-pending">Pending</span>
-                          )}
+                        <div className="hsk-staff-options">
+                          {filteredStaff.map(option => {
+                            const checked = selectedStaff.includes(option.name)
+                            return (
+                              <button
+                                type="button"
+                                key={option.id}
+                                className={checked ? 'is-selected' : ''}
+                                onClick={() => toggleStaff(row, option.name)}
+                              >
+                                <span className="hsk-staff-check">{checked && <Check size={13} />}</span>
+                                {option.name}
+                              </button>
+                            )
+                          })}
+                          {!filteredStaff.length && <div className="hsk-no-staff">No matching active staff.</div>}
                         </div>
                       </div>
-                    </td>
+                    )}
+                  </div>
+                </div>
 
-                    <td>
+                <div className="hsk-manager-checks">
+                  <div className={row.haSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
+                    <span className="hsk-signoff-label">HA Check</span>
+                    {row.haSignedBy ? (
+                      <span className="hsk-signoff-value">✓ {row.haSignedName} {formatShortTime(row.haSignedAt)}</span>
+                    ) : canHaSignoff && row.complete ? (
+                      <button type="button" onClick={() => void signOff(row, 'ha')}>Sign</button>
+                    ) : (
+                      <span className="hsk-signoff-pending">Pending</span>
+                    )}
+                  </div>
+
+                  <div className={row.fohSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
+                    <span className="hsk-signoff-label">FOH Check</span>
+                    {row.fohSignedBy ? (
+                      <span className="hsk-signoff-value">✓ {row.fohSignedName} {formatShortTime(row.fohSignedAt)}</span>
+                    ) : canFohSignoff && row.complete ? (
+                      <button type="button" onClick={() => void signOff(row, 'foh')}>Sign</button>
+                    ) : (
+                      <span className="hsk-signoff-pending">Pending</span>
+                    )}
+                  </div>
+                </div>
+
+                <details className="hsk-manager-details">
+                  <summary>Room details & notes</summary>
+                  <div className="hsk-manager-details-grid">
+                    <label>
+                      Condition
                       <select value={row.roomCondition} onChange={e => patch(row.roomId, { roomCondition: e.target.value })}>
                         {conditionOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
                       </select>
-                    </td>
+                    </label>
 
-                    <td>
+                    <label>
+                      Next shift
                       <select value={row.nextShiftCondition} onChange={e => patch(row.roomId, { nextShiftCondition: e.target.value })}>
                         {nextShiftOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
                       </select>
-                    </td>
+                    </label>
 
-                    <td>
-                      <input
+                    <label className="wide">
+                      Notes
+                      <textarea
                         value={row.notes}
                         onChange={e => patch(row.roomId, { notes: e.target.value })}
-                        placeholder="Notes"
+                        placeholder="Room notes"
                       />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </label>
+                  </div>
+                </details>
+              </article>
+            )
+          })}
         </div>
       )}
     </div>
