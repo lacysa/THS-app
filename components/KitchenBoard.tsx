@@ -64,7 +64,6 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
         <section className="card kitchen-board-card">
           <div className="kitchen-board-head">
             <div><strong>Breakfast delivery board</strong><span>Grouped by delivery time. Scroll vertically to move through service.</span></div>
-            <span className="pill">{data.groups.length} rooms</span>
           </div>
 
           <div className="kitchen-scroll-board">
