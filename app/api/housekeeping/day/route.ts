@@ -107,10 +107,7 @@ export async function GET(req: NextRequest) {
       String(access.roleName || '').toLowerCase() === 'housekeeping'
 
     const staffOptions = peopleData.people
-      .filter((person: any) => {
-        const caps = peopleData.byMember.get(String(person.id)) || new Set<string>()
-        return caps.has('housekeeping') || caps.has('runner')
-      })
+      .filter((person: any) => person.active !== false)
       .map((person: any) => ({ id: person.id, name: person.name }))
 
     const savedByRoom = new Map<string, any>()
