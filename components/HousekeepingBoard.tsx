@@ -42,6 +42,7 @@ type RoomRow = {
   fohSignedBy?: string | null
   fohSignedName?: string | null
   fohSignedAt?: string | null
+  housekeeperAttested?: boolean
   housekeeperAttestedBy?: string | null
   housekeeperAttestedName?: string | null
   housekeeperAttestedAt?: string | null
@@ -403,6 +404,7 @@ export default function HousekeepingBoard() {
 
   async function attestRoom(row:RoomRow, checked:boolean) {
     patch(row.roomId,{
+      housekeeperAttested: checked,
       housekeeperAttestedBy: checked ? 'pending-self' : null,
       housekeeperAttestedName: checked ? (access?.preferredName || access?.name || 'You') : null,
       housekeeperAttestedAt: checked ? new Date().toISOString() : null
@@ -545,7 +547,7 @@ export default function HousekeepingBoard() {
                 <label className="hsk-attestation">
                   <input
                     type="checkbox"
-                    checked={Boolean(row.housekeeperAttestedBy)}
+                    checked={Boolean(row.housekeeperAttested)}
                     onChange={e => void attestRoom(row,e.target.checked)}
                     disabled={row.complete}
                   />
@@ -559,7 +561,7 @@ export default function HousekeepingBoard() {
                   disabled={
                     !row.complete &&
                     (
-                      !row.housekeeperAttestedBy ||
+                      !row.housekeeperAttested ||
                       Boolean(blockingRoomId && blockingRoomId !== row.roomId)
                     )
                   }
