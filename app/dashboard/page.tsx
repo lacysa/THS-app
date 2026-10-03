@@ -53,7 +53,8 @@ export default async function DashboardPage() {
     breakfastRes,
     maintenanceRes,
     inventoryRes,
-    notesRes
+    notesRes,
+    menuNotesRes
   ] = await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('staff_members').select('id,name').eq('auth_user_id',access.userId).maybeSingle(),
@@ -76,6 +77,14 @@ export default async function DashboardPage() {
       : Promise.resolve({data:[],error:null}),
     (moduleKeys.has('laundry') || moduleKeys.has('lobby'))
       ? admin.from('department_daily_notes').select('department,note').eq('service_date',today).in('department',['laundry','lobby'])
+      : Promise.resolve({data:[],error:null}),
+    (
+      moduleKeys.has('front_desk') ||
+      moduleKeys.has('kitchen') ||
+      moduleKeys.has('daily_overview') ||
+      moduleKeys.has('breakfast_guest')
+    )
+      ? admin.from('breakfast_menu_notes').select('booking_id,note')
       : Promise.resolve({data:[],error:null})
   ])
 
@@ -102,13 +111,18 @@ export default async function DashboardPage() {
     )
   }
 
+  const menuNoteMap = new Map<string,string>(
+    (menuNotesRes.data || []).map((row:any)=>[String(row.booking_id),String(row.note || '')])
+  )
+
   const breakfast = (breakfastRes.data || []).map((row:any)=>({
     id:String(row.id),
     roomName:roomName(row.room_id,roomMap),
     lastName:String(row.last_name || ''),
     timeSlot:String(row.time_slot || ''),
     status:String(row.status || ''),
-    menuSubmitted:Boolean(row.menu_submitted)
+    menuSubmitted:Boolean(row.menu_submitted),
+    note:menuNoteMap.get(String(row.id)) || ''
   }))
 
   const maintenance = (maintenanceRes.data || []).map((row:any)=>({
