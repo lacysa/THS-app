@@ -42,6 +42,14 @@ type RoomRow = {
   fohSignedBy?: string | null
   fohSignedName?: string | null
   fohSignedAt?: string | null
+  housekeeperAttestedBy?: string | null
+  housekeeperAttestedName?: string | null
+  housekeeperAttestedAt?: string | null
+  checkIssueOpen?: boolean
+  checkIssueNote?: string
+  checkIssueBy?: string | null
+  checkIssueByName?: string | null
+  checkIssueAt?: string | null
   breakfast: {
     serviceDate: string
     status: BreakfastStatus
@@ -138,6 +146,9 @@ export default function HousekeepingBoard() {
   const [canFohSignoff, setCanFohSignoff] = useState(false)
   const [breakfastDate, setBreakfastDate] = useState('')
   const [menuNeededRooms, setMenuNeededRooms] = useState<string[]>([])
+  const [blockingRoomId, setBlockingRoomId] = useState<string | null>(null)
+  const [blockingRoomName, setBlockingRoomName] = useState<string | null>(null)
+  const [issueDrafts, setIssueDrafts] = useState<Record<string,string>>({})
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [dirty, setDirty] = useState(false)
   const [openStaffRoomId, setOpenStaffRoomId] = useState<string | null>(null)
@@ -191,6 +202,8 @@ export default function HousekeepingBoard() {
       setCanFohSignoff(Boolean(d.signoffAccess?.canFohSignoff))
       setBreakfastDate(d.breakfast?.serviceDate || '')
       setMenuNeededRooms(d.breakfast?.menuNeededRooms || [])
+      setBlockingRoomId(d.blockingRoomId || null)
+      setBlockingRoomName(d.blockingRoomName || null)
     } catch {
       setMessage('Could not load housekeeping board.')
     } finally {
@@ -292,6 +305,25 @@ export default function HousekeepingBoard() {
   }
 
   function toggleComplete(row: RoomRow, checked: boolean) {
+    if (
+      checked &&
+      viewMode === 'assigned' &&
+      blockingRoomId &&
+      blockingRoomId !== row.roomId
+    ) {
+      setMessage(`You must correct ${blockingRoomName || 'the flagged room'} and have it pass re-check before completing another room.`)
+      return
+    }
+
+    if (
+      checked &&
+      viewMode === 'assigned' &&
+      !row.housekeeperAttestedBy
+    ) {
+      setMessage('Please attest that this room is fully cleaned and up to The Hotel Saugatuck standards first.')
+      return
+    }
+
     if (!checked) {
       patch(row.roomId, {
         complete: false,
@@ -321,6 +353,60 @@ export default function HousekeepingBoard() {
       ? current.filter(item => item !== name)
       : [...current, name]
     patch(row.roomId, { assignedTo: next.join(', ') })
+  }
+
+  async function flagCheckIssue(row:RoomRow) {
+    const note = (issueDrafts[row.roomId] || '').trim()
+    if (!note) {
+      setMessage('Enter what needs to be corrected before flagging the room.')
+      return
+    }
+
+    const r = await fetch('/api/housekeeping/check-issue',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        serviceDate:dateRef.current,
+        roomId:row.roomId,
+        note,
+        action:'flag'
+      })
+    })
+    const d = await r.json().catch(()=>({}))
+    if(!r.ok){
+      setMessage(d.error || 'Could not flag room issue.')
+      return
+    }
+    setIssueDrafts(current=>({...current,[row.roomId]:''}))
+    setMessage(`${row.roomName} was sent back to housekeeping for correction.`)
+    await load()
+  }
+
+  async function clearCheckIssue(row:RoomRow) {
+    const r = await fetch('/api/housekeeping/check-issue',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        serviceDate:dateRef.current,
+        roomId:row.roomId,
+        action:'clear'
+      })
+    })
+    const d = await r.json().catch(()=>({}))
+    if(!r.ok){
+      setMessage(d.error || 'Could not clear room issue.')
+      return
+    }
+    setMessage(`${row.roomName} passed re-check.`)
+    await load()
+  }
+
+  async function attestRoom(row:RoomRow, checked:boolean) {
+    patch(row.roomId,{
+      housekeeperAttestedBy: checked ? 'pending-self' : null,
+      housekeeperAttestedName: checked ? (access?.preferredName || access?.name || 'You') : null,
+      housekeeperAttestedAt: checked ? new Date().toISOString() : null
+    })
   }
 
   async function signOff(row: RoomRow, kind: 'ha' | 'foh') {
@@ -439,6 +525,14 @@ export default function HousekeepingBoard() {
                   </span>
                 )}
 
+                {row.checkIssueOpen && (
+                  <div className="hsk-correction-alert">
+                    <strong>Correction required before continuing</strong>
+                    <span>{row.checkIssueNote || 'A room check found something that needs to be corrected.'}</span>
+                    {row.checkIssueByName && <small>Flagged by {row.checkIssueByName}</small>}
+                  </div>
+                )}
+
                 <label className="hsk-assigned-notes">
                   Notes
                   <textarea
@@ -448,13 +542,32 @@ export default function HousekeepingBoard() {
                   />
                 </label>
 
+                <label className="hsk-attestation">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(row.housekeeperAttestedBy)}
+                    onChange={e => void attestRoom(row,e.target.checked)}
+                    disabled={row.complete}
+                  />
+                  <span>I attest that this room has been fully cleaned, reset, and meets The Hotel Saugatuck standards.</span>
+                </label>
+
                 <button
                   type="button"
                   className={row.complete ? 'ops-secondary-btn hsk-complete-btn' : 'ops-primary-btn hsk-complete-btn'}
                   onClick={() => toggleComplete(row, !row.complete)}
+                  disabled={
+                    !row.complete &&
+                    (
+                      !row.housekeeperAttestedBy ||
+                      Boolean(blockingRoomId && blockingRoomId !== row.roomId)
+                    )
+                  }
                 >
                   <Check size={16} />
-                  {row.complete ? 'Mark incomplete' : 'Mark complete'}
+                  {row.checkIssueOpen
+                    ? 'Ready for re-check'
+                    : row.complete ? 'Mark incomplete' : 'Mark complete'}
                 </button>
               </article>
             ))}
@@ -679,11 +792,28 @@ export default function HousekeepingBoard() {
                           {row.haSignedBy ? (
                             <span className="hsk-signoff-value">✓ {row.haSignedName} {formatShortTime(row.haSignedAt)}</span>
                           ) : canHaSignoff && row.complete ? (
-                            <button type="button" onClick={() => void signOff(row, 'ha')}>Sign</button>
+                            <button type="button" onClick={() => void signOff(row, 'ha')}>Pass</button>
                           ) : (
                             <span className="hsk-signoff-pending">Pending</span>
                           )}
                         </div>
+
+                        {canHaSignoff && row.complete && !row.haSignedBy && (
+                          <div className="hsk-check-issue">
+                            <input
+                              value={issueDrafts[row.roomId] || ''}
+                              onChange={e=>setIssueDrafts(current=>({...current,[row.roomId]:e.target.value}))}
+                              placeholder="Problem found…"
+                            />
+                            <button type="button" onClick={()=>void flagCheckIssue(row)}>Needs fix</button>
+                          </div>
+                        )}
+
+                        {canHaSignoff && row.checkIssueOpen && (
+                          <button type="button" className="hsk-pass-recheck" onClick={()=>void clearCheckIssue(row)}>
+                            Pass re-check
+                          </button>
+                        )}
 
                         <div className={row.fohSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
                           <span className="hsk-signoff-label">FOH</span>
