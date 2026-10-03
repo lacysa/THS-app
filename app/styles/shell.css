@@ -188,3 +188,45 @@ body{overflow-x:hidden}
     display:none!important;
   }
 }
+
+
+/* Mobile hardening: keep app chrome at the top of the viewport */
+@media(max-width:760px){
+  html,body{
+    min-height:100%;
+    height:auto;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  .ops-app,.staff-ops-app{
+    display:block!important;
+    min-height:100dvh!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  .ops-main,.staff-ops-main,
+  .sidebar-collapsed .staff-ops-main{
+    display:block!important;
+    min-height:100dvh!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  .ops-topbar,.staff-ops-topbar{
+    position:fixed!important;
+    top:0!important;
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    min-height:64px!important;
+    margin:0!important;
+    z-index:50!important;
+  }
+
+  .staff-page-content,.ops-content{
+    margin:0!important;
+    padding:78px 12px 30px!important;
+  }
+}
