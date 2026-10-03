@@ -26,6 +26,16 @@ export async function GET(req:NextRequest) {
 
   const bookingIds = (bookings || []).map((b:any)=>b.id)
 
+  let menuNotes:any[] = []
+  if (bookingIds.length) {
+    const {data,error} = await supabase
+      .from('breakfast_menu_notes')
+      .select('booking_id,note,updated_at')
+      .in('booking_id',bookingIds)
+    if (!error) menuNotes = data || []
+  }
+  const noteByBooking = new Map<string,string>((menuNotes || []).map((row:any)=>[row.booking_id,row.note || '']))
+
   // Native in-app orders link directly to breakfast_bookings.
   let nativeOrders:any[] = []
   if (bookingIds.length) {
@@ -89,6 +99,7 @@ export async function GET(req:NextRequest) {
   const decorated = (bookings || []).map((b:any)=>({
     ...b,
     menu_submitted:Boolean((nativeByBooking.get(b.id)||[]).length || (submissionsByBooking.get(b.id)||[]).length || b.menu_submitted),
+    note: noteByBooking.get(b.id) || '',
     displayTime:formatTime24(String(b.time_slot).slice(0,5))
   }))
 
@@ -110,6 +121,7 @@ export async function GET(req:NextRequest) {
       menuSubmitted:Boolean(orders.length || b.menu_submitted),
       unmatched:false,
       source:native.length ? 'native' : (legacy.length ? 'legacy' : null),
+      note: noteByBooking.get(b.id) || '',
       orders
     }
   })

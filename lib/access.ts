@@ -15,6 +15,7 @@ export type StaffAccess = {
   canPreviewUnpublished:boolean
   canManageModules:boolean
   permissions:string[]
+  capabilities:string[]
 }
 
 export async function getStaffAccess():Promise<StaffAccess|null> {
@@ -32,6 +33,7 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
   const roleRaw:any = Array.isArray((profile as any).staff_roles) ? (profile as any).staff_roles[0] : (profile as any).staff_roles
 
   let permissions:string[] = []
+  let capabilities:string[] = []
   if ((profile as any).role_id) {
     const { data:rows } = await supabase
       .from('role_permissions')
@@ -43,6 +45,20 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
       const ap = Array.isArray(row.app_permissions) ? row.app_permissions[0] : row.app_permissions
       return ap?.permission_key
     }).filter(Boolean)
+  }
+
+  const { data:member } = await supabase
+    .from('staff_members')
+    .select('id')
+    .eq('auth_user_id',user.id)
+    .maybeSingle()
+
+  if (member?.id) {
+    const { data:capRows } = await supabase
+      .from('staff_member_capabilities')
+      .select('capability_key')
+      .eq('staff_member_id',member.id)
+    capabilities = (capRows || []).map((row:any)=>row.capability_key).filter(Boolean)
   }
 
   return {
@@ -59,7 +75,8 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     isAdmin:Boolean(roleRaw?.is_admin),
     canPreviewUnpublished:Boolean(roleRaw?.can_preview_unpublished),
     canManageModules:Boolean(roleRaw?.can_manage_modules),
-    permissions
+    permissions,
+    capabilities
   }
 }
 
@@ -73,7 +90,34 @@ const MODULE_PERMISSION:Record<string,string|undefined> = {
   housekeeping:'housekeeping.dashboard.view',
   room_checks:'room_checks.view',
   projects:'projects.view',
-  maintenance:'projects.view'
+  breakfast_guest:'breakfast.read_only.view'
+}
+
+function hasAnyCapability(access:StaffAccess, keys:string[]) {
+  return keys.some(key => access.capabilities.includes(key))
+}
+
+export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
+  if (!module || module.active === false || module.enabled === false) return false
+  if (module.published === false && !access.canPreviewUnpublished) return false
+
+  const key = String(module.module_key || '')
+
+  if (key === 'maintenance') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'maintenance','maintenance_manager','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  if (key === 'shift_reports') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  const permission = MODULE_PERMISSION[key]
+  if (permission && !access.isAdmin && !access.permissions.includes(permission)) return false
+  return true
 }
 
 export async function canUseModule(moduleKey:string) {
@@ -87,15 +131,5 @@ export async function canUseModule(moduleKey:string) {
     .eq('module_key',moduleKey)
     .maybeSingle()
 
-  if (!module || module.active === false || module.enabled === false) {
-    return { allowed:false, access, module }
-  }
-  if (module.published === false && !access.canPreviewUnpublished) {
-    return { allowed:false, access, module }
-  }
-  const permission = MODULE_PERMISSION[moduleKey]
-  if (permission && !access.isAdmin && !access.permissions.includes(permission)) {
-    return { allowed:false, access, module }
-  }
-  return { allowed:true, access, module }
+  return { allowed:isModuleAllowedForAccess(access,module), access, module }
 }

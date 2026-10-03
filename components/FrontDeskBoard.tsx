@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import BookingMenuNote from '@/components/BookingMenuNote'
 
 export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
   const [date,setDate] = useState(initialDate)
@@ -120,6 +121,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
                       <button className="btn danger" onClick={()=>cancel(b.id)}>Cancel</button>
                     </div>
                   </div>
+                  <BookingMenuNote bookingId={b.id} initialNote={b.note || ''} />
                 </div>
               ))}
             </div>

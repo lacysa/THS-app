@@ -21,6 +21,21 @@ function hasAdminKey() {
   return Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
 }
 
+async function resolveAuthEmailFromUsername(identifier:string) {
+  if (!hasAdminKey()) throw new Error('LOGIN_ADMIN_KEY_MISSING')
+  const admin = createSupabaseAdmin()
+  const { data:member, error } = await admin
+    .from('staff_members')
+    .select('auth_user_id,active')
+    .ilike('username',identifier.trim())
+    .eq('active',true)
+    .maybeSingle()
+  if (error || !member?.auth_user_id) return null
+  const { data, error:userError } = await admin.auth.admin.getUserById(member.auth_user_id)
+  if (userError) return null
+  return data.user?.email || null
+}
+
 async function resolveAuthEmailFromStaffProfile(identifier:string) {
   if (!hasAdminKey()) throw new Error('PHONE_LOGIN_ADMIN_KEY_MISSING')
   const admin = createSupabaseAdmin()
@@ -87,12 +102,12 @@ export async function POST(req: NextRequest) {
     return loginRedirect(req, 'invalid_credentials')
   }
 
-  // Phone login intentionally uses staff_profiles.phone as an alias to the existing
-  // Supabase Auth account. It does NOT modify auth.users.phone and does NOT require SMS.
   if (!hasAdminKey()) return loginRedirect(req, 'phone_config')
 
   try {
-    const authEmail = await resolveAuthEmailFromStaffProfile(identifier)
+    // Username takes priority for non-email identifiers.
+    let authEmail = await resolveAuthEmailFromUsername(identifier)
+    if (!authEmail) authEmail = await resolveAuthEmailFromStaffProfile(identifier)
     if (!authEmail) return loginRedirect(req, 'phone_not_found')
 
     const alias = await supabase.auth.signInWithPassword({ email:authEmail, password })
