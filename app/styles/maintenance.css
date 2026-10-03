@@ -1,9 +1,321 @@
 /* THE HOTEL SAUGATUCK — ROOM-FIRST MAINTENANCE */
-.maintenance-page{display:grid;gap:16px}
-.maint-sticky-bar{position:sticky;top:74px;z-index:9;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;background:rgba(250,249,246,.96);border:1px solid var(--ths-line);border-radius:8px;backdrop-filter:blur(12px)}
-.maint-filter-row{display:flex;gap:8px;flex-wrap:wrap}.maint-filter-row button{border:1px solid var(--ths-line);background:white;border-radius:6px;padding:8px 11px;font-weight:700;cursor:pointer}.maint-filter-row button.active{background:var(--ths-charcoal);color:#fff}
-.maint-add-card{border:1px solid var(--ths-line);background:var(--ths-paper);border-radius:8px;padding:16px}.maint-form-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:10px}.maint-form-grid .wide{grid-column:span 2}.maint-form-grid textarea{min-height:80px}
-.maint-room-list{display:grid;gap:12px}.maint-room-card{border:1px solid var(--ths-line);background:var(--ths-paper);border-radius:8px;overflow:hidden}.maint-room-header{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:0;background:#f5f3ee;cursor:pointer;text-align:left}.maint-room-title{display:flex;align-items:center;gap:9px;font-weight:800}.maint-room-summary{font-size:11px;color:var(--ths-muted);font-weight:700}.maint-ticket-list{display:grid}.maint-ticket{display:grid;grid-template-columns:minmax(220px,1.4fr) 120px 135px 150px minmax(130px,.7fr);gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--ths-line)}.maint-ticket strong{display:block;margin-bottom:4px}.maint-ticket small{display:block;color:var(--ths-muted);line-height:1.35}.maint-priority{display:inline-flex;width:max-content;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:800;text-transform:uppercase}.maint-priority.urgent{background:#fbe7e7;color:#8b3030}.maint-priority.high{background:#fff0df;color:#875018}.maint-priority.medium{background:#f4eedf;color:#766126}.maint-priority.low{background:#edf2ee;color:#45624e}.maint-empty{padding:24px;text-align:center;color:var(--ths-muted)}
-@media(max-width:1000px){.maint-form-grid{grid-template-columns:1fr 1fr}.maint-ticket{grid-template-columns:1fr 110px 130px}.maint-ticket .maint-assignee,.maint-ticket .maint-completed{grid-column:span 1}}
-@media(max-width:680px){.maint-form-grid{grid-template-columns:1fr}.maint-form-grid .wide{grid-column:auto}.maint-ticket{grid-template-columns:1fr}.maint-sticky-bar{top:64px}}
-@media print{.maint-add-card,.maint-sticky-bar,.maint-ticket select,.maint-ticket button{display:none!important}.maint-room-card{break-inside:avoid}.maint-ticket{grid-template-columns:2fr 1fr 1fr!important}}
+.maintenance-page{
+  display:grid;
+  gap:14px;
+  min-width:0;
+}
+.maint-toolbar{
+  position:sticky;
+  top:74px;
+  z-index:9;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  padding:10px 12px;
+  border:1px solid var(--ths-line);
+  border-radius:10px;
+  background:rgba(250,249,246,.96);
+  backdrop-filter:blur(12px);
+}
+.maint-filter-row{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.maint-filter-row button{
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid var(--ths-line);
+  border-radius:999px;
+  background:#fff;
+  color:var(--ths-text);
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.maint-filter-row button.active{
+  background:var(--ths-charcoal);
+  border-color:var(--ths-charcoal);
+  color:#fff;
+}
+.maint-toolbar-actions{
+  display:flex;
+  gap:7px;
+  align-items:center;
+}
+.maint-add-card{
+  padding:14px;
+  border:1px solid var(--ths-line);
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 5px 16px rgba(26,26,24,.03);
+}
+.maint-add-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.maint-add-head h2{
+  margin:0;
+  font-size:20px;
+}
+.maint-form-grid{
+  display:grid;
+  grid-template-columns:1.15fr 1fr 1fr 1fr;
+  gap:9px;
+}
+.maint-form-grid .wide{
+  grid-column:span 2;
+}
+.maint-form-grid label,
+.maint-ticket-controls label{
+  display:grid;
+  gap:4px;
+  color:var(--ths-muted);
+  font-size:9px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.045em;
+}
+.maint-form-grid input,
+.maint-form-grid select,
+.maint-form-grid textarea,
+.maint-ticket-controls select{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid var(--ths-line);
+  border-radius:7px;
+  background:#fff;
+  color:var(--ths-text);
+  font:inherit;
+  font-size:11px;
+  text-transform:none;
+  letter-spacing:normal;
+}
+.maint-form-grid input,
+.maint-form-grid select,
+.maint-ticket-controls select{
+  min-height:36px;
+  padding:7px 9px;
+}
+.maint-form-grid textarea{
+  min-height:78px;
+  padding:8px 9px;
+  resize:vertical;
+}
+.maint-add-footer{
+  display:flex;
+  justify-content:flex-start;
+  margin-top:10px;
+}
+.maint-room-list{
+  display:grid;
+  gap:10px;
+}
+.maint-room-card{
+  overflow:hidden;
+  border:1px solid var(--ths-line);
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 4px 14px rgba(26,26,24,.025);
+}
+.maint-room-header{
+  width:100%;
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:11px 13px;
+  border:0;
+  background:#f7f5f0;
+  cursor:pointer;
+  text-align:left;
+}
+.maint-room-title{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.maint-room-title strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:14px;
+}
+.maint-room-icon{
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#ebe8e1;
+  color:var(--ths-charcoal);
+}
+.maint-room-summary{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:5px;
+  flex-wrap:wrap;
+}
+.maint-room-summary span{
+  padding:4px 7px;
+  border-radius:999px;
+  background:#ece9e2;
+  color:var(--ths-muted);
+  font-size:8px;
+  font-weight:800;
+}
+.maint-room-summary span.urgent{
+  background:#f7e5e3;
+  color:#933f38;
+}
+.maint-ticket-list{
+  display:grid;
+}
+.maint-ticket-card{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(360px,.9fr);
+  gap:16px;
+  align-items:center;
+  padding:13px 14px;
+  border-top:1px solid #ece8df;
+}
+.maint-ticket-main{
+  min-width:0;
+}
+.maint-ticket-title-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.maint-ticket-title-row>strong{
+  color:var(--ths-text);
+  font-size:13px;
+}
+.maint-ticket-main p{
+  margin:5px 0 0;
+  color:var(--ths-muted);
+  font-size:10px;
+  line-height:1.4;
+}
+.maint-ticket-meta{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:7px;
+  color:#8a867e;
+  font-size:8.5px;
+}
+.maint-priority{
+  display:inline-flex;
+  width:max-content;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:8px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+.maint-priority.urgent{
+  background:#fbe7e7;
+  color:#8b3030;
+}
+.maint-priority.high{
+  background:#fff0df;
+  color:#875018;
+}
+.maint-priority.medium{
+  background:#f4eedf;
+  color:#766126;
+}
+.maint-priority.low{
+  background:#edf2ee;
+  color:#45624e;
+}
+.maint-ticket-controls{
+  display:grid;
+  grid-template-columns:.75fr 1fr 1fr;
+  gap:8px;
+}
+.maint-ticket-controls strong{
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  padding:0 2px;
+  color:var(--ths-text);
+  font-size:10px;
+  text-transform:none;
+  letter-spacing:normal;
+}
+.maint-empty{
+  padding:30px 18px;
+  border:1px dashed var(--ths-line);
+  border-radius:10px;
+  background:#fbfaf7;
+  color:var(--ths-muted);
+  font-size:11px;
+  text-align:center;
+}
+
+@media(max-width:1100px){
+  .maint-form-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .maint-ticket-card{
+    grid-template-columns:1fr;
+  }
+  .maint-ticket-controls{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}
+@media(max-width:680px){
+  .maint-toolbar{
+    top:64px;
+    align-items:stretch;
+  }
+  .maint-toolbar-actions{
+    width:100%;
+  }
+  .maint-toolbar-actions .ops-secondary-btn,
+  .maint-toolbar-actions .ops-primary-btn{
+    flex:1;
+  }
+  .maint-form-grid{
+    grid-template-columns:1fr;
+  }
+  .maint-form-grid .wide{
+    grid-column:auto;
+  }
+  .maint-room-header{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .maint-room-summary{
+    justify-content:flex-start;
+  }
+  .maint-ticket-controls{
+    grid-template-columns:1fr;
+  }
+}
+@media print{
+  .maint-add-card,
+  .maint-toolbar,
+  .maint-ticket-controls{
+    display:none!important;
+  }
+  .maint-room-card{
+    break-inside:avoid;
+    box-shadow:none!important;
+  }
+  .maint-ticket-card{
+    grid-template-columns:1fr!important;
+  }
+}
