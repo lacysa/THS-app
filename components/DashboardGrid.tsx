@@ -11,7 +11,10 @@ import {
   FolderKanban,
   ShieldCheck,
   FileText,
-  ScrollText
+  ScrollText,
+  Package,
+  Building2,
+  BookOpen
 } from 'lucide-react'
 
 type ModuleRow = {
@@ -38,7 +41,15 @@ const icons:Record<string,any> = {
   projects:FolderKanban,
   maintenance:Wrench,
   shift_reports:ScrollText,
-  breakfast_guest:UtensilsCrossed
+  breakfast_guest:UtensilsCrossed,
+  laundry:Package,
+  lobby:Building2,
+  housekeeping_guide:BookOpen,
+  front_desk_inventory:Package,
+  kitchen_inventory:Package,
+  housekeeping_inventory:Package,
+  laundry_inventory:Package,
+  lobby_inventory:Package
 }
 
 const hrefFallback:Record<string,string> = {
@@ -52,7 +63,15 @@ const hrefFallback:Record<string,string> = {
   projects:'/projects',
   maintenance:'/maintenance',
   shift_reports:'/shift-reports',
-  breakfast_guest:'/breakfast'
+  breakfast_guest:'/breakfast',
+  laundry:'/laundry',
+  lobby:'/lobby',
+  housekeeping_guide:'/housekeeping/resources',
+  front_desk_inventory:'/inventory/front-desk',
+  kitchen_inventory:'/inventory/kitchen',
+  housekeeping_inventory:'/inventory/housekeeping',
+  laundry_inventory:'/inventory/laundry',
+  lobby_inventory:'/inventory/lobby'
 }
 
 export default function DashboardGrid({modules=[]}:{modules?:ModuleRow[]}) {
