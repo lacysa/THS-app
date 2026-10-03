@@ -1,21 +1,35 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { RefreshCw, Save } from 'lucide-react'
+
+type NoteState = 'idle'|'saving'|'saved'|'error'
 
 export default function KitchenBoard({initialDate}:{initialDate:string}) {
   const [date,setDate] = useState(initialDate)
   const [data,setData] = useState<any>(null)
   const [loading,setLoading] = useState(true)
   const [error,setError] = useState('')
+  const [notes,setNotes] = useState('')
+  const [noteState,setNoteState] = useState<NoteState>('idle')
+  const notesLoaded = useRef(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   async function load() {
     setLoading(true)
     setError('')
     try {
-      const r = await fetch(`/api/staff/day?date=${date}`,{cache:'no-store'})
-      const json = await r.json()
-      if (!r.ok) throw new Error(json.message || 'Could not load the kitchen board.')
+      const [boardRes,noteRes] = await Promise.all([
+        fetch(`/api/staff/day?date=${date}`,{cache:'no-store'}),
+        fetch(`/api/kitchen/notes?date=${date}`,{cache:'no-store'})
+      ])
+      const json = await boardRes.json()
+      if (!boardRes.ok) throw new Error(json.message || 'Could not load the kitchen board.')
       setData(json)
+      const noteJson = await noteRes.json().catch(()=>({}))
+      if (noteRes.ok) setNotes(noteJson.note || '')
+      notesLoaded.current = true
+      setNoteState('idle')
     } catch (e:any) {
       setData(null)
       setError(e?.message || 'Could not load the kitchen board.')
@@ -24,99 +38,144 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
     }
   }
 
-  useEffect(()=>{ load() },[date])
+  useEffect(()=>{
+    notesLoaded.current = false
+    void load()
+    return ()=>{ if(saveTimer.current) clearTimeout(saveTimer.current) }
+  },[date])
 
-  async function status(orderId:string,status:string) {
-    const r = await fetch('/api/staff/order-status',{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({orderId,status})
-    })
-    if (!r.ok) {
-      const json = await r.json().catch(()=>({}))
-      setError(json.message || 'Could not update order status.')
-      return
+  async function saveNotes(value=notes) {
+    setNoteState('saving')
+    try {
+      const r = await fetch('/api/kitchen/notes',{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({serviceDate:date,note:value})
+      })
+      const d = await r.json().catch(()=>({}))
+      if (!r.ok) throw new Error(d.error || 'Could not save kitchen notes.')
+      setNoteState('saved')
+    } catch (e:any) {
+      setNoteState('error')
+      setError(e?.message || 'Could not save kitchen notes.')
     }
-    load()
   }
 
+  function changeNotes(value:string) {
+    setNotes(value)
+    if (!notesLoaded.current) return
+    setNoteState('saving')
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(()=>void saveNotes(value),700)
+  }
+
+  const grouped = useMemo(()=>{
+    const map = new Map<string,any[]>()
+    for (const g of data?.groups || []) {
+      const key = g.timeSlot || 'unscheduled'
+      if (!map.has(key)) map.set(key,[])
+      map.get(key)!.push(g)
+    }
+    const slots = (data?.slots || []).map((s:any)=>s.value)
+    const ordered:string[] = []
+    for (const slot of slots) if (map.has(slot)) ordered.push(slot)
+    for (const key of map.keys()) if (!ordered.includes(key)) ordered.push(key)
+    return ordered.map(key=>({
+      key,
+      label:key==='unscheduled' ? 'Unscheduled' : (data?.slots || []).find((s:any)=>s.value===key)?.label || key,
+      groups:map.get(key) || []
+    }))
+  },[data])
+
+  const noteLabel = noteState==='saving' ? 'Saving…' : noteState==='saved' ? 'Saved ✓' : noteState==='error' ? 'Save failed' : 'Autosaves'
+
   return (
-    <div className="breakfast-workspace">
-      <div className="toolbar breakfast-toolbar">
+    <div className="breakfast-workspace kitchen-workspace">
+      <div className="toolbar breakfast-toolbar kitchen-toolbar">
         <div className="toolbar-left">
           <div className="field"><label>Service date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
         </div>
         <div className="toolbar-right">
           <a className="btn secondary" href={`/breakfast/overview?date=${encodeURIComponent(date)}`}>Read-only overview</a>
-          <button className="btn secondary" onClick={load}>Refresh</button>
+          <button className="btn secondary" onClick={load}><RefreshCw size={15}/> Refresh</button>
         </div>
       </div>
 
       {error && <div className="notice error">{error}</div>}
 
+      <section className="card kitchen-notes-card">
+        <div className="kitchen-notes-head">
+          <div><strong>Kitchen notes</strong><span>Daily prep, substitutions, guest-specific kitchen notes, or anything the next kitchen person needs to know.</span></div>
+          <div className={`kitchen-save-state ${noteState}`}>{noteLabel}</div>
+        </div>
+        <textarea value={notes} onChange={e=>changeNotes(e.target.value)} placeholder="Add kitchen notes for this service date…" />
+        <button className="btn secondary kitchen-manual-save" onClick={()=>void saveNotes()}><Save size={14}/> Save now</button>
+      </section>
+
       {loading ? <div className="card">Loading kitchen board…</div> : data && (
-        <div className="breakfast-ticket-grid">
-          {data.groups.length===0 && <div className="card muted">No breakfast tickets for this date.</div>}
-          {data.groups.map((g:any)=>(
-            <article className="ticket kitchen-ticket" key={g.groupKey}>
-              <div className="ticket-head">
-                <div>
-                  <div className="ticket-room">{g.room}</div>
-                  <div className="muted">{g.lastName}</div>
-                </div>
-                <div className="ticket-badges">
-                  <span className="pill">{g.displayTime}</span>
-                  {!g.menuSubmitted && <span className="pill">Missing menu</span>}
-                  {g.unmatched && <span className="pill warning">Unmatched legacy menu</span>}
-                </div>
-              </div>
+        <section className="card kitchen-board-card">
+          <div className="kitchen-board-head">
+            <div><strong>Breakfast delivery board</strong><span>Grouped by delivery time. Scroll vertically to move through service.</span></div>
+            <span className="pill">{data.groups.length} rooms</span>
+          </div>
 
-              {g.unmatched && (
-                <div className="notice" style={{marginTop:12}}>
-                  This legacy menu was received but could not be matched to a scheduled breakfast booking.
+          <div className="kitchen-scroll-board">
+            {grouped.length===0 && <div className="muted kitchen-empty">No breakfast tickets for this date.</div>}
+            {grouped.map(section=>(
+              <section className="kitchen-time-section" key={section.key}>
+                <div className="kitchen-time-header">
+                  <strong>{section.label}</strong>
+                  <span>{section.groups.length} {section.groups.length===1?'room':'rooms'}</span>
                 </div>
-              )}
-
-              {g.orders.length===0 ? (
-                <div className="notice" style={{marginTop:12}}>
-                  {g.menuSubmitted
-                    ? 'Breakfast menu received, but no guest meal selections were saved.'
-                    : 'No breakfast menu received.'}
-                </div>
-              ) : (
-                <div className="order-lines">
-                  {g.orders.map((o:any)=>(
-                    <div className="order-row kitchen-order-row" key={o.id}>
-                      <strong className="guest-label">Guest {o.guest_number}</strong>
-                      <div className="order-details">
-                        {o.meal_declined ? (
-                          <div className="notice" style={{margin:0}}><strong>Declined breakfast</strong></div>
-                        ) : (<>
-                        {o.dietary && <div><strong>Dietary:</strong> {o.dietary}</div>}
-                        {o.dietary_comments && <div><strong>Notes:</strong> {o.dietary_comments}</div>}
-                        {o.entree && <div><strong>Entrée:</strong> {o.entree}</div>}
-                        {o.pancakes && <div><strong>Pancakes:</strong> {o.pancakes}</div>}
-                        {o.meat && <div><strong>Meat:</strong> {o.meat}</div>}
-                        {o.eggs && <div><strong>Eggs:</strong> {o.eggs}</div>}
-                        {o.coffee && <div><strong>Coffee:</strong> {o.coffee}{o.cream?` · ${o.cream}`:''}</div>}
-                        {o.juice && <div><strong>Juice:</strong> {o.juice}</div>}
-                        {o.condiments && <div><strong>Condiments:</strong> {o.condiments}</div>}
-                        <div className="status-actions">
-                          {['new','prepping','ready','delivered','hold'].map(s=>
-                            <button key={s} className={`btn ${o.status===s?'sage':'secondary'}`} onClick={()=>status(o.id,s)}>
-                              {s[0].toUpperCase()+s.slice(1)}
-                            </button>
-                          )}
+                <div className="kitchen-time-grid">
+                  {[...section.groups, ...Array(Math.max(0, 2 - section.groups.length)).fill(null)].map((g:any,index:number)=> g ? (
+                    <article className="ticket kitchen-ticket compact" key={g.groupKey}>
+                      <div className="ticket-head">
+                        <div>
+                          <div className="ticket-room">{g.room}</div>
+                          {g.lastName && <div className="muted">{g.lastName}</div>}
                         </div>
-                        </>)}
+                        <div className="ticket-badges">
+                          {!g.menuSubmitted && <span className="pill warning">Missing menu</span>}
+                          {g.unmatched && <span className="pill warning">Unmatched</span>}
+                        </div>
                       </div>
-                    </div>
+
+                      {g.orders.length===0 ? (
+                        <div className="notice kitchen-missing-menu">{g.menuSubmitted ? 'Menu received, but no meal selections were saved.' : 'No breakfast menu received.'}</div>
+                      ) : (
+                        <div className="order-lines kitchen-order-lines">
+                          {g.orders.map((o:any)=>(
+                            <div className="order-row kitchen-order-row" key={o.id}>
+                              <strong className="guest-label">Guest {o.guest_number}</strong>
+                              <div className="order-details">
+                                {o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>
+                                  {o.dietary && <div className="kitchen-diet"><strong>Dietary:</strong> {o.dietary}</div>}
+                                  {o.dietary_comments && <div className="kitchen-diet"><strong>Notes:</strong> {o.dietary_comments}</div>}
+                                  {o.entree && <div><strong>Entrée:</strong> {o.entree}</div>}
+                                  {o.pancakes && <div><strong>Pancakes:</strong> {o.pancakes}</div>}
+                                  {o.meat && <div><strong>Meat:</strong> {o.meat}</div>}
+                                  {o.eggs && <div><strong>Eggs:</strong> {o.eggs}</div>}
+                                  {o.coffee && <div><strong>Coffee:</strong> {o.coffee}{o.cream?` · ${o.cream}`:''}</div>}
+                                  {o.juice && <div><strong>Juice:</strong> {o.juice}</div>}
+                                  {o.condiments && <div><strong>Condiments:</strong> {o.condiments}</div>}
+                                </>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </article>
+                  ) : (
+                    <article className="ticket kitchen-ticket compact kitchen-empty-slot" key={`empty-${section.key}-${index}`}>
+                      <div className="ticket-room muted">No second room scheduled</div>
+                    </article>
                   ))}
                 </div>
-              )}
-            </article>
-          ))}
-        </div>
+              </section>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   )

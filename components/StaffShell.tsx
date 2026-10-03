@@ -16,7 +16,10 @@ import {
   LogOut,
   Bell,
   Search,
-  ShieldCheck
+  ShieldCheck,
+  ScrollText,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react'
 
 type ModuleRow = {
@@ -67,6 +70,7 @@ const iconMap: Record<string, any> = {
   room_checks: ShieldCheck,
   projects: FolderKanban,
   maintenance: Wrench,
+  shift_reports: ScrollText,
   breakfast_guest: UtensilsCrossed
 }
 
@@ -80,7 +84,8 @@ const permissionByModule: Record<string, string | undefined> = {
   housekeeping: 'housekeeping.dashboard.view',
   room_checks: 'room_checks.view',
   projects: 'projects.view',
-  maintenance: 'projects.view',
+  maintenance: undefined,
+  shift_reports: undefined,
   breakfast_guest: undefined
 }
 
@@ -95,6 +100,7 @@ const hrefFallback: Record<string, string> = {
   room_checks: '/room-checks',
   projects: '/projects',
   maintenance: '/maintenance',
+  shift_reports: '/shift-reports',
   breakfast_guest: '/breakfast'
 }
 
@@ -110,6 +116,7 @@ const operationsModules = new Set([
   'housekeeping',
   'room_checks',
   'projects',
+  'shift_reports',
   'maintenance'
 ])
 
@@ -156,6 +163,7 @@ export default function StaffShell({
   const [modules, setModules] = useState<ModuleRow[]>([])
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const [notifications, setNotifications] =
     useState<NotificationRow[]>([])
@@ -170,6 +178,12 @@ export default function StaffShell({
     useState(false)
 
   useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('ths-sidebar-collapsed')
+      if (saved === '1') setSidebarCollapsed(true)
+      if (saved === null && window.innerWidth <= 760) setSidebarCollapsed(true)
+    } catch {}
+
     fetch('/api/me')
       .then(r => (r.ok ? r.json() : null))
       .then(d => {
@@ -412,12 +426,30 @@ export default function StaffShell({
     )
   }
 
-  return (
-    <main className="ops-app staff-ops-app">
+  function toggleSidebar() {
+    setSidebarCollapsed(current => {
+      const next = !current
+      try { window.localStorage.setItem('ths-sidebar-collapsed', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
 
-      <aside className="ops-sidebar staff-ops-sidebar">
+  return (
+    <main className={`ops-app staff-ops-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+
+      <aside className={`ops-sidebar staff-ops-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
 
         <div className="sidebar-brand">
+
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
 
           <Link
             className="ops-logo"

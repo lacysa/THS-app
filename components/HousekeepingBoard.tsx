@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {
   useEffect,
   useMemo,
@@ -14,7 +15,8 @@ import {
   Search,
   Check,
   ChevronDown,
-  UtensilsCrossed
+  UtensilsCrossed,
+  BookOpen
 } from 'lucide-react'
 
 type BreakfastStatus = 'none' | 'needed' | 'received' | 'declined'
@@ -405,6 +407,11 @@ export default function HousekeepingBoard() {
               onChange={e => setDate(e.target.value)}
             />
           </label>
+
+          <Link className="ops-secondary-btn" href="/housekeeping/resources">
+            <BookOpen size={16} />
+            Guide
+          </Link>
 
           <button className="ops-secondary-btn" onClick={load} type="button">
             <RefreshCw size={16} />

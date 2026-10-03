@@ -8,6 +8,14 @@ import './styles/breakfast.css'
 import './styles/operations.css'
 import './styles/housekeeping.css'
 import './styles/notifications.css'
+import './styles/shift-reports.css'
+import './styles/maintenance.css'
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover'
+}
 
 export const metadata = {
   title: 'THS Operations Hub',
