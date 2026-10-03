@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/admin'
 
 export type StaffAccess = {
   userId:string
@@ -50,7 +51,9 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     }).filter(Boolean)
   }
 
-  const { data:member } = await supabase
+  const admin = createSupabaseAdmin()
+
+  const { data:member } = await admin
     .from('staff_members')
     .select('id')
     .eq('auth_user_id',user.id)
@@ -58,11 +61,11 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
 
   if (member?.id) {
     const [{ data:capRows },{ data:accessRows }] = await Promise.all([
-      supabase
+      admin
         .from('staff_member_capabilities')
         .select('capability_key')
         .eq('staff_member_id',member.id),
-      supabase
+      admin
         .from('staff_module_access')
         .select('module_key,allowed')
         .eq('staff_member_id',member.id)
