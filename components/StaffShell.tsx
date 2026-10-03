@@ -339,15 +339,6 @@ export default function StaffShell({
             m.published !== false ||
             access?.canPreviewUnpublished
         )
-        .filter(m => {
-          const permission = permissionByModule[m.module_key]
-
-          return (
-            !permission ||
-            access?.isAdmin ||
-            access?.permissions?.includes(permission)
-          )
-        })
         .filter(
           m =>
             m.module_key !== 'breakfast_menu_manager' &&
