@@ -22,7 +22,9 @@ import {
   PanelLeftOpen,
   Package,
   Building2,
-  BookOpen
+  BookOpen,
+  Menu,
+  X
 } from 'lucide-react'
 
 type ModuleRow = {
@@ -191,6 +193,7 @@ export default function StaffShell({
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   const [notifications, setNotifications] =
     useState<NotificationRow[]>([])
@@ -224,6 +227,10 @@ export default function StaffShell({
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [pathname])
 
   async function loadNotifications(showLoading = false) {
     if (showLoading) {
@@ -464,9 +471,9 @@ export default function StaffShell({
   }
 
   return (
-    <main className={`ops-app staff-ops-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <main className={`ops-app staff-ops-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
 
-      <aside className={`ops-sidebar staff-ops-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      <aside className={`ops-sidebar staff-ops-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileNavOpen ? 'mobile-open' : ''}`}>
 
         <div className="sidebar-brand">
 
@@ -610,9 +617,27 @@ export default function StaffShell({
 
       </aside>
 
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="mobile-sidebar-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
       <section className="ops-main staff-ops-main">
 
         <header className="ops-topbar staff-ops-topbar">
+
+          <button
+            type="button"
+            className="mobile-nav-toggle"
+            onClick={() => setMobileNavOpen(open => !open)}
+            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
 
           <div className="staff-page-title">
             <span>
