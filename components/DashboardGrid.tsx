@@ -76,7 +76,7 @@ const hrefFallback:Record<string,string> = {
 
 export default function DashboardGrid({modules=[]}:{modules?:ModuleRow[]}) {
   const visible = modules
-    .filter(m => m.module_key !== 'dashboard' && m.module_key !== 'breakfast_menu_manager')
+    .filter(m => m.module_key !== 'dashboard' && m.module_key !== 'breakfast_menu_manager' && !m.module_key.endsWith('_inventory'))
     .sort((a,b)=>(a.sort_order||0)-(b.sort_order||0))
 
   return (
