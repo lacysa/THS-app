@@ -72,6 +72,7 @@ const iconMap: Record<string, any> = {
   breakfast_menu_manager: ClipboardList,
   daily_overview: FileText,
   housekeeping: BedDouble,
+  housekeeping_setup: ClipboardList,
   room_checks: ShieldCheck,
   projects: FolderKanban,
   maintenance: Wrench,
@@ -110,6 +111,7 @@ const hrefFallback: Record<string, string> = {
   breakfast_menu_manager: '/breakfast/menu-manager',
   daily_overview: '/breakfast/overview',
   housekeeping: '/housekeeping',
+  housekeeping_setup: '/housekeeping/setup',
   room_checks: '/room-checks',
   projects: '/projects',
   maintenance: '/maintenance',
@@ -135,6 +137,7 @@ const breakfastModules = new Set([
 
 const operationsModules = new Set([
   'housekeeping',
+  'housekeeping_setup',
   'room_checks',
   'projects',
   'shift_reports',
