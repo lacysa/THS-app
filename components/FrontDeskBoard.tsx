@@ -73,13 +73,6 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
 
       {loading ? <div className="card">Loading…</div> : data && (
         <>
-          <div className="grid grid-4">
-            <div className="stat"><span className="muted">Scheduled rooms</span><strong>{data.bookings.length}</strong></div>
-            <div className="stat"><span className="muted">Menus received</span><strong>{data.bookings.filter((x:any)=>x.menu_submitted).length}</strong></div>
-            <div className="stat"><span className="muted">Missing menus</span><strong>{data.bookings.filter((x:any)=>!x.menu_submitted).length}</strong></div>
-            <div className="stat"><span className="muted">Unmatched menus</span><strong>{data.unmatchedSubmissions.length}</strong></div>
-          </div>
-
           {data.unmatchedSubmissions.length>0 && (
             <div className="card">
               <h2>Unmatched legacy menus</h2>
