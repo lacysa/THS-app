@@ -163,8 +163,57 @@ export default function ShiftReportBoard() {
       {canManage && <button className={tab==='management'?'active':''} onClick={()=>setTab('management')}>Management Notes</button>}
     </div>
 
-    <div className="print-only shift-print-heading"><h1>The Hotel Saugatuck</h1><h2>Shift Report · {date} · {shift}</h2><div>Prepared by {currentStaffName}</div></div>
+    <div className="print-only shift-print-document">
+      <div className="shift-print-heading">
+        <h1>The Hotel Saugatuck</h1>
+        <h2>Daily Shift Report · {date} · {shift}</h2>
+        <div>Prepared by {currentStaffName}</div>
+      </div>
 
+      <section className="shift-print-section">
+        <h3>Rooms</h3>
+        <div className="shift-print-summary">
+          <span><strong>{summary.completed}</strong> completed</span>
+          <span><strong>{summary.refreshes}</strong> refreshes</span>
+          <span><strong>{summary.holds}</strong> holds</span>
+        </div>
+        {summary.roomIssues.map((r:any)=><div key={`print-room-${r.roomId}`} className="shift-print-row"><strong>{r.roomName}</strong><span>{[r.roomCondition,r.nextShiftCondition,r.notes].filter(Boolean).join(' · ')}</span></div>)}
+        {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row"><strong>{n.roomName}</strong><span>{n.note}</span></div>)}
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Breakfast · {auto.breakfastDate}</h3>
+        <div className="shift-print-summary">
+          <span><strong>{summary.menusReceived}</strong> menus received</span>
+          <span><strong>{summary.breakfastDeclined}</strong> declined</span>
+          <span><strong>{summary.menusMissing.length}</strong> outstanding</span>
+        </div>
+        {summary.menusMissing.map((r:any)=><div key={`print-menu-${r.roomId}`} className="shift-print-row"><strong>{r.roomName}</strong><span>Menu needed</span></div>)}
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Maintenance</h3>
+        <div className="shift-print-summary">
+          <span><strong>{summary.maintenanceOpen.length}</strong> open / carryover</span>
+          <span><strong>{summary.maintenanceComplete.length}</strong> completed</span>
+        </div>
+        {summary.maintenanceOpen.filter((m:any)=>m.include_in_shift_report).map((m:any)=><div key={`print-maint-${m.id}`} className="shift-print-row"><strong>{m.roomName}</strong><span>{m.title} · {String(m.status||'').replace('_',' ')}</span></div>)}
+      </section>
+
+      {[
+        ['Guest Notes',draft.guestNotes],
+        ['Staff Notes',draft.staffNotes],
+        ['Supplies / Inventory',draft.suppliesNotes],
+        ['Tomorrow',draft.tomorrowNotes],
+        ['General Notes',draft.generalNotes],
+        ...(canManage ? [['Management Notes',draft.managementNotes]] : [])
+      ].map(([label,value])=><section className="shift-print-section" key={String(label)}>
+        <h3>{label}</h3>
+        <div className="shift-print-text">{String(value || 'No notes entered.')}</div>
+      </section>)}
+    </div>
+
+    <div className="screen-only">
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-grid">
       <section className="shift-section"><h3>Rooms</h3><div className="shift-list">
         <div className="shift-line"><span>Completed rooms</span><strong>{summary.completed}</strong></div>
@@ -211,5 +260,6 @@ export default function ShiftReportBoard() {
       <h3>Management Notes</h3>
       {canManage ? <>{textarea('managementNotes','Manager-only notes','Attendance concerns, performance issues, guest compensation decisions, incidents, disciplinary matters, or other restricted notes.')}<p className="shift-muted">This field is only returned to manager-level users by the API.</p></> : <div className="manager-lock">Manager access required.</div>}
     </div>}
+    </div>
   </div>
 }
