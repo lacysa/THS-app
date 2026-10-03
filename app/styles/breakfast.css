@@ -90,3 +90,33 @@
   font-size:11px;
   line-height:1.4;
 }
+
+
+/* Saved per-room/menu notes in overviews */
+.overview-menu-note{
+  margin-top:6px;
+  padding:5px 6px;
+  border-radius:5px;
+  background:#f6efe2;
+  color:#5f584c;
+  font-size:9px;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.overview-menu-note strong{
+  font-weight:800;
+}
+.kitchen-ticket .menu-note-editor{
+  background:#faf8f3;
+  margin-left:-2px;
+  margin-right:-2px;
+  padding:9px;
+  border:1px solid #e8e2d7;
+  border-radius:7px;
+}
+@media print{
+  .overview-menu-note{
+    background:#fff!important;
+    border:1px solid #bbb!important;
+  }
+}
