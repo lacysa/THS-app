@@ -109,7 +109,8 @@ export async function POST(req:NextRequest){
             notification_type:'housekeeping_correction',
             title:'Room correction required',
             message:`${person.name} found an issue that must be corrected before you continue: ${note}`,
-            href:`/housekeeping#room-${roomId}`,
+            room_id:roomId,
+            service_date:serviceDate,
             created_by:access.userId
           })))
         }
@@ -156,7 +157,8 @@ export async function POST(req:NextRequest){
           notification_type:'housekeeping_recheck_passed',
           title:'Room passed re-check',
           message:`${person.name} marked the room as meeting standards. You may continue to your next assigned clean.`,
-          href:`/housekeeping#room-${roomId}`,
+          room_id:roomId,
+          service_date:serviceDate,
           created_by:access.userId
         })))
       }
