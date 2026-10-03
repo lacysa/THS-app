@@ -37,15 +37,15 @@ export default async function LoginPage({
           )}
 
           {params.error === 'phone_not_found' && (
-            <div className="notice error">That phone number is not attached to an active staff profile.</div>
+            <div className="notice error">That username or phone number is not attached to an active staff account.</div>
           )}
 
           {params.error && !['phone_config','phone_not_found'].includes(params.error) && (
-            <div className="notice error">We could not sign you in with that phone number/email and password.</div>
+            <div className="notice error">We could not sign you in with that username, phone number, or email and password.</div>
           )}
 
           <div className="field">
-            <label>Phone number or email</label>
+            <label>Username, phone number, or email</label>
             <input type="text" name="identifier" required autoComplete="username" />
           </div>
 
