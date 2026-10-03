@@ -100,7 +100,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
             <div className="timeline">
               {data.bookings.length===0 && <div className="muted">No breakfast bookings for this date.</div>}
               {data.bookings.map((b:any)=>(
-                <div className="ticket" key={b.id}>
+                <div className="ticket" id={`booking-${b.id}`} key={b.id}>
                   <div className="ticket-head">
                     <div>
                       <div className="ticket-room">{b.rooms?.name}</div>
