@@ -53,7 +53,7 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
           <div className="field"><label>Service date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
         </div>
         <div className="toolbar-right">
-          <a className="btn secondary" href={`/breakfast/overview?date=${encodeURIComponent(date)}`}>Read-only overview</a>
+          <a className="btn secondary" href="/inventory/kitchen">Inventory</a>\n          <a className="btn secondary" href={`/breakfast/overview?date=${encodeURIComponent(date)}`}>Read-only overview</a>
           <button className="btn secondary" onClick={load}><RefreshCw size={15}/> Refresh</button>
         </div>
       </div>
