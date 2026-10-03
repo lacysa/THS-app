@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import {
   useEffect,
   useMemo,
@@ -15,8 +14,7 @@ import {
   Search,
   Check,
   ChevronDown,
-  UtensilsCrossed,
-  BookOpen
+  UtensilsCrossed
 } from 'lucide-react'
 
 type BreakfastStatus = 'none' | 'needed' | 'received' | 'declined'
@@ -134,6 +132,7 @@ export default function HousekeepingBoard() {
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [viewMode, setViewMode] = useState<'manager'|'assigned'>('manager')
   const [access, setAccess] = useState<Access | null>(null)
   const [canHaSignoff, setCanHaSignoff] = useState(false)
   const [canFohSignoff, setCanFohSignoff] = useState(false)
@@ -186,6 +185,7 @@ export default function HousekeepingBoard() {
       const loadedRows = d.rows || []
       setRows(loadedRows)
       rowsRef.current = loadedRows
+      setViewMode(d.viewMode === 'assigned' ? 'assigned' : 'manager')
       setStaffOptions(d.staffOptions || [])
       setCanHaSignoff(Boolean(d.signoffAccess?.canHaSignoff))
       setCanFohSignoff(Boolean(d.signoffAccess?.canFohSignoff))
@@ -385,6 +385,94 @@ export default function HousekeepingBoard() {
     return staffOptions.filter(option => option.name.toLowerCase().includes(q))
   }, [staffOptions, staffSearch])
 
+  if (viewMode === 'assigned') {
+    return (
+      <div className="ops-module hsk-module hsk-assigned-view">
+        <div className="module-toolbar hsk-sticky-toolbar">
+          <div className="hsk-title-block">
+            <div className="module-kicker">Housekeeping</div>
+            <h1>My Rooms</h1>
+            <p>Only your assigned rooms for today are shown here.</p>
+          </div>
+
+          <div className="toolbar-actions hsk-toolbar-actions">
+            <div className={`hsk-save-indicator hsk-save-${saveState}`}>
+              {saveStatusLabel(saveState)}
+            </div>
+
+            <label className="date-control">
+              Date
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            </label>
+
+            <button className="ops-secondary-btn" onClick={load} type="button">
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {message && <div className="module-message">{message}</div>}
+
+        {loading ? (
+          <div className="module-empty">Loading your rooms…</div>
+        ) : rows.length === 0 ? (
+          <div className="module-empty">You do not have any rooms assigned for this date.</div>
+        ) : (
+          <div className="hsk-assigned-grid">
+            {rows.map(row => (
+              <article className={`hsk-assigned-card ${row.complete ? 'complete' : ''}`} key={row.roomId}>
+                <div className="hsk-assigned-card-head">
+                  <div>
+                    <div className="hsk-room-cell">
+                      <BedDouble size={17} />
+                      <strong>{row.roomName}</strong>
+                    </div>
+                    <div className="hsk-assigned-meta">
+                      {[row.reservationStatus, row.serviceType, row.stripHold]
+                        .filter(Boolean)
+                        .join(' · ') || 'Assigned clean'}
+                    </div>
+                  </div>
+
+                  <span className={row.complete ? 'hsk-complete-pill done' : 'hsk-complete-pill'}>
+                    {row.complete ? 'Complete ✓' : 'In progress'}
+                  </span>
+                </div>
+
+                {row.breakfast.status !== 'none' && (
+                  <span className={`hsk-breakfast-badge hsk-breakfast-${row.breakfast.status}`}>
+                    {row.breakfast.status === 'needed' && 'Breakfast · menu needed'}
+                    {row.breakfast.status === 'received' && 'Breakfast · menu ✓'}
+                    {row.breakfast.status === 'declined' && 'Breakfast · declined'}
+                  </span>
+                )}
+
+                <label className="hsk-assigned-notes">
+                  Notes
+                  <textarea
+                    value={row.notes}
+                    onChange={e => patch(row.roomId, { notes: e.target.value })}
+                    placeholder="Add room notes…"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  className={row.complete ? 'ops-secondary-btn hsk-complete-btn' : 'ops-primary-btn hsk-complete-btn'}
+                  onClick={() => toggleComplete(row, !row.complete)}
+                >
+                  <Check size={16} />
+                  {row.complete ? 'Mark incomplete' : 'Mark complete'}
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="ops-module hsk-module">
       <div className="module-toolbar hsk-sticky-toolbar">
@@ -408,10 +496,6 @@ export default function HousekeepingBoard() {
             />
           </label>
 
-          <Link className="ops-secondary-btn" href="/housekeeping/resources">
-            <BookOpen size={16} />
-            Guide
-          </Link>
 
           <button className="ops-secondary-btn" onClick={load} type="button">
             <RefreshCw size={16} />

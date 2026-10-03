@@ -103,6 +103,42 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
 
   const key = String(module.module_key || '')
 
+  if (key === 'laundry' || key === 'laundry_inventory') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'laundry','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  if (key === 'lobby' || key === 'lobby_inventory') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'hospitality_assistant','runner','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  if (key === 'housekeeping_guide') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'housekeeping','runner','hospitality_assistant','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  if (key === 'front_desk_inventory') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'foh_manager','foh_signoff','hospitality_assistant','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  if (key === 'kitchen_inventory') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'kitchen','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  if (key === 'housekeeping_inventory') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'housekeeping','runner','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
   if (key === 'maintenance') {
     return access.isAdmin || hasAnyCapability(access,[
       'maintenance','maintenance_manager','manager','general_manager','operations_manager','owner'
