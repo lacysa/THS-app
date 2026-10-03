@@ -412,7 +412,7 @@ export default function HousekeepingBoard() {
         ) : (
           <div className="hsk-assigned-grid">
             {rows.map(row => (
-              <article className={`hsk-assigned-card ${row.complete ? 'complete' : ''}`} key={row.roomId}>
+              <article id={`room-${row.roomId}`} className={`hsk-assigned-card ${row.complete ? 'complete' : ''}`} key={row.roomId}>
                 <div className="hsk-assigned-card-head">
                   <div>
                     <div className="hsk-room-cell">
@@ -554,7 +554,7 @@ export default function HousekeepingBoard() {
                 const selectedStaff = splitAssigned(row.assignedTo)
 
                 return (
-                  <tr key={row.roomId}>
+                  <tr id={`room-${row.roomId}`} key={row.roomId}>
                     <td className="hsk-sticky-room hsk-room-column">
                       <div className="hsk-room-cell">
                         <BedDouble size={15} />
