@@ -115,6 +115,18 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
     ])
   }
 
+  if (key === 'housekeeping_setup') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'foh_manager','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
+  if (key === 'room_checks') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'
+    ])
+  }
+
   if (key === 'housekeeping_guide') {
     return access.isAdmin || hasAnyCapability(access,[
       'housekeeping','runner','hospitality_assistant','manager','general_manager','operations_manager','owner'
