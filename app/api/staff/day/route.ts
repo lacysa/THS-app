@@ -99,6 +99,7 @@ export async function GET(req:NextRequest) {
   const decorated = (bookings || []).map((b:any)=>({
     ...b,
     menu_submitted:Boolean((nativeByBooking.get(b.id)||[]).length || (submissionsByBooking.get(b.id)||[]).length || b.menu_submitted),
+    note: noteByBooking.get(b.id) || '',
     displayTime:formatTime24(String(b.time_slot).slice(0,5))
   }))
 
