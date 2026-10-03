@@ -19,6 +19,7 @@ type SaveRow = {
   roomCondition?: string
   nextShiftCondition?: string
   notes?: string
+  housekeeperAttested?: boolean
 }
 
 function validDate(value: string | null | undefined) {
@@ -167,6 +168,18 @@ export async function GET(req: NextRequest) {
           ? (peopleById.get(String(savedRow.foh_signed_by)) as any)?.name || 'Staff'
           : null,
         fohSignedAt: savedRow.foh_signed_at || null,
+        housekeeperAttestedBy: savedRow.housekeeper_attested_by || null,
+        housekeeperAttestedName: savedRow.housekeeper_attested_by
+          ? (peopleById.get(String(savedRow.housekeeper_attested_by)) as any)?.name || 'Staff'
+          : null,
+        housekeeperAttestedAt: savedRow.housekeeper_attested_at || null,
+        checkIssueOpen: Boolean(savedRow.check_issue_open),
+        checkIssueNote: savedRow.check_issue_note || '',
+        checkIssueBy: savedRow.check_issue_by || null,
+        checkIssueByName: savedRow.check_issue_by
+          ? (peopleById.get(String(savedRow.check_issue_by)) as any)?.name || 'Staff'
+          : null,
+        checkIssueAt: savedRow.check_issue_at || null,
         breakfast: {
           serviceDate: breakfastDate,
           status: breakfastStatus,
@@ -189,8 +202,14 @@ export async function GET(req: NextRequest) {
       .filter((row: any) => row.breakfast.status === 'needed')
       .map((row: any) => row.roomName)
 
+    const blockingRoom = assignedOnlyView
+      ? visibleRows.find((row:any)=>row.checkIssueOpen)
+      : null
+
     return NextResponse.json({
       rows: visibleRows,
+      blockingRoomId: blockingRoom?.roomId || null,
+      blockingRoomName: blockingRoom?.roomName || null,
       viewMode: assignedOnlyView ? 'assigned' : 'manager',
       staffOptions,
       signoffAccess: {
@@ -235,6 +254,26 @@ export async function POST(req: NextRequest) {
       String(access.roleName || '').toLowerCase() === 'housekeeping'
 
     const roomIds = rows.map(row => row.roomId).filter(Boolean)
+
+    let blockingExisting:any = null
+    if (assignedOnlyView && currentPerson) {
+      const { data:allAssignedRows, error:blockError } = await admin
+        .from('housekeeping_daily_rooms')
+        .select('room_id,assigned_to,check_issue_open')
+        .eq('service_date', serviceDate)
+        .eq('check_issue_open', true)
+
+      if (blockError) throw new Error(blockError.message)
+
+      blockingExisting = (allAssignedRows || []).find((saved:any)=>
+        String(saved.assigned_to || '')
+          .split(',')
+          .map((name:string)=>name.trim().toLowerCase())
+          .filter(Boolean)
+          .includes(String(currentPerson.name || '').trim().toLowerCase())
+      ) || null
+    }
+
     const { data: existingRows, error: existingError } = roomIds.length
       ? await admin
           .from('housekeeping_daily_rooms')
@@ -263,6 +302,19 @@ export async function POST(req: NextRequest) {
         const complete = Boolean(row.complete)
 
         if (assignedOnlyView) {
+          if (
+            complete &&
+            blockingExisting &&
+            String(blockingExisting.room_id) !== String(row.roomId)
+          ) {
+            throw new Error('You must correct and pass re-check on the flagged room before completing another room.')
+          }
+
+          if (complete && !row.housekeeperAttested) {
+            throw new Error('Please attest that the room is fully cleaned and up to The Hotel Saugatuck standards before completing it.')
+          }
+
+          const attestedNow = complete && Boolean(row.housekeeperAttested)
           return {
             service_date: serviceDate,
             room_id: row.roomId,
@@ -281,6 +333,8 @@ export async function POST(req: NextRequest) {
               : (existing.room_condition || ''),
             next_shift_condition: existing.next_shift_condition || '',
             notes: cleanText(row.notes),
+            housekeeper_attested_by: attestedNow ? currentPerson.id : null,
+            housekeeper_attested_at: attestedNow ? (existing.housekeeper_attested_at || now) : null,
             ha_signed_by: complete ? existing.ha_signed_by || null : null,
             ha_signed_at: complete ? existing.ha_signed_at || null : null,
             foh_signed_by: complete ? existing.foh_signed_by || null : null,
