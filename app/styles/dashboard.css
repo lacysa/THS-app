@@ -550,3 +550,38 @@
   .daily-notes-grid{grid-template-columns:1fr}
   .daily-note-block+ .daily-note-block{border-left:0;border-top:1px solid var(--ths-line)}
 }
+
+
+/* Interactive dashboard overview */
+.daily-link-card{
+  color:inherit;
+  text-decoration:none;
+  cursor:pointer;
+}
+.daily-link-card:hover{
+  border-color:#bdb8ae;
+  box-shadow:0 8px 18px rgba(26,26,24,.06);
+  transform:translateY(-1px);
+}
+.daily-panel-link{
+  color:inherit;
+  text-decoration:none;
+}
+.daily-panel-link:hover{
+  background:#f0ede6;
+}
+.daily-list-link{
+  color:inherit;
+  text-decoration:none;
+  cursor:pointer;
+}
+.daily-list-link:hover{
+  background:#faf8f3;
+}
+.daily-note-link{
+  color:inherit;
+  text-decoration:none;
+}
+.daily-note-link:hover{
+  background:#faf8f3;
+}
