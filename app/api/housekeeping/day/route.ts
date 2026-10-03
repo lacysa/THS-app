@@ -104,7 +104,8 @@ export async function GET(req: NextRequest) {
 
     const assignedOnlyView =
       !access.isAdmin &&
-      String(access.roleName || '').toLowerCase() === 'housekeeping'
+      currentCaps.has('housekeeping') &&
+      !['manager','general_manager','operations_manager','owner'].some(cap => currentCaps.has(cap))
 
     const staffOptions = peopleData.people
       .filter((person: any) => person.active !== false)
@@ -247,9 +248,14 @@ export async function POST(req: NextRequest) {
     const currentPerson = peopleData.people.find(
       (person:any) => person.auth_user_id === access.userId
     ) as any | undefined
+    const currentCaps = currentPerson
+      ? peopleData.byMember.get(String(currentPerson.id)) || new Set<string>()
+      : new Set<string>()
+
     const assignedOnlyView =
       !access.isAdmin &&
-      String(access.roleName || '').toLowerCase() === 'housekeeping'
+      currentCaps.has('housekeeping') &&
+      !['manager','general_manager','operations_manager','owner'].some(cap => currentCaps.has(cap))
 
     const roomIds = rows.map(row => row.roomId).filter(Boolean)
 
