@@ -79,7 +79,7 @@ export default function SettingsPanel({initial}:{initial:Access}){
       <h2>Platform</h2><p>Owner controls. Unpublished modules remain visible to you for testing but hidden from normal staff.</p>
       <div className="module-settings-list">
         {modules.map(m=><div className="module-setting" key={m.module_key}>
-          <div><strong>{m.label||m.title}</strong><span>{m.status}{!m.published?' · preview only':''}</span></div>
+          <div><strong>{m.title}</strong><span>{m.status}{!m.published?' · preview only':''}</span></div>
           <label className="switch-label">Enabled <input type="checkbox" checked={m.enabled} onChange={e=>toggleModule(m.module_key,'enabled',e.target.checked)}/></label>
           <label className="switch-label">Published <input type="checkbox" checked={m.published} onChange={e=>toggleModule(m.module_key,'published',e.target.checked)}/></label>
         </div>)}
