@@ -182,3 +182,81 @@
   .inventory-request-row{grid-template-columns:1fr auto}
   .inventory-request-actions{grid-column:1/-1}
 }
+
+
+/* Housekeeper attestation + correction workflow */
+.hsk-correction-alert{
+  display:grid;
+  gap:4px;
+  padding:10px 11px;
+  border:1px solid #e4b7b1;
+  border-radius:8px;
+  background:#fff3f1;
+  color:#7f342f;
+}
+.hsk-correction-alert strong{
+  font-size:11px;
+}
+.hsk-correction-alert span{
+  font-size:10px;
+  line-height:1.4;
+}
+.hsk-correction-alert small{
+  color:#9b5e59;
+  font-size:9px;
+}
+.hsk-attestation{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:9px 10px;
+  border:1px solid var(--ths-line);
+  border-radius:8px;
+  background:#faf8f3;
+  color:var(--ths-text);
+  font-size:10px;
+  font-weight:700;
+  line-height:1.4;
+  text-transform:none;
+  letter-spacing:normal;
+}
+.hsk-attestation input{
+  margin-top:2px;
+  flex:0 0 auto;
+}
+.hsk-check-issue{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px;
+  margin-top:5px;
+}
+.hsk-check-issue input{
+  min-width:0;
+  min-height:30px;
+  padding:5px 7px;
+  border:1px solid var(--ths-line);
+  border-radius:6px;
+  background:#fff;
+  color:var(--ths-text);
+  font:inherit;
+  font-size:9px;
+}
+.hsk-check-issue button,
+.hsk-pass-recheck{
+  min-height:30px;
+  padding:5px 7px;
+  border:1px solid #d7aaa4;
+  border-radius:6px;
+  background:#fff4f2;
+  color:#8c3e37;
+  font-size:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+.hsk-pass-recheck{
+  width:100%;
+  margin-top:5px;
+  border-color:#b9cbbd;
+  background:#eef5ef;
+  color:#45624e;
+}
