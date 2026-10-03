@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     const { data: roomRow, error: roomError } = await admin
       .from('housekeeping_daily_rooms')
-      .select('complete')
+      .select('complete,check_issue_open')
       .eq('service_date', serviceDate)
       .eq('room_id', roomId)
       .maybeSingle()
@@ -66,7 +66,16 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString()
     const patch = kind === 'ha'
-      ? { ha_signed_by: person.id, ha_signed_at: now, updated_at: now }
+      ? {
+          ha_signed_by: person.id,
+          ha_signed_at: now,
+          check_issue_open: false,
+          ready_for_inspection: false,
+          inspected: true,
+          inspected_at: now,
+          room_condition: 'Vacant (Clean)',
+          updated_at: now
+        }
       : { foh_signed_by: person.id, foh_signed_at: now, updated_at: now }
 
     const { error: updateError } = await admin
