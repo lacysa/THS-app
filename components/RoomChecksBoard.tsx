@@ -56,7 +56,12 @@ export default function RoomChecksBoard(){
             {room.issueOpen&&<div className="room-check-alert"><strong>Correction required</strong><span>{room.issueNote}</span></div>}
             {zones.map(zone=><div className="room-check-zone" key={zone}><h3>{zone}</h3>
               {room.items.filter(i=>i.zone===zone).map(item=><div className={`room-check-item ${item.passed===true?'pass':item.passed===false?'fail':''}`} key={item.id}>
-                <div className="room-check-copy"><strong>{item.label}</strong>{item.passed===false&&<input value={item.note} onChange={e=>updateNote(room.roomId,item.id,e.target.value)} placeholder="What needs to be corrected?"/>}</div>
+                <div className="room-check-copy"><strong>{item.label}</strong>{item.passed===false&&<input
+  value={item.note}
+  onChange={e=>updateNote(room.roomId,item.id,e.target.value)}
+  onBlur={()=>void setResult(room,{...item,note:room.items.find(i=>i.id===item.id)?.note||item.note},false)}
+  placeholder="What needs to be corrected?"
+/>}</div>
                 <div className="room-check-actions">
                   <button aria-label="Pass" className={item.passed===true?'active pass':''} onClick={()=>void setResult(room,item,true)}><Check size={17}/><span>Pass</span></button>
                   <button aria-label="Needs correction" className={item.passed===false?'active fail':''} onClick={()=>void setResult(room,item,false)}><X size={17}/><span>Fix</span></button>
