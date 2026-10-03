@@ -369,15 +369,6 @@ export default function HousekeepingBoard() {
     }
   }
 
-  const summary = useMemo(() => {
-    const fullCleans = rows.filter(row => ['Checkout', 'Out/In', 'Blocked'].includes(row.reservationStatus)).length
-    const refreshes = rows.filter(row => row.serviceType === 'RF').length
-    const checkedOut = rows.filter(row => String(row.serviceType || '').toUpperCase().startsWith('OUT')).length
-    const complete = rows.filter(row => row.complete).length
-    const haChecked = rows.filter(row => Boolean(row.haSignedBy)).length
-    const fullyChecked = rows.filter(row => Boolean(row.haSignedBy && row.fohSignedBy)).length
-    return { fullCleans, refreshes, checkedOut, complete, haChecked, fullyChecked }
-  }, [rows])
 
   const filteredStaff = useMemo(() => {
     const q = staffSearch.trim().toLowerCase()
@@ -531,14 +522,7 @@ export default function HousekeepingBoard() {
         )}
       </div>
 
-      <div className="metric-row hsk-metric-row">
-        <div className="metric-card"><span>Full cleans</span><strong>{summary.fullCleans}</strong></div>
-        <div className="metric-card"><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
-        <div className="metric-card"><span>Checked out</span><strong>{summary.checkedOut}</strong></div>
-        <div className="metric-card"><span>Complete</span><strong>{summary.complete}</strong></div>
-        <div className="metric-card"><span>HA checked</span><strong>{summary.haChecked}</strong></div>
-        <div className="metric-card"><span>Fully checked</span><strong>{summary.fullyChecked}</strong></div>
-      </div>
+
 
       {loading ? (
         <div className="module-empty">Loading rooms…</div>
