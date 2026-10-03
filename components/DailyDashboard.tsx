@@ -21,6 +21,7 @@ type BreakfastRow = {
 
 type HousekeepingRow = {
   id:string
+  roomId:string
   roomName:string
   reservationStatus:string
   serviceType:string
@@ -179,7 +180,7 @@ export default function DailyDashboard({
             <div className="daily-list">
               {housekeeping.length===0 && <div className="daily-empty">No housekeeping rooms assigned.</div>}
               {housekeeping.map(row=>(
-                <Link href="/housekeeping" className="daily-list-row daily-list-link" key={row.id}>
+                <Link href={`/housekeeping#room-${encodeURIComponent(row.roomId)}`} className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-main">
                     <strong>{row.roomName}</strong>
                     <span>{[row.reservationStatus,row.serviceType,row.assignedTo].filter(Boolean).join(' · ') || 'Assigned clean'}</span>
@@ -201,7 +202,7 @@ export default function DailyDashboard({
             <div className="daily-list">
               {breakfastScheduled.length===0 && <div className="daily-empty">No breakfast rooms scheduled.</div>}
               {breakfastScheduled.map(row=>(
-                <Link href="/front-desk" className="daily-list-row daily-list-link" key={row.id}>
+                <Link href={`/front-desk#booking-${encodeURIComponent(row.id)}`} className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-time">{formatTime(row.timeSlot)}</div>
                   <div className="daily-row-main">
                     <strong>{row.roomName}</strong>
@@ -226,7 +227,7 @@ export default function DailyDashboard({
             <div className="daily-list">
               {maintenanceOpen.length===0 && <div className="daily-empty">No open maintenance items.</div>}
               {maintenanceOpen.slice(0,10).map(row=>(
-                <Link href="/maintenance" className="daily-list-row daily-list-link" key={row.id}>
+                <Link href={`/maintenance#maintenance-${encodeURIComponent(row.id)}`} className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-main">
                     <strong>{row.location}</strong>
                     <span>{row.title}</span>
