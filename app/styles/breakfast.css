@@ -52,3 +52,41 @@
 .kitchen-time-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .kitchen-empty-slot{min-height:84px;display:grid;place-items:center;border-style:dashed!important;background:#faf9f6!important}.kitchen-empty-slot .ticket-room{font-size:11px!important;font-weight:600;text-align:center}
 @media(max-width:700px){.kitchen-time-grid{grid-template-columns:1fr}.kitchen-empty-slot{min-height:48px}}
+
+
+/* Per-room / per-menu autosaving notes */
+.menu-note-editor{
+  display:grid;
+  gap:6px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px dashed var(--ths-line);
+}
+.menu-note-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.menu-note-head strong{font-size:10px}
+.menu-note-state{
+  font-size:9px;
+  font-weight:800;
+  color:var(--ths-muted);
+}
+.menu-note-state.saved{color:var(--ths-success)}
+.menu-note-state.error{color:var(--ths-danger)}
+.menu-note-editor textarea{
+  width:100%;
+  min-height:58px;
+  resize:vertical;
+  box-sizing:border-box;
+  padding:8px 9px;
+  border:1px solid var(--ths-line);
+  border-radius:6px;
+  background:#fff;
+  color:var(--ths-text);
+  font:inherit;
+  font-size:11px;
+  line-height:1.4;
+}
