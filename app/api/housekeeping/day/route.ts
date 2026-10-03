@@ -101,6 +101,10 @@ export async function GET(req: NextRequest) {
       ? peopleData.byMember.get(String(currentPerson.id)) || new Set<string>()
       : new Set<string>()
 
+    const assignedOnlyView =
+      !access.isAdmin &&
+      String(access.roleName || '').toLowerCase() === 'housekeeping'
+
     const staffOptions = peopleData.people
       .filter((person: any) => {
         const caps = peopleData.byMember.get(String(person.id)) || new Set<string>()
@@ -171,12 +175,23 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    const menuNeededRooms = rows
+    const visibleRows = assignedOnlyView && currentPerson
+      ? rows.filter((row:any) =>
+          String(row.assignedTo || '')
+            .split(',')
+            .map((name:string)=>name.trim().toLowerCase())
+            .filter(Boolean)
+            .includes(String(currentPerson.name || '').trim().toLowerCase())
+        )
+      : rows
+
+    const menuNeededRooms = visibleRows
       .filter((row: any) => row.breakfast.status === 'needed')
       .map((row: any) => row.roomName)
 
     return NextResponse.json({
-      rows,
+      rows: visibleRows,
+      viewMode: assignedOnlyView ? 'assigned' : 'manager',
       staffOptions,
       signoffAccess: {
         canHaSignoff: currentCaps.has('ha_signoff') || currentCaps.has('ha_signoff_override'),
@@ -211,11 +226,19 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString()
 
   try {
+    const peopleData = await getPeopleAndCapabilities(admin)
+    const currentPerson = peopleData.people.find(
+      (person:any) => person.auth_user_id === access.userId
+    ) as any | undefined
+    const assignedOnlyView =
+      !access.isAdmin &&
+      String(access.roleName || '').toLowerCase() === 'housekeeping'
+
     const roomIds = rows.map(row => row.roomId).filter(Boolean)
     const { data: existingRows, error: existingError } = roomIds.length
       ? await admin
           .from('housekeeping_daily_rooms')
-          .select('room_id,completed_at,inspected_at,ha_signed_by,ha_signed_at,foh_signed_by,foh_signed_at')
+          .select('*')
           .eq('service_date', serviceDate)
           .in('room_id', roomIds)
       : { data: [], error: null as any }
@@ -224,34 +247,72 @@ export async function POST(req: NextRequest) {
     const existingByRoom = new Map<string, any>()
     for (const row of existingRows || []) existingByRoom.set(String((row as any).room_id), row)
 
-    const upserts = rows.map(row => {
-      const existing = existingByRoom.get(String(row.roomId)) || {}
-      const complete = Boolean(row.complete)
-      const inspected = Boolean(row.inspected)
+    const upserts = rows
+      .filter(row => {
+        if (!assignedOnlyView) return true
+        if (!currentPerson) return false
+        const existing = existingByRoom.get(String(row.roomId)) || {}
+        return String(existing.assigned_to || '')
+          .split(',')
+          .map((name:string)=>name.trim().toLowerCase())
+          .filter(Boolean)
+          .includes(String(currentPerson.name || '').trim().toLowerCase())
+      })
+      .map(row => {
+        const existing = existingByRoom.get(String(row.roomId)) || {}
+        const complete = Boolean(row.complete)
 
-      return {
-        service_date: serviceDate,
-        room_id: row.roomId,
-        reservation_status: cleanText(row.reservationStatus),
-        service_type: cleanText(row.serviceType),
-        strip_hold: cleanText(row.stripHold),
-        assigned_to: cleanText(row.assignedTo),
-        clean_order: Number.isFinite(row.cleanOrder as number) ? row.cleanOrder : null,
-        complete,
-        ready_for_inspection: complete && !inspected,
-        inspected,
-        completed_at: complete ? (existing.completed_at || row.completedAt || now) : null,
-        inspected_at: inspected ? (existing.inspected_at || row.inspectedAt || now) : null,
-        room_condition: cleanText(row.roomCondition),
-        next_shift_condition: cleanText(row.nextShiftCondition),
-        notes: cleanText(row.notes),
-        ha_signed_by: complete ? existing.ha_signed_by || null : null,
-        ha_signed_at: complete ? existing.ha_signed_at || null : null,
-        foh_signed_by: complete ? existing.foh_signed_by || null : null,
-        foh_signed_at: complete ? existing.foh_signed_at || null : null,
-        updated_at: now
-      }
-    })
+        if (assignedOnlyView) {
+          return {
+            service_date: serviceDate,
+            room_id: row.roomId,
+            reservation_status: existing.reservation_status || '',
+            service_type: existing.service_type || '',
+            strip_hold: existing.strip_hold || '',
+            assigned_to: existing.assigned_to || '',
+            clean_order: existing.clean_order ?? null,
+            complete,
+            ready_for_inspection: complete && !Boolean(existing.inspected),
+            inspected: Boolean(existing.inspected),
+            completed_at: complete ? (existing.completed_at || row.completedAt || now) : null,
+            inspected_at: existing.inspected_at || null,
+            room_condition: complete
+              ? (existing.room_condition || 'Ready for Inspection')
+              : (existing.room_condition || ''),
+            next_shift_condition: existing.next_shift_condition || '',
+            notes: cleanText(row.notes),
+            ha_signed_by: complete ? existing.ha_signed_by || null : null,
+            ha_signed_at: complete ? existing.ha_signed_at || null : null,
+            foh_signed_by: complete ? existing.foh_signed_by || null : null,
+            foh_signed_at: complete ? existing.foh_signed_at || null : null,
+            updated_at: now
+          }
+        }
+
+        const inspected = Boolean(row.inspected)
+        return {
+          service_date: serviceDate,
+          room_id: row.roomId,
+          reservation_status: cleanText(row.reservationStatus),
+          service_type: cleanText(row.serviceType),
+          strip_hold: cleanText(row.stripHold),
+          assigned_to: cleanText(row.assignedTo),
+          clean_order: Number.isFinite(row.cleanOrder as number) ? row.cleanOrder : null,
+          complete,
+          ready_for_inspection: complete && !inspected,
+          inspected,
+          completed_at: complete ? (existing.completed_at || row.completedAt || now) : null,
+          inspected_at: inspected ? (existing.inspected_at || row.inspectedAt || now) : null,
+          room_condition: cleanText(row.roomCondition),
+          next_shift_condition: cleanText(row.nextShiftCondition),
+          notes: cleanText(row.notes),
+          ha_signed_by: complete ? existing.ha_signed_by || null : null,
+          ha_signed_at: complete ? existing.ha_signed_at || null : null,
+          foh_signed_by: complete ? existing.foh_signed_by || null : null,
+          foh_signed_at: complete ? existing.foh_signed_at || null : null,
+          updated_at: now
+        }
+      })
 
     if (upserts.length) {
       const { error } = await admin
