@@ -19,7 +19,9 @@ import {
   ShieldCheck,
   ScrollText,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Package,
+  Building2
 } from 'lucide-react'
 
 type ModuleRow = {
@@ -71,7 +73,15 @@ const iconMap: Record<string, any> = {
   projects: FolderKanban,
   maintenance: Wrench,
   shift_reports: ScrollText,
-  breakfast_guest: UtensilsCrossed
+  breakfast_guest: UtensilsCrossed,
+  laundry: Package,
+  lobby: Building2,
+  housekeeping_guide: BookOpen,
+  front_desk_inventory: Package,
+  kitchen_inventory: Package,
+  housekeeping_inventory: Package,
+  laundry_inventory: Package,
+  lobby_inventory: Package
 }
 
 const permissionByModule: Record<string, string | undefined> = {
@@ -101,7 +111,15 @@ const hrefFallback: Record<string, string> = {
   projects: '/projects',
   maintenance: '/maintenance',
   shift_reports: '/shift-reports',
-  breakfast_guest: '/breakfast'
+  breakfast_guest: '/breakfast',
+  laundry: '/laundry',
+  lobby: '/lobby',
+  housekeeping_guide: '/housekeeping/resources',
+  front_desk_inventory: '/inventory/front-desk',
+  kitchen_inventory: '/inventory/kitchen',
+  housekeeping_inventory: '/inventory/housekeeping',
+  laundry_inventory: '/inventory/laundry',
+  lobby_inventory: '/inventory/lobby'
 }
 
 const breakfastModules = new Set([
@@ -117,7 +135,15 @@ const operationsModules = new Set([
   'room_checks',
   'projects',
   'shift_reports',
-  'maintenance'
+  'maintenance',
+  'laundry',
+  'lobby',
+  'housekeeping_guide',
+  'front_desk_inventory',
+  'kitchen_inventory',
+  'housekeeping_inventory',
+  'laundry_inventory',
+  'lobby_inventory'
 ])
 
 function initials(name: string) {
