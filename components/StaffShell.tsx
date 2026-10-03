@@ -338,7 +338,9 @@ export default function StaffShell({
           )
         })
         .filter(
-          m => m.module_key !== 'breakfast_menu_manager'
+          m =>
+            m.module_key !== 'breakfast_menu_manager' &&
+            !m.module_key.endsWith('_inventory')
         )
         .sort(
           (a, b) =>
