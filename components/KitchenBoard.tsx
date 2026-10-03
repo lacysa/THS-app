@@ -1,35 +1,23 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { RefreshCw, Save } from 'lucide-react'
-
-type NoteState = 'idle'|'saving'|'saved'|'error'
+import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
+import BookingMenuNote from '@/components/BookingMenuNote'
 
 export default function KitchenBoard({initialDate}:{initialDate:string}) {
   const [date,setDate] = useState(initialDate)
   const [data,setData] = useState<any>(null)
   const [loading,setLoading] = useState(true)
   const [error,setError] = useState('')
-  const [notes,setNotes] = useState('')
-  const [noteState,setNoteState] = useState<NoteState>('idle')
-  const notesLoaded = useRef(false)
-  const saveTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   async function load() {
     setLoading(true)
     setError('')
     try {
-      const [boardRes,noteRes] = await Promise.all([
-        fetch(`/api/staff/day?date=${date}`,{cache:'no-store'}),
-        fetch(`/api/kitchen/notes?date=${date}`,{cache:'no-store'})
-      ])
+      const boardRes = await fetch(`/api/staff/day?date=${date}`,{cache:'no-store'})
       const json = await boardRes.json()
       if (!boardRes.ok) throw new Error(json.message || 'Could not load the kitchen board.')
       setData(json)
-      const noteJson = await noteRes.json().catch(()=>({}))
-      if (noteRes.ok) setNotes(noteJson.note || '')
-      notesLoaded.current = true
-      setNoteState('idle')
     } catch (e:any) {
       setData(null)
       setError(e?.message || 'Could not load the kitchen board.')
@@ -38,36 +26,7 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
     }
   }
 
-  useEffect(()=>{
-    notesLoaded.current = false
-    void load()
-    return ()=>{ if(saveTimer.current) clearTimeout(saveTimer.current) }
-  },[date])
-
-  async function saveNotes(value=notes) {
-    setNoteState('saving')
-    try {
-      const r = await fetch('/api/kitchen/notes',{
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body:JSON.stringify({serviceDate:date,note:value})
-      })
-      const d = await r.json().catch(()=>({}))
-      if (!r.ok) throw new Error(d.error || 'Could not save kitchen notes.')
-      setNoteState('saved')
-    } catch (e:any) {
-      setNoteState('error')
-      setError(e?.message || 'Could not save kitchen notes.')
-    }
-  }
-
-  function changeNotes(value:string) {
-    setNotes(value)
-    if (!notesLoaded.current) return
-    setNoteState('saving')
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(()=>void saveNotes(value),700)
-  }
+  useEffect(()=>{ void load() },[date])
 
   const grouped = useMemo(()=>{
     const map = new Map<string,any[]>()
@@ -87,8 +46,6 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
     }))
   },[data])
 
-  const noteLabel = noteState==='saving' ? 'Saving…' : noteState==='saved' ? 'Saved ✓' : noteState==='error' ? 'Save failed' : 'Autosaves'
-
   return (
     <div className="breakfast-workspace kitchen-workspace">
       <div className="toolbar breakfast-toolbar kitchen-toolbar">
@@ -102,15 +59,6 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
       </div>
 
       {error && <div className="notice error">{error}</div>}
-
-      <section className="card kitchen-notes-card">
-        <div className="kitchen-notes-head">
-          <div><strong>Kitchen notes</strong><span>Daily prep, substitutions, guest-specific kitchen notes, or anything the next kitchen person needs to know.</span></div>
-          <div className={`kitchen-save-state ${noteState}`}>{noteLabel}</div>
-        </div>
-        <textarea value={notes} onChange={e=>changeNotes(e.target.value)} placeholder="Add kitchen notes for this service date…" />
-        <button className="btn secondary kitchen-manual-save" onClick={()=>void saveNotes()}><Save size={14}/> Save now</button>
-      </section>
 
       {loading ? <div className="card">Loading kitchen board…</div> : data && (
         <section className="card kitchen-board-card">
@@ -165,6 +113,8 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
                           ))}
                         </div>
                       )}
+
+                      {g.bookingId && <BookingMenuNote bookingId={g.bookingId} initialNote={g.note || ''} />}
                     </article>
                   ) : (
                     <article className="ticket kitchen-ticket compact kitchen-empty-slot" key={`empty-${section.key}-${index}`}>
