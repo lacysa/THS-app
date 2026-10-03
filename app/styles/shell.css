@@ -27,19 +27,23 @@ body{overflow-x:hidden}
 .sidebar-brand{position:relative;padding-right:34px}
 .sidebar-collapse-btn{position:absolute;right:2px;top:4px;width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:rgba(255,255,255,.04);color:#c7c3bb;cursor:pointer}
 .sidebar-collapse-btn:hover{background:rgba(255,255,255,.08);color:#fff}
-.staff-ops-sidebar.collapsed{width:72px;padding-left:9px;padding-right:9px}
-.sidebar-collapsed .staff-ops-main{margin-left:72px}
+.staff-ops-sidebar.collapsed{width:52px;padding-left:5px;padding-right:5px}
+.sidebar-collapsed .staff-ops-main{margin-left:52px}
 .staff-ops-sidebar.collapsed .ops-logo-copy,.staff-ops-sidebar.collapsed .ops-nav-label,.staff-ops-sidebar.collapsed .sidebar-link-label,.staff-ops-sidebar.collapsed .preview-badge,.staff-ops-sidebar.collapsed .ops-sidebar-profile-copy,.staff-ops-sidebar.collapsed .sidebar-footer-actions span{display:none!important}
-.staff-ops-sidebar.collapsed .sidebar-brand{padding-right:0;padding-top:38px}
-.staff-ops-sidebar.collapsed .sidebar-collapse-btn{right:11px;top:0}
-.staff-ops-sidebar.collapsed .ops-logo{justify-content:center;padding-left:0;padding-right:0}
+.staff-ops-sidebar.collapsed .sidebar-brand{padding-right:0;padding-top:32px}
+.staff-ops-sidebar.collapsed .sidebar-collapse-btn{right:6px;top:0}
+.staff-ops-sidebar.collapsed .ops-logo{justify-content:center;padding:0 0 10px}
 .staff-ops-sidebar.collapsed .staff-ops-nav a,.staff-ops-sidebar.collapsed .sidebar-footer-actions button{justify-content:center;padding-left:0;padding-right:0}
-.staff-ops-sidebar.collapsed .sidebar-link-icon{width:24px;flex-basis:24px}
+.staff-ops-sidebar.collapsed .sidebar-link-icon{width:20px;flex-basis:20px}
 .staff-ops-sidebar.collapsed .ops-sidebar-profile{justify-content:center;padding-left:0;padding-right:0}
+.staff-ops-sidebar.collapsed .ops-logo-mark{width:30px;height:30px;flex-basis:30px;font-size:8px}
+.staff-ops-sidebar.collapsed .ops-sidebar-avatar{width:28px;height:28px;flex-basis:28px;font-size:8px}
+.staff-ops-sidebar.collapsed .staff-ops-nav a{min-height:34px}
+.staff-ops-sidebar.collapsed .sidebar-footer-actions button{min-height:32px}
 @media(max-width:760px){
   .ops-sidebar,.staff-ops-sidebar{width:205px}
   .ops-main,.staff-ops-main{margin-left:205px}
-  .staff-ops-sidebar.collapsed{width:64px}
-  .sidebar-collapsed .staff-ops-main{margin-left:64px}
+  .staff-ops-sidebar.collapsed{width:48px}
+  .sidebar-collapsed .staff-ops-main{margin-left:48px}
   .staff-page-content,.ops-content{max-width:none}
 }
