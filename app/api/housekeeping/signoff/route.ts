@@ -8,6 +8,12 @@ function validDate(value: string | null | undefined) {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value))
 }
 
+function nextDate(value:string) {
+  const d = new Date(`${value}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate()+1)
+  return d.toISOString().slice(0,10)
+}
+
 export async function POST(req: NextRequest) {
   const access = await getStaffAccess()
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -54,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const { data: roomRow, error: roomError } = await admin
       .from('housekeeping_daily_rooms')
-      .select('complete,check_issue_open')
+      .select('complete,check_issue_open,strip_hold,room_condition')
       .eq('service_date', serviceDate)
       .eq('room_id', roomId)
       .maybeSingle()
@@ -65,6 +71,22 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString()
+
+    let shouldMarkReady = false
+    if (kind === 'foh') {
+      const { data:nextDayRow,error:nextDayError } = await admin
+        .from('housekeeping_daily_rooms')
+        .select('reservation_status')
+        .eq('service_date',nextDate(serviceDate))
+        .eq('room_id',roomId)
+        .maybeSingle()
+      if (nextDayError) throw new Error(nextDayError.message)
+
+      const nextBlocked = String(nextDayRow?.reservation_status || '').trim().toLowerCase() === 'blocked'
+      const stripOrHold = Boolean(String(roomRow?.strip_hold || '').trim())
+      shouldMarkReady = !nextBlocked && !stripOrHold
+    }
+
     const patch = kind === 'ha'
       ? {
           ha_signed_by: person.id,
@@ -76,7 +98,12 @@ export async function POST(req: NextRequest) {
           room_condition: 'Vacant (Clean)',
           updated_at: now
         }
-      : { foh_signed_by: person.id, foh_signed_at: now, updated_at: now }
+      : {
+          foh_signed_by: person.id,
+          foh_signed_at: now,
+          ...(shouldMarkReady ? { room_condition:'Ready' } : {}),
+          updated_at: now
+        }
 
     const { error: updateError } = await admin
       .from('housekeeping_daily_rooms')
