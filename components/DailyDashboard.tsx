@@ -16,6 +16,7 @@ type BreakfastRow = {
   timeSlot:string
   status:string
   menuSubmitted:boolean
+  taggedOnly?:boolean
   note?:string
 }
 
@@ -202,15 +203,15 @@ export default function DailyDashboard({
             <div className="daily-list">
               {breakfastScheduled.length===0 && <div className="daily-empty">No breakfast rooms scheduled.</div>}
               {breakfastScheduled.map(row=>(
-                <Link href={`/front-desk#booking-${encodeURIComponent(row.id)}`} className="daily-list-row daily-list-link" key={row.id}>
+                <Link href={row.taggedOnly ? '/front-desk' : `/front-desk#booking-${encodeURIComponent(row.id)}`} className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-time">{formatTime(row.timeSlot)}</div>
                   <div className="daily-row-main">
                     <strong>{row.roomName}</strong>
-                    <span>{row.lastName || 'Guest'}</span>
+                    <span>{row.taggedOnly ? 'Menu Missing' : (row.lastName || 'Guest')}</span>
                     {row.note && <small>{row.note}</small>}
                   </div>
                   <span className={row.menuSubmitted?'daily-state done':'daily-state warning'}>
-                    {row.menuSubmitted?'Menu received':'Menu needed'}
+                    {row.menuSubmitted?'Menu received':'Menu Missing'}
                   </span>
                 </Link>
               ))}
