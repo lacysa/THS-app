@@ -126,13 +126,78 @@ export default function ShiftReportBoard() {
       menusMissing:breakfast.filter(r=>r.status==='scheduled'&&!r.menuSubmitted),
       breakfastDeclined:breakfast.filter(r=>r.status==='declined').length,
       maintenanceOpen:maintenance.filter(r=>r.status!=='complete'),
-      maintenanceComplete:maintenance.filter(r=>r.status==='complete'),
-      roomIssues:hk.filter(r=>r.notes||r.roomCondition||r.nextShiftCondition)
+      maintenanceComplete:maintenance.filter(r=>r.status==='complete')
     }
   },[auto])
 
   const handoffRoomNotes = roomNotes.filter(n=>!n.resolved)
   const handoffMaintenance = summary.maintenanceOpen
+
+  const roomHandoff = useMemo(()=>{
+    const byRoom = new Map<string,{roomId:string;roomName:string;details:string[]}>()
+    const normalConditions = new Set(['','ready','vacant (clean)','occupied'])
+
+    for (const row of (auto.housekeeping || [])) {
+      const roomId=String(row.roomId||'')
+      const roomName=String(row.roomName||'Room')
+      const details:string[]=[]
+      const reservation=String(row.reservationStatus||'').trim()
+      const condition=String(row.roomCondition||'').trim()
+      const next=String(row.nextShiftCondition||'').trim()
+      const stripHold=String(row.stripHold||'').trim()
+      const note=String(row.notes||'').trim()
+
+      if (reservation.toLowerCase()==='blocked') details.push('Blocked')
+      if (stripHold) details.push(stripHold)
+      if (condition && !normalConditions.has(condition.toLowerCase())) details.push(condition)
+      if (next && !normalConditions.has(next.toLowerCase())) details.push(`Next: ${next}`)
+      if (note) details.push(note)
+
+      if (details.length) byRoom.set(roomId,{roomId,roomName,details:[...new Set(details)]})
+    }
+
+    for (const note of handoffRoomNotes) {
+      const roomId=String(note.room_id||note.roomId||'')
+      const roomName=String(note.roomName||'Room')
+      const text=String(note.note||'').trim()
+      if (!text) continue
+      const current=byRoom.get(roomId)||{roomId,roomName,details:[]}
+      if (!current.details.includes(text)) current.details.push(text)
+      byRoom.set(roomId,current)
+    }
+
+    return [...byRoom.values()]
+  },[auto.housekeeping,handoffRoomNotes])
+
+  const actionItems = useMemo(()=>{
+    const items:{key:string;title:string;detail:string}[]=[]
+
+    for (const room of roomHandoff) {
+      items.push({
+        key:`room-${room.roomId}`,
+        title:room.roomName,
+        detail:room.details.join(' · ')
+      })
+    }
+
+    if (summary.menusMissing.length) {
+      items.push({
+        key:'breakfast-missing',
+        title:'Breakfast',
+        detail:`${summary.menusMissing.length} missing menu${summary.menusMissing.length===1?'':'s'}: ${summary.menusMissing.map((r:any)=>r.roomName).join(', ')}`
+      })
+    }
+
+    for (const item of summary.maintenanceOpen) {
+      items.push({
+        key:`maintenance-${item.id}`,
+        title:String(item.roomName||item.area||'Property'),
+        detail:`${String(item.title||'Maintenance item')} · ${String(item.status||'open').replace('_',' ')}`
+      })
+    }
+
+    return items
+  },[roomHandoff,summary.menusMissing,summary.maintenanceOpen])
 
   function textarea(key:keyof typeof draft,label:string,placeholder:string) {
     return <label>{label}<textarea value={draft[key]} onChange={e=>setDraft(cur=>({...cur,[key]:e.target.value}))} disabled={!canManage||locked} placeholder={placeholder}/></label>
@@ -166,122 +231,111 @@ export default function ShiftReportBoard() {
     <div className="shift-print-document" aria-hidden="true">
       <header className="shift-print-heading">
         <h1>The Hotel Saugatuck</h1>
-        <h2>Shift Report · {date} · {shift}</h2>
+        <h2>Daily Shift Report · {date} · {shift}</h2>
         <div>Prepared by {currentStaffName}</div>
         <div>Status: {report?.status || 'Draft'}</div>
       </header>
 
-      <section className="shift-print-section">
-        <h3>Rooms</h3>
-        <div className="shift-print-summary-grid">
-          <div><span>Completed rooms</span><strong>{summary.completed}</strong></div>
+      <section className="shift-print-section shift-print-snapshot">
+        <h3>Shift Snapshot</h3>
+        <div className="shift-print-summary-grid shift-print-summary-six">
+          <div><span>Rooms completed</span><strong>{summary.completed}</strong></div>
           <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
           <div><span>Holds</span><strong>{summary.holds}</strong></div>
+          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
+          <div><span>Menus missing</span><strong>{summary.menusMissing.length}</strong></div>
+          <div><span>Open maintenance</span><strong>{summary.maintenanceOpen.length}</strong></div>
         </div>
-        {summary.roomIssues.length > 0 && <div className="shift-print-list">
-          {summary.roomIssues.map((r:any)=><div key={`print-room-${r.roomId}`} className="shift-print-row">
-            <strong>{r.roomName}</strong>
-            <span>{[r.roomCondition,r.nextShiftCondition,r.notes].filter(Boolean).join(' · ')}</span>
-          </div>)}
-        </div>}
-        {roomNotes.filter(n=>n.include_in_shift_report).length > 0 && <div className="shift-print-list">
-          {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
-            <strong>{n.roomName}</strong>
-            <span>{n.note}</span>
-          </div>)}
-        </div>}
       </section>
+
+      {actionItems.length>0 && <section className="shift-print-section">
+        <h3>Action Required / Handoff</h3>
+        <ul className="shift-print-action-list">
+          {actionItems.map(item=><li key={`print-action-${item.key}`}><strong>{item.title}</strong> — {item.detail}</li>)}
+        </ul>
+      </section>}
 
       <section className="shift-print-section">
         <h3>Breakfast · {auto.breakfastDate}</h3>
-        <div className="shift-print-summary-grid">
-          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
-          <div><span>Menus outstanding</span><strong>{summary.menusMissing.length}</strong></div>
-          <div><span>Declined breakfast</span><strong>{summary.breakfastDeclined}</strong></div>
-        </div>
-        {summary.menusMissing.length > 0 && (
-          <div className="shift-print-bullets">
-            <strong>Missing menus</strong>
-            <ul>
-              {summary.menusMissing.map((r:any)=><li key={`print-menu-${r.roomId}`}>{r.roomName}</li>)}
-            </ul>
-          </div>
-        )}
-      </section>
-
-      <section className="shift-print-section">
-        <h3>Maintenance</h3>
-        <div className="shift-print-summary-grid">
-          <div><span>Open / carryover</span><strong>{summary.maintenanceOpen.length}</strong></div>
-          <div><span>Completed</span><strong>{summary.maintenanceComplete.length}</strong></div>
-        </div>
-        {summary.maintenanceOpen.filter((m:any)=>m.include_in_shift_report).length > 0 && <div className="shift-print-list">
-          {summary.maintenanceOpen.filter((m:any)=>m.include_in_shift_report).slice(0,10).map((m:any)=><div key={`print-maint-${m.id}`} className="shift-print-row">
-            <strong>{m.roomName}</strong><span>{m.title} · {m.status.replace('_',' ')}</span>
-          </div>)}
+        <p><strong>{summary.menusReceived + summary.menusMissing.length + summary.breakfastDeclined} rooms expected</strong> · {summary.menusReceived} menus received · {summary.menusMissing.length} missing · {summary.breakfastDeclined} declined</p>
+        {summary.menusMissing.length>0 && <div className="shift-print-bullets">
+          <strong>Missing menus</strong>
+          <ul>{summary.menusMissing.map((r:any)=><li key={`print-menu-${r.roomId}`}>{r.roomName}</li>)}</ul>
         </div>}
       </section>
 
-      <section className="shift-print-section">
-        <h3>Guest Notes</h3>
-        <p>{draft.guestNotes || '—'}</p>
-      </section>
+      {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <section className="shift-print-section">
+        <h3>Room / Guest Notes</h3>
+        <div className="shift-print-list">
+          {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
+            <strong>{n.roomName}</strong><span>{n.note}</span>
+          </div>)}
+        </div>
+        {draft.guestNotes.trim() && <p className="shift-print-narrative">{draft.guestNotes}</p>}
+      </section>}
 
-      <section className="shift-print-section">
-        <h3>Staff</h3>
-        <p>{draft.staffNotes || '—'}</p>
-      </section>
+      {!roomNotes.filter(n=>n.include_in_shift_report).length && draft.guestNotes.trim() && <section className="shift-print-section">
+        <h3>Room / Guest Notes</h3><p>{draft.guestNotes}</p>
+      </section>}
 
-      <section className="shift-print-section">
-        <h3>Supplies / Inventory</h3>
-        <p>{draft.suppliesNotes || '—'}</p>
-      </section>
-
-      <section className="shift-print-section">
-        <h3>Tomorrow</h3>
-        <p>{draft.tomorrowNotes || '—'}</p>
-      </section>
-
-      <section className="shift-print-section">
-        <h3>General Notes</h3>
-        <p>{draft.generalNotes || '—'}</p>
-      </section>
+      {draft.staffNotes.trim() && <section className="shift-print-section"><h3>Staff Notes</h3><p>{draft.staffNotes}</p></section>}
+      {draft.suppliesNotes.trim() && <section className="shift-print-section"><h3>Supplies / Inventory</h3><p>{draft.suppliesNotes}</p></section>}
+      {draft.tomorrowNotes.trim() && <section className="shift-print-section"><h3>Tomorrow / Follow-up</h3><p>{draft.tomorrowNotes}</p></section>}
+      {draft.generalNotes.trim() && <section className="shift-print-section"><h3>General Notes</h3><p>{draft.generalNotes}</p></section>}
+      {draft.managementNotes.trim() && <section className="shift-print-section"><h3>Management Notes</h3><p>{draft.managementNotes}</p></section>}
     </div>
 
-    {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-grid">
-      <section className="shift-section"><h3>Rooms</h3><div className="shift-list">
-        <div className="shift-line"><span>Completed rooms</span><strong>{summary.completed}</strong></div>
-        <div className="shift-line"><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
-        <div className="shift-line"><span>Holds</span><strong>{summary.holds}</strong></div>
-        {summary.roomIssues.map((r:any)=><div key={r.roomId} className="shift-line"><span><strong>{r.roomName}</strong><br/><span className="shift-muted">{[r.roomCondition,r.nextShiftCondition,r.notes].filter(Boolean).join(' · ')}</span></span><span className="shift-badge">Room note</span></div>)}
-        {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={n.id} className="shift-line"><span><strong>{n.roomName}</strong><br/><span className="shift-muted">{n.note}</span></span><span className="shift-badge">{n.note_type}</span></div>)}
-      </div></section>
+    {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-report-flow">
+      <section className="shift-section shift-snapshot-section">
+        <h3>Shift Snapshot</h3>
+        <div className="shift-snapshot-grid">
+          <div><span>Rooms completed</span><strong>{summary.completed}</strong></div>
+          <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
+          <div><span>Holds</span><strong>{summary.holds}</strong></div>
+          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
+          <div><span>Menus missing</span><strong>{summary.menusMissing.length}</strong></div>
+          <div><span>Open maintenance</span><strong>{summary.maintenanceOpen.length}</strong></div>
+        </div>
+      </section>
 
-      <section className="shift-section"><h3>Breakfast · {auto.breakfastDate}</h3><div className="shift-list">
-        <div className="shift-line"><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
-        <div className="shift-line"><span>Declined breakfast</span><strong>{summary.breakfastDeclined}</strong></div>
-        <div className="shift-line"><span>Menus outstanding</span><strong>{summary.menusMissing.length}</strong></div>
-        {summary.menusMissing.length > 0 && (
-          <div className="shift-missing-menu-list">
-            <strong>Missing menus</strong>
-            <ul>
-              {summary.menusMissing.map((r:any)=><li key={r.roomId}>{r.roomName}</li>)}
-            </ul>
-          </div>
-        )}
-      </div></section>
+      <section className="shift-section shift-action-section">
+        <h3>Action Required / Handoff</h3>
+        {actionItems.length ? <div className="shift-action-list">
+          {actionItems.map(item=><div className="shift-action-item" key={item.key}>
+            <strong>{item.title}</strong>
+            <span>{item.detail}</span>
+          </div>)}
+        </div> : <div className="shift-muted">No exceptions or open handoff items.</div>}
+      </section>
 
-      <section className="shift-section"><h3>Maintenance</h3><div className="shift-list">
-        <div className="shift-line"><span>Open / carryover</span><strong>{summary.maintenanceOpen.length}</strong></div>
-        <div className="shift-line"><span>Completed</span><strong>{summary.maintenanceComplete.length}</strong></div>
-        {summary.maintenanceOpen.filter((m:any)=>m.include_in_shift_report).slice(0,10).map((m:any)=><div key={m.id} className="shift-line"><span><strong>{m.roomName}</strong><br/><span className="shift-muted">{m.title}</span></span><span className={`shift-badge ${m.priority==='urgent'?'danger':''}`}>{m.status.replace('_',' ')}</span></div>)}
-      </div></section>
+      <section className="shift-section">
+        <h3>Breakfast · {auto.breakfastDate}</h3>
+        <div className="shift-breakfast-overview">
+          <strong>{summary.menusReceived + summary.menusMissing.length + summary.breakfastDeclined} rooms expected</strong>
+          <span>{summary.menusReceived} menus received · {summary.menusMissing.length} missing · {summary.breakfastDeclined} declined</span>
+        </div>
+        {summary.menusMissing.length>0 && <div className="shift-missing-menu-list">
+          <strong>Missing menus</strong>
+          <ul>{summary.menusMissing.map((r:any)=><li key={r.roomId}>{r.roomName}</li>)}</ul>
+        </div>}
+      </section>
 
-      <section className="shift-section"><h3>Guest Notes</h3>{textarea('guestNotes','Guest issues / requests / recovery','Complaints, special requests, compensation, late arrivals, anything the next shift should know.')}</section>
-      <section className="shift-section"><h3>Staff</h3>{textarea('staffNotes','Staff notes','Attendance, coverage changes, training, handoff information.')}</section>
+      <section className="shift-section full">
+        <h3>Room / Guest Notes</h3>
+        {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <div className="shift-list">
+          {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={n.id} className="shift-line">
+            <span><strong>{n.roomName}</strong><br/><span className="shift-muted">{n.note}</span></span>
+            <span className="shift-badge">{n.note_type}</span>
+          </div>)}
+        </div>}
+        {textarea('guestNotes','Guest issues / requests / recovery','Complaints, special requests, compensation, late arrivals, anything the next shift should know.')}
+      </section>
+
+      <section className="shift-section"><h3>Staff Notes</h3>{textarea('staffNotes','Staff notes','Attendance, coverage changes, training, handoff information.')}</section>
       <section className="shift-section"><h3>Supplies / Inventory</h3>{textarea('suppliesNotes','Supplies','Running low, ordered today, deliveries received.')}</section>
-      <section className="shift-section"><h3>Tomorrow</h3>{textarea('tomorrowNotes','Tomorrow priorities','Room follow-up, breakfast outstanding, maintenance carryover, priority tasks.')}</section>
-      <section className="shift-section full"><h3>General Notes</h3>{textarea('generalNotes','General notes','Anything else that belongs in the daily record.')}</section>
+      <section className="shift-section"><h3>Tomorrow / Follow-up</h3>{textarea('tomorrowNotes','Tomorrow priorities','Room follow-up, breakfast outstanding, maintenance carryover, priority tasks.')}</section>
+      <section className="shift-section"><h3>General Notes</h3>{textarea('generalNotes','General notes','Anything else that belongs in the daily record.')}</section>
+      <section className="shift-section full"><h3>Management Notes</h3>{textarea('managementNotes','Manager-only notes','Attendance concerns, performance issues, guest compensation decisions, incidents, disciplinary matters, or other restricted notes.')}</section>
     </div> : tab==='room-notes' ? <div className="shift-section full">
       <h3>Room Notes</h3>
       <div className="room-note-form">
