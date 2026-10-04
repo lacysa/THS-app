@@ -199,11 +199,14 @@ export default function ShiftReportBoard() {
           <div><span>Menus outstanding</span><strong>{summary.menusMissing.length}</strong></div>
           <div><span>Declined breakfast</span><strong>{summary.breakfastDeclined}</strong></div>
         </div>
-        {summary.menusMissing.length > 0 && <div className="shift-print-list">
-          {summary.menusMissing.map((r:any)=><div key={`print-menu-${r.roomId}`} className="shift-print-row">
-            <strong>{r.roomName}</strong><span>Menu needed</span>
-          </div>)}
-        </div>}
+        {summary.menusMissing.length > 0 && (
+          <div className="shift-print-bullets">
+            <strong>Missing menus</strong>
+            <ul>
+              {summary.menusMissing.map((r:any)=><li key={`print-menu-${r.roomId}`}>{r.roomName}</li>)}
+            </ul>
+          </div>
+        )}
       </section>
 
       <section className="shift-print-section">
@@ -258,7 +261,14 @@ export default function ShiftReportBoard() {
         <div className="shift-line"><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
         <div className="shift-line"><span>Declined breakfast</span><strong>{summary.breakfastDeclined}</strong></div>
         <div className="shift-line"><span>Menus outstanding</span><strong>{summary.menusMissing.length}</strong></div>
-        {summary.menusMissing.map((r:any)=><div key={r.roomId} className="shift-line"><span>{r.roomName}</span><span className="shift-badge warn">Menu needed</span></div>)}
+        {summary.menusMissing.length > 0 && (
+          <div className="shift-missing-menu-list">
+            <strong>Missing menus</strong>
+            <ul>
+              {summary.menusMissing.map((r:any)=><li key={r.roomId}>{r.roomName}</li>)}
+            </ul>
+          </div>
+        )}
       </div></section>
 
       <section className="shift-section"><h3>Maintenance</h3><div className="shift-list">
