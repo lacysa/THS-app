@@ -36,6 +36,7 @@ type RoomRow = {
   roomCondition: string
   nextShiftCondition: string
   notes: string
+  breakfastTag: boolean
   haSignedBy?: string | null
   haSignedName?: string | null
   haSignedAt?: string | null
@@ -519,6 +520,10 @@ export default function HousekeepingBoard() {
                   </span>
                 </div>
 
+                {row.breakfastTag && (
+                  <span className="hsk-breakfast-badge hsk-breakfast-tag">Breakfast</span>
+                )}
+
                 {row.breakfast.status !== 'none' && (
                   <span className={`hsk-breakfast-badge hsk-breakfast-${row.breakfast.status}`}>
                     {row.breakfast.status === 'needed' && 'Breakfast · menu needed'}
@@ -675,6 +680,9 @@ export default function HousekeepingBoard() {
                         <BedDouble size={15} />
                         <strong>{row.roomName}</strong>
                       </div>
+                      {row.breakfastTag && (
+                        <span className="hsk-breakfast-badge hsk-breakfast-tag">Breakfast</span>
+                      )}
                       {row.breakfast.status !== 'none' && (
                         <span className={`hsk-breakfast-badge hsk-breakfast-${row.breakfast.status}`}>
                           {row.breakfast.status === 'needed' && 'Breakfast · menu needed'}
