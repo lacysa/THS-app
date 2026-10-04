@@ -143,7 +143,7 @@ export default function HousekeepingSetupBoard(){
 
               <label>Strip / Hold
                 <select value={row.stripHold} onChange={e=>update(row.roomId,{stripHold:e.target.value})}>
-                  <option value="">—</option><option>Strip</option><option>Hold</option>
+                  <option value="">—</option><option>Strip</option><option>Room Strip</option><option>Hold</option>
                 </select>
               </label>
 
