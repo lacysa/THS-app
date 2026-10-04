@@ -163,7 +163,87 @@ export default function ShiftReportBoard() {
       {canManage && <button className={tab==='management'?'active':''} onClick={()=>setTab('management')}>Management Notes</button>}
     </div>
 
-    <div className="print-only shift-print-heading"><h1>The Hotel Saugatuck</h1><h2>Shift Report · {date} · {shift}</h2><div>Prepared by {currentStaffName}</div></div>
+    <div className="shift-print-document" aria-hidden="true">
+      <header className="shift-print-heading">
+        <h1>The Hotel Saugatuck</h1>
+        <h2>Shift Report · {date} · {shift}</h2>
+        <div>Prepared by {currentStaffName}</div>
+        <div>Status: {report?.status || 'Draft'}</div>
+      </header>
+
+      <section className="shift-print-section">
+        <h3>Rooms</h3>
+        <div className="shift-print-summary-grid">
+          <div><span>Completed rooms</span><strong>{summary.completed}</strong></div>
+          <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
+          <div><span>Holds</span><strong>{summary.holds}</strong></div>
+        </div>
+        {summary.roomIssues.length > 0 && <div className="shift-print-list">
+          {summary.roomIssues.map((r:any)=><div key={`print-room-${r.roomId}`} className="shift-print-row">
+            <strong>{r.roomName}</strong>
+            <span>{[r.roomCondition,r.nextShiftCondition,r.notes].filter(Boolean).join(' · ')}</span>
+          </div>)}
+        </div>}
+        {roomNotes.filter(n=>n.include_in_shift_report).length > 0 && <div className="shift-print-list">
+          {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
+            <strong>{n.roomName}</strong>
+            <span>{n.note}</span>
+          </div>)}
+        </div>}
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Breakfast · {auto.breakfastDate}</h3>
+        <div className="shift-print-summary-grid">
+          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
+          <div><span>Menus outstanding</span><strong>{summary.menusMissing.length}</strong></div>
+          <div><span>Declined breakfast</span><strong>{summary.breakfastDeclined}</strong></div>
+        </div>
+        {summary.menusMissing.length > 0 && <div className="shift-print-list">
+          {summary.menusMissing.map((r:any)=><div key={`print-menu-${r.roomId}`} className="shift-print-row">
+            <strong>{r.roomName}</strong><span>Menu needed</span>
+          </div>)}
+        </div>}
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Maintenance</h3>
+        <div className="shift-print-summary-grid">
+          <div><span>Open / carryover</span><strong>{summary.maintenanceOpen.length}</strong></div>
+          <div><span>Completed</span><strong>{summary.maintenanceComplete.length}</strong></div>
+        </div>
+        {summary.maintenanceOpen.filter((m:any)=>m.include_in_shift_report).length > 0 && <div className="shift-print-list">
+          {summary.maintenanceOpen.filter((m:any)=>m.include_in_shift_report).slice(0,10).map((m:any)=><div key={`print-maint-${m.id}`} className="shift-print-row">
+            <strong>{m.roomName}</strong><span>{m.title} · {m.status.replace('_',' ')}</span>
+          </div>)}
+        </div>}
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Guest Notes</h3>
+        <p>{draft.guestNotes || '—'}</p>
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Staff</h3>
+        <p>{draft.staffNotes || '—'}</p>
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Supplies / Inventory</h3>
+        <p>{draft.suppliesNotes || '—'}</p>
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Tomorrow</h3>
+        <p>{draft.tomorrowNotes || '—'}</p>
+      </section>
+
+      <section className="shift-print-section">
+        <h3>General Notes</h3>
+        <p>{draft.generalNotes || '—'}</p>
+      </section>
+    </div>
 
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-grid">
       <section className="shift-section"><h3>Rooms</h3><div className="shift-list">
