@@ -1,0 +1,78 @@
+/* THE HOTEL SAUGATUCK — MOBILE / TABLET SHELL
+   Applies only when the browser viewport is 900px or narrower. */
+
+@media (max-width:900px){
+  :root{--ths-sidebar-width:0px;--ths-header-height:64px;}
+
+  .staff-ops-app{
+    display:block!important;width:100%!important;min-width:0!important;
+    min-height:100vh!important;min-height:100dvh!important;margin:0!important;padding:0!important;
+  }
+
+  .staff-ops-main,.sidebar-collapsed .staff-ops-main{
+    display:block!important;width:100%!important;min-width:0!important;
+    min-height:100vh!important;min-height:100dvh!important;margin:0!important;padding:0!important;
+  }
+
+  .staff-ops-sidebar,.staff-ops-sidebar.collapsed{
+    display:flex!important;position:fixed!important;inset:0 auto 0 0!important;
+    width:min(86vw,320px)!important;max-width:320px!important;
+    height:100vh!important;height:100dvh!important;min-height:0!important;
+    padding:18px 12px 14px!important;overflow-x:hidden!important;overflow-y:auto!important;
+    transform:translate3d(-105%,0,0)!important;transition:transform .2s ease!important;
+    z-index:1001!important;box-shadow:18px 0 48px rgba(0,0,0,.28)!important;
+  }
+
+  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar,
+  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar.collapsed,
+  .staff-ops-sidebar.mobile-open,
+  .staff-ops-sidebar.collapsed.mobile-open{transform:translate3d(0,0,0)!important;}
+
+  .staff-ops-sidebar.collapsed .ops-logo-copy,
+  .staff-ops-sidebar.collapsed .ops-nav-label,
+  .staff-ops-sidebar.collapsed .sidebar-link-label,
+  .staff-ops-sidebar.collapsed .preview-badge,
+  .staff-ops-sidebar.collapsed .ops-sidebar-profile-copy,
+  .staff-ops-sidebar.collapsed .sidebar-footer-actions span{display:initial!important;}
+
+  .staff-ops-sidebar.collapsed .sidebar-brand{padding-right:0!important;padding-top:0!important;}
+  .staff-ops-sidebar.collapsed .ops-logo{justify-content:flex-start!important;padding:4px 8px 14px!important;}
+  .staff-ops-sidebar.collapsed .staff-ops-nav a,
+  .staff-ops-sidebar.collapsed .sidebar-footer-actions button,
+  .staff-ops-sidebar.collapsed .ops-sidebar-profile{justify-content:flex-start!important;}
+  .staff-ops-sidebar.collapsed .staff-ops-nav a{padding-left:10px!important;padding-right:10px!important;}
+  .staff-ops-sidebar.collapsed .ops-sidebar-profile{padding-left:8px!important;padding-right:8px!important;}
+  .sidebar-collapse-btn{display:none!important;}
+
+  .mobile-nav-toggle{
+    display:grid!important;width:40px!important;height:40px!important;flex:0 0 40px!important;
+    place-items:center!important;padding:0!important;border:1px solid var(--ths-line)!important;
+    border-radius:7px!important;background:#fff!important;color:var(--ths-charcoal)!important;cursor:pointer!important;
+  }
+
+  .mobile-sidebar-backdrop{
+    display:block!important;appearance:none!important;position:fixed!important;inset:0!important;
+    width:100vw!important;height:100vh!important;height:100dvh!important;margin:0!important;padding:0!important;
+    border:0!important;border-radius:0!important;background:rgba(20,20,18,.42)!important;
+    backdrop-filter:blur(1px);z-index:1000!important;cursor:pointer!important;
+  }
+
+  .staff-ops-app.mobile-nav-open{height:100vh!important;height:100dvh!important;overflow:hidden!important;}
+
+  .staff-ops-topbar{
+    position:sticky!important;top:0!important;z-index:50!important;
+    min-height:64px!important;padding:9px 10px!important;gap:10px!important;
+  }
+
+  .staff-global-search{display:none!important;}
+  .staff-page-title{min-width:0!important;flex:1!important;}
+  .staff-page-title span{display:none!important;}
+  .staff-page-title strong{margin-top:0!important;font-size:17px!important;}
+  .staff-user-area{margin-left:auto!important;gap:8px!important;}
+  .ops-user-copy{display:none!important;}
+
+  .staff-page-content{
+    width:100%!important;max-width:none!important;box-sizing:border-box!important;
+    margin:0!important;padding:14px 12px 30px!important;
+  }
+}
