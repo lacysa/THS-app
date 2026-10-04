@@ -14,13 +14,15 @@ export default function RoomChecksBoard(){
   const [loading,setLoading]=useState(true)
   const [message,setMessage]=useState('')
 
-  async function load(){
+  async function load(resetOpen=false){
     setLoading(true);setMessage('')
     const r=await fetch(`/api/room-checks?date=${date}`,{cache:'no-store'});const d=await r.json().catch(()=>({}))
     if(!r.ok){setMessage(d.error||'Could not load room checks.');setLoading(false);return}
-    setRooms(d.rooms||[]);setOpen(cur=>Object.keys(cur).length?cur:Object.fromEntries((d.rooms||[]).map((r:Room)=>[r.roomId,true])));setLoading(false)
+    setRooms(d.rooms||[])
+    if(resetOpen) setOpen({})
+    setLoading(false)
   }
-  useEffect(()=>{void load()},[date])
+  useEffect(()=>{void load(true)},[date])
 
   async function setResult(room:Room,item:Item,passed:boolean){
     setRooms(current=>current.map(r=>r.roomId===room.roomId?{...r,items:r.items.map(i=>i.id===item.id?{...i,passed}:i)}:r))
@@ -37,7 +39,7 @@ export default function RoomChecksBoard(){
   return <div className="room-checks-page">
     <div className="module-toolbar">
       <div><div className="module-kicker">Housekeeping Quality</div><h1>Room Checks</h1><p>Checkout and out/in rooms requiring final inspection.</p></div>
-      <div className="toolbar-actions"><label className="date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="ops-secondary-btn" onClick={load}><RefreshCw size={15}/>Refresh</button></div>
+      <div className="toolbar-actions"><label className="date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="ops-secondary-btn" onClick={()=>void load(true)}><RefreshCw size={15}/>Refresh</button></div>
     </div>
     <div className="room-check-summary"><span>{counts.rooms} rooms</span><span>{counts.passed} passed</span><span className={counts.issues?'warning':''}>{counts.issues} need correction</span></div>
     {message&&<div className="module-message">{message}</div>}
@@ -45,7 +47,7 @@ export default function RoomChecksBoard(){
       <div className="room-check-list">{rooms.map(room=>{
         const done=room.items.filter(i=>i.passed!==null).length
         const failed=room.items.filter(i=>i.passed===false).length
-        const expanded=open[room.roomId]!==false
+        const expanded=Boolean(open[room.roomId])
         const zones=[...new Set(room.items.map(i=>i.zone))]
         return <section className={`room-check-card ${room.issueOpen?'has-issue':''}`} key={room.roomId}>
           <button className="room-check-header" onClick={()=>setOpen(cur=>({...cur,[room.roomId]:!expanded}))}>
