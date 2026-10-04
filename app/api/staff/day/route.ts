@@ -5,6 +5,12 @@ import { formatTime24, generateTimeSlots } from '@/lib/time'
 
 export const dynamic = 'force-dynamic'
 
+function previousDate(value:string) {
+  const d = new Date(`${value}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate()-1)
+  return d.toISOString().slice(0,10)
+}
+
 export async function GET(req:NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data:{user} } = await supabase.auth.getUser()
@@ -33,7 +39,7 @@ export async function GET(req:NextRequest) {
   const { data:taggedBreakfastRooms,error:taggedBreakfastError } = await admin
     .from('housekeeping_daily_rooms')
     .select('room_id,rooms(id,name,sort_order)')
-    .eq('service_date',date)
+    .eq('service_date',previousDate(date))
     .eq('breakfast_tag',true)
 
   if (taggedBreakfastError) return NextResponse.json({message:taggedBreakfastError.message},{status:500})
