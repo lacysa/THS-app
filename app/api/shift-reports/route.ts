@@ -39,6 +39,13 @@ function canManage(caps: Set<string>) {
   return ['manager','general_manager','operations_manager','owner','foh_manager'].some(key => caps.has(key))
 }
 
+function authorInitials(name:string) {
+  const parts=String(name||'').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return ''
+  if (parts.length===1) return parts[0].slice(0,2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase()
+}
+
 async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: string) {
   const breakfastDate = nextDate(date)
 
@@ -148,9 +155,58 @@ export async function GET(req: NextRequest) {
     }
 
     const manager = canManage(me.caps)
+
+    const noteAuthorIds = report ? [
+      report.guest_notes_by,
+      report.staff_notes_by,
+      report.supplies_notes_by,
+      report.tomorrow_notes_by,
+      report.general_notes_by,
+      report.management_notes_by
+    ].filter(Boolean) : []
+
+    const { data:authorRows, error:authorError } = noteAuthorIds.length
+      ? await admin.from('staff_members').select('id,name').in('id',noteAuthorIds)
+      : { data:[], error:null as any }
+
+    if (authorError) throw new Error(authorError.message)
+    const authorMap = new Map((authorRows || []).map((row:any)=>[String(row.id),String(row.name || '')]))
+
     const safeReport = report ? {
       ...report,
-      management_notes: manager ? report.management_notes : ''
+      management_notes: manager ? report.management_notes : '',
+      note_authors: {
+        guest: report.guest_notes_by ? {
+          id:String(report.guest_notes_by),
+          name:authorMap.get(String(report.guest_notes_by)) || 'Staff',
+          initials:authorInitials(authorMap.get(String(report.guest_notes_by)) || 'Staff')
+        } : null,
+        staff: report.staff_notes_by ? {
+          id:String(report.staff_notes_by),
+          name:authorMap.get(String(report.staff_notes_by)) || 'Staff',
+          initials:authorInitials(authorMap.get(String(report.staff_notes_by)) || 'Staff')
+        } : null,
+        supplies: report.supplies_notes_by ? {
+          id:String(report.supplies_notes_by),
+          name:authorMap.get(String(report.supplies_notes_by)) || 'Staff',
+          initials:authorInitials(authorMap.get(String(report.supplies_notes_by)) || 'Staff')
+        } : null,
+        tomorrow: report.tomorrow_notes_by ? {
+          id:String(report.tomorrow_notes_by),
+          name:authorMap.get(String(report.tomorrow_notes_by)) || 'Staff',
+          initials:authorInitials(authorMap.get(String(report.tomorrow_notes_by)) || 'Staff')
+        } : null,
+        general: report.general_notes_by ? {
+          id:String(report.general_notes_by),
+          name:authorMap.get(String(report.general_notes_by)) || 'Staff',
+          initials:authorInitials(authorMap.get(String(report.general_notes_by)) || 'Staff')
+        } : null,
+        management: report.management_notes_by ? {
+          id:String(report.management_notes_by),
+          name:authorMap.get(String(report.management_notes_by)) || 'Staff',
+          initials:authorInitials(authorMap.get(String(report.management_notes_by)) || 'Staff')
+        } : null
+      }
     } : null
 
     return NextResponse.json({
@@ -199,17 +255,31 @@ export async function POST(req: NextRequest) {
   }
 
   const status = action === 'finalize' ? 'finalized' : action === 'reopen' ? 'draft' : 'draft'
+  const guestNotes = String(payload?.guestNotes || '')
+  const staffNotes = String(payload?.staffNotes || '')
+  const suppliesNotes = String(payload?.suppliesNotes || '')
+  const tomorrowNotes = String(payload?.tomorrowNotes || '')
+  const generalNotes = String(payload?.generalNotes || '')
+  const managementNotes = String(payload?.managementNotes || '')
+  const authorId = (me.member as any)?.id || null
+
   const row: any = {
     report_date: date,
     shift,
-    prepared_by: existing?.prepared_by || (me.member as any)?.id || null,
+    prepared_by: existing?.prepared_by || authorId,
     status,
-    guest_notes: String(payload?.guestNotes || ''),
-    staff_notes: String(payload?.staffNotes || ''),
-    supplies_notes: String(payload?.suppliesNotes || ''),
-    tomorrow_notes: String(payload?.tomorrowNotes || ''),
-    general_notes: String(payload?.generalNotes || ''),
-    management_notes: String(payload?.managementNotes || ''),
+    guest_notes: guestNotes,
+    staff_notes: staffNotes,
+    supplies_notes: suppliesNotes,
+    tomorrow_notes: tomorrowNotes,
+    general_notes: generalNotes,
+    management_notes: managementNotes,
+    guest_notes_by: guestNotes !== String(existing?.guest_notes || '') ? (guestNotes.trim() ? authorId : null) : existing?.guest_notes_by || null,
+    staff_notes_by: staffNotes !== String(existing?.staff_notes || '') ? (staffNotes.trim() ? authorId : null) : existing?.staff_notes_by || null,
+    supplies_notes_by: suppliesNotes !== String(existing?.supplies_notes || '') ? (suppliesNotes.trim() ? authorId : null) : existing?.supplies_notes_by || null,
+    tomorrow_notes_by: tomorrowNotes !== String(existing?.tomorrow_notes || '') ? (tomorrowNotes.trim() ? authorId : null) : existing?.tomorrow_notes_by || null,
+    general_notes_by: generalNotes !== String(existing?.general_notes || '') ? (generalNotes.trim() ? authorId : null) : existing?.general_notes_by || null,
+    management_notes_by: managementNotes !== String(existing?.management_notes || '') ? (managementNotes.trim() ? authorId : null) : existing?.management_notes_by || null,
     updated_at: now,
     finalized_at: action === 'finalize' ? now : null,
     finalized_by: action === 'finalize' ? (me.member as any)?.id || null : null
