@@ -390,12 +390,14 @@ a.module-card:hover {
 
 @media (max-width:1180px){ .ops-card-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
 @media (max-width:900px){
-  .ops-app{grid-template-columns:1fr;}
-  .ops-sidebar{position:fixed;left:-270px;width:250px;transition:left .2s ease;}
-  .ops-sidebar.open{left:0;}
-  .ops-sidebar-scrim{display:block;position:fixed;inset:0;border:0;background:rgba(0,0,0,.55);z-index:19;}
-  .ops-mobile-menu,.ops-mobile-close{display:grid;place-items:center;border:0;background:transparent;color:#c3cbda;cursor:pointer;}
-  .ops-mobile-close{margin-left:auto;}
+  /* Legacy operations shell only. StaffShell has its own mobile drawer below. */
+  .ops-app:not(.staff-ops-app){grid-template-columns:1fr;}
+  .ops-app:not(.staff-ops-app) .ops-sidebar{position:fixed;left:-270px;width:250px;transition:left .2s ease;}
+  .ops-app:not(.staff-ops-app) .ops-sidebar.open{left:0;}
+  .ops-app:not(.staff-ops-app) .ops-sidebar-scrim{display:block;position:fixed;inset:0;border:0;background:rgba(0,0,0,.55);z-index:19;}
+  .ops-app:not(.staff-ops-app) .ops-mobile-menu,
+  .ops-app:not(.staff-ops-app) .ops-mobile-close{display:grid;place-items:center;border:0;background:transparent;color:#c3cbda;cursor:pointer;}
+  .ops-app:not(.staff-ops-app) .ops-mobile-close{margin-left:auto;}
   .ops-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 @media (max-width:640px){
@@ -598,7 +600,6 @@ a.module-card:hover {
 .login-submit { min-height:48px; border:0; border-radius:13px; background:#676df2; color:white; font-weight:800; cursor:pointer; }
 
 @media (max-width:900px) {
-  .staff-ops-sidebar { display:none; }
   .staff-ops-main { margin-left:0; }
   .staff-global-search { display:none; }
   .staff-page-title { min-width:0; }
@@ -849,7 +850,6 @@ a.module-card:hover {
 }
 @media (max-width:900px){
   .staff-ops-app{display:block !important;}
-  .staff-ops-sidebar{display:none;}
   .staff-ops-main{margin-left:0;width:100%;}
   .breakfast-ticket-grid{grid-template-columns:1fr;}
   .overview-summary-grid{grid-template-columns:1fr;}
@@ -975,4 +975,113 @@ html[data-theme="light"] .ops-logo-mark{color:#fff}
   .hsk-toolbar-actions{justify-content:flex-start;}
   .hsk-metric-row{grid-template-columns:repeat(2,1fr);}
   .hsk-table-wrapper{max-height:calc(100vh - 390px);}
+}
+
+
+/* ============================================================
+   STAFF SHELL — SINGLE MOBILE DRAWER CONTRACT
+   StaffShell.tsx uses:
+   - .mobile-nav-toggle
+   - .staff-ops-sidebar.mobile-open
+   - .mobile-sidebar-backdrop
+   Keep all StaffShell mobile navigation behavior here only.
+   ============================================================ */
+.mobile-nav-toggle,
+.mobile-sidebar-backdrop{
+  display:none;
+}
+
+@media (max-width:900px){
+  .staff-ops-app{
+    display:block !important;
+    width:100%;
+    min-height:100vh;
+    min-height:100dvh;
+  }
+
+  .staff-ops-main{
+    margin-left:0 !important;
+    width:100% !important;
+    min-width:0;
+  }
+
+  .staff-ops-sidebar{
+    display:flex !important;
+    position:fixed !important;
+    top:0 !important;
+    bottom:0 !important;
+    left:0 !important;
+    right:auto !important;
+    width:min(82vw, 300px) !important;
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    transform:translate3d(-105%,0,0);
+    transition:transform .2s ease;
+    z-index:1001 !important;
+    box-shadow:18px 0 48px rgba(0,0,0,.34);
+  }
+
+  .staff-ops-sidebar.mobile-open{
+    transform:translate3d(0,0,0);
+  }
+
+  .staff-ops-sidebar .sidebar-collapse-btn{
+    display:none;
+  }
+
+  .mobile-nav-toggle{
+    flex:0 0 auto;
+    width:42px;
+    height:42px;
+    padding:0;
+    border:1px solid #252d43;
+    border-radius:12px;
+    background:#151c30;
+    color:#bac2d4;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+
+  .mobile-nav-toggle{
+    display:inline-grid;
+  }
+
+  .mobile-sidebar-backdrop{
+    display:block;
+    appearance:none;
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    height:100dvh;
+    margin:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:rgba(3,7,18,.62);
+    cursor:pointer;
+    z-index:1000;
+  }
+
+  .staff-ops-app.mobile-nav-open{
+    overflow:hidden;
+    height:100vh;
+    height:100dvh;
+  }
+
+  .staff-ops-topbar{
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+}
+
+@media (min-width:901px){
+  .staff-ops-sidebar{
+    transform:none !important;
+  }
 }
