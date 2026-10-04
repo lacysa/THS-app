@@ -21,6 +21,7 @@ type SaveRow = {
   notes?: string
   housekeeperAttested?: boolean
   breakfastTag?: boolean
+  packageIds?: string[]
 }
 
 function validDate(value: string | null | undefined) {
@@ -77,7 +78,13 @@ export async function GET(req: NextRequest) {
   const admin = createSupabaseAdmin()
 
   try {
-    const [{ data: rooms, error: roomError }, { data: saved, error: savedError }, peopleData] = await Promise.all([
+    const [
+      { data: rooms, error: roomError },
+      { data: saved, error: savedError },
+      peopleData,
+      { data: packageCatalog, error: packageCatalogError },
+      { data: roomPackageRows, error: roomPackageError }
+    ] = await Promise.all([
       admin
         .from('rooms')
         .select('id,name,sort_order,active')
@@ -87,11 +94,21 @@ export async function GET(req: NextRequest) {
         .from('housekeeping_daily_rooms')
         .select('*')
         .eq('service_date', serviceDate),
-      getPeopleAndCapabilities(admin)
+      getPeopleAndCapabilities(admin),
+      admin
+        .from('room_package_catalog')
+        .select('id,name,price,available,sort_order')
+        .order('sort_order'),
+      admin
+        .from('housekeeping_room_packages')
+        .select('room_id,package_id')
+        .eq('service_date', serviceDate)
     ])
 
     if (roomError) throw new Error(roomError.message)
     if (savedError) throw new Error(savedError.message)
+    if (packageCatalogError) throw new Error(packageCatalogError.message)
+    if (roomPackageError) throw new Error(roomPackageError.message)
 
     const peopleById = new Map<string, any>()
     for (const person of peopleData.people) peopleById.set(String((person as any).id), person)
@@ -114,6 +131,16 @@ export async function GET(req: NextRequest) {
 
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
+
+    const packageIdsByRoom = new Map<string,string[]>()
+    for (const assignment of roomPackageRows || []) {
+      const roomId = String((assignment as any).room_id || '')
+      const packageId = String((assignment as any).package_id || '')
+      if (!roomId || !packageId) continue
+      const current = packageIdsByRoom.get(roomId) || []
+      current.push(packageId)
+      packageIdsByRoom.set(roomId,current)
+    }
 
     const breakfastDate = nextDate(serviceDate)
     const { data: breakfastRows, error: breakfastError } = await admin
@@ -158,6 +185,7 @@ export async function GET(req: NextRequest) {
         nextShiftCondition: savedRow.next_shift_condition || '',
         notes: savedRow.notes || '',
         breakfastTag: Boolean(savedRow.breakfast_tag),
+        packageIds: packageIdsByRoom.get(String(room.id)) || [],
         haSignedBy: savedRow.ha_signed_by || null,
         haSignedName: savedRow.ha_signed_by
           ? (peopleById.get(String(savedRow.ha_signed_by)) as any)?.name || 'Staff'
@@ -213,6 +241,12 @@ export async function GET(req: NextRequest) {
       blockingRoomName: blockingRoom?.roomName || null,
       viewMode: assignedOnlyView ? 'assigned' : 'manager',
       staffOptions,
+      packageOptions: (packageCatalog || []).map((pkg:any)=>({
+        id:String(pkg.id),
+        name:String(pkg.name || ''),
+        price:pkg.price == null ? null : Number(pkg.price),
+        available:Boolean(pkg.available)
+      })),
       signoffAccess: {
         canHaSignoff: currentCaps.has('ha_signoff') || currentCaps.has('ha_signoff_override'),
         canFohSignoff: currentCaps.has('foh_signoff') || currentCaps.has('foh_signoff_override')
@@ -381,6 +415,42 @@ export async function POST(req: NextRequest) {
         .from('housekeeping_daily_rooms')
         .upsert(upserts, { onConflict: 'service_date,room_id' })
       if (error) throw new Error(error.message)
+    }
+
+    // Package assignments are management-controlled. Housekeeper-only saves must
+    // never clear or change package orders.
+    if (!assignedOnlyView && roomIds.length) {
+      const { data:catalogRows, error:catalogError } = await admin
+        .from('room_package_catalog')
+        .select('id')
+      if (catalogError) throw new Error(catalogError.message)
+
+      const validPackageIds = new Set((catalogRows || []).map((p:any)=>String(p.id)))
+
+      const { error:deletePackageError } = await admin
+        .from('housekeeping_room_packages')
+        .delete()
+        .eq('service_date',serviceDate)
+        .in('room_id',roomIds)
+      if (deletePackageError) throw new Error(deletePackageError.message)
+
+      const packageAssignments = rows.flatMap(row =>
+        [...new Set(Array.isArray(row.packageIds) ? row.packageIds : [])]
+          .map(String)
+          .filter(packageId => validPackageIds.has(packageId))
+          .map(packageId => ({
+            service_date:serviceDate,
+            room_id:row.roomId,
+            package_id:packageId
+          }))
+      )
+
+      if (packageAssignments.length) {
+        const { error:insertPackageError } = await admin
+          .from('housekeeping_room_packages')
+          .insert(packageAssignments)
+        if (insertPackageError) throw new Error(insertPackageError.message)
+      }
     }
 
     return NextResponse.json({ ok: true, savedAt: now })
