@@ -293,3 +293,14 @@
   .room-check-actions button{flex:1;min-height:42px}
   .room-check-copy strong{font-size:11px}
 }
+
+
+/* Manual per-room breakfast tag */
+.hsk-setup-room-tags{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.hsk-breakfast-toggle{
+  min-height:28px;display:inline-flex;align-items:center;gap:5px;padding:0 8px;
+  border:1px solid var(--ths-line);border-radius:999px;background:#fff;color:var(--ths-muted);
+  font-size:9px;font-weight:800;cursor:pointer;
+}
+.hsk-breakfast-toggle.active{border-color:#d1b675;background:#fff3d6;color:#725515}
+.hsk-breakfast-tag{background:#fff3d6;color:#725515;border:1px solid #ead49b}
