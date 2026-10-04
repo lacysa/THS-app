@@ -230,3 +230,88 @@ body{overflow-x:hidden}
     padding:78px 12px 30px!important;
   }
 }
+
+
+/* FINAL mobile navigation override */
+@media(max-width:900px){
+  .staff-ops-app{
+    display:block!important;
+    min-height:100dvh!important;
+    width:100%!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  .staff-ops-main,
+  .sidebar-collapsed .staff-ops-main{
+    width:100%!important;
+    margin-left:0!important;
+    min-height:100dvh!important;
+  }
+
+  .staff-ops-sidebar,
+  .staff-ops-sidebar.collapsed{
+    display:flex!important;
+    position:fixed!important;
+    top:0!important;
+    bottom:0!important;
+    left:0!important;
+    right:auto!important;
+    width:min(84vw,320px)!important;
+    max-width:320px!important;
+    height:100dvh!important;
+    padding:18px 12px 14px!important;
+    transform:translateX(-105%)!important;
+    transition:transform .2s ease!important;
+    z-index:100!important;
+    overflow-y:auto!important;
+  }
+
+  .staff-ops-sidebar.mobile-open,
+  .staff-ops-sidebar.collapsed.mobile-open{
+    transform:translateX(0)!important;
+  }
+
+  .staff-ops-sidebar.mobile-open .ops-logo-copy,
+  .staff-ops-sidebar.mobile-open .ops-nav-label,
+  .staff-ops-sidebar.mobile-open .sidebar-link-label,
+  .staff-ops-sidebar.mobile-open .preview-badge,
+  .staff-ops-sidebar.mobile-open .ops-sidebar-profile-copy,
+  .staff-ops-sidebar.mobile-open .sidebar-footer-actions span{
+    display:initial!important;
+  }
+
+  .staff-ops-sidebar.mobile-open .ops-logo,
+  .staff-ops-sidebar.mobile-open .staff-ops-nav a,
+  .staff-ops-sidebar.mobile-open .sidebar-footer-actions button,
+  .staff-ops-sidebar.mobile-open .ops-sidebar-profile{
+    justify-content:flex-start!important;
+  }
+
+  .mobile-sidebar-backdrop{
+    display:block!important;
+    position:fixed!important;
+    inset:0!important;
+    z-index:90!important;
+    border:0!important;
+    background:rgba(20,20,18,.42)!important;
+  }
+
+  .mobile-nav-toggle{
+    display:grid!important;
+    width:40px!important;
+    height:40px!important;
+    flex:0 0 40px!important;
+    place-items:center!important;
+  }
+
+  .sidebar-collapse-btn{
+    display:none!important;
+  }
+
+  .staff-ops-topbar{
+    position:sticky!important;
+    top:0!important;
+    z-index:50!important;
+  }
+}
