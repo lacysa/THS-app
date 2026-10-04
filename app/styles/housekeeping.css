@@ -442,3 +442,13 @@
 }
 .hsk-assigned-packages strong{font-size:9px;text-transform:uppercase;letter-spacing:.05em}
 .hsk-assigned-packages span{font-size:10px;line-height:1.4}
+
+.hsk-setup-envelope-row{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:4px;
+  padding:5px 6px;border:1px solid var(--ths-line);border-radius:6px;background:#faf8f3;
+}
+.hsk-setup-envelope-row strong{font-size:8px;letter-spacing:.05em}
+.hsk-setup-envelope-row button{
+  min-height:26px;padding:0 7px;border:1px solid var(--ths-line);border-radius:5px;
+  background:#fff;color:var(--ths-text);font-size:8px;font-weight:800;cursor:pointer;
+}
