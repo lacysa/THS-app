@@ -20,6 +20,7 @@ type SaveRow = {
   nextShiftCondition?: string
   notes?: string
   housekeeperAttested?: boolean
+  breakfastTag?: boolean
 }
 
 function validDate(value: string | null | undefined) {
@@ -156,6 +157,7 @@ export async function GET(req: NextRequest) {
         roomCondition: savedRow.room_condition || '',
         nextShiftCondition: savedRow.next_shift_condition || '',
         notes: savedRow.notes || '',
+        breakfastTag: Boolean(savedRow.breakfast_tag),
         haSignedBy: savedRow.ha_signed_by || null,
         haSignedName: savedRow.ha_signed_by
           ? (peopleById.get(String(savedRow.ha_signed_by)) as any)?.name || 'Staff'
@@ -337,6 +339,7 @@ export async function POST(req: NextRequest) {
               : (existing.room_condition || ''),
             next_shift_condition: existing.next_shift_condition || '',
             notes: cleanText(row.notes),
+            breakfast_tag: Boolean(existing.breakfast_tag),
             housekeeper_attested_by: attestedNow ? currentPerson.id : null,
             housekeeper_attested_at: attestedNow ? (existing.housekeeper_attested_at || now) : null,
             ha_signed_by: complete ? existing.ha_signed_by || null : null,
@@ -364,6 +367,7 @@ export async function POST(req: NextRequest) {
           room_condition: cleanText(row.roomCondition),
           next_shift_condition: cleanText(row.nextShiftCondition),
           notes: cleanText(row.notes),
+          breakfast_tag: Boolean(row.breakfastTag),
           ha_signed_by: complete ? existing.ha_signed_by || null : null,
           ha_signed_at: complete ? existing.ha_signed_at || null : null,
           foh_signed_by: complete ? existing.foh_signed_by || null : null,
