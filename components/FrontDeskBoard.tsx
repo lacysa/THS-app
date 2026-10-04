@@ -104,17 +104,17 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
                   <div className="ticket-head">
                     <div>
                       <div className="ticket-room">{b.rooms?.name}</div>
-                      <div className="muted">{b.last_name}</div>
+                      <div className="muted">{b.taggedOnly ? 'Menu Missing' : b.last_name}</div>
                     </div>
                     <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
                       <span className="pill">{b.displayTime}</span>
-                      <span className="pill">{b.menu_submitted?'Menu received':'Missing menu'}</span>
-                      <button className="btn secondary" onClick={()=>setEditing({...b,time_slot:String(b.time_slot).slice(0,5)})}>Edit time</button>
-                      {b.guest_token && <a className="btn secondary" href={`/breakfast/menu?token=${encodeURIComponent(b.guest_token)}`} target="_blank" rel="noreferrer">Edit menu</a>}
-                      <button className="btn danger" onClick={()=>cancel(b.id)}>Cancel</button>
+                      <span className={`pill ${b.menu_submitted ? '' : 'warning'}`}>{b.menu_submitted?'Menu received':'Menu Missing'}</span>
+                      {!b.taggedOnly && <button className="btn secondary" onClick={()=>setEditing({...b,time_slot:String(b.time_slot).slice(0,5)})}>Edit time</button>}
+                      {!b.taggedOnly && b.guest_token && <a className="btn secondary" href={`/breakfast/menu?token=${encodeURIComponent(b.guest_token)}`} target="_blank" rel="noreferrer">Edit menu</a>}
+                      {!b.taggedOnly && <button className="btn danger" onClick={()=>cancel(b.id)}>Cancel</button>}
                     </div>
                   </div>
-                  <BookingMenuNote bookingId={b.id} initialNote={b.note || ''} />
+                  {!b.taggedOnly && <BookingMenuNote bookingId={b.id} initialNote={b.note || ''} />}
                 </div>
               ))}
             </div>
