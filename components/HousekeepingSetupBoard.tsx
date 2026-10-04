@@ -116,7 +116,7 @@ export default function HousekeepingSetupBoard(){
                   className={`hsk-breakfast-toggle ${row.breakfastTag ? 'active' : ''}`}
                   onClick={()=>update(row.roomId,{breakfastTag:!row.breakfastTag})}
                   aria-pressed={row.breakfastTag}
-                  title="Mark whether this room is receiving breakfast for this date"
+                  title="Mark whether this room is receiving breakfast the following morning"
                 >
                   <UtensilsCrossed size={13}/>
                   Breakfast
@@ -143,7 +143,7 @@ export default function HousekeepingSetupBoard(){
 
               <label>Strip / Hold
                 <select value={row.stripHold} onChange={e=>update(row.roomId,{stripHold:e.target.value})}>
-                  <option value="">—</option><option>Strip</option><option>Room Strip</option><option>Hold</option>
+                  <option value="">—</option><option>Strip</option><option>Hold</option>
                 </select>
               </label>
 
