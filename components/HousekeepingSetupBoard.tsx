@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect,useMemo,useRef,useState } from 'react'
-import { Check, ChevronDown, RefreshCw, Save, Search } from 'lucide-react'
+import { Check, ChevronDown, RefreshCw, Save, Search, UtensilsCrossed } from 'lucide-react'
 
 type Row={
   roomId:string
@@ -13,6 +13,7 @@ type Row={
   cleanOrder:number|null
   notes:string
   complete:boolean
+  breakfastTag:boolean
 }
 type Staff={id:string;name:string}
 type SaveState='idle'|'saving'|'saved'|'error'
@@ -41,7 +42,8 @@ export default function HousekeepingSetupBoard(){
     setRows((d.rows||[]).map((x:any)=>({
       roomId:x.roomId,roomName:x.roomName,reservationStatus:x.reservationStatus||'',
       serviceType:x.serviceType||'',stripHold:x.stripHold||'',assignedTo:x.assignedTo||'',
-      cleanOrder:x.cleanOrder??null,notes:x.notes||'',complete:Boolean(x.complete)
+      cleanOrder:x.cleanOrder??null,notes:x.notes||'',complete:Boolean(x.complete),
+      breakfastTag:Boolean(x.breakfastTag)
     })))
     setStaff(d.staffOptions||[])
     setLoading(false)
@@ -108,7 +110,19 @@ export default function HousekeepingSetupBoard(){
           return <article className="hsk-setup-card" key={row.roomId}>
             <div className="hsk-setup-room">
               <strong>{row.roomName}</strong>
-              {row.complete&&<span className="daily-state done">Complete</span>}
+              <div className="hsk-setup-room-tags">
+                <button
+                  type="button"
+                  className={`hsk-breakfast-toggle ${row.breakfastTag ? 'active' : ''}`}
+                  onClick={()=>update(row.roomId,{breakfastTag:!row.breakfastTag})}
+                  aria-pressed={row.breakfastTag}
+                  title="Mark whether this room is receiving breakfast for this date"
+                >
+                  <UtensilsCrossed size={13}/>
+                  Breakfast
+                </button>
+                {row.complete&&<span className="daily-state done">Complete</span>}
+              </div>
             </div>
 
             <div className="hsk-setup-fields">
