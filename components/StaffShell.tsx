@@ -213,8 +213,11 @@ export default function StaffShell({
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem('ths-sidebar-collapsed')
-      if (saved === '1') setSidebarCollapsed(true)
-      if (saved === null && window.innerWidth <= 760) setSidebarCollapsed(true)
+      if (window.innerWidth <= 900) {
+        setSidebarCollapsed(false)
+      } else if (saved === '1') {
+        setSidebarCollapsed(true)
+      }
     } catch {}
 
     fetch('/api/me')
@@ -467,7 +470,7 @@ export default function StaffShell({
   return (
     <main className={`ops-app staff-ops-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
 
-      <aside className={`ops-sidebar staff-ops-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileNavOpen ? 'mobile-open' : ''}`}>
+      <aside className={`ops-sidebar staff-ops-sidebar ${sidebarCollapsed && !mobileNavOpen ? 'collapsed' : ''} ${mobileNavOpen ? 'mobile-open' : ''}`}>
 
         <div className="sidebar-brand">
 
@@ -627,7 +630,10 @@ export default function StaffShell({
           <button
             type="button"
             className="mobile-nav-toggle"
-            onClick={() => setMobileNavOpen(open => !open)}
+            onClick={() => {
+              setSidebarCollapsed(false)
+              setMobileNavOpen(open => !open)
+            }}
             aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
           >
             {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
