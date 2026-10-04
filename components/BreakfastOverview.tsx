@@ -105,7 +105,7 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
                 <thead><tr><th>Room</th><th>Time</th><th>Dietary</th><th>Meals</th><th>Beverages</th></tr></thead>
                 <tbody>
                   {data.groups.filter((g:any)=>!g.unmatched).map((g:any)=><tr key={g.groupKey}>
-                    <td><strong>{g.room}</strong><div className="muted">{g.lastName}</div>{g.note && <div className="overview-menu-note"><strong>Menu note:</strong> {g.note}</div>}</td>
+                    <td><strong>{g.room}</strong><div className="muted">{g.taggedOnly ? 'Menu Missing' : g.lastName}</div>{g.note && <div className="overview-menu-note"><strong>Menu note:</strong> {g.note}</div>}</td>
                     <td>{g.displayTime}</td>
                     <td>{g.orders.length===0 ? <span className="missing-badge">Missing menu</span> : g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.dietary&&<div>{o.dietary}</div>}{o.dietary_comments&&<div className="diet-note">{o.dietary_comments}</div>}</>}</div>)}</td>
                     <td>{g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.entree&&<div><strong>Entrée:</strong> {o.entree}</div>}{o.meat&&<div><strong>Meat:</strong> {o.meat}</div>}{o.eggs&&<div><strong>Eggs:</strong> {o.eggs}</div>}{o.condiments&&<div><strong>Condiments:</strong> {o.condiments}</div>}</>}</div>)}</td>
