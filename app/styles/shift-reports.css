@@ -198,3 +198,12 @@
   .shift-print-action-list li{margin:3px 0!important;font-size:9pt!important;line-height:1.35!important}
   .shift-print-narrative{margin-top:7px!important;padding-top:7px!important;border-top:1px solid #ddd!important}
 }
+
+.shift-note-author{
+  display:inline-flex;
+  margin-left:7px;
+  color:var(--ths-muted);
+  font-size:9px;
+  font-weight:700;
+}
+.shift-note-prefix{font-weight:800}
