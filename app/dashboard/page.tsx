@@ -51,6 +51,7 @@ export default async function DashboardPage() {
     staffMemberRes,
     housekeepingRes,
     breakfastRes,
+    breakfastTagRes,
     maintenanceRes,
     inventoryRes,
     notesRes,
@@ -68,6 +69,14 @@ export default async function DashboardPage() {
       moduleKeys.has('breakfast_guest')
     )
       ? admin.from('breakfast_bookings').select('*').eq('service_date',breakfastDate).in('status',['scheduled','declined']).order('time_slot')
+      : Promise.resolve({data:[],error:null}),
+    (
+      moduleKeys.has('front_desk') ||
+      moduleKeys.has('kitchen') ||
+      moduleKeys.has('daily_overview') ||
+      moduleKeys.has('breakfast_guest')
+    )
+      ? admin.from('housekeeping_daily_rooms').select('room_id').eq('service_date',breakfastDate).eq('breakfast_tag',true)
       : Promise.resolve({data:[],error:null}),
     moduleKeys.has('maintenance')
       ? admin.from('maintenance_work_orders').select('*').order('created_at',{ascending:false})
@@ -116,15 +125,34 @@ export default async function DashboardPage() {
     (menuNotesRes.data || []).map((row:any)=>[String(row.booking_id),String(row.note || '')])
   )
 
-  const breakfast = (breakfastRes.data || []).map((row:any)=>({
+  const breakfast:any[] = (breakfastRes.data || []).map((row:any)=>({
     id:String(row.id),
+    roomId:String(row.room_id || ''),
     roomName:roomName(row.room_id,roomMap),
     lastName:String(row.last_name || ''),
     timeSlot:String(row.time_slot || ''),
     status:String(row.status || ''),
     menuSubmitted:Boolean(row.menu_submitted),
+    taggedOnly:false,
     note:menuNoteMap.get(String(row.id)) || ''
   }))
+
+  const bookedBreakfastRooms = new Set(breakfast.map((row:any)=>row.roomId).filter(Boolean))
+  for (const row of (breakfastTagRes.data || [])) {
+    const roomId = String((row as any).room_id || '')
+    if (!roomId || bookedBreakfastRooms.has(roomId)) continue
+    breakfast.push({
+      id:`breakfast-tag:${roomId}`,
+      roomId,
+      roomName:roomName(roomId,roomMap),
+      lastName:'',
+      timeSlot:'',
+      status:'scheduled',
+      menuSubmitted:false,
+      taggedOnly:true,
+      note:''
+    })
+  }
 
   const maintenance = (maintenanceRes.data || []).map((row:any)=>({
     id:String(row.id),
