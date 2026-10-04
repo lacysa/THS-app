@@ -16,17 +16,37 @@ type Row={
   breakfastTag:boolean
 }
 type Staff={id:string;name:string}
+type Access={
+  name?:string|null
+  preferredName?:string|null
+  email?:string|null
+  roleName?:string|null
+  isAdmin?:boolean
+}
 type SaveState='idle'|'saving'|'saved'|'error'
 
 function todayDetroit(){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 }
 function splitNames(value:string){return value.split(',').map(v=>v.trim()).filter(Boolean)}
+function normalize(value:string|null|undefined){return String(value||'').trim().toLowerCase()}
+function getManagerInitials(access:Access|null){
+  if(!access)return ''
+  const combined=normalize(`${access.name||''} ${access.preferredName||''} ${access.email||''}`)
+  if(combined.includes('sarah')||combined.includes('lacysa'))return 'SL'
+  if(combined.includes('brittany')||combined.includes('brittanyahollingshead'))return 'BH'
+  if(combined.includes('david')||combined.includes('davidheiser'))return 'DH'
+  const rawName=access.name||access.preferredName||''
+  const pieces=rawName.trim().split(/\s+/).filter(Boolean)
+  if(pieces.length>=2)return `${pieces[0][0]}${pieces[pieces.length-1][0]}`.toUpperCase()
+  return ''
+}
 
 export default function HousekeepingSetupBoard(){
   const [date,setDate]=useState(todayDetroit())
   const [rows,setRows]=useState<Row[]>([])
   const [staff,setStaff]=useState<Staff[]>([])
+  const [access,setAccess]=useState<Access|null>(null)
   const [loading,setLoading]=useState(true)
   const [message,setMessage]=useState('')
   const [saveState,setSaveState]=useState<SaveState>('idle')
@@ -49,6 +69,12 @@ export default function HousekeepingSetupBoard(){
     setLoading(false)
   }
   useEffect(()=>{void load()},[date])
+  useEffect(()=>{
+    fetch('/api/me',{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{if(d)setAccess(d.access||null)})
+      .catch(()=>{})
+  },[])
 
   async function save(nextRows:Row[]){
     setSaveState('saving')
@@ -84,6 +110,25 @@ export default function HousekeepingSetupBoard(){
 
   function setService(row:Row,value:''|'OUT'|'RF'){
     update(row.roomId,{serviceType:value})
+  }
+
+  const canInitialEnvelope=Boolean(
+    access?.isAdmin ||
+    normalize(access?.roleName)==='owner' ||
+    normalize(access?.roleName)==='manager'
+  )
+  const managerInitials=getManagerInitials(access)
+
+  function initialEnvelope(row:Row){
+    if(!canInitialEnvelope||!managerInitials){
+      setMessage('Manager initials could not be determined from your profile.')
+      return
+    }
+    if(!String(row.serviceType||'').toUpperCase().startsWith('OUT')){
+      setMessage('Mark the room OUT before initialing the envelope.')
+      return
+    }
+    update(row.roomId,{serviceType:`OUT-${managerInitials}`})
   }
 
   return <div className="hsk-setup-page">
@@ -128,7 +173,7 @@ export default function HousekeepingSetupBoard(){
             <div className="hsk-setup-fields">
               <label>Status
                 <select value={row.reservationStatus} onChange={e=>update(row.roomId,{reservationStatus:e.target.value})}>
-                  <option value="">—</option><option>Checkout</option><option>Out/In</option><option>Stayover</option><option>Arrival</option><option>Blocked</option>
+                  <option value="">—</option><option>Checkout</option><option>Out/In</option><option>Stayover</option><option>Arrival</option><option>Vacant</option><option>Blocked</option>
                 </select>
               </label>
 
@@ -139,6 +184,14 @@ export default function HousekeepingSetupBoard(){
                   <button className={row.serviceType.startsWith('OUT')?'active':''} onClick={()=>setService(row,'OUT')}>OUT</button>
                   <button className={row.serviceType==='RF'?'active':''} onClick={()=>setService(row,'RF')}>RF</button>
                 </div>
+                {String(row.serviceType||'').toUpperCase().startsWith('OUT')&&(
+                  <div className="hsk-setup-envelope-row">
+                    <strong>{String(row.serviceType).toUpperCase()}</strong>
+                    {canInitialEnvelope&&!/^OUT-[A-Z]{2,4}$/.test(String(row.serviceType||'').toUpperCase())&&(
+                      <button type="button" onClick={()=>initialEnvelope(row)}>Initial tip envelope</button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <label>Strip / Hold
