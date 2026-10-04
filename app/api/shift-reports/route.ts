@@ -42,16 +42,17 @@ function canManage(caps: Set<string>) {
 async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: string) {
   const breakfastDate = nextDate(date)
 
-  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes] = await Promise.all([
+  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes, breakfastTagRes] = await Promise.all([
     admin.from('rooms').select('id,name,sort_order,active').eq('active', true).order('sort_order'),
     admin.from('housekeeping_daily_rooms').select('*').eq('service_date', date),
     admin.from('breakfast_bookings').select('room_id,status,menu_submitted,time_slot').eq('service_date', breakfastDate),
     admin.from('maintenance_work_orders').select('*').order('created_at', { ascending: false }),
     admin.from('room_notes').select('*').or(`service_date.eq.${date},note_type.eq.persistent`).order('created_at', { ascending: false }),
-    admin.from('staff_members').select('id,name')
+    admin.from('staff_members').select('id,name'),
+    admin.from('housekeeping_daily_rooms').select('room_id').eq('service_date', date).eq('breakfast_tag', true)
   ])
 
-  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error
+  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error
   if (error) throw new Error(error.message)
 
   const rooms = roomsRes.data || []
@@ -72,13 +73,28 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     notes: row.notes || ''
   }))
 
-  const breakfast = (breakfastRes.data || []).map((row: any) => ({
+  const breakfast:any[] = (breakfastRes.data || []).map((row: any) => ({
     roomId: row.room_id,
     roomName: roomById.get(String(row.room_id)) || 'Room',
     status: row.status,
     menuSubmitted: Boolean(row.menu_submitted),
-    timeSlot: row.time_slot || null
+    timeSlot: row.time_slot || null,
+    taggedOnly:false
   }))
+
+  const bookedRoomIds = new Set(breakfast.map((row:any)=>String(row.roomId || '')).filter(Boolean))
+  for (const tagged of (breakfastTagRes.data || [])) {
+    const roomId = String((tagged as any).room_id || '')
+    if (!roomId || bookedRoomIds.has(roomId)) continue
+    breakfast.push({
+      roomId,
+      roomName: roomById.get(roomId) || 'Room',
+      status:'scheduled',
+      menuSubmitted:false,
+      timeSlot:null,
+      taggedOnly:true
+    })
+  }
 
   const maintenance = (maintenanceRes.data || []).map((row: any) => ({
     ...row,
