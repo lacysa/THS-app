@@ -27,9 +27,19 @@ export async function GET(req:NextRequest) {
 
   const bookingIds = (bookings || []).map((b:any)=>b.id)
 
+  // Rooms manually tagged for breakfast in Housekeeping Setup should appear in
+  // breakfast operations even when a guest menu/booking has not been created yet.
+  const admin = createSupabaseAdmin()
+  const { data:taggedBreakfastRooms,error:taggedBreakfastError } = await admin
+    .from('housekeeping_daily_rooms')
+    .select('room_id,rooms(id,name,sort_order)')
+    .eq('service_date',date)
+    .eq('breakfast_tag',true)
+
+  if (taggedBreakfastError) return NextResponse.json({message:taggedBreakfastError.message},{status:500})
+
   let menuNotes:any[] = []
   if (bookingIds.length) {
-    const admin = createSupabaseAdmin()
     const {data,error} = await admin
       .from('breakfast_menu_notes')
       .select('booking_id,note,updated_at')
@@ -99,16 +109,37 @@ export async function GET(req:NextRequest) {
     submissionsByBooking.set(submission.booking_id,existing)
   }
 
-  const decorated = (bookings || []).map((b:any)=>({
+  const decorated:any[] = (bookings || []).map((b:any)=>({
     ...b,
+    taggedOnly:false,
     menu_submitted:Boolean((nativeByBooking.get(b.id)||[]).length || (submissionsByBooking.get(b.id)||[]).length || b.menu_submitted),
     note: noteByBooking.get(b.id) || '',
     displayTime:formatTime24(String(b.time_slot).slice(0,5))
   }))
 
+  const bookedRoomIds = new Set(decorated.map((b:any)=>String(b.rooms?.id || '')).filter(Boolean))
+  const taggedOnly = (taggedBreakfastRooms || [])
+    .filter((row:any)=>!bookedRoomIds.has(String(row.room_id || row.rooms?.id || '')))
+    .map((row:any)=>({
+      id:`breakfast-tag:${row.room_id || row.rooms?.id}`,
+      service_date:date,
+      last_name:'',
+      time_slot:null,
+      status:'scheduled',
+      menu_submitted:false,
+      latest_submission_id:null,
+      guest_token:null,
+      rooms:row.rooms,
+      taggedOnly:true,
+      note:'',
+      displayTime:'Unscheduled'
+    }))
+
+  decorated.push(...taggedOnly)
+
   const groups:any[] = decorated.map((b:any)=>{
-    const native = nativeByBooking.get(b.id) || []
-    const candidates = submissionsByBooking.get(b.id) || []
+    const native = b.taggedOnly ? [] : (nativeByBooking.get(b.id) || [])
+    const candidates = b.taggedOnly ? [] : (submissionsByBooking.get(b.id) || [])
     const latestLegacy = candidates.find((s:any)=>s.tally_submission_id === b.latest_submission_id) || candidates[0]
     const legacy = latestLegacy ? (ordersBySubmission.get(latestLegacy.id) || []) : []
     const orders = native.length ? native : legacy
@@ -123,7 +154,8 @@ export async function GET(req:NextRequest) {
       displayTime:b.displayTime,
       menuSubmitted:Boolean(orders.length || b.menu_submitted),
       unmatched:false,
-      source:native.length ? 'native' : (legacy.length ? 'legacy' : null),
+      taggedOnly:Boolean(b.taggedOnly),
+      source:b.taggedOnly ? 'breakfast_tag' : (native.length ? 'native' : (legacy.length ? 'legacy' : null)),
       note: noteByBooking.get(b.id) || '',
       orders
     }
