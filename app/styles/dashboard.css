@@ -615,3 +615,5 @@
     font-size:18px;
   }
 }
+
+.daily-row-main b{font-weight:800;color:var(--ths-text)}
