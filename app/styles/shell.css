@@ -230,3 +230,46 @@ body{overflow-x:hidden}
     padding:78px 12px 30px!important;
   }
 }
+
+
+/* Mobile drawer hardening */
+@media(max-width:760px){
+  .staff-ops-sidebar,
+  .staff-ops-sidebar.collapsed{
+    display:flex!important;
+    width:min(84vw,320px)!important;
+    max-width:320px!important;
+    left:0!important;
+    right:auto!important;
+    transform:translate3d(-102%,0,0)!important;
+  }
+
+  .staff-ops-sidebar.mobile-open,
+  .staff-ops-sidebar.collapsed.mobile-open{
+    display:flex!important;
+    width:min(84vw,320px)!important;
+    max-width:320px!important;
+    transform:translate3d(0,0,0)!important;
+  }
+
+  .staff-ops-sidebar.mobile-open .ops-logo-copy,
+  .staff-ops-sidebar.mobile-open .ops-nav-label,
+  .staff-ops-sidebar.mobile-open .sidebar-link-label,
+  .staff-ops-sidebar.mobile-open .preview-badge,
+  .staff-ops-sidebar.mobile-open .ops-sidebar-profile-copy,
+  .staff-ops-sidebar.mobile-open .sidebar-footer-actions span{
+    display:initial!important;
+  }
+
+  .mobile-sidebar-backdrop{
+    z-index:60!important;
+  }
+
+  .staff-ops-sidebar{
+    z-index:80!important;
+  }
+
+  .ops-topbar,.staff-ops-topbar{
+    z-index:50!important;
+  }
+}
