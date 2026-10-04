@@ -407,3 +407,38 @@
     white-space:nowrap !important;
   }
 }
+
+
+/* ============================================================
+   ROOM PACKAGE MULTI-SELECT
+   ============================================================ */
+.hsk-package-cell{min-width:240px}
+.hsk-package-picker{position:relative}
+.hsk-package-trigger{
+  width:100%;min-height:32px;display:flex;align-items:center;justify-content:space-between;gap:6px;
+  padding:5px 7px;border:1px solid var(--app-border,var(--line));border-radius:7px;
+  background:var(--app-surface2,#fff);color:var(--app-text,var(--ink));font-size:10px;cursor:pointer;text-align:left;
+}
+.hsk-package-trigger span{display:block;max-width:205px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hsk-package-popover{
+  position:absolute;z-index:80;top:calc(100% + 4px);right:0;width:310px;max-width:min(310px,80vw);
+  padding:7px;border:1px solid var(--app-border,var(--line));border-radius:10px;background:var(--app-surface,#fff);
+  box-shadow:0 14px 36px rgba(0,0,0,.2);
+}
+.hsk-package-options{display:grid;gap:2px;max-height:330px;overflow:auto}
+.hsk-package-options button{
+  width:100%;min-height:40px;display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:center;
+  padding:6px;border:0;border-radius:6px;background:transparent;color:var(--app-text,var(--ink));text-align:left;cursor:pointer;
+}
+.hsk-package-options button:hover,.hsk-package-options button.is-selected{background:var(--app-surface2,#f1f1f1)}
+.hsk-package-options button:disabled{opacity:.55;cursor:not-allowed}
+.hsk-package-check{width:17px;height:17px;display:grid;place-items:center;border:1px solid var(--app-border,var(--line));border-radius:4px}
+.hsk-package-copy{min-width:0}
+.hsk-package-copy strong,.hsk-package-copy small{display:block}
+.hsk-package-copy strong{font-size:10px;line-height:1.25;white-space:normal}
+.hsk-package-copy small{margin-top:2px;color:var(--app-muted,var(--muted));font-size:8px}
+.hsk-assigned-packages{
+  display:grid;gap:3px;padding:9px 10px;border:1px solid #e4d5a7;border-radius:8px;background:#fff8e6;color:#6f5618
+}
+.hsk-assigned-packages strong{font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.hsk-assigned-packages span{font-size:10px;line-height:1.4}
