@@ -23,10 +23,25 @@ type Report = {
   general_notes:string
   management_notes:string
   finalized_at:string|null
+  note_authors?:{
+    guest?:{id:string;name:string;initials:string}|null
+    staff?:{id:string;name:string;initials:string}|null
+    supplies?:{id:string;name:string;initials:string}|null
+    tomorrow?:{id:string;name:string;initials:string}|null
+    general?:{id:string;name:string;initials:string}|null
+    management?:{id:string;name:string;initials:string}|null
+  }
 }
 
 function todayDetroit() {
   return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+}
+
+function initials(value:string) {
+  const parts=String(value||'').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return ''
+  if (parts.length===1) return parts[0].slice(0,2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase()
 }
 
 export default function ShiftReportBoard() {
@@ -199,8 +214,17 @@ export default function ShiftReportBoard() {
     return items
   },[roomHandoff,summary.menusMissing,summary.maintenanceOpen])
 
-  function textarea(key:keyof typeof draft,label:string,placeholder:string) {
-    return <label>{label}<textarea value={draft[key]} onChange={e=>setDraft(cur=>({...cur,[key]:e.target.value}))} disabled={!canManage||locked} placeholder={placeholder}/></label>
+  function textarea(key:keyof typeof draft,label:string,placeholder:string,authorKey?:keyof NonNullable<Report['note_authors']>) {
+    const author=authorKey ? report?.note_authors?.[authorKey] : null
+    return <label>{label}
+      {author && <span className="shift-note-author">{author.initials} · {author.name}</span>}
+      <textarea value={draft[key]} onChange={e=>setDraft(cur=>({...cur,[key]:e.target.value}))} disabled={!canManage||locked} placeholder={placeholder}/>
+    </label>
+  }
+
+  function authoredText(value:string,authorKey:keyof NonNullable<Report['note_authors']>) {
+    const author=report?.note_authors?.[authorKey]
+    return <>{author && <strong className="shift-note-prefix">{author.initials}: </strong>}{value}</>
   }
 
   return <div className="shift-page">
@@ -268,21 +292,21 @@ export default function ShiftReportBoard() {
         <h3>Room / Guest Notes</h3>
         <div className="shift-print-list">
           {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
-            <strong>{n.roomName}</strong><span>{n.note}</span>
+            <strong>{n.roomName}</strong><span><b>{initials(n.createdByName)}:</b> {n.note}</span>
           </div>)}
         </div>
-        {draft.guestNotes.trim() && <p className="shift-print-narrative">{draft.guestNotes}</p>}
+        {draft.guestNotes.trim() && <p className="shift-print-narrative">{authoredText(draft.guestNotes,'guest')}</p>}
       </section>}
 
       {!roomNotes.filter(n=>n.include_in_shift_report).length && draft.guestNotes.trim() && <section className="shift-print-section">
-        <h3>Room / Guest Notes</h3><p>{draft.guestNotes}</p>
+        <h3>Room / Guest Notes</h3><p>{authoredText(draft.guestNotes,'guest')}</p>
       </section>}
 
-      {draft.staffNotes.trim() && <section className="shift-print-section"><h3>Staff Notes</h3><p>{draft.staffNotes}</p></section>}
-      {draft.suppliesNotes.trim() && <section className="shift-print-section"><h3>Supplies / Inventory</h3><p>{draft.suppliesNotes}</p></section>}
-      {draft.tomorrowNotes.trim() && <section className="shift-print-section"><h3>Tomorrow / Follow-up</h3><p>{draft.tomorrowNotes}</p></section>}
-      {draft.generalNotes.trim() && <section className="shift-print-section"><h3>General Notes</h3><p>{draft.generalNotes}</p></section>}
-      {draft.managementNotes.trim() && <section className="shift-print-section"><h3>Management Notes</h3><p>{draft.managementNotes}</p></section>}
+      {draft.staffNotes.trim() && <section className="shift-print-section"><h3>Staff Notes</h3><p>{authoredText(draft.staffNotes,'staff')}</p></section>}
+      {draft.suppliesNotes.trim() && <section className="shift-print-section"><h3>Supplies / Inventory</h3><p>{authoredText(draft.suppliesNotes,'supplies')}</p></section>}
+      {draft.tomorrowNotes.trim() && <section className="shift-print-section"><h3>Tomorrow / Follow-up</h3><p>{authoredText(draft.tomorrowNotes,'tomorrow')}</p></section>}
+      {draft.generalNotes.trim() && <section className="shift-print-section"><h3>General Notes</h3><p>{authoredText(draft.generalNotes,'general')}</p></section>}
+      {draft.managementNotes.trim() && <section className="shift-print-section"><h3>Management Notes</h3><p>{authoredText(draft.managementNotes,'management')}</p></section>}
     </div>
 
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-report-flow">
@@ -324,18 +348,18 @@ export default function ShiftReportBoard() {
         <h3>Room / Guest Notes</h3>
         {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <div className="shift-list">
           {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={n.id} className="shift-line">
-            <span><strong>{n.roomName}</strong><br/><span className="shift-muted">{n.note}</span></span>
+            <span><strong>{n.roomName}</strong><br/><span className="shift-muted"><b>{initials(n.createdByName)}:</b> {n.note}</span></span>
             <span className="shift-badge">{n.note_type}</span>
           </div>)}
         </div>}
-        {textarea('guestNotes','Guest issues / requests / recovery','Complaints, special requests, compensation, late arrivals, anything the next shift should know.')}
+        {textarea('guestNotes','Guest issues / requests / recovery','Complaints, special requests, compensation, late arrivals, anything the next shift should know.','guest')}
       </section>
 
-      <section className="shift-section"><h3>Staff Notes</h3>{textarea('staffNotes','Staff notes','Attendance, coverage changes, training, handoff information.')}</section>
-      <section className="shift-section"><h3>Supplies / Inventory</h3>{textarea('suppliesNotes','Supplies','Running low, ordered today, deliveries received.')}</section>
-      <section className="shift-section"><h3>Tomorrow / Follow-up</h3>{textarea('tomorrowNotes','Tomorrow priorities','Room follow-up, breakfast outstanding, maintenance carryover, priority tasks.')}</section>
-      <section className="shift-section"><h3>General Notes</h3>{textarea('generalNotes','General notes','Anything else that belongs in the daily record.')}</section>
-      <section className="shift-section full"><h3>Management Notes</h3>{textarea('managementNotes','Manager-only notes','Attendance concerns, performance issues, guest compensation decisions, incidents, disciplinary matters, or other restricted notes.')}</section>
+      <section className="shift-section"><h3>Staff Notes</h3>{textarea('staffNotes','Staff notes','Attendance, coverage changes, training, handoff information.','staff')}</section>
+      <section className="shift-section"><h3>Supplies / Inventory</h3>{textarea('suppliesNotes','Supplies','Running low, ordered today, deliveries received.','supplies')}</section>
+      <section className="shift-section"><h3>Tomorrow / Follow-up</h3>{textarea('tomorrowNotes','Tomorrow priorities','Room follow-up, breakfast outstanding, maintenance carryover, priority tasks.','tomorrow')}</section>
+      <section className="shift-section"><h3>General Notes</h3>{textarea('generalNotes','General notes','Anything else that belongs in the daily record.','general')}</section>
+      <section className="shift-section full"><h3>Management Notes</h3>{textarea('managementNotes','Manager-only notes','Attendance concerns, performance issues, guest compensation decisions, incidents, disciplinary matters, or other restricted notes.','management')}</section>
     </div> : tab==='room-notes' ? <div className="shift-section full">
       <h3>Room Notes</h3>
       <div className="room-note-form">
