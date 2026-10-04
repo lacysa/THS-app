@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const { data: roomRow, error: roomError } = await admin
       .from('housekeeping_daily_rooms')
-      .select('complete,check_issue_open,strip_hold,room_condition')
+      .select('complete,check_issue_open,strip_hold,room_condition,reservation_status')
       .eq('service_date', serviceDate)
       .eq('room_id', roomId)
       .maybeSingle()
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString()
 
-    let shouldMarkReady = false
+    let automaticEndOfShiftStatus:string | null = null
     if (kind === 'foh') {
       const { data:nextDayRow,error:nextDayError } = await admin
         .from('housekeeping_daily_rooms')
@@ -84,7 +84,13 @@ export async function POST(req: NextRequest) {
 
       const nextBlocked = String(nextDayRow?.reservation_status || '').trim().toLowerCase() === 'blocked'
       const stripOrHold = Boolean(String(roomRow?.strip_hold || '').trim())
-      shouldMarkReady = !nextBlocked && !stripOrHold
+
+      if (!nextBlocked && !stripOrHold) {
+        automaticEndOfShiftStatus =
+          String(roomRow?.reservation_status || '').trim().toLowerCase() === 'checkout'
+            ? 'Vacant (Clean)'
+            : 'Ready'
+      }
     }
 
     const patch = kind === 'ha'
@@ -101,7 +107,7 @@ export async function POST(req: NextRequest) {
       : {
           foh_signed_by: person.id,
           foh_signed_at: now,
-          ...(shouldMarkReady ? { room_condition:'Ready' } : {}),
+          ...(automaticEndOfShiftStatus ? { room_condition:automaticEndOfShiftStatus } : {}),
           updated_at: now
         }
 
