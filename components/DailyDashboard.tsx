@@ -28,6 +28,7 @@ type HousekeepingRow = {
   serviceType:string
   assignedTo:string
   complete:boolean
+  stripHold:string
   notes:string
 }
 
@@ -184,7 +185,7 @@ export default function DailyDashboard({
                 <Link href={`/housekeeping#room-${encodeURIComponent(row.roomId)}`} className="daily-list-row daily-list-link" key={row.id}>
                   <div className="daily-row-main">
                     <strong>{row.roomName}</strong>
-                    <span>{[row.reservationStatus,row.serviceType,row.assignedTo].filter(Boolean).join(' · ') || 'Assigned clean'}</span>
+                    <span>{[row.reservationStatus,row.serviceType,row.stripHold,row.assignedTo].filter(Boolean).join(' · ') || 'Assigned clean'}</span>
                     {row.notes && <small>{row.notes}</small>}
                   </div>
                   <span className={row.complete?'daily-state done':'daily-state'}>{row.complete?'Complete':'Open'}</span>
