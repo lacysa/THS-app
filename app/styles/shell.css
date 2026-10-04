@@ -1,259 +1,101 @@
-/* THE HOTEL SAUGATUCK — STAFF APP SHELL */
-:root{--ths-sidebar-width:236px;--ths-header-height:76px}
-html,body{margin:0;min-height:100%}
-body{overflow-x:hidden}
-.ops-app,.staff-ops-app{width:100%;min-width:0;min-height:100vh;display:block;background:var(--ths-ivory);color:var(--ths-text)}
-.ops-sidebar,.staff-ops-sidebar{width:var(--ths-sidebar-width);height:100dvh;position:fixed;left:0;top:0;display:flex;flex-direction:column;box-sizing:border-box;padding:18px 12px 14px;overflow:hidden;background:#1b1b19;color:#fff;border-right:1px solid rgba(255,255,255,.06);z-index:60;transition:width .18s ease,padding .18s ease}
-.sidebar-brand{flex:0 0 auto;padding-bottom:8px}
-.ops-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 14px;color:#fff;text-decoration:none}.ops-logo:hover{color:#fff}
-.ops-logo-mark{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.55);border-radius:2px;background:transparent;color:#fff;font-size:10px;font-weight:900;letter-spacing:.08em}
-.ops-logo-copy{min-width:0}.ops-logo-copy strong{display:block;color:#fff;font-size:11px;font-weight:800;line-height:1.15;letter-spacing:.045em;text-transform:uppercase}.ops-logo-copy span{display:block;margin-top:3px;color:#918e87;font-size:9px}
-.ops-nav,.staff-ops-nav{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:none}.ops-nav::-webkit-scrollbar,.staff-ops-nav::-webkit-scrollbar{width:0;height:0}
-.ops-nav-section{margin-top:16px}.ops-nav-section:first-child{margin-top:0}.ops-nav-label{margin-bottom:5px;padding:0 10px;color:#77746d;font-size:8px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
-.staff-ops-nav a{width:100%;min-width:0;min-height:38px;display:flex;align-items:center;gap:9px;box-sizing:border-box;margin:1px 0;padding:0 10px;border-radius:5px;color:#bcb8b0;text-decoration:none;font-size:12px;font-weight:600;transition:background .15s ease,color .15s ease}.staff-ops-nav a:hover{background:rgba(255,255,255,.045);color:#fff}.sidebar-link-icon{width:20px;flex:0 0 20px;display:grid;place-items:center;color:#918d86}.sidebar-link-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.staff-ops-nav a.active{background:#eeeae2;color:#1a1a18}.staff-ops-nav a.active .sidebar-link-icon{color:#1a1a18}
-.preview-badge{margin-left:auto;flex:0 0 auto;padding:2px 5px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.035);color:#8e8a82;font-size:7px;font-style:normal;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
-.ops-sidebar-bottom{flex:0 0 auto;display:grid;gap:3px;margin-top:10px;padding-top:11px;border-top:1px solid rgba(255,255,255,.075)}.ops-sidebar-profile{min-width:0;display:flex;align-items:center;gap:9px;padding:3px 8px 10px}.ops-sidebar-avatar{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border-radius:50%;background:#ece8df;color:#1a1a18;font-size:9px;font-weight:800}.ops-sidebar-profile-copy{min-width:0}.ops-sidebar-profile-copy strong,.ops-sidebar-profile-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ops-sidebar-profile-copy strong{color:#f3f0e9;font-size:10px;font-weight:700}.ops-sidebar-profile-copy span{margin-top:2px;color:#86827b;font-size:8px}.sidebar-footer-actions{display:grid;gap:2px}.sidebar-footer-actions form{margin:0}.sidebar-footer-actions button,.ops-sidebar-bottom>button{width:100%;min-height:36px;display:flex;align-items:center;gap:9px;padding:0 9px;border:0;border-radius:5px;background:transparent;color:#aaa69f;font-size:11px;font-weight:600;text-align:left;cursor:pointer}.sidebar-footer-actions button:hover,.ops-sidebar-bottom>button:hover{background:rgba(255,255,255,.04);color:#fff}
-.ops-main,.staff-ops-main{width:auto;min-width:0;min-height:100vh;margin:0 0 0 var(--ths-sidebar-width);padding:0;background:var(--ths-ivory);border:0;transition:margin-left .18s ease}
-.ops-topbar,.staff-ops-topbar{width:100%;min-height:var(--ths-header-height);position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;box-sizing:border-box;margin:0;padding:10px 24px;background:rgba(255,255,255,.98);border:0;border-bottom:1px solid var(--ths-line);backdrop-filter:blur(14px)}
-.staff-page-title{min-width:220px}.staff-page-title span{display:block;color:var(--ths-muted);font-size:8px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}.staff-page-title strong{display:block;margin-top:4px;color:var(--ths-text);font-size:18px;font-weight:700}.staff-topbar-spacer{flex:1}
-.staff-global-search,.ops-search{width:min(405px,38vw);flex:0 1 405px;position:relative;display:flex;align-items:center;gap:9px;box-sizing:border-box;padding:0 13px;border:1px solid #dedad1;border-radius:6px;background:#f3f1ec;color:#8b877f}.staff-global-search input,.ops-search input{width:100%;padding:11px 0;border:0;outline:0;background:transparent;color:var(--ths-text);box-shadow:none}.staff-global-search input::placeholder,.ops-search input::placeholder{color:#96928a}
-.workspace-search-results{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:100;overflow:hidden;border:1px solid var(--ths-line);border-radius:7px;background:#fff;box-shadow:0 14px 34px rgba(26,26,24,.13)}.workspace-search-results button{width:100%;display:flex;align-items:center;gap:9px;padding:11px 12px;border:0;border-bottom:1px solid #eeeae2;background:#fff;color:var(--ths-text);font-size:12px;font-weight:600;text-align:left;cursor:pointer}.workspace-search-results button:last-child{border-bottom:0}.workspace-search-results button:hover{background:#f4f2ed}.workspace-search-empty{padding:12px;color:var(--ths-muted);font-size:12px}
-.staff-user-area,.ops-top-actions{margin-left:0;display:flex;align-items:center;gap:10px;flex:0 0 auto}.ops-icon-btn{width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--ths-line);border-radius:6px;background:#fff;color:var(--ths-charcoal);cursor:pointer}.ops-icon-btn:hover{background:#f3f1ec}.ops-avatar{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:50%;background:var(--ths-charcoal);color:#fff;font-size:10px;font-weight:800}.ops-user-copy{min-width:125px}.ops-user-copy strong,.ops-user-copy span{display:block}.ops-user-copy strong{color:var(--ths-text);font-size:11px;font-weight:700}.ops-user-copy span{margin-top:2px;color:var(--ths-muted);font-size:9px}
-.staff-page-content,.ops-content{width:100%;max-width:1500px;box-sizing:border-box;margin:0 auto;padding:26px 28px 54px;background:var(--ths-ivory)}
-@media(max-width:1100px){.staff-page-title{min-width:180px}.staff-global-search,.ops-search{width:min(300px,31vw);flex-basis:300px}}
-@media(max-width:760px){:root{--ths-sidebar-width:205px}.staff-global-search,.ops-search{display:none}.staff-page-title{min-width:0}.ops-user-copy{display:none}.staff-page-content,.ops-content{padding:18px 14px 40px}.ops-topbar,.staff-ops-topbar{padding:9px 12px;gap:10px}}
+/* THE HOTEL SAUGATUCK — SHARED STAFF APP SHELL
+   Structural + visual rules shared by desktop and mobile only.
+   Browser-width behavior lives in shell-desktop.css and shell-mobile.css. */
 
-/* Fixed, collapsible navigation */
-.sidebar-brand{position:relative;padding-right:34px}
-.sidebar-collapse-btn{position:absolute;right:2px;top:4px;width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:rgba(255,255,255,.04);color:#c7c3bb;cursor:pointer}
-.sidebar-collapse-btn:hover{background:rgba(255,255,255,.08);color:#fff}
-.staff-ops-sidebar.collapsed{width:52px;padding-left:5px;padding-right:5px}
-.sidebar-collapsed .staff-ops-main{margin-left:52px}
-.staff-ops-sidebar.collapsed .ops-logo-copy,.staff-ops-sidebar.collapsed .ops-nav-label,.staff-ops-sidebar.collapsed .sidebar-link-label,.staff-ops-sidebar.collapsed .preview-badge,.staff-ops-sidebar.collapsed .ops-sidebar-profile-copy,.staff-ops-sidebar.collapsed .sidebar-footer-actions span{display:none!important}
-.staff-ops-sidebar.collapsed .sidebar-brand{padding-right:0;padding-top:32px}
-.staff-ops-sidebar.collapsed .sidebar-collapse-btn{right:6px;top:0}
-.staff-ops-sidebar.collapsed .ops-logo{justify-content:center;padding:0 0 10px}
-.staff-ops-sidebar.collapsed .staff-ops-nav a,.staff-ops-sidebar.collapsed .sidebar-footer-actions button{justify-content:center;padding-left:0;padding-right:0}
-.staff-ops-sidebar.collapsed .sidebar-link-icon{width:20px;flex-basis:20px}
-.staff-ops-sidebar.collapsed .ops-sidebar-profile{justify-content:center;padding-left:0;padding-right:0}
-.staff-ops-sidebar.collapsed .ops-logo-mark{width:30px;height:30px;flex-basis:30px;font-size:8px}
-.staff-ops-sidebar.collapsed .ops-sidebar-avatar{width:28px;height:28px;flex-basis:28px;font-size:8px}
-.staff-ops-sidebar.collapsed .staff-ops-nav a{min-height:34px}
-.staff-ops-sidebar.collapsed .sidebar-footer-actions button{min-height:32px}
-@media(max-width:760px){
-  .ops-sidebar,.staff-ops-sidebar{width:205px}
-  .ops-main,.staff-ops-main{margin-left:205px}
-  .staff-ops-sidebar.collapsed{width:48px}
-  .sidebar-collapsed .staff-ops-main{margin-left:48px}
-  .staff-page-content,.ops-content{max-width:none}
+:root{
+  --ths-sidebar-width:232px;
+  --ths-header-height:76px;
 }
 
-/* ============================================================
-   MOBILE STAFF SHELL
-   One source of truth: .staff-ops-app.mobile-nav-open.
-   Desktop collapse state is ignored on mobile.
-   ============================================================ */
+html,body{margin:0;min-height:100%;}
+body{overflow-x:hidden;}
 
-.mobile-nav-toggle,
-.mobile-sidebar-backdrop{
-  display:none;
+.staff-ops-app{
+  width:100%;
+  min-width:0;
+  min-height:100vh;
+  background:var(--ths-ivory);
+  color:var(--ths-text);
 }
 
-@media (max-width:900px){
-  :root{--ths-sidebar-width:0px}
-
-  html,body{
-    min-height:100%;
-    margin:0!important;
-    padding:0!important;
-  }
-
-  body{
-    overflow-x:hidden;
-  }
-
-  .staff-ops-app{
-    display:block!important;
-    width:100%!important;
-    min-width:0!important;
-    min-height:100vh!important;
-    min-height:100dvh!important;
-    margin:0!important;
-    padding:0!important;
-  }
-
-  .staff-ops-main,
-  .sidebar-collapsed .staff-ops-main{
-    display:block!important;
-    width:100%!important;
-    min-width:0!important;
-    min-height:100vh!important;
-    min-height:100dvh!important;
-    margin:0!important;
-    padding:0!important;
-  }
-
-  /* The desktop sidebar becomes one off-canvas mobile drawer. */
-  .staff-ops-app > .staff-ops-sidebar,
-  .staff-ops-app > .staff-ops-sidebar.collapsed{
-    display:flex!important;
-    position:fixed!important;
-    inset:0 auto 0 0!important;
-    width:min(84vw,320px)!important;
-    max-width:320px!important;
-    height:100vh!important;
-    height:100dvh!important;
-    min-height:0!important;
-    box-sizing:border-box!important;
-    padding:18px 12px 14px!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    transform:translate3d(-105%,0,0)!important;
-    transition:transform .2s ease!important;
-    background:#1b1b19!important;
-    z-index:1001!important;
-    box-shadow:18px 0 48px rgba(0,0,0,.28)!important;
-  }
-
-  /*
-    IMPORTANT: use the parent open state, not the sidebar's collapsed/mobile-open
-    class combination. The backdrop and this rule now share the same state.
-  */
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar.collapsed{
-    width:min(84vw,320px)!important;
-    max-width:320px!important;
-    padding:18px 12px 14px!important;
-    transform:translate3d(0,0,0)!important;
-  }
-
-  /* Undo every desktop collapsed visual while the mobile drawer is open. */
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .ops-logo-copy,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .ops-nav-label,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .sidebar-link-label,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .preview-badge,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .ops-sidebar-profile-copy,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .sidebar-footer-actions span{
-    display:initial!important;
-  }
-
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .sidebar-brand{
-    padding-right:0!important;
-    padding-top:0!important;
-  }
-
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .ops-logo{
-    justify-content:flex-start!important;
-    padding:4px 8px 14px!important;
-  }
-
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .staff-ops-nav a,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .sidebar-footer-actions button,
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .ops-sidebar-profile{
-    justify-content:flex-start!important;
-  }
-
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .staff-ops-nav a{
-    padding-left:10px!important;
-    padding-right:10px!important;
-  }
-
-  .staff-ops-app.mobile-nav-open > .staff-ops-sidebar .ops-sidebar-profile{
-    padding-left:8px!important;
-    padding-right:8px!important;
-  }
-
-  .staff-ops-sidebar .sidebar-collapse-btn{
-    display:none!important;
-  }
-
-  .mobile-nav-toggle{
-    display:grid!important;
-    width:40px!important;
-    height:40px!important;
-    flex:0 0 40px!important;
-    place-items:center!important;
-    padding:0!important;
-    border:1px solid var(--ths-line)!important;
-    border-radius:7px!important;
-    background:#fff!important;
-    color:var(--ths-charcoal)!important;
-    cursor:pointer!important;
-  }
-
-  .mobile-sidebar-backdrop{
-    display:block!important;
-    appearance:none!important;
-    position:fixed!important;
-    inset:0!important;
-    width:100vw!important;
-    height:100vh!important;
-    height:100dvh!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    border-radius:0!important;
-    background:rgba(20,20,18,.42)!important;
-    backdrop-filter:blur(1px);
-    z-index:1000!important;
-    cursor:pointer!important;
-  }
-
-  .staff-ops-app.mobile-nav-open{
-    height:100vh!important;
-    height:100dvh!important;
-    overflow:hidden!important;
-  }
-
-  .staff-ops-topbar{
-    width:100%!important;
-    min-height:64px!important;
-    position:sticky!important;
-    top:0!important;
-    z-index:50!important;
-    padding:9px 10px!important;
-    gap:10px!important;
-  }
-
-  .staff-global-search{
-    display:none!important;
-  }
-
-  .staff-page-title{
-    min-width:0!important;
-    flex:1!important;
-  }
-
-  .staff-page-title span{
-    display:none!important;
-  }
-
-  .staff-page-title strong{
-    margin-top:0!important;
-    font-size:17px!important;
-  }
-
-  .staff-user-area{
-    margin-left:auto!important;
-    gap:8px!important;
-  }
-
-  .ops-user-copy{
-    display:none!important;
-  }
-
-  .staff-page-content,
-  .ops-content{
-    width:100%!important;
-    max-width:none!important;
-    box-sizing:border-box!important;
-    margin:0!important;
-    padding:14px 12px 30px!important;
-  }
+.staff-ops-sidebar{
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  background:#1b1b19!important;
+  color:#fff;
+  border-right:1px solid rgba(255,255,255,.06)!important;
 }
 
-@media (min-width:901px){
-  .staff-ops-sidebar{
-    transform:none!important;
-  }
+.sidebar-brand{position:relative;flex:0 0 auto;padding:0 34px 8px 0;}
+.sidebar-collapse-btn{
+  position:absolute;right:2px;top:4px;width:30px;height:30px;
+  display:grid;place-items:center;border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;background:rgba(255,255,255,.04);color:#c7c3bb;cursor:pointer;
 }
+.sidebar-collapse-btn:hover{background:rgba(255,255,255,.08);color:#fff;}
+
+.ops-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 14px!important;color:#fff!important;text-decoration:none;}
+.ops-logo:hover{color:#fff!important;}
+.ops-logo-mark{
+  width:38px!important;height:38px!important;flex:0 0 38px!important;display:grid;place-items:center;
+  border:1px solid rgba(255,255,255,.54)!important;border-radius:2px!important;
+  background:transparent!important;color:#fff!important;box-shadow:none!important;
+  font-size:10px!important;font-weight:900;letter-spacing:.08em;
+}
+.ops-logo-copy{min-width:0;}
+.ops-logo-copy strong,.ops-logo-copy span{display:block;}
+.ops-logo-copy strong{color:#fff!important;font-size:11px!important;font-weight:800;line-height:1.1;letter-spacing:.045em;text-transform:uppercase;}
+.ops-logo-copy span{margin-top:3px;color:#8f8c84!important;font-size:9px!important;}
+
+.staff-ops-nav{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;}
+.staff-ops-nav::-webkit-scrollbar{width:0;height:0;}
+.ops-nav-section{margin-top:17px;}
+.ops-nav-section:first-child{margin-top:0;}
+.ops-nav-label{margin-bottom:5px;padding:0 10px;color:#77746d!important;font-size:8px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;}
+.staff-ops-nav a{
+  width:100%;min-width:0;min-height:39px;box-sizing:border-box;display:flex;align-items:center;gap:9px;
+  margin:1px 0;padding:0 10px!important;border-radius:5px!important;color:#bcb8b0!important;
+  text-decoration:none;font-size:12px;font-weight:600;transition:background .15s ease,color .15s ease;
+}
+.staff-ops-nav a:hover{background:rgba(255,255,255,.045)!important;color:#fff!important;}
+.staff-ops-nav a.active{background:#ede9e1!important;color:#1a1a18!important;box-shadow:none!important;}
+.sidebar-link-icon{width:20px;flex:0 0 20px;display:grid;place-items:center;color:#8f8b83;}
+.staff-ops-nav a.active .sidebar-link-icon{color:#1a1a18!important;}
+.sidebar-link-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.preview-badge{margin-left:auto;flex:0 0 auto;padding:2px 5px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.035);color:#8e8a82!important;font-size:7px;font-style:normal;font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+
+.ops-sidebar-bottom{flex:0 0 auto;display:grid;gap:3px;margin-top:auto;padding-top:11px;border-top:1px solid rgba(255,255,255,.075);}
+.ops-sidebar-profile{min-width:0;display:flex;align-items:center;gap:9px;padding:3px 8px 10px;}
+.ops-sidebar-avatar{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border-radius:50%;background:#ece8df!important;color:#1a1a18!important;font-size:9px;font-weight:800;}
+.ops-sidebar-profile-copy{min-width:0;}
+.ops-sidebar-profile-copy strong,.ops-sidebar-profile-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ops-sidebar-profile-copy strong{color:#f3f0e9!important;font-size:10px;font-weight:700;}
+.ops-sidebar-profile-copy span{margin-top:2px;color:#86827b!important;font-size:8px;}
+.sidebar-footer-actions{display:grid;gap:2px;}
+.sidebar-footer-actions form{margin:0;}
+.sidebar-footer-actions button{
+  width:100%;min-height:36px;display:flex;align-items:center;gap:9px;padding:0 9px;border:0;border-radius:5px;
+  background:transparent;color:#aaa69f!important;font-size:11px;font-weight:600;text-align:left;cursor:pointer;
+}
+.sidebar-footer-actions button:hover{background:rgba(255,255,255,.04);color:#fff!important;}
+
+.staff-ops-main{min-width:0;min-height:100vh;padding:0!important;border:0!important;box-shadow:none!important;background:var(--ths-ivory)!important;}
+.staff-ops-topbar{
+  width:100%;min-height:var(--ths-header-height);box-sizing:border-box;display:flex;align-items:center;gap:18px;
+  margin:0;padding:10px 24px!important;background:rgba(255,255,255,.98)!important;border:0;border-bottom:1px solid var(--ths-line)!important;
+  backdrop-filter:blur(14px);
+}
+.staff-page-title{min-width:220px;}
+.staff-page-title span,.staff-page-title strong{display:block;}
+.staff-page-title span{color:var(--ths-muted)!important;font-size:8px;font-weight:800;letter-spacing:.17em;text-transform:uppercase;}
+.staff-page-title strong{margin-top:4px;color:var(--ths-text)!important;font-size:18px;font-weight:700;}
+.staff-topbar-spacer{flex:1;}
+.staff-global-search{width:min(405px,38vw);max-width:405px;flex:0 1 405px;position:relative;}
+.staff-user-area{margin-left:0;display:flex;align-items:center;gap:10px;flex:0 0 auto;}
+
+.staff-page-content{
+  width:100%;max-width:1500px;box-sizing:border-box;margin:0 auto;padding:26px 28px 54px!important;background:var(--ths-ivory)!important;
+}
+
+.mobile-nav-toggle,.mobile-sidebar-backdrop{display:none;}
