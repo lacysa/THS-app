@@ -35,6 +35,7 @@ type RoomRow = {
   inspectedAt?: string | null
   roomCondition: string
   nextShiftCondition: string
+  packageIds: string[]
   notes: string
   breakfastTag: boolean
   haSignedBy?: string | null
@@ -64,6 +65,13 @@ type StaffOption = {
   name: string
 }
 
+type RoomPackageOption = {
+  id: string
+  name: string
+  price: number | null
+  available: boolean
+}
+
 type Access = {
   name?: string | null
   preferredName?: string | null
@@ -74,10 +82,9 @@ type Access = {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
-const reservationOptions = ['', 'Checkout', 'Out/In', 'Stayover', 'Arrival', 'Blocked']
+const reservationOptions = ['', 'Checkout', 'Out/In', 'Stayover', 'Arrival', 'Vacant', 'Blocked']
 const stripOptions = ['', 'Strip', 'Hold']
-const conditionOptions = ['', 'Occupied', 'Cleaning', 'Ready for Inspection', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
-const nextShiftOptions = ['', 'Occupied', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
+const conditionOptions = ['', 'Occupied', 'Cleaning', 'Ready for Inspection', 'Vacant', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
 
 function todayDetroit() {
   return new Intl.DateTimeFormat('en-CA', {
@@ -140,6 +147,7 @@ export default function HousekeepingBoard() {
   const [date, setDate] = useState(todayDetroit())
   const [rows, setRows] = useState<RoomRow[]>([])
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
+  const [packageOptions, setPackageOptions] = useState<RoomPackageOption[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [viewMode, setViewMode] = useState<'manager'|'assigned'>('manager')
@@ -155,6 +163,7 @@ export default function HousekeepingBoard() {
   const [dirty, setDirty] = useState(false)
   const [openStaffRoomId, setOpenStaffRoomId] = useState<string | null>(null)
   const [staffSearch, setStaffSearch] = useState('')
+  const [openPackageRoomId, setOpenPackageRoomId] = useState<string | null>(null)
   const rowsRef = useRef<RoomRow[]>([])
   const dateRef = useRef(date)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -200,6 +209,7 @@ export default function HousekeepingBoard() {
       rowsRef.current = loadedRows
       setViewMode(d.viewMode === 'assigned' ? 'assigned' : 'manager')
       setStaffOptions(d.staffOptions || [])
+      setPackageOptions(d.packageOptions || [])
       setCanHaSignoff(Boolean(d.signoffAccess?.canHaSignoff))
       setCanFohSignoff(Boolean(d.signoffAccess?.canFohSignoff))
       setBreakfastDate(d.breakfast?.serviceDate || '')
@@ -355,6 +365,21 @@ export default function HousekeepingBoard() {
       ? current.filter(item => item !== name)
       : [...current, name]
     patch(row.roomId, { assignedTo: next.join(', ') })
+  }
+
+  function togglePackage(row: RoomRow, packageId: string) {
+    const current = Array.isArray(row.packageIds) ? row.packageIds : []
+    const next = current.includes(packageId)
+      ? current.filter(id => id !== packageId)
+      : [...current, packageId]
+    patch(row.roomId, { packageIds: next })
+  }
+
+  function packageLabel(packageIds: string[]) {
+    const names = (packageIds || [])
+      .map(id => packageOptions.find(option => option.id === id)?.name)
+      .filter(Boolean) as string[]
+    return names.length ? names.join(', ') : 'Select packages'
   }
 
   async function flagCheckIssue(row:RoomRow) {
@@ -532,6 +557,13 @@ export default function HousekeepingBoard() {
                   </span>
                 )}
 
+                {row.packageIds?.length > 0 && (
+                  <div className="hsk-assigned-packages">
+                    <strong>Room packages</strong>
+                    <span>{packageLabel(row.packageIds)}</span>
+                  </div>
+                )}
+
                 {row.checkIssueOpen && (
                   <div className="hsk-correction-alert">
                     <strong>Correction required before continuing</strong>
@@ -659,8 +691,8 @@ export default function HousekeepingBoard() {
                 <th>Order</th>
                 <th>Complete</th>
                 <th>Room checks</th>
-                <th>Condition</th>
-                <th>Next</th>
+                <th>End of shift status</th>
+                <th>Room Packages</th>
                 <th>Notes</th>
               </tr>
             </thead>
@@ -672,6 +704,7 @@ export default function HousekeepingBoard() {
                 const isRefresh = outRf === 'RF'
                 const envelopeInitialed = /^OUT-[A-Z]{2,4}$/.test(outRf)
                 const selectedStaff = splitAssigned(row.assignedTo)
+                const selectedPackageIds = Array.isArray(row.packageIds) ? row.packageIds : []
 
                 return (
                   <tr id={`room-${row.roomId}`} key={row.roomId}>
@@ -844,10 +877,44 @@ export default function HousekeepingBoard() {
                       </select>
                     </td>
 
-                    <td>
-                      <select value={row.nextShiftCondition} onChange={e => patch(row.roomId, { nextShiftCondition: e.target.value })}>
-                        {nextShiftOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
-                      </select>
+                    <td className="hsk-package-cell">
+                      <div className="hsk-package-picker">
+                        <button
+                          type="button"
+                          className="hsk-package-trigger"
+                          onClick={() => setOpenPackageRoomId(openPackageRoomId === row.roomId ? null : row.roomId)}
+                        >
+                          <span>{packageLabel(selectedPackageIds)}</span>
+                          <ChevronDown size={14}/>
+                        </button>
+
+                        {openPackageRoomId === row.roomId && (
+                          <div className="hsk-package-popover">
+                            <div className="hsk-package-options">
+                              {packageOptions
+                                .filter(option => option.available || selectedPackageIds.includes(option.id))
+                                .map(option => {
+                                  const checked = selectedPackageIds.includes(option.id)
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={option.id}
+                                      className={checked ? 'is-selected' : ''}
+                                      onClick={() => togglePackage(row, option.id)}
+                                      disabled={!option.available && !checked}
+                                    >
+                                      <span className="hsk-package-check">{checked && <Check size={13}/>}</span>
+                                      <span className="hsk-package-copy">
+                                        <strong>{option.name}</strong>
+                                        <small>{option.available ? (option.price == null ? 'Available' : `${option.price.toFixed(2)}`) : 'Unavailable'}</small>
+                                      </span>
+                                    </button>
+                                  )
+                                })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                     <td>
