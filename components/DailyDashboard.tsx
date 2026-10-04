@@ -193,7 +193,7 @@ export default function DailyDashboard({
                     <span><b>Status:</b> {[row.reservationStatus,row.serviceType,row.stripHold].filter(Boolean).join(' · ') || '—'}</span>
                     {row.complete && <span><b>End of shift:</b> {row.roomCondition || '—'}</span>}
                     <span><b>Room check:</b> {row.checkIssueOpen ? 'Needs correction' : row.fohCheckInitials ? `FOH ✓ ${row.fohCheckInitials}` : row.haCheckInitials ? `HA ✓ ${row.haCheckInitials} · FOH pending` : 'Pending'}</span>
-                    {row.reservationStatus === 'Arrival' && row.packages.length > 0 && <span><b>Packages:</b> {row.packages.join(', ')}</span>}
+                    {['Arrival','Out/In'].includes(row.reservationStatus) && row.packages.length > 0 && <span><b>Packages:</b> {row.packages.join(', ')}</span>}
                     {row.assignedTo && <span><b>HSK:</b> {row.assignedTo}</span>}
                     {row.notes && <small><b>Note:</b> {row.notes}</small>}
                   </div>
