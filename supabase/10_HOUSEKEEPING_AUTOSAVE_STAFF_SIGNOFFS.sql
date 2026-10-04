@@ -131,6 +131,7 @@ create table if not exists public.housekeeping_daily_rooms (
   room_condition text not null default '',
   next_shift_condition text not null default '',
   notes text not null default '',
+  breakfast_tag boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -148,6 +149,7 @@ alter table public.housekeeping_daily_rooms add column if not exists inspected_a
 alter table public.housekeeping_daily_rooms add column if not exists room_condition text not null default '';
 alter table public.housekeeping_daily_rooms add column if not exists next_shift_condition text not null default '';
 alter table public.housekeeping_daily_rooms add column if not exists notes text not null default '';
+alter table public.housekeeping_daily_rooms add column if not exists breakfast_tag boolean not null default false;
 alter table public.housekeeping_daily_rooms add column if not exists created_at timestamptz not null default now();
 alter table public.housekeeping_daily_rooms add column if not exists updated_at timestamptz not null default now();
 alter table public.housekeeping_daily_rooms add column if not exists ha_signed_by uuid references public.staff_members(id) on delete set null;
