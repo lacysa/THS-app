@@ -84,7 +84,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const reservationOptions = ['', 'Checkout', 'Out/In', 'Stayover', 'Arrival', 'Vacant', 'Blocked']
 const stripOptions = ['', 'Strip', 'Hold']
-const conditionOptions = ['', 'Occupied', 'Cleaning', 'Ready for Inspection', 'Vacant', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
+const conditionOptions = ['', 'Occupied', 'Cleaning', 'Ready for Inspection', 'Ready', 'Vacant', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
 
 function todayDetroit() {
   return new Intl.DateTimeFormat('en-CA', {
