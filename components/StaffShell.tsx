@@ -470,7 +470,7 @@ export default function StaffShell({
   return (
     <main className={`ops-app staff-ops-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
 
-      <aside className={`ops-sidebar staff-ops-sidebar desktop-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      <aside className={`ops-sidebar staff-ops-sidebar ${sidebarCollapsed && !mobileNavOpen ? 'collapsed' : ''} ${mobileNavOpen ? 'mobile-open' : ''}`}>
 
         <div className="sidebar-brand">
 
@@ -615,112 +615,12 @@ export default function StaffShell({
       </aside>
 
       {mobileNavOpen && (
-        <>
-          <button
-            type="button"
-            className="mobile-sidebar-backdrop"
-            aria-label="Close navigation"
-            onClick={() => setMobileNavOpen(false)}
-          />
-
-          <aside className="mobile-nav-drawer" aria-label="Mobile navigation">
-            <div className="mobile-nav-drawer-head">
-              <Link
-                className="ops-logo"
-                href="/dashboard"
-                onClick={() => setMobileNavOpen(false)}
-              >
-                <div className="ops-logo-mark">THS</div>
-                <div className="ops-logo-copy">
-                  <strong>The Hotel Saugatuck</strong>
-                  <span>Operations Hub</span>
-                </div>
-              </Link>
-
-              <button
-                type="button"
-                className="mobile-nav-close"
-                aria-label="Close navigation"
-                onClick={() => setMobileNavOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <nav className="ops-nav staff-ops-nav mobile-nav-list">
-              <div className="ops-nav-section">
-                <div className="ops-nav-label">Overview</div>
-                {dashboardItem ? (
-                  renderNavLink(dashboardItem)
-                ) : (
-                  <Link
-                    href="/dashboard"
-                    className={pathname === '/dashboard' ? 'active' : ''}
-                    onClick={() => setMobileNavOpen(false)}
-                  >
-                    <span className="sidebar-link-icon">
-                      <LayoutGrid size={17} />
-                    </span>
-                    <span className="sidebar-link-label">Dashboard</span>
-                  </Link>
-                )}
-              </div>
-
-              {breakfastNav.length > 0 && (
-                <div className="ops-nav-section">
-                  <div className="ops-nav-label">Breakfast</div>
-                  {breakfastNav.map(renderNavLink)}
-                </div>
-              )}
-
-              {operationsNav.length > 0 && (
-                <div className="ops-nav-section">
-                  <div className="ops-nav-label">Operations</div>
-                  {operationsNav.map(renderNavLink)}
-                </div>
-              )}
-
-              {otherNav.length > 0 && (
-                <div className="ops-nav-section">
-                  <div className="ops-nav-label">Tools</div>
-                  {otherNav.map(renderNavLink)}
-                </div>
-              )}
-            </nav>
-
-            <div className="ops-sidebar-bottom mobile-nav-bottom">
-              <div className="ops-sidebar-profile">
-                <div className="ops-sidebar-avatar">
-                  {initials(displayName)}
-                </div>
-                <div className="ops-sidebar-profile-copy">
-                  <strong>{displayName}</strong>
-                  <span>{displayRole}</span>
-                </div>
-              </div>
-
-              <div className="sidebar-footer-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileNavOpen(false)
-                    window.location.assign('/settings')
-                  }}
-                >
-                  <Settings size={17} />
-                  <span>Settings</span>
-                </button>
-
-                <form action="/auth/signout" method="post">
-                  <button type="submit">
-                    <LogOut size={17} />
-                    <span>Sign out</span>
-                  </button>
-                </form>
-              </div>
-            </div>
-          </aside>
-        </>
+        <button
+          type="button"
+          className="mobile-sidebar-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
       )}
 
       <section className="ops-main staff-ops-main">
@@ -730,7 +630,10 @@ export default function StaffShell({
           <button
             type="button"
             className="mobile-nav-toggle"
-            onClick={() => setMobileNavOpen(open => !open)}
+            onClick={() => {
+              setSidebarCollapsed(false)
+              setMobileNavOpen(open => !open)
+            }}
             aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
           >
             {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
