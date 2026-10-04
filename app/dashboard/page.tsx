@@ -16,6 +16,17 @@ function previousDate(value:string) {
   return d.toISOString().slice(0,10)
 }
 
+function initials(value:string) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(part=>part[0])
+    .join('')
+    .slice(0,3)
+    .toUpperCase()
+}
+
 function roomName(value:any, roomMap:Map<string,string>) {
   return roomMap.get(String(value || '')) || 'Room'
 }
@@ -61,7 +72,10 @@ export default async function DashboardPage() {
     maintenanceRes,
     inventoryRes,
     notesRes,
-    menuNotesRes
+    menuNotesRes,
+    allStaffRes,
+    packageCatalogRes,
+    roomPackagesRes
   ] = await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('staff_members').select('id,name').eq('auth_user_id',access.userId).maybeSingle(),
@@ -100,10 +114,30 @@ export default async function DashboardPage() {
       moduleKeys.has('breakfast_guest')
     )
       ? admin.from('breakfast_menu_notes').select('booking_id,note')
+      : Promise.resolve({data:[],error:null}),
+    moduleKeys.has('housekeeping')
+      ? admin.from('staff_members').select('id,name')
+      : Promise.resolve({data:[],error:null}),
+    moduleKeys.has('housekeeping')
+      ? admin.from('room_package_catalog').select('id,name')
+      : Promise.resolve({data:[],error:null}),
+    moduleKeys.has('housekeeping')
+      ? admin.from('housekeeping_room_packages').select('room_id,package_id').eq('service_date',today)
       : Promise.resolve({data:[],error:null})
   ])
 
   const roomMap = new Map<string,string>((roomsRes.data || []).map((r:any)=>[String(r.id),r.name]))
+  const staffNameMap = new Map<string,string>((allStaffRes.data || []).map((r:any)=>[String(r.id),String(r.name || '')]))
+  const packageNameMap = new Map<string,string>((packageCatalogRes.data || []).map((r:any)=>[String(r.id),String(r.name || '')]))
+  const packageNamesByRoom = new Map<string,string[]>()
+  for (const assignment of (roomPackagesRes.data || [])) {
+    const roomId = String((assignment as any).room_id || '')
+    const packageName = packageNameMap.get(String((assignment as any).package_id || ''))
+    if (!roomId || !packageName) continue
+    const current = packageNamesByRoom.get(roomId) || []
+    current.push(packageName)
+    packageNamesByRoom.set(roomId,current)
+  }
   const currentStaffName = String((staffMemberRes.data as any)?.name || access.preferredName || access.name || '').trim()
 
   let housekeeping = (housekeepingRes.data || []).map((row:any)=>({
@@ -115,6 +149,11 @@ export default async function DashboardPage() {
     assignedTo:String(row.assigned_to || ''),
     complete:Boolean(row.complete),
     stripHold:String(row.strip_hold || ''),
+    roomCondition:String(row.room_condition || ''),
+    haCheckInitials:row.ha_signed_by ? initials(staffNameMap.get(String(row.ha_signed_by)) || 'Staff') : '',
+    fohCheckInitials:row.foh_signed_by ? initials(staffNameMap.get(String(row.foh_signed_by)) || 'Staff') : '',
+    checkIssueOpen:Boolean(row.check_issue_open),
+    packages:packageNamesByRoom.get(String(row.room_id || '')) || [],
     notes:String(row.notes || '')
   }))
 
