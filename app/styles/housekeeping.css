@@ -304,3 +304,106 @@
 }
 .hsk-breakfast-toggle.active{border-color:#d1b675;background:#fff3d6;color:#725515}
 .hsk-breakfast-tag{background:#fff3d6;color:#725515;border:1px solid #ead49b}
+
+
+/* ============================================================
+   HOUSEKEEPING ASSIGNED VIEW — MOBILE HARDENING
+   Prevent generic form-control sizing from blowing out cards.
+   ============================================================ */
+@media (max-width:900px){
+  .hsk-assigned-view,
+  .hsk-assigned-grid,
+  .hsk-assigned-card{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  .hsk-assigned-grid{
+    grid-template-columns:minmax(0,1fr) !important;
+    overflow:visible !important;
+  }
+
+  .hsk-assigned-card{
+    overflow:hidden !important;
+  }
+
+  .hsk-assigned-card-head{
+    min-width:0 !important;
+  }
+
+  .hsk-assigned-card-head > div:first-child{
+    min-width:0 !important;
+    flex:1 1 auto !important;
+  }
+
+  .hsk-assigned-meta{
+    overflow-wrap:anywhere !important;
+  }
+
+  .hsk-assigned-notes,
+  .hsk-assigned-notes textarea{
+    min-width:0 !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+  }
+
+  .hsk-attestation{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    display:grid !important;
+    grid-template-columns:22px minmax(0,1fr) !important;
+    align-items:start !important;
+    gap:9px !important;
+    overflow:hidden !important;
+  }
+
+  .hsk-attestation input[type="checkbox"]{
+    appearance:auto !important;
+    -webkit-appearance:checkbox !important;
+    width:20px !important;
+    height:20px !important;
+    min-width:20px !important;
+    max-width:20px !important;
+    min-height:20px !important;
+    max-height:20px !important;
+    margin:1px 0 0 !important;
+    padding:0 !important;
+    flex:none !important;
+    box-sizing:border-box !important;
+  }
+
+  .hsk-attestation span{
+    display:block !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    white-space:normal !important;
+    overflow-wrap:anywhere !important;
+    word-break:normal !important;
+  }
+
+  .hsk-complete-btn{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+  }
+}
+
+@media (max-width:560px){
+  .hsk-assigned-card{
+    padding:12px !important;
+    gap:10px !important;
+  }
+
+  .hsk-assigned-card-head{
+    gap:8px !important;
+  }
+
+  .hsk-complete-pill{
+    max-width:42% !important;
+    white-space:nowrap !important;
+  }
+}
