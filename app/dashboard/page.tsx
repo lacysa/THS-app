@@ -10,6 +10,12 @@ export const dynamic = 'force-dynamic'
 
 const managerCaps = new Set(['manager','general_manager','operations_manager','owner'])
 
+function previousDate(value:string) {
+  const d = new Date(`${value}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate()-1)
+  return d.toISOString().slice(0,10)
+}
+
 function roomName(value:any, roomMap:Map<string,string>) {
   return roomMap.get(String(value || '')) || 'Room'
 }
@@ -76,7 +82,7 @@ export default async function DashboardPage() {
       moduleKeys.has('daily_overview') ||
       moduleKeys.has('breakfast_guest')
     )
-      ? admin.from('housekeeping_daily_rooms').select('room_id').eq('service_date',breakfastDate).eq('breakfast_tag',true)
+      ? admin.from('housekeeping_daily_rooms').select('room_id').eq('service_date',previousDate(breakfastDate)).eq('breakfast_tag',true)
       : Promise.resolve({data:[],error:null}),
     moduleKeys.has('maintenance')
       ? admin.from('maintenance_work_orders').select('*').order('created_at',{ascending:false})
@@ -108,6 +114,7 @@ export default async function DashboardPage() {
     serviceType:String(row.service_type || ''),
     assignedTo:String(row.assigned_to || ''),
     complete:Boolean(row.complete),
+    stripHold:String(row.strip_hold || ''),
     notes:String(row.notes || '')
   }))
 
