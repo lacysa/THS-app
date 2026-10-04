@@ -80,7 +80,7 @@ export default async function DashboardPage() {
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('staff_members').select('id,name').eq('auth_user_id',access.userId).maybeSingle(),
     moduleKeys.has('housekeeping')
-      ? admin.from('housekeeping_daily_rooms').select('*').eq('service_date',today).order('clean_order',{ascending:true,nullsFirst:false})
+      ? admin.from('housekeeping_daily_rooms').select('*').eq('service_date',today)
       : Promise.resolve({data:[],error:null}),
     (
       moduleKeys.has('front_desk') ||
@@ -127,6 +127,7 @@ export default async function DashboardPage() {
   ])
 
   const roomMap = new Map<string,string>((roomsRes.data || []).map((r:any)=>[String(r.id),r.name]))
+  const roomSortMap = new Map<string,number>((roomsRes.data || []).map((r:any)=>[String(r.id),Number(r.sort_order ?? 9999)]))
   const staffNameMap = new Map<string,string>((allStaffRes.data || []).map((r:any)=>[String(r.id),String(r.name || '')]))
   const packageNameMap = new Map<string,string>((packageCatalogRes.data || []).map((r:any)=>[String(r.id),String(r.name || '')]))
   const packageNamesByRoom = new Map<string,string[]>()
@@ -155,7 +156,9 @@ export default async function DashboardPage() {
     checkIssueOpen:Boolean(row.check_issue_open),
     packages:packageNamesByRoom.get(String(row.room_id || '')) || [],
     notes:String(row.notes || '')
-  }))
+  })).sort((a:any,b:any)=>
+    (roomSortMap.get(a.roomId) ?? 9999) - (roomSortMap.get(b.roomId) ?? 9999)
+  )
 
   if (!isManager && access.capabilities.includes('housekeeping') && currentStaffName) {
     housekeeping = housekeeping.filter((row:any)=>
