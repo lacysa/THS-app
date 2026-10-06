@@ -17,7 +17,7 @@ export async function POST(req:NextRequest) {
   if (!access) return NextResponse.json({error:'Unauthorized'},{status:401})
 
   const body = await req.json().catch(()=>({}))
-  const theme = ['light','blue','dark'].includes(body.theme_preference) ? body.theme_preference : access.theme
+  const theme = ['light','blue','sage','violet','dark'].includes(body.theme_preference) ? body.theme_preference : access.theme
   const phone = normalizePhone(String(body.phone || ''))
 
   try {
