@@ -1,3 +1,4 @@
+import type React from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -103,6 +104,16 @@ function splitStaff(value:string) {
   return String(value||'').split(',').map(v=>v.trim()).filter(Boolean)
 }
 
+function staffHue(name:string) {
+  let hash=0
+  for(let i=0;i<name.length;i++) hash=((hash<<5)-hash)+name.charCodeAt(i)
+  return Math.abs(hash)%360
+}
+
+function staffStyle(name:string) {
+  return {'--staff-hue':staffHue(name)} as React.CSSProperties
+}
+
 function roomCheckLabel(row:HousekeepingRow) {
   if (row.checkIssueOpen) return 'Needs correction'
   if (row.fohCheckInitials) return `FOH ✓ ${row.fohCheckInitials}`
@@ -120,12 +131,12 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
         </div>
         <div className="daily-room-pills">
           {row.reservationStatus && <span className={`daily-chip ${statusClass(row.reservationStatus)}`}>{row.reservationStatus}</span>}
-          {row.serviceType && <span className="daily-chip">{row.serviceType}</span>}
+          {row.serviceType && <span className="daily-chip service">{row.serviceType}</span>}
           {row.stripHold && <span className="daily-chip warning">{row.stripHold}</span>}
-          {staff.length>0 && <span className="daily-chip"><b>HSK</b> {staff.join(', ')}</span>}
-          {row.cleanOrder!=null && <span className="daily-chip"><b>Order</b> {row.cleanOrder}</span>}
-          <span className={`daily-chip ${row.complete?'done':''}`}>{row.complete?'Complete':'In progress'}</span>
-          {row.roomCondition && <span className="daily-chip"><b>EOS</b> {row.roomCondition}</span>}
+          {staff.map(name=><span className="daily-chip staff" style={staffStyle(name)} key={name}><b>HSK</b> {name}</span>)}
+          {row.cleanOrder!=null && <span className="daily-chip order"><b>Order</b> {row.cleanOrder}</span>}
+          <span className={`daily-chip progress ${row.complete?'done':'open'}`}>{row.complete?'Complete':'In progress'}</span>
+          {row.roomCondition && <span className="daily-chip eos"><b>EOS</b> {row.roomCondition}</span>}
           {(row.haCheckInitials || row.fohCheckInitials || row.checkIssueOpen) && (
             <span className={`daily-chip ${row.checkIssueOpen?'danger':''}`}>{roomCheckLabel(row)}</span>
           )}
@@ -437,7 +448,7 @@ export default function DailyDashboard({
                   <strong>{row.roomName}</strong>
                   <div className="daily-room-pills">
                     <span className={`daily-chip ${row.roomCondition==='Ready'?'done':'warning'}`}>{row.roomCondition || 'Not ready'}</span>
-                    {row.assignedTo && <span className="daily-chip">{row.assignedTo}</span>}
+                    {splitStaff(row.assignedTo).map(name=><span className="daily-chip staff" style={staffStyle(name)} key={name}>{name}</span>)}
                     {row.fohCheckInitials && <span className="daily-chip done">FOH ✓ {row.fohCheckInitials}</span>}
                     {!row.fohCheckInitials && <span className="daily-chip warning">Room check pending</span>}
                     {row.packages.map(pkg=><span className="daily-chip package" key={pkg}>{pkg}</span>)}
@@ -511,7 +522,7 @@ export default function DailyDashboard({
               {assignedStaff.length
                 ? assignedStaff.map(name=>{
                     const count=housekeeping.filter(r=>splitStaff(r.assignedTo).includes(name)).length
-                    return <span key={name}><strong>{name}</strong><small>{count} room{count===1?'':'s'}</small></span>
+                    return <span className="daily-staff-person" style={staffStyle(name)} key={name}><strong>{name}</strong><small>{count} room{count===1?'':'s'}</small></span>
                   })
                 : <div className="daily-empty">No housekeeping staff assigned yet.</div>}
             </div>
