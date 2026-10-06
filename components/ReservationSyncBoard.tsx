@@ -424,21 +424,6 @@ export default function ReservationSyncBoard(){
         <button className="rs-btn" disabled={busy} onClick={pasteFromPms}>{busy?<RefreshCw className="spin" size={17}/>:<ClipboardPaste size={17}/>} Paste copied PMS report</button>
         <span className="rs-private-note">Only reservation fields needed for operations are sent. Full phone numbers are discarded after the 4-digit door code is derived.</span>
       </div>
-    </section>
-
-    <section className="rs-upload-card">
-      <div className="rs-kicker">Fallback</div>
-      <h2>PDF import</h2>
-      <label className={`rs-drop ${file?'has-file':''}`}>
-        <input type="file" accept="application/pdf,.pdf" onChange={e=>{const chosen=e.target.files?.[0]||null;setFile(chosen);setSourceName(chosen?.name||'Arrival Report');setRows([]);setError('');setSuccess('')}}/>
-        <UploadCloud size={34}/>
-        <strong>{file?file.name:'Drop the Arrival Report PDF here'}</strong>
-        <span>{file?'Ready to read and compare.':'or click to choose the downloaded PDF'}</span>
-      </label>
-      <div className="rs-upload-actions">
-        <button className="rs-btn" disabled={!file||busy} onClick={preview}>{busy?<RefreshCw className="spin" size={17}/>:<FileUp size={17}/>} Read & preview changes</button>
-        <span className="rs-private-note">Use this only when copying directly from the PMS is unavailable. Scanned PDFs can require manual review.</span>
-      </div>
       {progress && <div className="rs-progress"><div><span style={{width:`${pct}%`}}/></div><small>{progress}</small></div>}
       {error && <div className="rs-alert error"><TriangleAlert size={17}/>{error}</div>}
       {success && <div className="rs-alert success"><CheckCircle2 size={17}/>{success}</div>}
@@ -451,7 +436,7 @@ export default function ReservationSyncBoard(){
       </section>
       {warnings.length>0 && <div className="rs-alert warning"><TriangleAlert size={17}/><div>{warnings.map(w=><div key={w}>{w}</div>)}</div></div>}
       <section className="rs-review-head">
-        <div><h2>Review before import</h2><p>Rows with uncertain OCR are left unchecked. Fix them, then include them when they are accurate.</p></div>
+        <div><h2>Review before import</h2><p>Rows that need review are left unchecked. Fix them, then include them when they are accurate.</p></div>
         <button className="rs-btn" disabled={busy||stats.selected===0} onClick={commit}>Import {stats.selected} selected</button>
       </section>
       <section className="rs-reservations">
