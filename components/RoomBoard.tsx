@@ -101,6 +101,7 @@ export default function RoomBoard(){
   const [serviceFilters,setServiceFilters]=useState<string[]>([])
   const [progressFilters,setProgressFilters]=useState<string[]>([])
   const [breakfastFilters,setBreakfastFilters]=useState<string[]>([])
+  const [packageFilters,setPackageFilters]=useState<string[]>([])
   const [filtersOpen,setFiltersOpen]=useState(false)
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
@@ -273,6 +274,12 @@ export default function RoomBoard(){
         if(!breakfastFilters.includes(breakfast)) return false
       }
 
+      if(packageFilters.length){
+        const hasPackage=Array.isArray(row.packageIds) && row.packageIds.length>0
+        const packageState=hasPackage?'yes':'no'
+        if(!packageFilters.includes(packageState)) return false
+      }
+
       return true
     })
   },[
@@ -283,7 +290,8 @@ export default function RoomBoard(){
     staffFilters,
     serviceFilters,
     progressFilters,
-    breakfastFilters
+    breakfastFilters,
+    packageFilters
   ])
 
   const activeFilterCount=
@@ -291,7 +299,8 @@ export default function RoomBoard(){
     staffFilters.length+
     serviceFilters.length+
     progressFilters.length+
-    breakfastFilters.length
+    breakfastFilters.length+
+    packageFilters.length
 
   const hasFilters=Boolean(search || activeFilterCount)
 
@@ -312,6 +321,7 @@ export default function RoomBoard(){
     setServiceFilters([])
     setProgressFilters([])
     setBreakfastFilters([])
+    setPackageFilters([])
   }
 
   function collapseAll(){
@@ -491,6 +501,28 @@ export default function RoomBoard(){
                       onChange={()=>toggleFilter('no',setBreakfastFilters)}
                     />
                     <span>No breakfast</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Package</legend>
+                <div className="rb-check-grid">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={packageFilters.includes('yes')}
+                      onChange={()=>toggleFilter('yes',setPackageFilters)}
+                    />
+                    <span>Has package</span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={packageFilters.includes('no')}
+                      onChange={()=>toggleFilter('no',setPackageFilters)}
+                    />
+                    <span>No package</span>
                   </label>
                 </div>
               </fieldset>
