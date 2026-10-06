@@ -148,6 +148,7 @@ export default async function DashboardPage() {
     reservationStatus:String(row.reservation_status || ''),
     serviceType:String(row.service_type || ''),
     assignedTo:String(row.assigned_to || ''),
+    cleanOrder:row.clean_order == null ? null : Number(row.clean_order),
     complete:Boolean(row.complete),
     stripHold:String(row.strip_hold || ''),
     roomCondition:String(row.room_condition || ''),
