@@ -67,7 +67,7 @@ function candidateGuestName(lines:string[], roomIndex:number, roomName:string|nu
     const sameLine=lines[roomIndex].replace(new RegExp(roomName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),'').replace(/^\([^)]*\)\s*/,'').trim()
     if(looksLikeGuestName(sameLine)) return sameLine
   }
-  for(let i=Math.min(roomIndex-1,lines.length-1);i>=Math.max(0,roomIndex-6);i--){
+  for(let i=Math.min(roomIndex-1,lines.length-1);i>=Math.max(0,roomIndex-12);i--){
     const line=lines[i].trim()
     if(looksLikeGuestName(line)) return line
   }
@@ -76,7 +76,7 @@ function candidateGuestName(lines:string[], roomIndex:number, roomName:string|nu
 
 function closestDatesBeforeOrder(lines:string[],orderIndex:number){
   const found:string[]=[]
-  for(let i=orderIndex;i>=Math.max(0,orderIndex-6);i--){
+  for(let i=orderIndex;i>=Math.max(0,orderIndex-18);i--){
     const line=lines[i]
     if(/selection criteria|Date\s*>=|arrival guests|checkout guests|stay.?over guests|total .* guests/i.test(line)) continue
     const dates=[...line.matchAll(DATE_RE)].map(m=>isoDate(m[0])).filter(Boolean) as string[]
@@ -178,7 +178,7 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
       const orderMatch=lines[orderIndex].match(ORDER_RE)
       if(!orderMatch) continue
       const reservationNumber=orderMatch[1]
-      const start=Math.max(0,orderIndex-6)
+      const start=Math.max(0,orderIndex-18)
       const windowLines=lines.slice(start,orderIndex+1)
       const windowText=windowLines.join(' ')
       const roomName=findRoom(windowText,roomNames)
@@ -189,7 +189,7 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
       const arrivalDate=dates[0]||null
       const checkoutDate=dates.length>1?dates[dates.length-1]:null
 
-      const phoneSearch=[lines[orderIndex],lines[orderIndex+1],lines[orderIndex+2],lines[orderIndex-1],lines[orderIndex-2]].filter(Boolean)
+      const phoneSearch=lines.slice(Math.max(0,orderIndex-14),Math.min(lines.length,orderIndex+3)).reverse().filter(Boolean)
       let phoneMatch:RegExpMatchArray|null=null
       for(const candidate of phoneSearch){ const m=candidate.match(PHONE_RE); if(m){ phoneMatch=m; break } }
       const phone=phoneMatch ? `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}` : null
