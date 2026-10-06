@@ -99,6 +99,11 @@ function normalize(value: string | null | undefined) {
   return String(value || '').trim().toLowerCase()
 }
 
+function reservationStatusClass(value: string | null | undefined) {
+  const status = normalize(value).replace(/[^a-z0-9]+/g, '-')
+  return status ? `hsk-status-${status}` : 'hsk-status-none'
+}
+
 function getManagerInitials(access: Access | null) {
   if (!access) return ''
 
@@ -707,7 +712,11 @@ export default function HousekeepingBoard() {
                 const selectedPackageIds = Array.isArray(row.packageIds) ? row.packageIds : []
 
                 return (
-                  <tr id={`room-${row.roomId}`} key={row.roomId}>
+                  <tr
+                    id={`room-${row.roomId}`}
+                    key={row.roomId}
+                    className={`hsk-status-row ${reservationStatusClass(row.reservationStatus)}`}
+                  >
                     <td className="hsk-sticky-room hsk-room-column">
                       <div className="hsk-room-cell">
                         <BedDouble size={15} />
@@ -727,6 +736,7 @@ export default function HousekeepingBoard() {
 
                     <td>
                       <select
+                        className={`hsk-status-select ${reservationStatusClass(row.reservationStatus)}`}
                         value={row.reservationStatus}
                         onChange={e => patch(row.roomId, { reservationStatus: e.target.value })}
                       >
