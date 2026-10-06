@@ -550,6 +550,7 @@ export default function RoomBoard(){
           const staff=splitAssigned(row.assignedTo)
           const selectedPackages=(row.packageIds||[]).map(id=>packageOptions.find(p=>p.id===id)?.name).filter(Boolean)
           const service=String(row.serviceType||'').toUpperCase()
+          const showHousekeepingWorkflow = row.reservationStatus!=='Stayover' || service==='RF'
           return <article className={`rb-room-card ${statusClass(row.reservationStatus)} ${row.complete?'is-complete':''} ${collapsed?'is-collapsed':''}`} key={row.roomId}>
             {collapsed ? (
               <div className="rb-collapsed-row">
@@ -566,9 +567,11 @@ export default function RoomBoard(){
                 <div className="rb-collapsed-data">
                   {row.reservationStatus&&<span className={`rb-summary-pill ${statusClass(row.reservationStatus)}`}>{row.reservationStatus}</span>}
                   {service&&<span className="rb-summary-pill"><b>Service</b> {service}</span>}
-                  <span className="rb-summary-pill"><b>Staff</b> {staff.length?staff.join(', '):'Unassigned'}</span>
-                  <span className="rb-summary-pill"><b>Order</b> {row.cleanOrder??'—'}</span>
-                  <span className={`rb-summary-pill ${row.complete?'is-done':''}`}>{row.complete?'Complete':'In progress'}</span>
+                  {showHousekeepingWorkflow&&<>
+                    <span className="rb-summary-pill"><b>Staff</b> {staff.length?staff.join(', '):'Unassigned'}</span>
+                    <span className="rb-summary-pill"><b>Order</b> {row.cleanOrder??'—'}</span>
+                    <span className={`rb-summary-pill ${row.complete?'is-done':''}`}>{row.complete?'Complete':'In progress'}</span>
+                  </>}
                   {row.roomCondition&&<span className="rb-summary-pill"><b>EOS</b> {row.roomCondition}</span>}
                   {row.breakfastTag&&<span className="rb-summary-pill breakfast">Breakfast</span>}
                   {row.stripHold&&<span className="rb-summary-pill warn">{row.stripHold}</span>}
@@ -631,23 +634,25 @@ export default function RoomBoard(){
                 </select>
               </label>
 
-              <div className="rb-field rb-staff-summary">
-                <span>Staff</span>
-                <strong>{staff.length?staff.join(', '):'Unassigned'}</strong>
-              </div>
+              {showHousekeepingWorkflow&&<>
+                <div className="rb-field rb-staff-summary">
+                  <span>Staff</span>
+                  <strong>{staff.length?staff.join(', '):'Unassigned'}</strong>
+                </div>
 
-              <label className="rb-field rb-order-summary">
-                <span>Order</span>
-                <input type="number" min="1" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
-              </label>
+                <label className="rb-field rb-order-summary">
+                  <span>Order</span>
+                  <input type="number" min="1" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
+                </label>
 
-              <label className="rb-progress">
-                <input type="checkbox" checked={row.complete} onChange={e=>patch(row.roomId,{
-                  complete:e.target.checked,
-                  roomCondition:e.target.checked?(row.roomCondition||'Ready for Inspection'):row.roomCondition
-                })}/>
-                <span>{row.complete?'Complete ✓':'In progress'}</span>
-              </label>
+                <label className="rb-progress">
+                  <input type="checkbox" checked={row.complete} onChange={e=>patch(row.roomId,{
+                    complete:e.target.checked,
+                    roomCondition:e.target.checked?(row.roomCondition||'Ready for Inspection'):row.roomCondition
+                  })}/>
+                  <span>{row.complete?'Complete ✓':'In progress'}</span>
+                </label>
+              </>}
 
               <label className="rb-field rb-end-field">
                 <span>End of shift</span>
