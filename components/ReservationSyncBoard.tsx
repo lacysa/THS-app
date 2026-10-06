@@ -76,9 +76,10 @@ export default function ReservationSyncBoard(){
     }).promise
 
     const pages:string[]=new Array(pdf.numPages)
+    const unreadable:number[]=[]
     const concurrency=4
 
-    async function readPage(pageNumber:number){
+    async function extractEmbeddedText(pageNumber:number){
       const page=await pdf.getPage(pageNumber)
       try{
         const content=await page.getTextContent()
@@ -103,13 +104,27 @@ export default function ReservationSyncBoard(){
           }else current.items.push(item)
         }
 
-        const text=rows
+        return rows
           .map(row=>row.items.sort((a,b)=>a.x-b.x).map(item=>item.text).join(' | '))
           .join('\n')
           .trim()
+      }finally{
+        await page.cleanup?.()
+      }
+    }
 
-        if(!text || text.length<80) throw new Error(`Page ${pageNumber} did not contain readable report text.`)
-        return text
+    async function ocrPage(pageNumber:number,worker:any){
+      const page=await pdf.getPage(pageNumber)
+      try{
+        const viewport=page.getViewport({scale:2})
+        const canvas=document.createElement('canvas')
+        canvas.width=Math.ceil(viewport.width)
+        canvas.height=Math.ceil(viewport.height)
+        const ctx=canvas.getContext('2d',{willReadFrequently:true})
+        if(!ctx) throw new Error('Could not create the local PDF reader canvas.')
+        await page.render({canvasContext:ctx,viewport}).promise
+        const result=await worker.recognize(canvas)
+        return String(result?.data?.text||'').replace(/\r/g,'').trim()
       }finally{
         await page.cleanup?.()
       }
@@ -118,10 +133,36 @@ export default function ReservationSyncBoard(){
     try{
       for(let start=1;start<=pdf.numPages;start+=concurrency){
         const pageNumbers=Array.from({length:Math.min(concurrency,pdf.numPages-start+1)},(_,index)=>start+index)
-        const texts=await Promise.all(pageNumbers.map(readPage))
-        pageNumbers.forEach((pageNumber,index)=>{ pages[pageNumber-1]=texts[index] })
-        setPct(Math.min(72,Math.round((Math.min(pdf.numPages,start+concurrency-1)/pdf.numPages)*72)))
+        const texts=await Promise.all(pageNumbers.map(extractEmbeddedText))
+        pageNumbers.forEach((pageNumber,index)=>{
+          const text=texts[index]
+          if(text && text.length>=80) pages[pageNumber-1]=text
+          else unreadable.push(pageNumber)
+        })
+        setPct(Math.min(45,Math.round((Math.min(pdf.numPages,start+concurrency-1)/pdf.numPages)*45)))
       }
+
+      if(unreadable.length){
+        setProgress(`This report is image-based. Reading ${unreadable.length} page${unreadable.length===1?'':'s'} locally…`)
+        const tess:any=await import('tesseract.js')
+        const worker=await tess.createWorker('eng')
+        try{
+          if(worker.setParameters){
+            await worker.setParameters({preserve_interword_spaces:'1'})
+          }
+          for(let index=0;index<unreadable.length;index++){
+            const pageNumber=unreadable[index]
+            setProgress(`Reading scanned page ${pageNumber} of ${pdf.numPages}…`)
+            const text=await ocrPage(pageNumber,worker)
+            if(!text || text.length<80) throw new Error(`Page ${pageNumber} could not be read from this report.`)
+            pages[pageNumber-1]=text
+            setPct(45+Math.round(((index+1)/unreadable.length)*30))
+          }
+        }finally{
+          await worker.terminate()
+        }
+      }
+
       return pages
     }finally{
       await pdf.destroy?.()
