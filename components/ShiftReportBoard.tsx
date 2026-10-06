@@ -227,8 +227,20 @@ export default function ShiftReportBoard() {
     return <>{author && <strong className="shift-note-prefix">{author.initials}: </strong>}{value}</>
   }
 
-  return <div className="shift-page">
-    <div className="shift-toolbar no-print">
+  return <div className="shift-page module-pretty-page">
+    <section className="module-pretty-hero no-print">
+      <div>
+        <div className="module-kicker">Operations handoff</div>
+        <h1>Shift Reports</h1>
+        <p>Capture the day clearly, surface exceptions, and leave the next shift with the information they actually need.</p>
+      </div>
+      <div className="module-pretty-hero-stat">
+        <span>Status</span>
+        <strong>{report?.status || 'Draft'}</strong>
+      </div>
+    </section>
+
+    <div className="shift-toolbar no-print module-pretty-toolbar">
       <div className="shift-toolbar-left">
         <label>Date <input type="date" value={date} onChange={e=>setDate(e.target.value)} /></label>
         <label>Shift <select value={shift} onChange={e=>setShift(e.target.value)}><option>Daily</option><option>Morning</option><option>Evening</option></select></label>
