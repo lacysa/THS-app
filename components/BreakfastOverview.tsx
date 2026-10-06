@@ -51,7 +51,7 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
   },[data])
 
   return (
-    <div className="breakfast-overview-page">
+    <div className="breakfast-overview-page module-pretty-page">
       <div className="overview-actions no-print">
         <div className="field"><label>Service date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
         <div className="toolbar-right">
