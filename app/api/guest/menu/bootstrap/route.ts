@@ -14,7 +14,7 @@ export async function GET(req:NextRequest) {
 
   const { data:booking,error } = await supabase
     .from('breakfast_bookings')
-    .select('id,service_date,last_name,time_slot,status,menu_submitted,guest_token,rooms(id,name)')
+    .select('id,service_date,last_name,time_slot,status,menu_submitted,guest_token,room_id,rooms(id,name)')
     .eq('guest_token',token)
     .eq('status','scheduled')
     .maybeSingle()
@@ -30,6 +30,16 @@ export async function GET(req:NextRequest) {
     .order('sort_order')
 
   if (optionsError) return NextResponse.json({ok:false,message:'Breakfast menu is temporarily unavailable.'},{status:500})
+
+  await supabase.from('breakfast_guest_activity').insert({
+    booking_id:booking.id,
+    room_id:booking.room_id || (booking.rooms as any)?.id || null,
+    service_date:booking.service_date,
+    event_type:'menu_opened',
+    details:{
+      menu_submitted:Boolean(booking.menu_submitted)
+    }
+  })
 
   const { data:existingOrders } = await supabase
     .from('breakfast_guest_orders')
