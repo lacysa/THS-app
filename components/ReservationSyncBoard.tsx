@@ -61,69 +61,30 @@ export default function ReservationSyncBoard(){
   useEffect(()=>{ void loadMeta() },[])
   useEffect(()=>{ void loadMeta(verifyDate) },[verifyDate])
 
-  async function extractPdf(selected:File){
-    setProgress('Reading PDF…'); setPct(2)
-    const pdfjs:any=await import('pdfjs-dist/legacy/build/pdf.mjs')
-    pdfjs.GlobalWorkerOptions.workerSrc=`https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.mjs`
-    const pdf=await pdfjs.getDocument({data:new Uint8Array(await selected.arrayBuffer())}).promise
-    const pages:string[]=[]
-    let worker:any=null
-
-    for(let i=1;i<=pdf.numPages;i++){
-      const page=await pdf.getPage(i)
-      const content=await page.getTextContent()
-      const items=Array.from((content as any)?.items || []) as any[]
-      const positioned=items
-        .filter((item:any)=>String(item?.str||'').trim())
-        .map((item:any)=>({
-          text:String(item?.str||'').trim(),
-          x:Number(item && item.transform ? item.transform[4] || 0 : 0),
-          y:Number(item && item.transform ? item.transform[5] || 0 : 0)
-        }))
-      const rowBuckets:{y:number;items:{text:string;x:number;y:number}[]}[]=[]
-      for(const item of positioned){
-        let row=rowBuckets.find(bucket=>Math.abs(bucket.y-item.y)<=2.2)
-        if(!row){ row={y:item.y,items:[]}; rowBuckets.push(row) }
-        row.items.push(item)
-      }
-      rowBuckets.sort((a,b)=>b.y-a.y)
-      let text=rowBuckets.map(row=>row.items.sort((a,b)=>a.x-b.x).map(item=>item.text).join(' | ')).join('\n').trim()
-      if(text.length<180){
-        if(!worker){
-          setProgress('Starting document reader…')
-          const tess:any=await import('tesseract.js')
-          worker=await tess.createWorker('eng')
-        }
-        setProgress(`Reading page ${i} of ${pdf.numPages}…`)
-        const viewport=page.getViewport({scale:2})
-        const canvas=document.createElement('canvas')
-        canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height)
-        const ctx=canvas.getContext('2d',{willReadFrequently:true})
-        if(!ctx) throw new Error('Could not create the PDF reader canvas.')
-        await page.render({canvasContext:ctx,viewport}).promise
-        const result=await worker.recognize(canvas)
-        text=result?.data?.text||''
-      }
-      pages.push(text)
-      setPct(Math.round((i/pdf.numPages)*78))
-    }
-    if(worker) await worker.terminate()
-    return pages
-  }
-
   async function preview(){
     if(!file) return
     setBusy(true); setError(''); setSuccess(''); setRows([])
     try{
-      const pages=await extractPdf(file)
-      setProgress('Comparing with current reservation data…'); setPct(86)
-      const r=await fetch('/api/reservation-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'preview',pages})})
+      setProgress('Uploading and reading PDF…'); setPct(20)
+      const form=new FormData()
+      form.append('file',file)
+      const r=await fetch('/api/reservation-sync/pdf-preview',{method:'POST',body:form})
+      setPct(86); setProgress('Comparing with current reservation data…')
       const d=await r.json().catch(()=>({}))
       if(!r.ok) throw new Error(d.error||'Could not preview this report.')
-      setRows(d.reservations||[]); setReportStart(d.reportStartDate||null); setReportEnd(d.reportEndDate||null); setWarnings(d.warnings||[])
-      setProgress(`Preview ready: ${(d.reservations||[]).length} reservations found.`); setPct(100)
-    }catch(e:any){ setError(e?.message||'Could not read this report.'); setProgress(''); setPct(0) }
-    finally{ setBusy(false) }
+      setRows(d.reservations||[])
+      setReportStart(d.reportStartDate||null)
+      setReportEnd(d.reportEndDate||null)
+      setWarnings(d.warnings||[])
+      setProgress(`Preview ready: ${(d.reservations||[]).length} reservations found.`)
+      setPct(100)
+    }catch(e:any){
+      setError(e?.message||'Could not read this report.')
+      setProgress('')
+      setPct(0)
+    }finally{
+      setBusy(false)
+    }
   }
 
   function patch(index:number,patch:Partial<PreviewRow>){ setRows(current=>current.map((r,i)=>i===index?{...r,...patch}:r)) }
