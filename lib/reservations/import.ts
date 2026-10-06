@@ -263,7 +263,7 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
         roomName,occupancy,ratePlan,checkInTime,productsRaw,
         dietaryRestrictions:notes.dietary,referralSource:notes.referral,reasonForVisit:notes.reason,
         guestComments:notes.guest,innkeeperNotes:notes.innkeeper,
-        sourcePage:pageIdx+1,rawText:windowText+' '+noteText,
+        sourcePage:pageIdx+1,rawText:blockText+' '+noteText,
         confidence,needsReview:rowWarnings.length>0,warnings:rowWarnings
       })
     }
