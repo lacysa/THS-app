@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
-import { normalizeEditedReservation, parseArrivalReportPages } from '@/lib/reservations/import'
+import { normalizeEditedReservation } from '@/lib/reservations/import'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,12 +36,16 @@ function normal(value:unknown){
   return String(value||'').toLowerCase().replace(/^\s*\d+\s*x\s*/,'').replace(/[^a-z0-9]+/g,' ').trim()
 }
 
-async function loadBase(admin:any){
+async function loadRooms(admin:any){
   const roomResult=await admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order')
   if(roomResult.error) throw new Error(roomResult.error.message)
+  return roomResult.data||[]
+}
+
+async function loadPackages(admin:any){
   const packageResult=await admin.from('room_package_catalog').select('id,name,available').order('sort_order')
   if(packageResult.error) throw new Error(packageResult.error.message)
-  return {rooms:roomResult.data||[],packages:packageResult.data||[]}
+  return packageResult.data||[]
 }
 
 async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
@@ -145,49 +149,19 @@ export async function GET(req:NextRequest){
   const admin=createSupabaseAdmin()
 
   try{
-    const base=await loadBase(admin)
-    const batchResult=await admin.from('reservation_import_batches').select('*').order('created_at',{ascending:false}).limit(8)
-    if(batchResult.error) throw new Error(batchResult.error.message)
+    const [rooms,batchResult,verifyResult]=await Promise.all([
+      loadRooms(admin),
+      admin.from('reservation_import_batches').select('id,file_name,report_start_date,report_end_date,status,records_imported,created_at,committed_at').order('created_at',{ascending:false}).limit(8),
+      admin.from('reservation_daily_verifications').select('*').eq('service_date',date).maybeSingle()
+    ])
 
-    const verifyResult=await admin.from('reservation_daily_verifications').select('*').eq('service_date',date).maybeSingle()
+    if(batchResult.error) throw new Error(batchResult.error.message)
     if(verifyResult.error) throw new Error(verifyResult.error.message)
 
-    const linkResult=await admin.from('reservation_daily_links').select('*').eq('service_date',date)
-    if(linkResult.error) throw new Error(linkResult.error.message)
-    const links=linkResult.data||[]
-
-    const ids=[...new Set(links.flatMap((row:any)=>[
-      row.primary_reservation_id,row.arriving_reservation_id,row.stay_reservation_id,row.departing_reservation_id
-    ]).filter(Boolean).map(String))]
-
-    let stays:any[]=[]
-    if(ids.length){
-      const stayResult=await admin.from('reservation_stays').select('*').in('id',ids)
-      if(stayResult.error) throw new Error(stayResult.error.message)
-      stays=stayResult.data||[]
-    }
-
-    const stayById=new Map<string,any>(stays.map((row:any)=>[String(row.id),row] as [string,any]))
-    const linkByRoom=new Map<string,any>(links.map((row:any)=>[String(row.room_id),row] as [string,any]))
-
-    const daily=base.rooms.map((room:any)=>{
-      const link:any=linkByRoom.get(String(room.id))
-      return {
-        roomId:room.id,
-        roomName:room.name,
-        status:link?.reservation_status||'Vacant',
-        primary:link?.primary_reservation_id?stayById.get(String(link.primary_reservation_id))||null:null,
-        arriving:link?.arriving_reservation_id?stayById.get(String(link.arriving_reservation_id))||null:null,
-        staying:link?.stay_reservation_id?stayById.get(String(link.stay_reservation_id))||null:null,
-        departing:link?.departing_reservation_id?stayById.get(String(link.departing_reservation_id))||null:null
-      }
-    })
-
     return NextResponse.json({
-      rooms:base.rooms,
+      rooms,
       batches:batchResult.data||[],
-      verification:verifyResult.data||null,
-      daily
+      verification:verifyResult.data||null
     })
   }catch(error:any){
     return NextResponse.json({error:error?.message||'Could not load Reservation Sync.'},{status:500})
@@ -203,57 +177,6 @@ export async function POST(req:NextRequest){
   const admin=createSupabaseAdmin()
 
   try{
-    const base=await loadBase(admin)
-    const roomNames=base.rooms.map((room:any)=>String(room.name))
-
-    if(body?.action==='preview'){
-      const pages=Array.isArray(body.pages)?body.pages.map(String):[]
-      if(!pages.length) return NextResponse.json({error:'No PDF pages were received.'},{status:400})
-
-      const parsed=parseArrivalReportPages(pages,roomNames)
-      const keys=parsed.reservations.map(row=>row.reservationKey)
-      let existing:any[]=[]
-
-      if(keys.length){
-        const existingResult=await admin.from('reservation_stays').select('*').in('reservation_key',keys)
-        if(existingResult.error) throw new Error(existingResult.error.message)
-        existing=existingResult.data||[]
-      }
-
-      const oldByKey=new Map<string,any>(existing.map((row:any)=>[String(row.reservation_key),row] as [string,any]))
-      const roomIdByName=new Map<string,string>(base.rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
-      const tracked:any={
-        guestName:'guest_name',phone:'guest_phone',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',
-        occupancy:'occupancy',ratePlan:'rate_plan',checkInTime:'check_in_time',productsRaw:'products_raw',
-        dietaryRestrictions:'dietary_restrictions',referralSource:'referral_source',reasonForVisit:'reason_for_visit',
-        guestComments:'guest_comments',innkeeperNotes:'innkeeper_notes'
-      }
-
-      const reservations=parsed.reservations.map(row=>{
-        const old:any=oldByKey.get(row.reservationKey)
-        const changedFields:any={}
-        if(old){
-          for(const key of Object.keys(tracked)){
-            const before=old[tracked[key]]??null
-            const after=(row as any)[key]??null
-            if(String(before??'')!==String(after??'')) changedFields[key]={before,after}
-          }
-          const beforeRoom=String(old.room_id||'')
-          const afterRoom=row.roomName?String(roomIdByName.get(row.roomName)||''):''
-          if(beforeRoom!==afterRoom) changedFields.roomName={before:beforeRoom,after:afterRoom}
-        }
-
-        return {
-          ...row,
-          changeType:!old?'new':Object.keys(changedFields).length?'updated':'unchanged',
-          changedFields,
-          include:!row.needsReview
-        }
-      })
-
-      return NextResponse.json({...parsed,reservations})
-    }
-
     if(body?.action==='verify'){
       if(!validDate(body.serviceDate)) return NextResponse.json({error:'Invalid date'},{status:400})
       const result=await admin.from('reservation_daily_verifications').upsert({
@@ -266,6 +189,8 @@ export async function POST(req:NextRequest){
     }
 
     if(body?.action==='commit'){
+      const [rooms,packages]=await Promise.all([loadRooms(admin),loadPackages(admin)])
+      const roomNames=rooms.map((room:any)=>String(room.name))
       const rawRows=Array.isArray(body.reservations)?body.reservations.filter((row:any)=>row.include):[]
       if(!rawRows.length) return NextResponse.json({error:'No reservations are selected.'},{status:400})
 
@@ -294,7 +219,7 @@ export async function POST(req:NextRequest){
       if(batchResult.error) throw new Error(batchResult.error.message)
       const batch=batchResult.data
 
-      const roomIdByName=new Map<string,string>(base.rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
+      const roomIdByName=new Map<string,string>(rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
       const payloads=rows.map(row=>({
         reservation_key:row.reservationKey,
         reservation_number:row.reservationNumber,
@@ -327,8 +252,8 @@ export async function POST(req:NextRequest){
       if(saveResult.error) throw new Error(saveResult.error.message)
       const saved=saveResult.data||[]
 
-      await rebuildDaily(admin,start,end,base.rooms)
-      const packageCount=await syncPackages(admin,saved,base.packages)
+      await rebuildDaily(admin,start,end,rooms)
+      const packageCount=await syncPackages(admin,saved,packages)
 
       const finishResult=await admin.from('reservation_import_batches').update({
         status:'committed',
