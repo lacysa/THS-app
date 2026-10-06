@@ -95,26 +95,30 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
             </div>
           )}
 
-          <div className="card">
+          <div className="card fd-breakfast-card">
             <h2>Breakfast schedule</h2>
-            <div className="timeline">
+            <div className="timeline fd-breakfast-list">
               {data.bookings.length===0 && <div className="muted">No breakfast bookings for this date.</div>}
               {data.bookings.map((b:any)=>(
-                <div className="ticket" id={`booking-${b.id}`} key={b.id}>
-                  <div className="ticket-head">
-                    <div>
-                      <div className="ticket-room">{b.rooms?.name}</div>
-                      <div className="muted">{b.taggedOnly ? 'Menu Missing' : b.last_name}</div>
+                <div className={`fd-breakfast-pill ${b.menu_submitted?'is-received':'is-missing'}`} id={`booking-${b.id}`} key={b.id}>
+                  <div className="fd-breakfast-pill-main">
+                    <div className="fd-breakfast-pill-room">
+                      <strong>{b.rooms?.name}</strong>
+                      <span>{b.taggedOnly ? 'Menu Missing' : b.last_name}</span>
                     </div>
-                    <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                    <div className="fd-breakfast-pill-status">
                       <span className="pill">{b.displayTime}</span>
-                      <span className={`pill ${b.menu_submitted ? '' : 'warning'}`}>{b.menu_submitted?'Menu received':'Menu Missing'}</span>
-                      {!b.taggedOnly && <button className="btn secondary" onClick={()=>setEditing({...b,time_slot:String(b.time_slot).slice(0,5)})}>Edit time</button>}
-                      {!b.taggedOnly && b.guest_token && <a className="btn secondary" href={`/breakfast/menu?token=${encodeURIComponent(b.guest_token)}`} target="_blank" rel="noreferrer">Edit menu</a>}
-                      {!b.taggedOnly && <button className="btn danger" onClick={()=>cancel(b.id)}>Cancel</button>}
+                      <span className={`pill ${b.menu_submitted ? 'success' : 'warning'}`}>{b.menu_submitted?'Menu received':'Menu Missing'}</span>
                     </div>
+                    {!b.taggedOnly && (
+                      <div className="fd-breakfast-pill-actions">
+                        <button className="btn secondary" onClick={()=>setEditing({...b,time_slot:String(b.time_slot).slice(0,5)})}>Edit time</button>
+                        {b.guest_token && <a className="btn secondary" href={`/breakfast/menu?token=${encodeURIComponent(b.guest_token)}`} target="_blank" rel="noreferrer">Edit menu</a>}
+                        <button className="btn danger" onClick={()=>cancel(b.id)}>Cancel</button>
+                      </div>
+                    )}
                   </div>
-                  {!b.taggedOnly && <BookingMenuNote bookingId={b.id} initialNote={b.note || ''} />}
+                  {!b.taggedOnly && <div className="fd-breakfast-pill-note"><BookingMenuNote bookingId={b.id} initialNote={b.note || ''} /></div>}
                 </div>
               ))}
             </div>
