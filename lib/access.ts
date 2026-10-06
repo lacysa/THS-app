@@ -7,7 +7,7 @@ export type StaffAccess = {
   email:string|null
   phone:string|null
   jobTitle:string|null
-  theme:'light'|'blue'|'dark'
+  theme:'light'|'blue'|'sage'|'violet'|'dark'
   active:boolean
   roleId:string|null
   roleName:string|null
@@ -68,7 +68,7 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     email:(profile as any).email || user.email || null,
     phone:(profile as any).phone || user.phone || null,
     jobTitle:(profile as any).job_title || null,
-    theme:((profile as any).theme_preference || 'blue') as 'light'|'blue'|'dark',
+    theme:((profile as any).theme_preference || 'blue') as 'light'|'blue'|'sage'|'violet'|'dark',
     active:(profile as any).active !== false,
     roleId:(profile as any).role_id || null,
     roleName:roleRaw?.name || null,
