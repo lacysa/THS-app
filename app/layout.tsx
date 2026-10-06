@@ -15,6 +15,7 @@ import './styles/room-board.css'
 import './styles/notifications.css'
 import './styles/shift-reports.css'
 import './styles/maintenance.css'
+import './styles/surfaces.css'
 
 export const viewport: Viewport = {
   width: 'device-width',
