@@ -17,6 +17,7 @@ import {
   Bell,
   Search,
   RefreshCw,
+  CalendarDays,
   ShieldCheck,
   ScrollText,
   PanelLeftClose,
@@ -88,7 +89,8 @@ const iconMap: Record<string, any> = {
   housekeeping_inventory: Package,
   laundry_inventory: Package,
   lobby_inventory: Package,
-  reservation_sync: RefreshCw
+  reservation_sync: RefreshCw,
+  reservations: CalendarDays
 }
 
 const permissionByModule: Record<string, string | undefined> = {
@@ -130,7 +132,8 @@ const hrefFallback: Record<string, string> = {
   housekeeping_inventory: '/inventory/housekeeping',
   laundry_inventory: '/inventory/laundry',
   lobby_inventory: '/inventory/lobby',
-  reservation_sync: '/reservation-sync'
+  reservation_sync: '/reservation-sync',
+  reservations: '/reservations'
 }
 
 const breakfastModules = new Set([
@@ -157,7 +160,8 @@ const operationsModules = new Set([
   'housekeeping_inventory',
   'laundry_inventory',
   'lobby_inventory',
-  'reservation_sync'
+  'reservation_sync',
+  'reservations'
 ])
 
 function initials(name: string) {

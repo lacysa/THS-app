@@ -3,6 +3,7 @@ import Link from 'next/link'
 import {
   AlertTriangle,
   BedDouble,
+  CalendarDays,
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
@@ -341,33 +342,6 @@ export default function DailyDashboard({
         </div>
       </div>
 
-      {showReservationDaily && reservationDaily.some(item=>item.status!=='Vacant') && (
-        <section className="rs-daily-board dashboard-reservation-board">
-          <div className="rs-daily-head">
-            <div><div className="rs-kicker">Daily operations</div><h2>Today&apos;s stay information</h2></div>
-            <span>{reservationDaily.filter(item=>item.status!=='Vacant').length} occupied / changing rooms</span>
-          </div>
-          <div className="rs-daily-grid">
-            {reservationDaily.filter(item=>item.status!=='Vacant').map(item=>{
-              const stay=item.arriving||item.primary||item.departing
-              return <article className={`rs-daily-room status-${String(item.status||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}`} key={item.roomId}>
-                <div className="rs-daily-room-top"><strong>{item.roomName}</strong><span>{item.status}</span></div>
-                {item.status==='Out/In' && <div className="rs-outin"><span>OUT {item.departing?.guest_name||'—'}</span><span>IN {item.arriving?.guest_name||'—'}</span></div>}
-                {stay && <div className="rs-daily-info">
-                  <div><b>Guest</b><span>{stay.guest_name||'—'}</span></div>
-                  <div><b>Door</b><span className="rs-door-code">{stay.door_code||'—'}</span></div>
-                  <div><b>Stay</b><span>{stay.arrival_date||'—'} → {stay.checkout_date||'—'}</span></div>
-                  <div><b>Check-in</b><span>{stay.check_in_time||'—'}</span></div>
-                  {stay.products_raw&&<div className="wide"><b>Packages</b><span>{stay.products_raw}</span></div>}
-                  {stay.innkeeper_notes&&<div className="wide"><b>Innkeeper</b><span>{stay.innkeeper_notes}</span></div>}
-                  {stay.guest_comments&&<div className="wide"><b>Guest comment</b><span>{stay.guest_comments}</span></div>}
-                  {stay.dietary_restrictions && !/^(no|none|n\/a|no dietary restrictions)$/i.test(String(stay.dietary_restrictions).trim()) && <div className="wide"><b>Dietary</b><span>{stay.dietary_restrictions}</span></div>}
-                </div>}
-              </article>
-            })}
-          </div>
-        </section>
-      )}
 
       <div className="daily-visual-overview">
         <section className="daily-snapshot-card">
@@ -421,6 +395,30 @@ export default function DailyDashboard({
           </div>
         )}
       </div>
+
+      {showReservationDaily && reservationDaily.some(item=>item.status!=='Vacant') && (() => {
+        const active=reservationDaily.filter(item=>item.status!=='Vacant')
+        const arrivals=active.filter(item=>item.status==='Arrival').length
+        const stayovers=active.filter(item=>item.status==='Stayover').length
+        const checkouts=active.filter(item=>item.status==='Checkout').length
+        const outIn=active.filter(item=>item.status==='Out/In').length
+        return <Link href="/reservations" className="daily-reservations-summary">
+          <div className="daily-reservations-summary-head">
+            <div>
+              <span>Reservations</span>
+              <strong>Today&apos;s stay snapshot</strong>
+            </div>
+            <small>Open reservations →</small>
+          </div>
+          <div className="daily-reservations-summary-grid">
+            <div><CalendarDays size={15}/><span>Arrivals</span><strong>{arrivals}</strong></div>
+            <div><Users size={15}/><span>Stayovers</span><strong>{stayovers}</strong></div>
+            <div><BedDouble size={15}/><span>Checkouts</span><strong>{checkouts}</strong></div>
+            <div><ClipboardList size={15}/><span>Out / In</span><strong>{outIn}</strong></div>
+            <div className="total"><span>Occupied / changing</span><strong>{active.length}</strong></div>
+          </div>
+        </Link>
+      })()}
 
       <section className={`daily-panel daily-attention-panel ${attentionCount===0?'all-clear':''}`}>
         <div className="daily-panel-head">

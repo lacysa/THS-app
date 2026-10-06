@@ -4,7 +4,6 @@ import DailyDashboard from '@/components/DailyDashboard'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess, isModuleAllowedForAccess } from '@/lib/access'
-import '../styles/reservation-sync.css'
 import { bohDefaultServiceDate, prettyDate, ymdInHotelTz } from '@/lib/time'
 
 export const dynamic = 'force-dynamic'
@@ -228,7 +227,7 @@ export default async function DashboardPage() {
   }))
 
   let reservationDaily:any[] = []
-  if (moduleKeys.has('reservation_sync')) {
+  if (moduleKeys.has('reservations')) {
     const { data:linkRows, error:linkError } = await admin
       .from('reservation_daily_links')
       .select('*')
@@ -281,7 +280,7 @@ export default async function DashboardPage() {
         maintenance={maintenance}
         inventory={inventory}
         departmentNotes={departmentNotes}
-        showReservationDaily={moduleKeys.has('reservation_sync')}
+        showReservationDaily={moduleKeys.has('reservations')}
         reservationDaily={reservationDaily}
       />
     </StaffShell>
