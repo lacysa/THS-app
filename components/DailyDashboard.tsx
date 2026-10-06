@@ -192,7 +192,14 @@ export default function DailyDashboard({
   const pendingChecks = roomCheckRooms.filter(row=>row.complete && !row.fohCheckInitials && !row.checkIssueOpen)
   const arrivals = housekeeping.filter(row=>['Arrival','Out/In'].includes(row.reservationStatus))
   const arrivalsNotReady = arrivals.filter(row=>row.roomCondition!=='Ready')
+  const arrivalsReady = arrivals.filter(row=>row.roomCondition==='Ready')
   const packageRooms = arrivals.filter(row=>row.packages.length>0)
+
+  const pct = (done:number,total:number) => total>0 ? Math.round((done/total)*100) : 0
+  const hkPercent = pct(hkComplete.length,housekeeping.length)
+  const roomCheckPercent = pct(roomChecksPassed.length,roomCheckRooms.length)
+  const breakfastPercent = pct(receivedMenus.length,breakfastScheduled.length)
+  const arrivalPercent = pct(arrivalsReady.length,arrivals.length)
 
   const attentionCount =
     missingMenus.length +
@@ -284,20 +291,58 @@ export default function DailyDashboard({
         </div>
       </div>
 
-      {metrics.length > 0 && (
-        <div className="daily-metric-grid">
-          {metrics.map(({label,value,sub,icon:Icon,href,tone})=>(
-            <Link className={`daily-metric-card daily-link-card tone-${tone}`} href={href} key={label}>
-              <span className="daily-metric-icon"><Icon size={17}/></span>
-              <div>
-                <span>{label}</span>
-                <strong>{value}</strong>
-                <small>{sub}</small>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+      <div className="daily-visual-overview">
+        <section className="daily-snapshot-card">
+          <div className="daily-snapshot-head">
+            <div>
+              <span>Today at a glance</span>
+              <strong>Operations progress</strong>
+            </div>
+            <small>Live from today’s room and breakfast data</small>
+          </div>
+
+          <div className="daily-progress-stack">
+            <div className="daily-progress-row">
+              <div><span>Housekeeping</span><b>{hkComplete.length}/{housekeeping.length}</b></div>
+              <div className="daily-progress-track"><i style={{width:`${hkPercent}%`}}/></div>
+              <small>{hkPercent}% complete</small>
+            </div>
+
+            <div className="daily-progress-row">
+              <div><span>Room checks</span><b>{roomChecksPassed.length}/{roomCheckRooms.length}</b></div>
+              <div className="daily-progress-track"><i style={{width:`${roomCheckPercent}%`}}/></div>
+              <small>{roomCheckPercent}% passed</small>
+            </div>
+
+            <div className="daily-progress-row">
+              <div><span>Breakfast menus</span><b>{receivedMenus.length}/{breakfastScheduled.length}</b></div>
+              <div className="daily-progress-track"><i style={{width:`${breakfastPercent}%`}}/></div>
+              <small>{missingMenus.length} missing</small>
+            </div>
+
+            <div className="daily-progress-row">
+              <div><span>Arrivals ready</span><b>{arrivalsReady.length}/{arrivals.length}</b></div>
+              <div className="daily-progress-track"><i style={{width:`${arrivalPercent}%`}}/></div>
+              <small>{arrivalsNotReady.length} not ready</small>
+            </div>
+          </div>
+        </section>
+
+        {metrics.length > 0 && (
+          <div className="daily-metric-grid daily-metric-stack">
+            {metrics.map(({label,value,sub,icon:Icon,href,tone})=>(
+              <Link className={`daily-metric-card daily-link-card tone-${tone}`} href={href} key={label}>
+                <span className="daily-metric-icon"><Icon size={17}/></span>
+                <div>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                  <small>{sub}</small>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       <section className={`daily-panel daily-attention-panel ${attentionCount===0?'all-clear':''}`}>
         <div className="daily-panel-head">
