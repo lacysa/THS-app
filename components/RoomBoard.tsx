@@ -551,11 +551,12 @@ export default function RoomBoard(){
           const staff=splitAssigned(row.assignedTo)
           const selectedPackages=(row.packageIds||[]).map(id=>packageOptions.find(p=>p.id===id)?.name).filter(Boolean)
           const service=String(row.serviceType||'').toUpperCase()
-          const isStayover=row.reservationStatus==='Stayover'
-          const isArrival=row.reservationStatus==='Arrival'
+          const status=row.reservationStatus
+          const isStayover=status==='Stayover'
+          const requiresCorrectionOnly=['Arrival','Vacant','Blocked'].includes(status)
           const showHousekeepingWorkflow =
             isStayover ? service==='RF'
-            : isArrival ? Boolean(row.checkIssueOpen)
+            : requiresCorrectionOnly ? Boolean(row.checkIssueOpen)
             : true
           return <article className={`rb-room-card ${statusClass(row.reservationStatus)} ${row.complete?'is-complete':''} ${collapsed?'is-collapsed':''}`} key={row.roomId}>
             {collapsed ? (
