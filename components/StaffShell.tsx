@@ -72,6 +72,7 @@ const iconMap: Record<string, any> = {
   breakfast_menu_manager: ClipboardList,
   daily_overview: FileText,
   housekeeping: BedDouble,
+  room_board: BedDouble,
   housekeeping_setup: ClipboardList,
   room_checks: ShieldCheck,
   projects: FolderKanban,
@@ -96,6 +97,7 @@ const permissionByModule: Record<string, string | undefined> = {
   breakfast_menu_manager: 'breakfast.menu_manager.view',
   daily_overview: 'breakfast.read_only.view',
   housekeeping: 'housekeeping.dashboard.view',
+  room_board: 'housekeeping.dashboard.view',
   room_checks: 'room_checks.view',
   projects: 'projects.view',
   maintenance: undefined,
@@ -111,6 +113,7 @@ const hrefFallback: Record<string, string> = {
   breakfast_menu_manager: '/breakfast/menu-manager',
   daily_overview: '/breakfast/overview',
   housekeeping: '/housekeeping',
+  room_board: '/room-board',
   housekeeping_setup: '/housekeeping/setup',
   room_checks: '/room-checks',
   projects: '/projects',
@@ -137,6 +140,7 @@ const breakfastModules = new Set([
 
 const operationsModules = new Set([
   'housekeeping',
+  'room_board',
   'housekeeping_setup',
   'room_checks',
   'projects',
