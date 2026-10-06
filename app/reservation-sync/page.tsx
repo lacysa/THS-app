@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function Page(){
   const access=await getStaffAccess()
   if(!access) redirect('/login')
-  const allowed=access.isAdmin || ['manager','general_manager','operations_manager','owner'].some(cap=>access.capabilities.includes(cap))
+  const allowed=access.isAdmin || ['foh_manager','manager','general_manager','operations_manager','owner'].some(cap=>access.capabilities.includes(cap))
   if(!allowed) redirect('/dashboard')
   return <StaffShell title="Reservation Sync"><ReservationSyncBoard/></StaffShell>
 }
