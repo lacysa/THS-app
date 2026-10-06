@@ -273,7 +273,15 @@ export default function RoomBoard(){
                 <div>
                   <strong>{row.roomName}</strong>
                   <div className="rb-badges">
-                    {row.breakfastTag&&<span className="rb-badge breakfast">Breakfast</span>}
+                    <button
+                      type="button"
+                      className={`rb-badge rb-breakfast-toggle ${row.breakfastTag?'breakfast is-active':''}`}
+                      aria-pressed={row.breakfastTag}
+                      onClick={()=>patch(row.roomId,{breakfastTag:!row.breakfastTag})}
+                      title="Breakfast service the following morning"
+                    >
+                      Breakfast
+                    </button>
                     {selectedPackages.length>0&&<span className="rb-badge">Package</span>}
                     {row.stripHold&&<span className="rb-badge warn">{row.stripHold}</span>}
                   </div>
