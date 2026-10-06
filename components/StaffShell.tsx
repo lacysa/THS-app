@@ -48,7 +48,7 @@ type Access = {
   jobTitle: string | null
   canPreviewUnpublished: boolean
   permissions: string[]
-  theme: 'light' | 'blue' | 'dark'
+  theme: 'light' | 'blue' | 'sage' | 'violet' | 'dark'
   roleName: string | null
   isAdmin: boolean
 }
