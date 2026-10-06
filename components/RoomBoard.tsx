@@ -30,6 +30,13 @@ type RoomRow = {
 
 type StaffOption={id:string;name:string}
 type PackageOption={id:string;name:string;price:number|null;available:boolean}
+type Access={
+  name?:string|null
+  preferredName?:string|null
+  email?:string|null
+  roleName?:string|null
+  isAdmin?:boolean
+}
 
 const reservationOptions=['','Checkout','Out/In','Stayover','Arrival','Vacant','Blocked']
 const conditionOptions=['','Occupied','Cleaning','Ready for Inspection','Ready','Vacant','Vacant (Clean)','Vacant (Dirty)','Vacant (Blocked)','Out of Order']
@@ -43,6 +50,22 @@ function todayDetroit(){
 
 function splitAssigned(value:string){
   return String(value||'').split(',').map(x=>x.trim()).filter(Boolean)
+}
+
+function normalize(value:string|null|undefined){
+  return String(value||'').trim().toLowerCase()
+}
+
+function getManagerInitials(access:Access|null){
+  if(!access) return ''
+  const combined=normalize(`${access.name||''} ${access.preferredName||''} ${access.email||''}`)
+  if(combined.includes('sarah')||combined.includes('lacysa')) return 'SL'
+  if(combined.includes('brittany')||combined.includes('brittanyahollingshead')) return 'BH'
+  if(combined.includes('david')||combined.includes('davidheiser')) return 'DH'
+  const rawName=access.name||access.preferredName||''
+  const parts=rawName.trim().split(/\s+/).filter(Boolean)
+  if(parts.length>=2) return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase()
+  return ''
 }
 
 function statusClass(value:string){
@@ -60,6 +83,7 @@ export default function RoomBoard(){
   const [date,setDate]=useState(todayDetroit())
   const [rows,setRows]=useState<RoomRow[]>([])
   const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
+  const [access,setAccess]=useState<Access|null>(null)
   const [packageOptions,setPackageOptions]=useState<PackageOption[]>([])
   const [breakfastDate,setBreakfastDate]=useState('')
   const [menuNeededRooms,setMenuNeededRooms]=useState<string[]>([])
@@ -76,6 +100,13 @@ export default function RoomBoard(){
 
   useEffect(()=>{ rowsRef.current=rows },[rows])
   useEffect(()=>{ dateRef.current=date },[date])
+
+  useEffect(()=>{
+    fetch('/api/me',{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d) setAccess(d.access||null) })
+      .catch(()=>{})
+  },[])
 
   async function load(){
     setLoading(true)
@@ -184,6 +215,19 @@ export default function RoomBoard(){
   }),[rows])
 
   const saveLabel=saveState==='saving'?'Saving…':saveState==='saved'?'Saved ✓':saveState==='error'?'Save failed':'All changes saved'
+  const managerInitials=getManagerInitials(access)
+
+  function setService(row:RoomRow,value:string){
+    if(value==='OUT'){
+      if(!managerInitials){
+        setMessage('Manager initials could not be determined from your profile.')
+        return
+      }
+      patch(row.roomId,{serviceType:`OUT-${managerInitials}`})
+      return
+    }
+    patch(row.roomId,{serviceType:value})
+  }
 
   return <div className="rb-page">
     <div className="rb-toolbar">
@@ -245,10 +289,10 @@ export default function RoomBoard(){
 
               <label className="rb-field">
                 <span>Service</span>
-                <select value={service} onChange={e=>patch(row.roomId,{serviceType:e.target.value})}>
+                <select value={service} onChange={e=>setService(row,e.target.value)}>
                   <option value="">—</option>
-                  <option value="OUT">OUT</option>
-                  {service.startsWith('OUT-')&&<option value={service}>{service}</option>}
+                  <option value="OUT">OUT{managerInitials?`-${managerInitials}`:''}</option>
+                  {service.startsWith('OUT-')&&service!==`OUT-${managerInitials}`&&<option value={service}>{service}</option>}
                   <option value="RF">RF</option>
                 </select>
               </label>
