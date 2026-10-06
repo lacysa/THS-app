@@ -171,7 +171,17 @@ export default function DailyDashboard({
   const receivedMenus = breakfastScheduled.filter(r=>r.menuSubmitted)
   const declinedBreakfast = breakfast.filter(r=>r.status==='declined')
 
-  const hkComplete = housekeeping.filter(r=>r.complete)
+  // Housekeeping workload is intentionally narrower than the full room board:
+  // stayovers that requested RF, plus turnover/arrival rooms that were sent
+  // back to Housekeeping for a correction.
+  const housekeepingWorkload = housekeeping.filter(row=>{
+    const status=String(row.reservationStatus||'')
+    const service=String(row.serviceType||'').toUpperCase()
+    const stayoverRefresh=status==='Stayover' && service==='RF'
+    const correctionRoom=['Checkout','Out/In','Arrival'].includes(status) && row.checkIssueOpen
+    return stayoverRefresh || correctionRoom
+  })
+  const hkComplete = housekeepingWorkload.filter(r=>r.complete && !r.checkIssueOpen)
 
   // Only these room states belong in the room-check workflow.
   const roomCheckEligibleStatuses = new Set(['Checkout','Out/In','Vacant','Arrival'])
@@ -196,7 +206,7 @@ export default function DailyDashboard({
   const packageRooms = arrivals.filter(row=>row.packages.length>0)
 
   const pct = (done:number,total:number) => total>0 ? Math.round((done/total)*100) : 0
-  const hkPercent = pct(hkComplete.length,housekeeping.length)
+  const hkPercent = pct(hkComplete.length,housekeepingWorkload.length)
   const roomCheckPercent = pct(roomChecksPassed.length,roomCheckRooms.length)
   const breakfastPercent = pct(receivedMenus.length,breakfastScheduled.length)
   const arrivalPercent = pct(arrivalsReady.length,arrivals.length)
@@ -245,11 +255,11 @@ export default function DailyDashboard({
   const metrics = [
     showHousekeeping ? {
       label:'Housekeeping',
-      value:`${hkComplete.length}/${housekeeping.length}`,
-      sub:`${housekeeping.filter(r=>r.serviceType.toUpperCase().startsWith('OUT')).length} OUT · ${housekeeping.filter(r=>r.serviceType==='RF').length} RF`,
+      value:`${hkComplete.length}/${housekeepingWorkload.length}`,
+      sub:`${housekeepingWorkload.filter(r=>r.reservationStatus==='Stayover').length} RF · ${housekeepingWorkload.filter(r=>r.checkIssueOpen).length} fixes`,
       icon:BedDouble,
       href:'/housekeeping',
-      tone:hkComplete.length===housekeeping.length && housekeeping.length>0 ? 'good' : 'neutral'
+      tone:hkComplete.length===housekeepingWorkload.length && housekeepingWorkload.length>0 ? 'good' : 'neutral'
     } : null,
     showBreakfast ? {
       label:`Breakfast · ${breakfastDate.slice(5)}`,
@@ -303,7 +313,7 @@ export default function DailyDashboard({
 
           <div className="daily-progress-stack">
             <div className="daily-progress-row">
-              <div><span>Housekeeping</span><b>{hkComplete.length}/{housekeeping.length}</b></div>
+              <div><span>Housekeeping</span><b>{hkComplete.length}/{housekeepingWorkload.length}</b></div>
               <div className="daily-progress-track"><i style={{width:`${hkPercent}%`}}/></div>
               <small>{hkPercent}% complete</small>
             </div>
