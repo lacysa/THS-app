@@ -298,7 +298,11 @@ export default function HousekeepingBoard() {
   const managerInitials = getManagerInitials(access)
 
   function markOut(row: RoomRow) {
-    patch(row.roomId, { serviceType: 'OUT' })
+    if (!managerInitials) {
+      setMessage('Manager initials could not be determined from your profile.')
+      return
+    }
+    patch(row.roomId, { serviceType: `OUT-${managerInitials}` })
   }
 
   function markRefresh(row: RoomRow) {
