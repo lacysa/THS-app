@@ -1,0 +1,133 @@
+/* Shared modern card surfaces for staff operations */
+.staff-page-content{
+  --surface-card:color-mix(in srgb,var(--app-surface,#fff) 96%, var(--app-accent,#59c8d8) 4%);
+  --surface-card-alt:color-mix(in srgb,var(--app-surface,#fff) 92%, var(--app-accent,#59c8d8) 8%);
+  --surface-border:color-mix(in srgb,var(--app-border,#d7dce3) 72%, transparent);
+  --surface-shadow:0 14px 34px rgba(35,49,70,.08),0 2px 8px rgba(35,49,70,.035);
+  --surface-shadow-hover:0 18px 42px rgba(35,49,70,.11),0 3px 10px rgba(35,49,70,.05);
+}
+
+/* Primary card surfaces */
+.staff-page-content .card,
+.staff-page-content .ticket,
+.staff-page-content .settings-card,
+.staff-page-content .rb-room-card,
+.staff-page-content .room-check-card,
+.staff-page-content .maint-add-card,
+.staff-page-content .maint-room-card,
+.staff-page-content .daily-panel,
+.staff-page-content .daily-metric-card,
+.staff-page-content .shift-section,
+.staff-page-content .preview-module-card{
+  border:1px solid var(--surface-border)!important;
+  border-radius:18px!important;
+  background:
+    linear-gradient(145deg,var(--surface-card) 0%,var(--app-surface,#fff) 72%)!important;
+  box-shadow:var(--surface-shadow)!important;
+}
+
+/* Give cards a little more visual depth without turning them glossy */
+.staff-page-content .daily-panel,
+.staff-page-content .settings-card,
+.staff-page-content .maint-room-card,
+.staff-page-content .room-check-card,
+.staff-page-content .shift-section{
+  position:relative;
+  overflow:hidden;
+}
+.staff-page-content .daily-panel::before,
+.staff-page-content .settings-card::before,
+.staff-page-content .maint-room-card::before,
+.staff-page-content .room-check-card::before,
+.staff-page-content .shift-section::before{
+  content:'';
+  position:absolute;
+  inset:0 auto auto 0;
+  width:100%;
+  height:3px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb,var(--app-accent,#59c8d8) 68%,transparent),
+    color-mix(in srgb,var(--app-accent,#59c8d8) 18%,transparent),
+    transparent 72%);
+  pointer-events:none;
+}
+
+/* Softer internal headers */
+.staff-page-content .daily-panel-head,
+.staff-page-content .room-check-header,
+.staff-page-content .maint-room-header,
+.staff-page-content .settings-card-heading{
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb,var(--app-surface2,#f4f6f8) 88%,var(--app-accent,#59c8d8) 12%),
+      color-mix(in srgb,var(--app-surface,#fff) 95%,var(--app-accent,#59c8d8) 5%))!important;
+  border-color:var(--surface-border)!important;
+}
+
+/* Snapshot-style supporting cards */
+.staff-page-content .stat,
+.staff-page-content .shift-snapshot-grid>div{
+  border:1px solid var(--surface-border)!important;
+  border-radius:14px!important;
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb,var(--app-surface,#fff) 94%,var(--app-accent,#59c8d8) 6%),
+      var(--app-surface,#fff))!important;
+  box-shadow:0 8px 20px rgba(35,49,70,.055)!important;
+}
+
+/* Interactive cards feel like app surfaces, not records */
+.staff-page-content a.daily-panel:hover,
+.staff-page-content .daily-link-card:hover,
+.staff-page-content .rb-room-card:hover,
+.staff-page-content .maint-room-card:hover{
+  transform:translateY(-1px);
+  box-shadow:var(--surface-shadow-hover)!important;
+}
+
+/* Controls inside cards should not look like hospital chart fields */
+.staff-page-content .card input,
+.staff-page-content .card select,
+.staff-page-content .card textarea,
+.staff-page-content .rb-room-card input,
+.staff-page-content .rb-room-card select,
+.staff-page-content .rb-room-card textarea,
+.staff-page-content .settings-card input,
+.staff-page-content .settings-card select,
+.staff-page-content .settings-card textarea{
+  border-radius:10px!important;
+}
+
+/* Dark theme keeps contrast while preserving the same dimensional system */
+html[data-theme="dark"] .staff-page-content{
+  --surface-card:#171f2a;
+  --surface-card-alt:#1c2632;
+  --surface-border:#344353;
+  --surface-shadow:0 14px 34px rgba(0,0,0,.24),0 2px 8px rgba(0,0,0,.16);
+  --surface-shadow-hover:0 18px 42px rgba(0,0,0,.30),0 3px 10px rgba(0,0,0,.18);
+}
+
+/* Print stays clean and flat */
+@media print{
+  .staff-page-content .card,
+  .staff-page-content .ticket,
+  .staff-page-content .settings-card,
+  .staff-page-content .rb-room-card,
+  .staff-page-content .room-check-card,
+  .staff-page-content .maint-add-card,
+  .staff-page-content .maint-room-card,
+  .staff-page-content .daily-panel,
+  .staff-page-content .daily-metric-card,
+  .staff-page-content .shift-section{
+    box-shadow:none!important;
+    background:#fff!important;
+    border-color:#d9d9d9!important;
+  }
+  .staff-page-content .daily-panel::before,
+  .staff-page-content .settings-card::before,
+  .staff-page-content .maint-room-card::before,
+  .staff-page-content .room-check-card::before,
+  .staff-page-content .shift-section::before{
+    display:none!important;
+  }
+}
