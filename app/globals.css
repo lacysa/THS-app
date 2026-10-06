@@ -967,12 +967,12 @@ html[data-theme="light"] .ops-logo-mark{color:#fff}
   .hsk-sticky-toolbar{align-items:flex-start;}
   .hsk-title-block p{display:none;}
   .hsk-metric-row{grid-template-columns:repeat(3,1fr);}
-  .hsk-table-wrapper{max-height:calc(100vh - 330px);}
+  .hsk-table-wrapper{max-height:none;overflow-y:visible;}
 }
 
 @media (max-width:720px){
   .hsk-sticky-toolbar{position:sticky;display:grid;grid-template-columns:1fr;}
   .hsk-toolbar-actions{justify-content:flex-start;}
   .hsk-metric-row{grid-template-columns:repeat(2,1fr);}
-  .hsk-table-wrapper{max-height:calc(100vh - 390px);}
+  .hsk-table-wrapper{max-height:none;overflow-y:visible;}
 }
