@@ -1223,3 +1223,101 @@
     width: 100%;
   }
 }
+
+
+/* Front Desk breakfast compact pill layout */
+.fd-breakfast-card{
+  padding-bottom:16px;
+}
+.fd-breakfast-list{
+  gap:8px;
+}
+.staff-page-content .fd-breakfast-pill{
+  display:grid;
+  gap:6px;
+  padding:9px 11px;
+  border:1px solid var(--ths-line);
+  border-radius:999px;
+  background:var(--app-surface,#fff);
+  color:var(--app-text,var(--ths-text));
+  box-shadow:0 4px 12px rgba(26,26,24,.03);
+}
+.staff-page-content .fd-breakfast-pill.is-missing{
+  border-color:#e6c99b;
+  background:#fffdf7;
+}
+.staff-page-content .fd-breakfast-pill.is-received{
+  border-color:#bfd2c4;
+  background:#fbfefc;
+}
+.fd-breakfast-pill-main{
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) auto auto;
+  gap:10px;
+  align-items:center;
+  min-width:0;
+}
+.fd-breakfast-pill-room{
+  min-width:0;
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+}
+.fd-breakfast-pill-room strong{
+  color:var(--app-text,var(--ths-text));
+  font-size:12px;
+  white-space:nowrap;
+}
+.fd-breakfast-pill-room span{
+  min-width:0;
+  color:var(--app-muted,var(--ths-muted));
+  font-size:10px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.fd-breakfast-pill-status,
+.fd-breakfast-pill-actions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.fd-breakfast-pill-actions .btn{
+  min-height:30px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:9px;
+}
+.staff-page-content .pill.success{
+  background:#e9f3eb;
+  border-color:#bfd2c4;
+  color:#45624e;
+}
+.fd-breakfast-pill-note{
+  padding:0 8px 2px;
+}
+@media(max-width:900px){
+  .staff-page-content .fd-breakfast-pill{
+    border-radius:18px;
+  }
+  .fd-breakfast-pill-main{
+    grid-template-columns:1fr auto;
+  }
+  .fd-breakfast-pill-actions{
+    grid-column:1/-1;
+  }
+}
+@media(max-width:620px){
+  .fd-breakfast-pill-main{
+    grid-template-columns:1fr;
+  }
+  .fd-breakfast-pill-status,
+  .fd-breakfast-pill-actions{
+    justify-content:flex-start;
+  }
+  .fd-breakfast-pill-room{
+    display:grid;
+    gap:2px;
+  }
+}
