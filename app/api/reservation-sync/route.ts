@@ -125,7 +125,7 @@ async function syncPackages(admin:any,stays:any[],packages:any[]){
     }
   }
 
-  const unique=[...new Map(inserts.map(row=>[String(row.service_date)+'|'+String(row.room_id)+'|'+String(row.package_id)+'|'+String(row.reservation_id),row])).values()]
+  const unique=[...new Map<string,any>(inserts.map((row:any)=>[String(row.service_date)+'|'+String(row.room_id)+'|'+String(row.package_id)+'|'+String(row.reservation_id),row] as [string,any])).values()]
   if(unique.length){
     const result=await admin.from('housekeeping_room_packages').insert(unique)
     if(result.error) throw new Error(result.error.message)
@@ -166,8 +166,8 @@ export async function GET(req:NextRequest){
       stays=stayResult.data||[]
     }
 
-    const stayById=new Map(stays.map((row:any)=>[String(row.id),row]))
-    const linkByRoom=new Map(links.map((row:any)=>[String(row.room_id),row]))
+    const stayById=new Map<string,any>(stays.map((row:any)=>[String(row.id),row] as [string,any]))
+    const linkByRoom=new Map<string,any>(links.map((row:any)=>[String(row.room_id),row] as [string,any]))
 
     const daily=base.rooms.map((room:any)=>{
       const link:any=linkByRoom.get(String(room.id))
@@ -219,8 +219,8 @@ export async function POST(req:NextRequest){
         existing=existingResult.data||[]
       }
 
-      const oldByKey=new Map(existing.map((row:any)=>[String(row.reservation_key),row]))
-      const roomIdByName=new Map(base.rooms.map((room:any)=>[String(room.name),String(room.id)]))
+      const oldByKey=new Map<string,any>(existing.map((row:any)=>[String(row.reservation_key),row] as [string,any]))
+      const roomIdByName=new Map<string,string>(base.rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
       const tracked:any={
         guestName:'guest_name',phone:'guest_phone',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',
         occupancy:'occupancy',ratePlan:'rate_plan',checkInTime:'check_in_time',productsRaw:'products_raw',
@@ -293,7 +293,7 @@ export async function POST(req:NextRequest){
       if(batchResult.error) throw new Error(batchResult.error.message)
       const batch=batchResult.data
 
-      const roomIdByName=new Map(base.rooms.map((room:any)=>[String(room.name),String(room.id)]))
+      const roomIdByName=new Map<string,string>(base.rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
       const payloads=rows.map(row=>({
         reservation_key:row.reservationKey,
         reservation_number:row.reservationNumber,
