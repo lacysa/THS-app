@@ -139,8 +139,20 @@ export default function MaintenanceBoard() {
       .sort((a,b)=>a.sort-b.sort || a.label.localeCompare(b.label))
   },[rooms,visibleTickets])
 
-  return <div className="maintenance-page">
-    <div className="maint-sticky-bar">
+  return <div className="maintenance-page module-pretty-page">
+    <section className="module-pretty-hero">
+      <div>
+        <div className="module-kicker">Property operations</div>
+        <h1>Maintenance</h1>
+        <p>Track room and property issues, priorities, ownership, and completion without losing the daily operational picture.</p>
+      </div>
+      <div className="module-pretty-hero-stat">
+        <span>Open items</span>
+        <strong>{tickets.filter(t=>t.status!=='complete').length}</strong>
+      </div>
+    </section>
+
+    <div className="maint-sticky-bar module-pretty-toolbar">
       <div className="maint-filter-row">
         {(['open','urgent','completed','all'] as const).map(value =>
           <button key={value} type="button" className={filter===value?'active':''} onClick={()=>setFilter(value)}>

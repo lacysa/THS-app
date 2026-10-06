@@ -1054,3 +1054,606 @@ html[data-theme="dark"] .daily-snapshot-head small,
 html[data-theme="dark"] .daily-progress-row small{
   color:#bdc7d1!important;
 }
+
+
+/* ============================================================
+   RESERVATIONS-INSPIRED MODULE POLISH
+   Shared visual language across staff operations modules.
+   ============================================================ */
+:root{
+  --module-card:#ffffff;
+  --module-card-soft:#fbfcfe;
+  --module-line:#dfe5eb;
+  --module-text:#172033;
+  --module-muted:#6b7789;
+  --module-shadow:0 10px 26px rgba(45,63,94,.07);
+  --module-shadow-hover:0 16px 34px rgba(45,63,94,.11);
+  --module-radius:16px;
+  --module-radius-sm:12px;
+  --module-gradient:
+    radial-gradient(circle at 12% 12%,rgba(58,220,190,.18),transparent 28%),
+    radial-gradient(circle at 84% 20%,rgba(126,92,255,.16),transparent 32%),
+    linear-gradient(135deg,#f8fbff 0%,#eef7ff 55%,#f5efff 100%);
+}
+
+.module-pretty-page,
+.rb-page,
+.ops-module.hsk-module,
+.room-checks-page,
+.shift-page,
+.maintenance-page,
+.rs-wrap,
+.breakfast-overview-page{
+  display:grid;
+  gap:18px;
+  min-width:0;
+}
+
+.module-pretty-hero,
+.rb-toolbar,
+.ops-module.hsk-module>.module-toolbar,
+.room-checks-page>.module-toolbar,
+.rs-hero-card,
+.overview-title-row{
+  position:relative;
+  overflow:hidden;
+  padding:18px;
+  border:1px solid rgba(80,110,150,.18);
+  border-radius:18px;
+  background:var(--module-gradient);
+  box-shadow:0 14px 34px rgba(48,72,110,.09);
+}
+
+.module-pretty-hero{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+}
+.module-pretty-hero h1,
+.rb-toolbar h1,
+.ops-module.hsk-module>.module-toolbar h1,
+.room-checks-page>.module-toolbar h1,
+.rs-hero-card h1,
+.overview-title-row h1{
+  margin:4px 0 3px!important;
+  color:var(--module-text)!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:32px!important;
+  font-weight:800!important;
+  line-height:1.05;
+}
+.module-pretty-hero p,
+.rb-toolbar p,
+.ops-module.hsk-module>.module-toolbar p,
+.room-checks-page>.module-toolbar p,
+.rs-hero-card p,
+.overview-title-row p{
+  margin:0;
+  color:var(--module-muted)!important;
+  font-size:12px;
+  line-height:1.5;
+}
+.module-pretty-hero-stat{
+  flex:0 0 auto;
+  min-width:150px;
+  padding:12px 14px;
+  border:1px solid rgba(61,80,110,.10);
+  border-radius:14px;
+  background:rgba(255,255,255,.78);
+}
+.module-pretty-hero-stat span,
+.module-pretty-hero-stat strong{display:block}
+.module-pretty-hero-stat span{
+  color:#64758a;
+  font-size:8px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.module-pretty-hero-stat strong{
+  margin-top:4px;
+  color:#172033;
+  font-size:18px;
+}
+
+.module-kicker,
+.rs-kicker,
+.overview-title-row .ops-kicker{
+  color:#607287!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  text-transform:uppercase;
+  letter-spacing:.1em!important;
+}
+
+/* Toolbars and control rails */
+.module-pretty-toolbar,
+.rb-view-controls,
+.rb-breakfast-strip,
+.shift-toolbar,
+.maint-sticky-bar,
+.overview-actions,
+.rs-upload-card,
+.room-check-summary{
+  border:1px solid var(--module-line)!important;
+  border-radius:14px!important;
+  background:rgba(255,255,255,.92)!important;
+  box-shadow:var(--module-shadow)!important;
+  backdrop-filter:blur(12px);
+}
+.module-pretty-toolbar,
+.shift-toolbar,
+.maint-sticky-bar,
+.overview-actions{
+  padding:12px 14px!important;
+}
+.rb-view-controls,
+.rb-breakfast-strip{
+  padding:11px 13px!important;
+}
+.room-check-summary{
+  padding:9px!important;
+}
+
+.staff-ops-main input,
+.staff-ops-main select,
+.staff-ops-main textarea{
+  border:1px solid #d6dde5!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#172033!important;
+  box-shadow:none!important;
+}
+.staff-ops-main input:focus,
+.staff-ops-main select:focus,
+.staff-ops-main textarea:focus{
+  border-color:#8ea5bd!important;
+  outline:3px solid rgba(111,143,174,.13)!important;
+}
+.ops-primary-btn,
+.rs-btn,
+.staff-ops-main .btn:not(.secondary):not(.danger){
+  border-radius:11px!important;
+  background:#20252b!important;
+  color:#fff!important;
+  box-shadow:0 7px 16px rgba(24,32,45,.12);
+}
+.ops-secondary-btn,
+.rs-btn.rs-secondary,
+.staff-ops-main .btn.secondary{
+  border:1px solid #d9e0e7!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#253142!important;
+}
+.ops-primary-btn:hover,
+.rs-btn:hover{transform:translateY(-1px)}
+.ops-secondary-btn:hover,
+.staff-ops-main .btn.secondary:hover{
+  background:#f7f9fb!important;
+}
+
+/* Core cards */
+.front-desk-page .card,
+.rb-room-card,
+.hsk-assigned-card,
+.hsk-table-wrapper,
+.room-check-card,
+.shift-section,
+.maint-add-card,
+.maint-room-card,
+.rs-upload-card,
+.rs-reservation,
+.rs-history,
+.overview-panel{
+  border:1px solid var(--module-line)!important;
+  border-radius:var(--module-radius)!important;
+  background:linear-gradient(145deg,#fff,#fbfcfe)!important;
+  box-shadow:var(--module-shadow)!important;
+}
+.front-desk-page .card,
+.shift-section,
+.maint-add-card,
+.overview-panel{
+  padding:16px!important;
+}
+.rb-room-card,
+.hsk-assigned-card,
+.room-check-card,
+.maint-room-card,
+.rs-reservation{
+  overflow:hidden;
+}
+.rb-room-card:hover,
+.hsk-assigned-card:hover,
+.maint-room-card:hover,
+.rs-reservation:hover{
+  box-shadow:var(--module-shadow-hover)!important;
+}
+
+/* Front Desk */
+.front-desk-page .fd-breakfast-card>h2,
+.front-desk-page .card>h2{
+  margin:0 0 12px!important;
+  color:#172033;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:16px!important;
+  font-weight:800!important;
+}
+.front-desk-page .fd-breakfast-pill{
+  border:1px solid #e1e6ec!important;
+  border-left:4px solid #6f8fae!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  box-shadow:0 6px 16px rgba(45,63,94,.04);
+}
+.front-desk-page .fd-breakfast-pill.is-received{
+  border-left-color:#6f9a78!important;
+  background:linear-gradient(90deg,#f3fbf5,#fff 22%)!important;
+}
+.front-desk-page .fd-breakfast-pill.is-missing{
+  border-left-color:#d2a64f!important;
+  background:linear-gradient(90deg,#fffaf0,#fff 22%)!important;
+}
+.front-desk-page .pill{
+  border-color:#dbe2e9!important;
+  background:#f8fafc!important;
+}
+
+/* Room Board */
+.rb-toolbar{padding:18px!important}
+.rb-toolbar-actions{
+  align-items:flex-end!important;
+}
+.rb-date-control,
+.date-control{
+  padding:8px 10px!important;
+  border:1px solid rgba(61,80,110,.10)!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.78)!important;
+}
+.rb-summary-strip{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px!important;
+}
+.rb-summary-strip span,
+.room-check-summary span{
+  border:1px solid #dce3ea!important;
+  border-radius:999px!important;
+  background:#fff!important;
+  box-shadow:0 4px 12px rgba(45,63,94,.04);
+}
+.rb-room-card{
+  border-left-width:4px!important;
+  background:#fff!important;
+}
+.rb-room-head,
+.rb-room-summary{
+  background:linear-gradient(180deg,#fbfdff,#f7f9fc)!important;
+}
+.rb-room-card select,
+.rb-room-card input,
+.rb-room-card textarea{
+  background:#fbfcfe!important;
+}
+
+/* Housekeeping */
+.ops-module.hsk-module>.module-toolbar{padding:18px!important}
+.hsk-assigned-card{
+  border-left:4px solid #6f8fae!important;
+  padding:14px!important;
+}
+.hsk-assigned-card.complete{
+  border-left-color:#6f9a78!important;
+  background:linear-gradient(145deg,#f7fff9,#fff)!important;
+}
+.hsk-table-wrapper{
+  padding:0!important;
+  overflow:hidden!important;
+}
+.hsk-table-wrapper table{
+  border-collapse:separate!important;
+  border-spacing:0!important;
+}
+.hsk-table-wrapper th{
+  background:#f6f9fc!important;
+  color:#68788b!important;
+  font-size:8px!important;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.hsk-table-wrapper td{
+  border-color:#e8edf2!important;
+}
+.hsk-breakfast-badge,
+.hsk-complete-pill{
+  border-radius:999px!important;
+}
+
+/* Room checks */
+.room-check-card{
+  border-left:4px solid #8ba0b5!important;
+}
+.room-check-card.has-issue{
+  border-left-color:#b85c56!important;
+}
+.room-check-header{
+  background:linear-gradient(180deg,#fbfdff,#f7f9fc)!important;
+}
+.room-check-zone h3{
+  background:#f7f9fc!important;
+  border-color:#e2e7ed!important;
+  color:#66778a!important;
+}
+.room-check-item{
+  border-color:#e9edf2!important;
+}
+.room-check-item.pass{background:#f8fdf9!important}
+.room-check-item.fail{background:#fff9f8!important}
+
+/* Shift Reports */
+.shift-tabs{
+  gap:8px!important;
+  padding:5px!important;
+  border:1px solid var(--module-line)!important;
+  border-radius:13px!important;
+  background:#f7f9fb!important;
+}
+.shift-tabs button{
+  border:0!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:#647183!important;
+}
+.shift-tabs button.active{
+  background:#fff!important;
+  color:#172033!important;
+  box-shadow:0 4px 12px rgba(45,63,94,.08)!important;
+}
+.shift-snapshot-section{
+  background:var(--module-gradient)!important;
+}
+.shift-snapshot-grid>div{
+  border:1px solid rgba(61,80,110,.09)!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.78)!important;
+}
+.shift-snapshot-grid span{color:#64758a!important}
+.shift-action-item{
+  border-color:#e7ebef!important;
+}
+
+/* Maintenance */
+.maint-add-card{
+  background:var(--module-gradient)!important;
+}
+.maint-room-card{
+  border-left:4px solid #6f8fae!important;
+}
+.maint-room-header{
+  background:linear-gradient(180deg,#fbfdff,#f7f9fc)!important;
+}
+.maint-ticket{
+  border-color:#e8edf2!important;
+}
+.maint-filter-row{
+  padding:4px;
+  border-radius:11px;
+  background:#f4f7fa;
+}
+.maint-filter-row button{
+  border:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  color:#647183!important;
+}
+.maint-filter-row button.active{
+  background:#fff!important;
+  color:#172033!important;
+  box-shadow:0 4px 12px rgba(45,63,94,.08)!important;
+}
+
+/* Reservation Sync */
+.rs-hero-card{padding:18px!important}
+.rs-upload-card{
+  padding:16px!important;
+  background:var(--module-gradient)!important;
+}
+.rs-stats{
+  gap:10px!important;
+}
+.rs-stats>div{
+  border:1px solid rgba(61,80,110,.09)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:var(--module-shadow)!important;
+}
+.rs-reservation{
+  border-left:4px solid #6f8fae!important;
+}
+.rs-reservation.needs-review{
+  border-left-color:#d2a64f!important;
+}
+.rs-row-top{
+  background:linear-gradient(180deg,#fbfdff,#f7f9fc)!important;
+  border-bottom:1px solid #e7ebef!important;
+}
+.rs-history{
+  padding:16px!important;
+}
+
+/* Breakfast Overview */
+.overview-title-row{
+  margin:0 0 14px!important;
+}
+.overview-summary-grid{
+  gap:12px!important;
+}
+.overview-panel{
+  margin-bottom:12px;
+}
+.overview-panel h3{
+  color:#172033!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:14px!important;
+  font-weight:800!important;
+}
+.overview-metrics>div{
+  border:1px solid #e2e7ed;
+  border-radius:12px;
+  background:#f9fbfd;
+}
+.summary-chip{
+  border:1px solid #dce3ea!important;
+  border-radius:999px!important;
+  background:#f8fafc!important;
+}
+.overview-table{
+  border-collapse:separate!important;
+  border-spacing:0!important;
+  overflow:hidden;
+}
+.overview-table th{
+  background:#f4f7fa!important;
+  color:#647183!important;
+}
+.overview-table tr:nth-child(even) td{
+  background:#fbfcfe;
+}
+
+/* Dark mode */
+html[data-theme="dark"]{
+  --module-card:#17212b;
+  --module-card-soft:#1a2530;
+  --module-line:#334250;
+  --module-text:#f2f6fa;
+  --module-muted:#aebbc7;
+  --module-shadow:0 12px 28px rgba(0,0,0,.20);
+  --module-shadow-hover:0 16px 34px rgba(0,0,0,.28);
+  --module-gradient:
+    radial-gradient(circle at 12% 12%,rgba(47,220,193,.14),transparent 28%),
+    radial-gradient(circle at 84% 20%,rgba(126,92,255,.16),transparent 32%),
+    linear-gradient(135deg,#17222d,#1a2633 55%,#211d33);
+}
+html[data-theme="dark"] .module-pretty-hero,
+html[data-theme="dark"] .rb-toolbar,
+html[data-theme="dark"] .ops-module.hsk-module>.module-toolbar,
+html[data-theme="dark"] .room-checks-page>.module-toolbar,
+html[data-theme="dark"] .rs-hero-card,
+html[data-theme="dark"] .overview-title-row{
+  border-color:#344451!important;
+  background:var(--module-gradient)!important;
+}
+html[data-theme="dark"] .module-pretty-hero h1,
+html[data-theme="dark"] .rb-toolbar h1,
+html[data-theme="dark"] .ops-module.hsk-module>.module-toolbar h1,
+html[data-theme="dark"] .room-checks-page>.module-toolbar h1,
+html[data-theme="dark"] .rs-hero-card h1,
+html[data-theme="dark"] .overview-title-row h1{
+  color:#f2f6fa!important;
+}
+html[data-theme="dark"] .module-pretty-hero p,
+html[data-theme="dark"] .rb-toolbar p,
+html[data-theme="dark"] .ops-module.hsk-module>.module-toolbar p,
+html[data-theme="dark"] .room-checks-page>.module-toolbar p,
+html[data-theme="dark"] .rs-hero-card p,
+html[data-theme="dark"] .overview-title-row p,
+html[data-theme="dark"] .module-kicker,
+html[data-theme="dark"] .rs-kicker{
+  color:#aebbc7!important;
+}
+html[data-theme="dark"] .module-pretty-hero-stat,
+html[data-theme="dark"] .shift-snapshot-grid>div{
+  background:rgba(18,27,36,.72)!important;
+  border-color:#344451!important;
+}
+html[data-theme="dark"] .module-pretty-hero-stat span,
+html[data-theme="dark"] .module-pretty-hero-stat strong{
+  color:#f2f6fa!important;
+}
+html[data-theme="dark"] .module-pretty-toolbar,
+html[data-theme="dark"] .rb-view-controls,
+html[data-theme="dark"] .rb-breakfast-strip,
+html[data-theme="dark"] .shift-toolbar,
+html[data-theme="dark"] .maint-sticky-bar,
+html[data-theme="dark"] .overview-actions,
+html[data-theme="dark"] .room-check-summary{
+  background:#18232e!important;
+  border-color:#334250!important;
+}
+html[data-theme="dark"] .front-desk-page .card,
+html[data-theme="dark"] .rb-room-card,
+html[data-theme="dark"] .hsk-assigned-card,
+html[data-theme="dark"] .hsk-table-wrapper,
+html[data-theme="dark"] .room-check-card,
+html[data-theme="dark"] .shift-section,
+html[data-theme="dark"] .maint-room-card,
+html[data-theme="dark"] .rs-reservation,
+html[data-theme="dark"] .rs-history,
+html[data-theme="dark"] .overview-panel{
+  background:linear-gradient(145deg,#18232e,#141c25)!important;
+  border-color:#334250!important;
+  color:#edf3f8!important;
+}
+html[data-theme="dark"] .staff-ops-main input,
+html[data-theme="dark"] .staff-ops-main select,
+html[data-theme="dark"] .staff-ops-main textarea{
+  background:#111923!important;
+  border-color:#3a4857!important;
+  color:#eef4f9!important;
+}
+html[data-theme="dark"] .ops-secondary-btn,
+html[data-theme="dark"] .rs-btn.rs-secondary,
+html[data-theme="dark"] .staff-ops-main .btn.secondary{
+  background:#202b36!important;
+  border-color:#3a4857!important;
+  color:#eef4f9!important;
+}
+html[data-theme="dark"] .rb-room-head,
+html[data-theme="dark"] .rb-room-summary,
+html[data-theme="dark"] .room-check-header,
+html[data-theme="dark"] .maint-room-header,
+html[data-theme="dark"] .rs-row-top{
+  background:linear-gradient(180deg,#202c39,#1a2530)!important;
+  border-color:#334250!important;
+}
+html[data-theme="dark"] .shift-tabs,
+html[data-theme="dark"] .maint-filter-row{
+  background:#131c25!important;
+  border-color:#334250!important;
+}
+html[data-theme="dark"] .shift-tabs button.active,
+html[data-theme="dark"] .maint-filter-row button.active{
+  background:#253342!important;
+  color:#f2f6fa!important;
+}
+
+@media(max-width:760px){
+  .module-pretty-hero{
+    display:grid;
+    align-items:stretch;
+  }
+  .module-pretty-hero-stat{
+    width:100%;
+  }
+  .module-pretty-hero h1,
+  .rb-toolbar h1,
+  .ops-module.hsk-module>.module-toolbar h1,
+  .room-checks-page>.module-toolbar h1,
+  .rs-hero-card h1,
+  .overview-title-row h1{
+    font-size:27px!important;
+  }
+  .module-pretty-toolbar,
+  .rb-toolbar,
+  .ops-module.hsk-module>.module-toolbar,
+  .room-checks-page>.module-toolbar{
+    position:static!important;
+  }
+}
+
+@media print{
+  .module-pretty-hero{box-shadow:none!important;background:#fff!important;border-color:#ddd!important}
+}
