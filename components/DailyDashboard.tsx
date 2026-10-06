@@ -171,15 +171,18 @@ export default function DailyDashboard({
   const receivedMenus = breakfastScheduled.filter(r=>r.menuSubmitted)
   const declinedBreakfast = breakfast.filter(r=>r.status==='declined')
 
-  // Housekeeping workload is intentionally narrower than the full room board:
-  // stayovers that requested RF, plus turnover/arrival rooms that were sent
-  // back to Housekeeping for a correction.
+  // Housekeeping workload:
+  // - Checkout always counts
+  // - Out/In always counts
+  // - Stayover only counts when RF is requested
+  // - Arrival only counts when Housekeeping fixes/corrections are needed
   const housekeepingWorkload = housekeeping.filter(row=>{
     const status=String(row.reservationStatus||'')
     const service=String(row.serviceType||'').toUpperCase()
-    const stayoverRefresh=status==='Stayover' && service==='RF'
-    const correctionRoom=['Checkout','Out/In','Arrival'].includes(status) && row.checkIssueOpen
-    return stayoverRefresh || correctionRoom
+    if(status==='Checkout' || status==='Out/In') return true
+    if(status==='Stayover' && service==='RF') return true
+    if(status==='Arrival' && row.checkIssueOpen) return true
+    return false
   })
   const hkComplete = housekeepingWorkload.filter(r=>r.complete && !r.checkIssueOpen)
 
