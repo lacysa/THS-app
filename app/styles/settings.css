@@ -201,7 +201,7 @@
 
 .theme-picker {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin: 18px 0;
 }
@@ -355,4 +355,17 @@
   .settings-primary {
     width: 100%;
   }
+}
+
+.theme-preview.sage{background:#f2f6f1;border:1px solid #c8d6c6}
+.theme-preview.sage i{background:#7ea689}
+.theme-preview.violet{background:#f6f2fb;border:1px solid #d3c5e8}
+.theme-preview.violet i{background:#9d86c8}
+.theme-preview.blue{background:#eef7fb;border:1px solid #bed2dc}
+.theme-preview.blue i{background:#3aa9c0}
+.theme-preview.dark{background:#0d1117;border:1px solid #394756}
+.theme-preview.dark i{background:#526171}
+
+@media (max-width:1000px){
+  .theme-picker{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
