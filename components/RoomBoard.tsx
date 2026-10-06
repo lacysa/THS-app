@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BedDouble, Check, ChevronDown, ChevronUp, RefreshCw, Save, Search, UtensilsCrossed } from 'lucide-react'
+import { BedDouble, Check, ChevronDown, ChevronUp, RefreshCw, Save, Search, SlidersHorizontal, UtensilsCrossed } from 'lucide-react'
 
 type BreakfastStatus = 'none'|'needed'|'received'|'declined'
 type SaveState = 'idle'|'saving'|'saved'|'error'
@@ -96,11 +96,12 @@ export default function RoomBoard(){
   const [openRooms,setOpenRooms]=useState<Record<string,boolean>>({})
   const [collapsedRooms,setCollapsedRooms]=useState<Record<string,boolean>>({})
   const [search,setSearch]=useState('')
-  const [statusFilter,setStatusFilter]=useState('')
-  const [staffFilter,setStaffFilter]=useState('')
-  const [serviceFilter,setServiceFilter]=useState('')
-  const [progressFilter,setProgressFilter]=useState('')
-  const [breakfastFilter,setBreakfastFilter]=useState('')
+  const [statusFilters,setStatusFilters]=useState<string[]>([])
+  const [staffFilters,setStaffFilters]=useState<string[]>([])
+  const [serviceFilters,setServiceFilters]=useState<string[]>([])
+  const [progressFilters,setProgressFilters]=useState<string[]>([])
+  const [breakfastFilters,setBreakfastFilters]=useState<string[]>([])
+  const [filtersOpen,setFiltersOpen]=useState(false)
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
   const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
@@ -244,31 +245,33 @@ export default function RoomBoard(){
       ].join(' ').toLowerCase()
 
       if(q && !haystack.includes(q)) return false
-      if(statusFilter && row.reservationStatus!==statusFilter) return false
+      if(statusFilters.length && !statusFilters.includes(row.reservationStatus)) return false
 
-      if(staffFilter){
+      if(staffFilters.length){
         const assigned=splitAssigned(row.assignedTo)
-        if(staffFilter==='__unassigned__'){
-          if(assigned.length) return false
-        }else if(!assigned.includes(staffFilter)){
-          return false
-        }
+        const matchesStaff=staffFilters.some(filter=>
+          filter==='__unassigned__' ? assigned.length===0 : assigned.includes(filter)
+        )
+        if(!matchesStaff) return false
       }
 
-      if(serviceFilter){
+      if(serviceFilters.length){
         const service=String(row.serviceType||'').toUpperCase()
-        if(serviceFilter==='OUT'){
-          if(!service.startsWith('OUT')) return false
-        }else if(service!==serviceFilter){
-          return false
-        }
+        const matchesService=serviceFilters.some(filter=>
+          filter==='OUT' ? service.startsWith('OUT') : service===filter
+        )
+        if(!matchesService) return false
       }
 
-      if(progressFilter==='complete' && !row.complete) return false
-      if(progressFilter==='open' && row.complete) return false
+      if(progressFilters.length){
+        const progress=row.complete?'complete':'open'
+        if(!progressFilters.includes(progress)) return false
+      }
 
-      if(breakfastFilter==='yes' && !row.breakfastTag) return false
-      if(breakfastFilter==='no' && row.breakfastTag) return false
+      if(breakfastFilters.length){
+        const breakfast=row.breakfastTag?'yes':'no'
+        if(!breakfastFilters.includes(breakfast)) return false
+      }
 
       return true
     })
@@ -276,24 +279,39 @@ export default function RoomBoard(){
     rows,
     search,
     packageOptions,
-    statusFilter,
-    staffFilter,
-    serviceFilter,
-    progressFilter,
-    breakfastFilter
+    statusFilters,
+    staffFilters,
+    serviceFilters,
+    progressFilters,
+    breakfastFilters
   ])
 
-  const hasFilters=Boolean(
-    search || statusFilter || staffFilter || serviceFilter || progressFilter || breakfastFilter
-  )
+  const activeFilterCount=
+    statusFilters.length+
+    staffFilters.length+
+    serviceFilters.length+
+    progressFilters.length+
+    breakfastFilters.length
+
+  const hasFilters=Boolean(search || activeFilterCount)
+
+  function toggleFilter(
+    value:string,
+    setter:React.Dispatch<React.SetStateAction<string[]>>
+  ){
+    setter(current=>current.includes(value)
+      ? current.filter(item=>item!==value)
+      : [...current,value]
+    )
+  }
 
   function clearFilters(){
     setSearch('')
-    setStatusFilter('')
-    setStaffFilter('')
-    setServiceFilter('')
-    setProgressFilter('')
-    setBreakfastFilter('')
+    setStatusFilters([])
+    setStaffFilters([])
+    setServiceFilters([])
+    setProgressFilters([])
+    setBreakfastFilters([])
   }
 
   function collapseAll(){
@@ -358,62 +376,128 @@ export default function RoomBoard(){
         />
       </label>
 
-      <div className="rb-filter-grid">
-        <label>
-          <span>Status</span>
-          <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-            <option value="">All statuses</option>
-            {reservationOptions.filter(Boolean).map(v=><option key={v} value={v}>{v}</option>)}
-          </select>
-        </label>
+      <div className="rb-view-actions">
+        <div className="rb-filter-menu">
+          <button
+            type="button"
+            className={`ops-secondary-btn rb-filter-button ${activeFilterCount?'is-active':''}`}
+            onClick={()=>setFiltersOpen(open=>!open)}
+            aria-expanded={filtersOpen}
+          >
+            <SlidersHorizontal size={15}/>
+            Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+          </button>
 
-        <label>
-          <span>Staff</span>
-          <select value={staffFilter} onChange={e=>setStaffFilter(e.target.value)}>
-            <option value="">All staff</option>
-            <option value="__unassigned__">Unassigned</option>
-            {staffOptions.map(option=><option key={option.id} value={option.name}>{option.name}</option>)}
-          </select>
-        </label>
+          {filtersOpen&&(
+            <div className="rb-filter-panel">
+              <div className="rb-filter-panel-head">
+                <strong>Filter rooms</strong>
+                <button type="button" onClick={clearFilters} disabled={!hasFilters}>Clear</button>
+              </div>
 
-        <label>
-          <span>Service</span>
-          <select value={serviceFilter} onChange={e=>setServiceFilter(e.target.value)}>
-            <option value="">All service</option>
-            <option value="OUT">OUT</option>
-            <option value="RF">RF</option>
-          </select>
-        </label>
+              <fieldset>
+                <legend>Status</legend>
+                <div className="rb-check-grid">
+                  {reservationOptions.filter(Boolean).map(value=>(
+                    <label key={value}>
+                      <input
+                        type="checkbox"
+                        checked={statusFilters.includes(value)}
+                        onChange={()=>toggleFilter(value,setStatusFilters)}
+                      />
+                      <span>{value}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
 
-        <label>
-          <span>Progress</span>
-          <select value={progressFilter} onChange={e=>setProgressFilter(e.target.value)}>
-            <option value="">All progress</option>
-            <option value="open">Open</option>
-            <option value="complete">Complete</option>
-          </select>
-        </label>
+              <fieldset>
+                <legend>Staff</legend>
+                <div className="rb-check-grid">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={staffFilters.includes('__unassigned__')}
+                      onChange={()=>toggleFilter('__unassigned__',setStaffFilters)}
+                    />
+                    <span>Unassigned</span>
+                  </label>
+                  {staffOptions.map(option=>(
+                    <label key={option.id}>
+                      <input
+                        type="checkbox"
+                        checked={staffFilters.includes(option.name)}
+                        onChange={()=>toggleFilter(option.name,setStaffFilters)}
+                      />
+                      <span>{option.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
 
-        <label>
-          <span>Breakfast</span>
-          <select value={breakfastFilter} onChange={e=>setBreakfastFilter(e.target.value)}>
-            <option value="">All rooms</option>
-            <option value="yes">Breakfast tagged</option>
-            <option value="no">No breakfast</option>
-          </select>
-        </label>
+              <fieldset>
+                <legend>Service</legend>
+                <div className="rb-check-grid">
+                  {['OUT','RF'].map(value=>(
+                    <label key={value}>
+                      <input
+                        type="checkbox"
+                        checked={serviceFilters.includes(value)}
+                        onChange={()=>toggleFilter(value,setServiceFilters)}
+                      />
+                      <span>{value}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
 
-        <button
-          type="button"
-          className="ops-secondary-btn rb-clear-filters"
-          onClick={clearFilters}
-          disabled={!hasFilters}
-        >
-          Clear filters
-        </button>
-      </div>
+              <fieldset>
+                <legend>Progress</legend>
+                <div className="rb-check-grid">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={progressFilters.includes('open')}
+                      onChange={()=>toggleFilter('open',setProgressFilters)}
+                    />
+                    <span>Open</span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={progressFilters.includes('complete')}
+                      onChange={()=>toggleFilter('complete',setProgressFilters)}
+                    />
+                    <span>Complete</span>
+                  </label>
+                </div>
+              </fieldset>
 
-      <div className="rb-collapse-actions">
+              <fieldset>
+                <legend>Breakfast</legend>
+                <div className="rb-check-grid">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={breakfastFilters.includes('yes')}
+                      onChange={()=>toggleFilter('yes',setBreakfastFilters)}
+                    />
+                    <span>Breakfast tagged</span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={breakfastFilters.includes('no')}
+                      onChange={()=>toggleFilter('no',setBreakfastFilters)}
+                    />
+                    <span>No breakfast</span>
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+          )}
+        </div>
+
         <button type="button" className="ops-secondary-btn" onClick={collapseAll}>Collapse all</button>
         <button type="button" className="ops-secondary-btn" onClick={expandAll}>Expand all</button>
       </div>
