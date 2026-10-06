@@ -285,6 +285,7 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
 
 export function normalizeEditedReservation(row:any, roomNames:string[]):ParsedReservation {
   const phone=String(row.phone||'').replace(/\D/g,'').slice(-10)||null
+  const doorCodeRaw=String(row.doorCode||'').replace(/\D/g,'').slice(-4)
   const roomName=roomNames.find(r=>r===row.roomName) || null
   const arrivalDate=/^20\d{2}-\d{2}-\d{2}$/.test(String(row.arrivalDate||''))?String(row.arrivalDate):null
   const checkoutDate=/^20\d{2}-\d{2}-\d{2}$/.test(String(row.checkoutDate||''))?String(row.checkoutDate):null
@@ -296,7 +297,7 @@ export function normalizeEditedReservation(row:any, roomNames:string[]):ParsedRe
   if(arrivalDate&&checkoutDate&&checkoutDate<arrivalDate) warnings.push('Checkout cannot be before arrival')
   if(!roomName) warnings.push('Room is required')
   return {
-    reservationKey,reservationNumber,guestName:clean(row.guestName)||'',phone,doorCode:phone?phone.slice(-4):null,
+    reservationKey,reservationNumber,guestName:clean(row.guestName)||'',phone,doorCode:phone?phone.slice(-4):(doorCodeRaw||null),
     arrivalDate,checkoutDate,roomName,occupancy:Number(row.occupancy)||null,ratePlan:clean(row.ratePlan),
     checkInTime:clean(row.checkInTime),productsRaw:clean(row.productsRaw),dietaryRestrictions:clean(row.dietaryRestrictions),
     referralSource:clean(row.referralSource),reasonForVisit:clean(row.reasonForVisit),guestComments:clean(row.guestComments),
