@@ -1440,3 +1440,122 @@ html[data-theme="dark"] .daily-progress-track{
 html[data-theme="dark"] .daily-progress-track i{
   background:linear-gradient(90deg,#2fdcc1 0%,#35bff1 48%,#8a70ff 100%)!important;
 }
+
+
+/* Reservations snapshot, matched to Today at a Glance */
+.daily-reservations-summary{
+  display:block;
+  position:relative;
+  overflow:hidden;
+  padding:16px 18px;
+  border:1px solid rgba(80,110,150,.18);
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 12% 12%,rgba(58,220,190,.18),transparent 28%),
+    radial-gradient(circle at 84% 20%,rgba(126,92,255,.16),transparent 32%),
+    linear-gradient(135deg,#f8fbff 0%,#eef7ff 55%,#f5efff 100%);
+  box-shadow:0 12px 30px rgba(48,72,110,.08);
+  color:inherit;
+  text-decoration:none;
+}
+.daily-reservations-summary:hover{
+  transform:translateY(-1px);
+  box-shadow:0 16px 34px rgba(48,72,110,.12);
+}
+.daily-reservations-summary-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:12px;
+}
+.daily-reservations-summary-head>div{
+  display:grid;
+  gap:3px;
+}
+.daily-reservations-summary-head span{
+  color:#607287;
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.daily-reservations-summary-head strong{
+  color:#172033;
+  font-size:18px;
+}
+.daily-reservations-summary-head small{
+  color:#6b7789;
+  font-size:9px;
+  font-weight:800;
+}
+.daily-reservations-summary-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:9px;
+}
+.daily-reservations-summary-grid>div{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  padding:10px 11px;
+  border:1px solid rgba(61,80,110,.09);
+  border-radius:13px;
+  background:rgba(255,255,255,.78);
+}
+.daily-reservations-summary-grid span{
+  color:#64758a;
+  font-size:9px;
+  font-weight:800;
+}
+.daily-reservations-summary-grid strong{
+  color:#172033;
+  font-size:18px;
+}
+.daily-reservations-summary-grid svg{
+  color:#526b86;
+}
+.daily-reservations-summary-grid .total{
+  grid-template-columns:1fr auto;
+}
+.daily-reservations-summary-grid .total span{
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  font-size:8px;
+}
+
+html[data-theme="dark"] .daily-reservations-summary{
+  background:
+    radial-gradient(circle at 12% 12%,rgba(47,220,193,.14),transparent 28%),
+    radial-gradient(circle at 84% 20%,rgba(126,92,255,.16),transparent 32%),
+    linear-gradient(135deg,#17222d,#1a2633 55%,#211d33);
+  border-color:#344451;
+}
+html[data-theme="dark"] .daily-reservations-summary-head strong,
+html[data-theme="dark"] .daily-reservations-summary-grid strong{
+  color:#f2f6fa;
+}
+html[data-theme="dark"] .daily-reservations-summary-head span,
+html[data-theme="dark"] .daily-reservations-summary-head small,
+html[data-theme="dark"] .daily-reservations-summary-grid span{
+  color:#aebbc7;
+}
+html[data-theme="dark"] .daily-reservations-summary-grid>div{
+  background:rgba(18,27,36,.72);
+  border-color:#344451;
+}
+html[data-theme="dark"] .daily-reservations-summary-grid svg{
+  color:#9fc3df;
+}
+
+@media(max-width:950px){
+  .daily-reservations-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .daily-reservations-summary-grid .total{grid-column:1/-1}
+}
+@media(max-width:620px){
+  .daily-reservations-summary{padding:14px}
+  .daily-reservations-summary-head{display:grid}
+  .daily-reservations-summary-grid{grid-template-columns:1fr 1fr}
+}
