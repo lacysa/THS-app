@@ -72,9 +72,14 @@ export default function ReservationSyncBoard(){
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i)
       const content=await page.getTextContent()
-      const positioned=(content.items||[])
-        .filter((item:any)=>String(item.str||'').trim())
-        .map((item:any)=>({text:String(item.str||'').trim(),x:Number(item.transform?.[4]||0),y:Number(item.transform?.[5]||0)}))
+      const items=Array.from((content as any)?.items || []) as any[]
+      const positioned=items
+        .filter((item:any)=>String(item?.str||'').trim())
+        .map((item:any)=>({
+          text:String(item?.str||'').trim(),
+          x:Number(item && item.transform ? item.transform[4] || 0 : 0),
+          y:Number(item && item.transform ? item.transform[5] || 0 : 0)
+        }))
       const rowBuckets:{y:number;items:{text:string;x:number;y:number}[]}[]=[]
       for(const item of positioned){
         let row=rowBuckets.find(bucket=>Math.abs(bucket.y-item.y)<=2.2)
