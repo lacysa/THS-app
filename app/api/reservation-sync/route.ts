@@ -130,11 +130,20 @@ async function syncPackages(admin:any,stays:any[],packages:any[]){
     }
   }
 
-  const unique=[...new Map<string,any>(inserts.map((row:any)=>[String(row.service_date)+'|'+String(row.room_id)+'|'+String(row.package_id)+'|'+String(row.reservation_id),row] as [string,any])).values()]
+  const unique=[...new Map<string,any>(
+    inserts.map((row:any)=>[
+      String(row.service_date)+'|'+String(row.room_id)+'|'+String(row.package_id),
+      row
+    ] as [string,any])
+  ).values()]
+
   if(unique.length){
-    const result=await admin.from('housekeeping_room_packages').insert(unique)
+    const result=await admin
+      .from('housekeeping_room_packages')
+      .upsert(unique,{onConflict:'service_date,room_id,package_id',ignoreDuplicates:true})
     if(result.error) throw new Error(result.error.message)
   }
+
   return unique.length
 }
 
