@@ -317,6 +317,11 @@ export default function RoomBoard(){
                 <strong>{staff.length?staff.join(', '):'Unassigned'}</strong>
               </div>
 
+              <label className="rb-field rb-order-summary">
+                <span>Order</span>
+                <input type="number" min="1" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
+              </label>
+
               <label className="rb-progress">
                 <input type="checkbox" checked={row.complete} onChange={e=>patch(row.roomId,{
                   complete:e.target.checked,
@@ -344,11 +349,6 @@ export default function RoomBoard(){
                   <select value={row.stripHold} onChange={e=>patch(row.roomId,{stripHold:e.target.value})}>
                     {stripOptions.map(v=><option key={v} value={v}>{v||'—'}</option>)}
                   </select>
-                </label>
-
-                <label className="rb-field">
-                  <span>Cleaning order</span>
-                  <input type="number" min="1" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
                 </label>
 
                 <div className="rb-detail-block">
