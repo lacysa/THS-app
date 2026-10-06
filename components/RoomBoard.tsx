@@ -26,6 +26,7 @@ type RoomRow = {
   fohSignedBy?:string|null
   fohSignedName?:string|null
   fohSignedAt?:string|null
+  checkIssueOpen?:boolean
 }
 
 type StaffOption={id:string;name:string}
@@ -550,7 +551,12 @@ export default function RoomBoard(){
           const staff=splitAssigned(row.assignedTo)
           const selectedPackages=(row.packageIds||[]).map(id=>packageOptions.find(p=>p.id===id)?.name).filter(Boolean)
           const service=String(row.serviceType||'').toUpperCase()
-          const showHousekeepingWorkflow = row.reservationStatus!=='Stayover' || service==='RF'
+          const isStayover=row.reservationStatus==='Stayover'
+          const isArrival=row.reservationStatus==='Arrival'
+          const showHousekeepingWorkflow =
+            isStayover ? service==='RF'
+            : isArrival ? Boolean(row.checkIssueOpen)
+            : true
           return <article className={`rb-room-card ${statusClass(row.reservationStatus)} ${row.complete?'is-complete':''} ${collapsed?'is-collapsed':''}`} key={row.roomId}>
             {collapsed ? (
               <div className="rb-collapsed-row">
@@ -572,7 +578,7 @@ export default function RoomBoard(){
                     <span className="rb-summary-pill"><b>Order</b> {row.cleanOrder??'—'}</span>
                     <span className={`rb-summary-pill ${row.complete?'is-done':''}`}>{row.complete?'Complete':'In progress'}</span>
                   </>}
-                  {row.roomCondition&&<span className="rb-summary-pill"><b>EOS</b> {row.roomCondition}</span>}
+                  <span className="rb-summary-pill"><b>EOS</b> {row.roomCondition||'—'}</span>
                   {row.breakfastTag&&<span className="rb-summary-pill breakfast">Breakfast</span>}
                   {row.stripHold&&<span className="rb-summary-pill warn">{row.stripHold}</span>}
                   {selectedPackages.map(name=><span className="rb-summary-pill package" key={name}>{name}</span>)}
