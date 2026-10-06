@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BedDouble, Check, ChevronDown, ChevronUp, RefreshCw, Save, UtensilsCrossed } from 'lucide-react'
+import { BedDouble, Check, ChevronDown, ChevronUp, RefreshCw, Save, Search, UtensilsCrossed } from 'lucide-react'
 
 type BreakfastStatus = 'none'|'needed'|'received'|'declined'
 type SaveState = 'idle'|'saving'|'saved'|'error'
@@ -94,6 +94,8 @@ export default function RoomBoard(){
   const [saveState,setSaveState]=useState<SaveState>('idle')
   const [dirty,setDirty]=useState(false)
   const [openRooms,setOpenRooms]=useState<Record<string,boolean>>({})
+  const [collapsedRooms,setCollapsedRooms]=useState<Record<string,boolean>>({})
+  const [search,setSearch]=useState('')
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
   const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
@@ -214,6 +216,41 @@ export default function RoomBoard(){
     open:rows.filter(r=>!r.complete).length
   }),[rows])
 
+  const filteredRows=useMemo(()=>{
+    const q=search.trim().toLowerCase()
+    if(!q) return rows
+    return rows.filter(row=>{
+      const packageNames=(row.packageIds||[])
+        .map(id=>packageOptions.find(p=>p.id===id)?.name||'')
+        .join(' ')
+      const haystack=[
+        row.roomName,
+        row.reservationStatus,
+        row.serviceType,
+        row.stripHold,
+        row.assignedTo,
+        row.cleanOrder==null?'':String(row.cleanOrder),
+        row.complete?'complete':'in progress',
+        row.roomCondition,
+        row.notes,
+        row.breakfastTag?'breakfast':'',
+        packageNames
+      ].join(' ').toLowerCase()
+      return haystack.includes(q)
+    })
+  },[rows,search,packageOptions])
+
+  function collapseAll(){
+    const next:Record<string,boolean>={}
+    for(const row of rows) next[row.roomId]=true
+    setCollapsedRooms(next)
+    setOpenRooms({})
+  }
+
+  function expandAll(){
+    setCollapsedRooms({})
+  }
+
   const saveLabel=saveState==='saving'?'Saving…':saveState==='saved'?'Saved ✓':saveState==='error'?'Save failed':'All changes saved'
   const managerInitials=getManagerInitials(access)
 
@@ -253,6 +290,23 @@ export default function RoomBoard(){
         :<span>No breakfast menus currently outstanding.</span>}
     </div>
 
+    <div className="rb-view-controls">
+      <label className="rb-search">
+        <Search size={15}/>
+        <input
+          type="search"
+          value={search}
+          onChange={e=>setSearch(e.target.value)}
+          placeholder="Search rooms, staff, status, notes, packages…"
+          aria-label="Search HSK"
+        />
+      </label>
+      <div className="rb-collapse-actions">
+        <button type="button" className="ops-secondary-btn" onClick={collapseAll}>Collapse all</button>
+        <button type="button" className="ops-secondary-btn" onClick={expandAll}>Expand all</button>
+      </div>
+    </div>
+
     <div className="rb-summary-strip">
       <span><b>{rows.length}</b> rooms</span>
       <span><b>{counts.complete}</b> complete</span>
@@ -261,12 +315,40 @@ export default function RoomBoard(){
 
     {loading?<div className="module-empty">Loading Room Board…</div>:(
       <div className="rb-room-list">
-        {rows.map(row=>{
+        {filteredRows.map(row=>{
           const open=Boolean(openRooms[row.roomId])
+          const collapsed=Boolean(collapsedRooms[row.roomId])
           const staff=splitAssigned(row.assignedTo)
           const selectedPackages=(row.packageIds||[]).map(id=>packageOptions.find(p=>p.id===id)?.name).filter(Boolean)
           const service=String(row.serviceType||'').toUpperCase()
-          return <article className={`rb-room-card ${statusClass(row.reservationStatus)} ${row.complete?'is-complete':''}`} key={row.roomId}>
+          return <article className={`rb-room-card ${statusClass(row.reservationStatus)} ${row.complete?'is-complete':''} ${collapsed?'is-collapsed':''}`} key={row.roomId}>
+            {collapsed ? (
+              <div className="rb-collapsed-row">
+                <button
+                  type="button"
+                  className="rb-collapse-toggle"
+                  onClick={()=>setCollapsedRooms(cur=>({...cur,[row.roomId]:false}))}
+                  title="Expand room"
+                >
+                  <BedDouble size={17}/>
+                  <strong>{row.roomName}</strong>
+                  <ChevronDown size={15}/>
+                </button>
+                <div className="rb-collapsed-data">
+                  {row.reservationStatus&&<span className={`rb-summary-pill ${statusClass(row.reservationStatus)}`}>{row.reservationStatus}</span>}
+                  {service&&<span className="rb-summary-pill"><b>Service</b> {service}</span>}
+                  <span className="rb-summary-pill"><b>Staff</b> {staff.length?staff.join(', '):'Unassigned'}</span>
+                  <span className="rb-summary-pill"><b>Order</b> {row.cleanOrder??'—'}</span>
+                  <span className={`rb-summary-pill ${row.complete?'is-done':''}`}>{row.complete?'Complete':'In progress'}</span>
+                  {row.roomCondition&&<span className="rb-summary-pill"><b>EOS</b> {row.roomCondition}</span>}
+                  {row.breakfastTag&&<span className="rb-summary-pill breakfast">Breakfast</span>}
+                  {row.stripHold&&<span className="rb-summary-pill warn">{row.stripHold}</span>}
+                  {selectedPackages.map(name=><span className="rb-summary-pill package" key={name}>{name}</span>)}
+                  {row.notes&&<span className="rb-summary-pill note" title={row.notes}><b>Note</b> {row.notes}</span>}
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="rb-room-main">
               <div className="rb-room-name">
                 <BedDouble size={17}/>
@@ -293,6 +375,14 @@ export default function RoomBoard(){
                     {row.stripHold&&<span className="rb-badge warn">{row.stripHold}</span>}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  className="rb-mini-collapse"
+                  onClick={()=>setCollapsedRooms(cur=>({...cur,[row.roomId]:true}))}
+                  title="Collapse room"
+                >
+                  <ChevronUp size={14}/>
+                </button>
               </div>
 
               <label className="rb-field rb-status-field">
@@ -390,6 +480,8 @@ export default function RoomBoard(){
                 </label>
               </div>
             </div>}
+            </>
+            )}
           </article>
         })}
       </div>
