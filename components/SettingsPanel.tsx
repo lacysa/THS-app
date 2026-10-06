@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 type Access = {
   name:string; preferredName:string|null; email:string|null; phone:string|null; jobTitle:string|null;
-  theme:'light'|'blue'|'dark'; roleName:string|null; canManageModules:boolean
+  theme:'light'|'blue'|'sage'|'violet'|'dark'; roleName:string|null; canManageModules:boolean
 }
 
 type Module = { module_key:string; title:string; label:string|null; enabled:boolean; published:boolean; status:string; active:boolean }
@@ -68,8 +68,14 @@ export default function SettingsPanel({initial}:{initial:Access}){
     <section className="settings-card">
       <h2>Appearance</h2><p>Your theme follows your staff account.</p>
       <div className="theme-picker">
-        {(['light','blue','dark'] as const).map(t=><button key={t} onClick={()=>setProfile({...profile,theme_preference:t})} className={profile.theme_preference===t?'selected':''}>
-          <span className={`theme-preview ${t}`}><i/><i/><i/></span><strong>{t==='light'?'Light':t==='blue'?'Blue':'Dark'}</strong>
+        {([
+          ['light','Light'],
+          ['blue','Coastal'],
+          ['sage','Sage'],
+          ['violet','Violet'],
+          ['dark','Dark']
+        ] as const).map(([t,label])=><button key={t} onClick={()=>setProfile({...profile,theme_preference:t})} className={profile.theme_preference===t?'selected':''}>
+          <span className={`theme-preview ${t}`}><i/><i/><i/></span><strong>{label}</strong>
         </button>)}
       </div>
       <button className="settings-primary" onClick={saveProfile}>Save appearance</button>
