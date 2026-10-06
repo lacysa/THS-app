@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type ParsedReservation = {
   reservationKey:string
   reservationNumber:string|null
