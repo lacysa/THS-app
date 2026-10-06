@@ -32,3 +32,50 @@
   border-color:#e5c66f;
   color:#7c5a14;
 }
+
+
+/* HSK status card emphasis */
+.rb-room-card.rb-status-checkout{
+  background:#fffaf4;
+  border-left-color:#c77b30;
+}
+.rb-room-card.rb-status-out-in{
+  background:#f7fbff;
+  border-left-color:#5d7fa3;
+}
+.rb-room-card.rb-status-stayover{
+  background:#fbf8ff;
+  border-left-color:#8b78a8;
+}
+.rb-room-card.rb-status-arrival{
+  background:#f6fbf7;
+  border-left-color:#5d8c70;
+}
+.rb-room-card.rb-status-vacant{
+  background:#f8f9fa;
+  border-left-color:#7b8a93;
+}
+.rb-room-card.rb-status-blocked{
+  background:#fff7f7;
+  border-left-color:#a45151;
+}
+
+.rb-room-card.rb-status-checkout .rb-room-main,
+.rb-room-card.rb-status-out-in .rb-room-main,
+.rb-room-card.rb-status-stayover .rb-room-main,
+.rb-room-card.rb-status-arrival .rb-room-main,
+.rb-room-card.rb-status-vacant .rb-room-main,
+.rb-room-card.rb-status-blocked .rb-room-main{
+  background:transparent;
+}
+
+.rb-status-field select{
+  border-width:1.5px;
+}
+
+.rb-status-field select.rb-status-checkout{border-color:#d7a46f}
+.rb-status-field select.rb-status-out-in{border-color:#9db4c9}
+.rb-status-field select.rb-status-stayover{border-color:#b9a9ca}
+.rb-status-field select.rb-status-arrival{border-color:#9fbba8}
+.rb-status-field select.rb-status-vacant{border-color:#b9c0c4}
+.rb-status-field select.rb-status-blocked{border-color:#d3a0a0}
