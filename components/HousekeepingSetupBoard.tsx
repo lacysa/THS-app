@@ -109,6 +109,14 @@ export default function HousekeepingSetupBoard(){
   },[staff,staffSearch])
 
   function setService(row:Row,value:''|'OUT'|'RF'){
+    if(value==='OUT'){
+      if(!managerInitials){
+        setMessage('Manager initials could not be determined from your profile.')
+        return
+      }
+      update(row.roomId,{serviceType:`OUT-${managerInitials}`})
+      return
+    }
     update(row.roomId,{serviceType:value})
   }
 
