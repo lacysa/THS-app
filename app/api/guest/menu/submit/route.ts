@@ -41,13 +41,14 @@ export async function POST(req:NextRequest) {
   if (bookingError) return NextResponse.json({ok:false,message:bookingError.message},{status:500})
   if (!booking) return NextResponse.json({ok:false,message:'This breakfast reservation is no longer available.'},{status:404})
 
-  const roomName=(booking.rooms as any)?.name || 'Room'
+  const activeBooking = booking
+  const roomName=(activeBooking.rooms as any)?.name || 'Room'
 
   async function logActivity(event_type:string,details:any={}) {
     await supabase.from('breakfast_guest_activity').insert({
-      booking_id:booking.id,
-      room_id:booking.room_id || (booking.rooms as any)?.id || null,
-      service_date:booking.service_date,
+      booking_id:activeBooking.id,
+      room_id:activeBooking.room_id || (activeBooking.rooms as any)?.id || null,
+      service_date:activeBooking.service_date,
       event_type,
       details
     })
@@ -145,10 +146,10 @@ export async function POST(req:NextRequest) {
   const { data:submission,error:submissionError } = await supabase
     .from('breakfast_submissions')
     .insert({
-      booking_id:booking.id,
-      service_date:booking.service_date,
+      booking_id:activeBooking.id,
+      service_date:activeBooking.service_date,
       room_name:roomName,
-      last_name:booking.last_name,
+      last_name:activeBooking.last_name,
       submitted_at:now,
       raw_payload:rawPayload
     })
@@ -163,7 +164,7 @@ export async function POST(req:NextRequest) {
   for (const g of parsed.data.guests) {
     const declined = Boolean(g.mealDeclined)
     const row = {
-      booking_id:booking.id,
+      booking_id:activeBooking.id,
       submission_id:submission.id,
       guest_number:g.guestNumber,
       meal_declined:declined,
@@ -199,7 +200,7 @@ export async function POST(req:NextRequest) {
       latest_submission_id:submission.id,
       updated_at:now
     })
-    .eq('id',booking.id)
+    .eq('id',activeBooking.id)
 
   if (updateError) {
     await logActivity('submit_error',{stage:'booking_update',message:updateError.message,submission_id:submission.id})
