@@ -439,3 +439,56 @@
 }
 
 .rb-filter-grid{display:none!important}
+
+
+/* HSK semantic pill colors */
+.rb-summary-pill.service{
+  background:#e8f6fb;
+  border-color:#b9dbe7;
+  color:#27677c;
+}
+.rb-summary-pill.order{
+  background:#eef1f4;
+  border-color:#cfd6dc;
+  color:#52606b;
+}
+.rb-summary-pill.progress.is-open{
+  background:#fff4de;
+  border-color:#e8cf98;
+  color:#7b5e24;
+}
+.rb-summary-pill.progress.is-done{
+  background:#eaf5ec;
+  border-color:#bdd6c2;
+  color:#426a4a;
+}
+.rb-summary-pill.eos{
+  background:#f1ebfa;
+  border-color:#d3c3e9;
+  color:#67518b;
+}
+.rb-summary-pill.package{
+  background:#e7f7f4;
+  border-color:#b9ddd6;
+  color:#2f6e65;
+}
+.rb-summary-pill.note{
+  background:#edf3f8;
+  border-color:#c8d6e2;
+  color:#4f6679;
+}
+.rb-summary-pill.staff{
+  background:hsl(var(--staff-hue) 58% 94%);
+  border-color:hsl(var(--staff-hue) 42% 76%);
+  color:hsl(var(--staff-hue) 42% 34%);
+}
+.rb-summary-pill.staff-unassigned{
+  background:#f3f1ec;
+  border-color:#ddd7cb;
+  color:#6c655c;
+}
+html[data-theme="dark"] .rb-summary-pill.staff{
+  background:hsl(var(--staff-hue) 34% 22%);
+  border-color:hsl(var(--staff-hue) 36% 38%);
+  color:hsl(var(--staff-hue) 70% 84%);
+}
