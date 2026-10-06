@@ -115,7 +115,7 @@ function parsePmsTableHtml(html:string,roomNames:string[]){
       const roomText=values[idx.room]||''
       const roomName=roomNames.find(name=>roomText.toLowerCase().includes(name.toLowerCase())) || roomText.split('\n').map(x=>x.trim()).find(Boolean) || null
       const reservationNumber=roomText.match(/order\s*[:#]?\s*(\d{4,8})/i)?.[1]||null
-      const escapedRoom=roomName?roomName.replace(/[.*+?^${}()|[\]\\]/g,'\\const escapedRoom=roomName?roomName.replace(/[.*+?^${}()|[\]\\]/g,'\\export default function ReservationSyncBoard(){'):'''):''
+      const escapedRoom=roomName?roomName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'):''
       const ratePlan=roomText.replace(escapedRoom?new RegExp(escapedRoom,'i'):/^$/,'').replace(/\(\s*order\s*[:#]?\s*\d{4,8}\s*\)/ig,'').replace(/\s+/g,' ').trim()||null
       const occupancy=Number(String(values[idx.occ]||'').match(/\d+/)?.[0]||0)||null
       const productsRaw=(values[idx.product]||'').trim()||null
