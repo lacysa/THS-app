@@ -8,17 +8,64 @@ export const dynamic='force-dynamic'
 export const runtime='nodejs'
 
 const MANAGER_CAPS=['foh_manager','manager','general_manager','operations_manager','owner']
+let pdfModulePromise:Promise<any>|null=null
 
 function canSync(access:any){
   return Boolean(access?.isAdmin || MANAGER_CAPS.some(cap=>access?.capabilities?.includes(cap)))
 }
-function norm(v:string){ return String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim() }
+
+function getPdfModule(){
+  if(!pdfModulePromise){
+    pdfModulePromise=(async()=>{
+      const workerModule:any=await import('pdfjs-dist/legacy/build/pdf.worker.mjs')
+      ;(globalThis as any).pdfjsWorker={WorkerMessageHandler:workerModule.WorkerMessageHandler}
+      return import('pdfjs-dist/legacy/build/pdf.mjs')
+    })()
+  }
+  return pdfModulePromise
+}
+
+async function extractPageText(pdf:any,pageNumber:number){
+  const page=await pdf.getPage(pageNumber)
+  try{
+    const content=await page.getTextContent()
+    const positioned=(Array.from(content?.items||[]) as any[])
+      .filter((item:any)=>String(item?.str||'').trim())
+      .map((item:any)=>({
+        text:String(item?.str||'').trim(),
+        x:Number(item?.transform?.[4]||0),
+        y:Number(item?.transform?.[5]||0)
+      }))
+      .sort((a:any,b:any)=>{
+        const dy=b.y-a.y
+        if(Math.abs(dy)>2.2) return dy
+        return a.x-b.x
+      })
+
+    const rows:{y:number;items:any[]}[]=[]
+    let current:{y:number;items:any[]}|null=null
+    for(const item of positioned){
+      if(!current || Math.abs(current.y-item.y)>2.2){
+        current={y:item.y,items:[item]}
+        rows.push(current)
+      }else{
+        current.items.push(item)
+      }
+    }
+
+    return rows
+      .map(row=>row.items.sort((a,b)=>a.x-b.x).map(item=>item.text).join(' | '))
+      .join('\n')
+      .trim()
+  }finally{
+    await page.cleanup?.()
+  }
+}
 
 async function extractPages(file:File){
   if(file.size>12*1024*1024) throw new Error('PDF is too large. Please use an Arrival Report under 12 MB.')
-  const workerModule:any=await import('pdfjs-dist/legacy/build/pdf.worker.mjs')
-  ;(globalThis as any).pdfjsWorker={WorkerMessageHandler:workerModule.WorkerMessageHandler}
-  const pdfjs:any=await import('pdfjs-dist/legacy/build/pdf.mjs')
+
+  const pdfjs:any=await getPdfModule()
   const data=new Uint8Array(await file.arrayBuffer())
   const loadingTask=pdfjs.getDocument({
     data,
@@ -27,39 +74,28 @@ async function extractPages(file:File){
     useSystemFonts:true
   })
   const pdf=await loadingTask.promise
-  const pages:string[]=[]
 
-  for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){
-    const page=await pdf.getPage(pageNumber)
-    const content=await page.getTextContent()
-    const items=Array.from(content?.items||[]) as any[]
-    const positioned=items
-      .filter((item:any)=>String(item?.str||'').trim())
-      .map((item:any)=>({
-        text:String(item?.str||'').trim(),
-        x:Number(item?.transform?.[4]||0),
-        y:Number(item?.transform?.[5]||0)
-      }))
+  try{
+    const pages:string[]=new Array(pdf.numPages)
+    const concurrency=4
 
-    const rows:{y:number;items:any[]}[]=[]
-    for(const item of positioned){
-      let row=rows.find(bucket=>Math.abs(bucket.y-item.y)<=2.2)
-      if(!row){ row={y:item.y,items:[]}; rows.push(row) }
-      row.items.push(item)
+    for(let start=1;start<=pdf.numPages;start+=concurrency){
+      const pageNumbers=Array.from(
+        {length:Math.min(concurrency,pdf.numPages-start+1)},
+        (_,index)=>start+index
+      )
+      const texts=await Promise.all(pageNumbers.map(pageNumber=>extractPageText(pdf,pageNumber)))
+      pageNumbers.forEach((pageNumber,index)=>{
+        const text=texts[index]
+        if(!text || text.length<80) throw new Error(`Page ${pageNumber} did not contain readable report text.`)
+        pages[pageNumber-1]=text
+      })
     }
-    rows.sort((a,b)=>b.y-a.y)
-    const text=rows
-      .map(row=>row.items.sort((a,b)=>a.x-b.x).map(item=>item.text).join(' | '))
-      .join('\n')
-      .trim()
 
-    if(!text || text.length<80) throw new Error(`Page ${pageNumber} did not contain readable report text.`)
-    pages.push(text)
-    await page.cleanup?.()
+    return pages
+  }finally{
+    await pdf.destroy?.()
   }
-
-  await pdf.destroy?.()
-  return pages
 }
 
 export async function POST(req:NextRequest){
@@ -74,17 +110,22 @@ export async function POST(req:NextRequest){
     if(!/\.pdf$/i.test(file.name) && file.type!=='application/pdf') return NextResponse.json({error:'Please upload a PDF.'},{status:400})
 
     const admin=createSupabaseAdmin()
-    const roomResult=await admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order')
+    const [pages,roomResult]=await Promise.all([
+      extractPages(file),
+      admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order')
+    ])
+
     if(roomResult.error) throw new Error(roomResult.error.message)
     const rooms=roomResult.data||[]
     const roomNames=rooms.map((room:any)=>String(room.name))
-    const pages=await extractPages(file)
     const parsed=parseArrivalReportPages(pages,roomNames)
 
     const keys=parsed.reservations.map((row:any)=>row.reservationKey)
     let existing:any[]=[]
     if(keys.length){
-      const existingResult=await admin.from('reservation_stays').select('*').in('reservation_key',keys)
+      const existingResult=await admin.from('reservation_stays')
+        .select('reservation_key,room_id,guest_name,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
+        .in('reservation_key',keys)
       if(existingResult.error) throw new Error(existingResult.error.message)
       existing=existingResult.data||[]
     }
@@ -120,9 +161,9 @@ export async function POST(req:NextRequest){
         const afterRoom=row.roomName?String(roomIdByName.get(row.roomName)||''):''
         if(beforeRoom!==afterRoom) changedFields.roomName={before:beforeRoom,after:afterRoom}
       }
+
       return {
         ...row,
-        // Keep the full phone out of the client response; only the door code is needed operationally.
         phone:null,
         changeType:!old?'new':Object.keys(changedFields).length?'updated':'unchanged',
         changedFields,
@@ -131,7 +172,9 @@ export async function POST(req:NextRequest){
     })
 
     return NextResponse.json({
-      ...parsed,
+      reportStartDate:parsed.reportStartDate,
+      reportEndDate:parsed.reportEndDate,
+      warnings:parsed.warnings,
       fileName:file.name,
       reservations
     })

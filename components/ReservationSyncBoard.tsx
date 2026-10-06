@@ -49,26 +49,27 @@ export default function ReservationSyncBoard(){
   const [warnings,setWarnings]=useState<string[]>([])
   const [batches,setBatches]=useState<any[]>([])
   const [verification,setVerification]=useState<any>(null)
-  const [daily,setDaily]=useState<any[]>([])
   const [verifyDate,setVerifyDate]=useState(localDate())
 
   async function loadMeta(date=verifyDate){
     const r=await fetch(`/api/reservation-sync?date=${encodeURIComponent(date)}`,{cache:'no-store'})
     const d=await r.json().catch(()=>({}))
-    if(r.ok){ setRooms(d.rooms||[]); setBatches(d.batches||[]); setVerification(d.verification||null); setDaily(d.daily||[]) }
+    if(r.ok){ setRooms(d.rooms||[]); setBatches(d.batches||[]); setVerification(d.verification||null) }
   }
 
-  useEffect(()=>{ void loadMeta() },[])
   useEffect(()=>{ void loadMeta(verifyDate) },[verifyDate])
 
   async function preview(){
     if(!file) return
     setBusy(true); setError(''); setSuccess(''); setRows([])
     try{
-      setProgress('Uploading and reading PDF…'); setPct(20)
+      setProgress('Reading Arrival Report…'); setPct(15)
       const form=new FormData()
       form.append('file',file)
-      const r=await fetch('/api/reservation-sync/pdf-preview',{method:'POST',body:form})
+      const controller=new AbortController()
+      const timeout=window.setTimeout(()=>controller.abort(),45000)
+      const r=await fetch('/api/reservation-sync/pdf-preview',{method:'POST',body:form,signal:controller.signal})
+      window.clearTimeout(timeout)
       setPct(86); setProgress('Comparing with current reservation data…')
       const d=await r.json().catch(()=>({}))
       if(!r.ok) throw new Error(d.error||'Could not preview this report.')
@@ -79,7 +80,7 @@ export default function ReservationSyncBoard(){
       setProgress(`Preview ready: ${(d.reservations||[]).length} reservations found.`)
       setPct(100)
     }catch(e:any){
-      setError(e?.message||'Could not read this report.')
+      setError(e?.name==='AbortError'?'The report took too long to read. Please try the PDF again.':(e?.message||'Could not read this report.'))
       setProgress('')
       setPct(0)
     }finally{
