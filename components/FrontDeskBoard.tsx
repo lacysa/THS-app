@@ -61,8 +61,20 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
   }
 
   return (
-    <div className="grid" style={{gap:18}}>
-      <div className="toolbar">
+    <div className="grid module-pretty-page front-desk-page" style={{gap:18}}>
+      <section className="module-pretty-hero">
+        <div>
+          <div className="module-kicker">Breakfast operations</div>
+          <h1>Front Desk</h1>
+          <p>Manage delivery times, missing menus, guest breakfast updates, and room notes.</p>
+        </div>
+        <div className="module-pretty-hero-stat">
+          <span>Service date</span>
+          <strong>{date}</strong>
+        </div>
+      </section>
+
+      <div className="toolbar module-pretty-toolbar">
         <div className="toolbar-left">
           <div className="field"><label>Service date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
         </div>
