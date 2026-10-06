@@ -123,7 +123,47 @@ export default function ReservationSyncBoard(){
         const ctx=canvas.getContext('2d',{willReadFrequently:true})
         if(!ctx) throw new Error('Could not create the local PDF reader canvas.')
         await page.render({canvasContext:ctx,viewport}).promise
-        const result=await worker.recognize(canvas)
+        const result=await worker.recognize(canvas,{}, {blocks:true,text:true})
+        const blocks=result?.data?.blocks||[]
+        const words:any[]=[]
+        const collectWords=(node:any)=>{
+          if(!node) return
+          if(Array.isArray(node)){ node.forEach(collectWords); return }
+          if(node.text && node.bbox && typeof node.bbox.x0==='number' && typeof node.bbox.y0==='number' && !node.words){
+            words.push({text:String(node.text).trim(),x:Number(node.bbox.x0),y:Number(node.bbox.y0),h:Math.max(1,Number(node.bbox.y1)-Number(node.bbox.y0))})
+          }
+          if(node.words) collectWords(node.words)
+          if(node.lines) collectWords(node.lines)
+          if(node.paragraphs) collectWords(node.paragraphs)
+          if(node.blocks) collectWords(node.blocks)
+        }
+        collectWords(blocks)
+
+        if(words.length){
+          words.sort((a,b)=>{
+            const dy=a.y-b.y
+            if(Math.abs(dy)>Math.max(5,Math.min(a.h,b.h)*0.55)) return dy
+            return a.x-b.x
+          })
+          const rows:{y:number;h:number;items:any[]}[]=[]
+          let current:{y:number;h:number;items:any[]}|null=null
+          for(const word of words){
+            const tolerance=Math.max(5,(current?.h||word.h)*0.6)
+            if(!current || Math.abs(current.y-word.y)>tolerance){
+              current={y:word.y,h:word.h,items:[word]}
+              rows.push(current)
+            }else{
+              current.items.push(word)
+              current.h=Math.max(current.h,word.h)
+            }
+          }
+          return rows
+            .map(row=>row.items.sort((a,b)=>a.x-b.x).map(item=>item.text).filter(Boolean).join(' '))
+            .join('\n')
+            .replace(/\r/g,'')
+            .trim()
+        }
+
         return String(result?.data?.text||'').replace(/\r/g,'').trim()
       }finally{
         await page.cleanup?.()
