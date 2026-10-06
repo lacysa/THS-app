@@ -1,0 +1,558 @@
+/* Unified staff module polish, intentionally loaded last. */
+
+.staff-page-content{
+  --pretty-line:#dfe5eb;
+  --pretty-text:#172033;
+  --pretty-muted:#6b7789;
+  --pretty-shadow:0 10px 26px rgba(45,63,94,.07);
+  --pretty-shadow-hover:0 16px 34px rgba(45,63,94,.11);
+  --pretty-gradient:
+    radial-gradient(circle at 12% 12%,rgba(58,220,190,.18),transparent 28%),
+    radial-gradient(circle at 84% 20%,rgba(126,92,255,.16),transparent 32%),
+    linear-gradient(135deg,#f8fbff 0%,#eef7ff 55%,#f5efff 100%);
+}
+
+.staff-page-content .module-pretty-page,
+.staff-page-content .rb-page,
+.staff-page-content .ops-module,
+.staff-page-content .room-checks-page,
+.staff-page-content .shift-page,
+.staff-page-content .maintenance-page,
+.staff-page-content .rs-wrap,
+.staff-page-content .breakfast-overview-page,
+.staff-page-content .department-board,
+.staff-page-content .inventory-page,
+.staff-page-content .hsk-resource-page,
+.staff-page-content .hsk-setup-page{
+  display:grid;
+  gap:18px;
+  min-width:0;
+}
+
+/* Hero / title surfaces */
+.staff-page-content .module-pretty-hero,
+.staff-page-content .rb-toolbar,
+.staff-page-content .ops-module>.module-toolbar,
+.staff-page-content .room-checks-page>.module-toolbar,
+.staff-page-content .rs-hero-card,
+.staff-page-content .overview-title-row,
+.staff-page-content .hsk-resource-topbar{
+  position:relative;
+  overflow:hidden;
+  padding:18px!important;
+  border:1px solid rgba(80,110,150,.18)!important;
+  border-radius:18px!important;
+  background:var(--pretty-gradient)!important;
+  box-shadow:0 14px 34px rgba(48,72,110,.09)!important;
+}
+
+.staff-page-content .module-pretty-hero{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+}
+
+.staff-page-content .module-pretty-hero h1,
+.staff-page-content .rb-toolbar h1,
+.staff-page-content .ops-module>.module-toolbar h1,
+.staff-page-content .room-checks-page>.module-toolbar h1,
+.staff-page-content .rs-hero-card h1,
+.staff-page-content .overview-title-row h1,
+.staff-page-content .hsk-resource-topbar h1{
+  margin:4px 0 3px!important;
+  color:var(--pretty-text)!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:32px!important;
+  font-weight:800!important;
+  line-height:1.05!important;
+}
+
+.staff-page-content .module-pretty-hero p,
+.staff-page-content .rb-toolbar p,
+.staff-page-content .ops-module>.module-toolbar p,
+.staff-page-content .room-checks-page>.module-toolbar p,
+.staff-page-content .rs-hero-card p,
+.staff-page-content .overview-title-row p,
+.staff-page-content .hsk-resource-topbar p{
+  margin:0!important;
+  color:var(--pretty-muted)!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+
+.staff-page-content .module-kicker,
+.staff-page-content .rs-kicker,
+.staff-page-content .ops-kicker{
+  color:#607287!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.1em!important;
+}
+
+.staff-page-content .module-pretty-hero-stat{
+  min-width:150px;
+  padding:12px 14px;
+  border:1px solid rgba(61,80,110,.10);
+  border-radius:14px;
+  background:rgba(255,255,255,.78);
+}
+.staff-page-content .module-pretty-hero-stat span,
+.staff-page-content .module-pretty-hero-stat strong{display:block}
+.staff-page-content .module-pretty-hero-stat span{
+  color:#64758a;
+  font-size:8px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.staff-page-content .module-pretty-hero-stat strong{
+  margin-top:4px;
+  color:#172033;
+  font-size:18px;
+}
+
+/* Control rails */
+.staff-page-content .module-pretty-toolbar,
+.staff-page-content .toolbar,
+.staff-page-content .rb-view-controls,
+.staff-page-content .rb-breakfast-strip,
+.staff-page-content .shift-toolbar,
+.staff-page-content .maint-sticky-bar,
+.staff-page-content .overview-actions,
+.staff-page-content .room-check-summary{
+  border:1px solid var(--pretty-line)!important;
+  border-radius:14px!important;
+  background:rgba(255,255,255,.93)!important;
+  box-shadow:var(--pretty-shadow)!important;
+}
+
+.staff-page-content .module-pretty-toolbar,
+.staff-page-content .toolbar,
+.staff-page-content .shift-toolbar,
+.staff-page-content .maint-sticky-bar,
+.staff-page-content .overview-actions{
+  padding:12px 14px!important;
+}
+
+.staff-page-content .rb-view-controls,
+.staff-page-content .rb-breakfast-strip{
+  padding:11px 13px!important;
+}
+
+.staff-page-content .room-check-summary{
+  padding:9px!important;
+}
+
+/* Buttons and fields */
+.staff-page-content input,
+.staff-page-content select,
+.staff-page-content textarea{
+  border:1px solid #d6dde5!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#172033!important;
+  box-shadow:none!important;
+}
+.staff-page-content input:focus,
+.staff-page-content select:focus,
+.staff-page-content textarea:focus{
+  border-color:#8ea5bd!important;
+  outline:3px solid rgba(111,143,174,.13)!important;
+}
+.staff-page-content .ops-primary-btn,
+.staff-page-content .rs-btn,
+.staff-page-content .btn:not(.secondary):not(.danger){
+  border-radius:11px!important;
+  background:#20252b!important;
+  color:#fff!important;
+  box-shadow:0 7px 16px rgba(24,32,45,.12)!important;
+}
+.staff-page-content .ops-secondary-btn,
+.staff-page-content .rs-btn.rs-secondary,
+.staff-page-content .btn.secondary{
+  border:1px solid #d9e0e7!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#253142!important;
+}
+.staff-page-content .ops-primary-btn:hover,
+.staff-page-content .rs-btn:hover,
+.staff-page-content .btn:hover{transform:translateY(-1px)}
+.staff-page-content .ops-secondary-btn:hover,
+.staff-page-content .btn.secondary:hover{background:#f7f9fb!important}
+
+/* All working surfaces */
+.staff-page-content .card,
+.staff-page-content .rb-room-card,
+.staff-page-content .hsk-assigned-card,
+.staff-page-content .hsk-table-wrapper,
+.staff-page-content .room-check-card,
+.staff-page-content .shift-section,
+.staff-page-content .maint-add-card,
+.staff-page-content .maint-room-card,
+.staff-page-content .rs-upload-card,
+.staff-page-content .rs-reservation,
+.staff-page-content .rs-history,
+.staff-page-content .overview-panel,
+.staff-page-content .hsk-guide-card,
+.staff-page-content .hsk-zone-card,
+.staff-page-content .department-note-card,
+.staff-page-content .inventory-request-card,
+.staff-page-content .inventory-catalog,
+.staff-page-content .inventory-add-card,
+.staff-page-content .inventory-item{
+  border:1px solid var(--pretty-line)!important;
+  border-radius:16px!important;
+  background:linear-gradient(145deg,#fff,#fbfcfe)!important;
+  box-shadow:var(--pretty-shadow)!important;
+}
+
+.staff-page-content .card,
+.staff-page-content .shift-section,
+.staff-page-content .maint-add-card,
+.staff-page-content .overview-panel,
+.staff-page-content .hsk-guide-card,
+.staff-page-content .department-note-card,
+.staff-page-content .inventory-request-card,
+.staff-page-content .inventory-catalog,
+.staff-page-content .inventory-add-card{
+  padding:16px!important;
+}
+
+.staff-page-content .rb-room-card:hover,
+.staff-page-content .hsk-assigned-card:hover,
+.staff-page-content .maint-room-card:hover,
+.staff-page-content .rs-reservation:hover,
+.staff-page-content .inventory-item:hover{
+  box-shadow:var(--pretty-shadow-hover)!important;
+}
+
+/* Status and summary chips */
+.staff-page-content .rb-summary-strip span,
+.staff-page-content .room-check-summary span,
+.staff-page-content .pill,
+.staff-page-content .shift-badge,
+.staff-page-content .hsk-complete-pill,
+.staff-page-content .status-badge{
+  border-radius:999px!important;
+  border-color:#dce3ea!important;
+  background:#f8fafc!important;
+}
+
+/* Front Desk */
+.staff-page-content .front-desk-page .card>h2{
+  margin:0 0 12px!important;
+  color:#172033!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:16px!important;
+  font-weight:800!important;
+}
+.staff-page-content .fd-breakfast-pill{
+  border:1px solid #e1e6ec!important;
+  border-left:4px solid #6f8fae!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  box-shadow:0 6px 16px rgba(45,63,94,.04)!important;
+}
+.staff-page-content .fd-breakfast-pill.is-received{
+  border-left-color:#6f9a78!important;
+  background:linear-gradient(90deg,#f3fbf5,#fff 22%)!important;
+}
+.staff-page-content .fd-breakfast-pill.is-missing{
+  border-left-color:#d2a64f!important;
+  background:linear-gradient(90deg,#fffaf0,#fff 22%)!important;
+}
+
+/* Room Board */
+.staff-page-content .rb-toolbar-actions{align-items:flex-end!important}
+.staff-page-content .rb-date-control,
+.staff-page-content .date-control{
+  padding:8px 10px!important;
+  border:1px solid rgba(61,80,110,.10)!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.78)!important;
+}
+.staff-page-content .rb-room-card{
+  border-left-width:4px!important;
+  background:#fff!important;
+}
+.staff-page-content .rb-details{
+  border-color:#e7ebef!important;
+  background:#f8fafc!important;
+}
+.staff-page-content .rb-room-card select,
+.staff-page-content .rb-room-card input,
+.staff-page-content .rb-room-card textarea{
+  background:#fbfcfe!important;
+}
+
+/* Housekeeping */
+.staff-page-content .hsk-assigned-card{
+  border-left:4px solid #6f8fae!important;
+}
+.staff-page-content .hsk-assigned-card.complete{
+  border-left-color:#6f9a78!important;
+  background:linear-gradient(145deg,#f7fff9,#fff)!important;
+}
+.staff-page-content .hsk-table-wrapper{
+  padding:0!important;
+  overflow:hidden!important;
+}
+.staff-page-content .hsk-table-wrapper th{
+  background:#f6f9fc!important;
+  color:#68788b!important;
+  font-size:8px!important;
+  text-transform:uppercase!important;
+  letter-spacing:.06em!important;
+}
+.staff-page-content .hsk-table-wrapper td{border-color:#e8edf2!important}
+
+/* Room checks */
+.staff-page-content .room-check-card{border-left:4px solid #8ba0b5!important}
+.staff-page-content .room-check-card.has-issue{border-left-color:#b85c56!important}
+.staff-page-content .room-check-header{
+  background:linear-gradient(180deg,#fbfdff,#f7f9fc)!important;
+}
+.staff-page-content .room-check-zone h3{
+  background:#f7f9fc!important;
+  border-color:#e2e7ed!important;
+  color:#66778a!important;
+}
+.staff-page-content .room-check-item{border-color:#e9edf2!important}
+.staff-page-content .room-check-item.pass{background:#f8fdf9!important}
+.staff-page-content .room-check-item.fail{background:#fff9f8!important}
+
+/* Shift report */
+.staff-page-content .shift-tabs{
+  gap:8px!important;
+  padding:5px!important;
+  border:1px solid var(--pretty-line)!important;
+  border-radius:13px!important;
+  background:#f7f9fb!important;
+}
+.staff-page-content .shift-tabs button{
+  border:0!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:#647183!important;
+}
+.staff-page-content .shift-tabs button.active{
+  background:#fff!important;
+  color:#172033!important;
+  box-shadow:0 4px 12px rgba(45,63,94,.08)!important;
+}
+.staff-page-content .shift-snapshot-section{
+  background:var(--pretty-gradient)!important;
+}
+.staff-page-content .shift-snapshot-grid>div{
+  border:1px solid rgba(61,80,110,.09)!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.78)!important;
+}
+.staff-page-content .shift-action-item{border-color:#e7ebef!important}
+
+/* Maintenance */
+.staff-page-content .maint-add-card{background:var(--pretty-gradient)!important}
+.staff-page-content .maint-room-card{border-left:4px solid #6f8fae!important}
+.staff-page-content .maint-room-header{
+  background:linear-gradient(180deg,#fbfdff,#f7f9fc)!important;
+}
+.staff-page-content .maint-ticket{border-color:#e8edf2!important}
+.staff-page-content .maint-filter-row{
+  padding:4px!important;
+  border-radius:11px!important;
+  background:#f4f7fa!important;
+}
+.staff-page-content .maint-filter-row button{
+  border:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  color:#647183!important;
+}
+.staff-page-content .maint-filter-row button.active{
+  background:#fff!important;
+  color:#172033!important;
+  box-shadow:0 4px 12px rgba(45,63,94,.08)!important;
+}
+
+/* Reservation Sync */
+.staff-page-content .rs-upload-card{background:var(--pretty-gradient)!important}
+.staff-page-content .rs-stats>div{
+  border:1px solid rgba(61,80,110,.09)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:var(--pretty-shadow)!important;
+}
+.staff-page-content .rs-reservation{border-left:4px solid #6f8fae!important}
+.staff-page-content .rs-reservation.needs-review{border-left-color:#d2a64f!important}
+.staff-page-content .rs-row-top{
+  padding-bottom:10px!important;
+  border-bottom:1px solid #e7ebef!important;
+}
+
+/* Breakfast Overview */
+.staff-page-content .overview-title-row{margin:0 0 14px!important}
+.staff-page-content .overview-panel h3{
+  color:#172033!important;
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:14px!important;
+  font-weight:800!important;
+}
+.staff-page-content .overview-table th{
+  background:#f4f7fa!important;
+  color:#647183!important;
+}
+.staff-page-content .overview-table tr:nth-child(even) td{background:#fbfcfe!important}
+.staff-page-content .summary-chip{
+  border:1px solid #dce3ea!important;
+  border-radius:999px!important;
+  background:#f8fafc!important;
+}
+
+/* Inventory, laundry, lobby, resources */
+.staff-page-content .inventory-item{
+  padding:12px!important;
+  background:#fff!important;
+}
+.staff-page-content .inventory-request-row{
+  padding:10px 0!important;
+  border-color:#e7ebef!important;
+}
+.staff-page-content .hsk-resource-tabs{
+  padding:5px!important;
+  border:1px solid var(--pretty-line)!important;
+  border-radius:13px!important;
+  background:#f7f9fb!important;
+}
+.staff-page-content .hsk-resource-tabs button{
+  border:0!important;
+  border-radius:9px!important;
+  background:transparent!important;
+}
+.staff-page-content .hsk-resource-tabs button.active{
+  background:#fff!important;
+  color:#172033!important;
+  box-shadow:0 4px 12px rgba(45,63,94,.08)!important;
+}
+
+/* Dark mode */
+html[data-theme="dark"] .staff-page-content{
+  --pretty-line:#334250;
+  --pretty-text:#f2f6fa;
+  --pretty-muted:#aebbc7;
+  --pretty-shadow:0 12px 28px rgba(0,0,0,.20);
+  --pretty-shadow-hover:0 16px 34px rgba(0,0,0,.28);
+  --pretty-gradient:
+    radial-gradient(circle at 12% 12%,rgba(47,220,193,.14),transparent 28%),
+    radial-gradient(circle at 84% 20%,rgba(126,92,255,.16),transparent 32%),
+    linear-gradient(135deg,#17222d,#1a2633 55%,#211d33);
+}
+html[data-theme="dark"] .staff-page-content .module-pretty-hero,
+html[data-theme="dark"] .staff-page-content .rb-toolbar,
+html[data-theme="dark"] .staff-page-content .ops-module>.module-toolbar,
+html[data-theme="dark"] .staff-page-content .room-checks-page>.module-toolbar,
+html[data-theme="dark"] .staff-page-content .rs-hero-card,
+html[data-theme="dark"] .staff-page-content .overview-title-row,
+html[data-theme="dark"] .staff-page-content .hsk-resource-topbar{
+  border-color:#344451!important;
+  background:var(--pretty-gradient)!important;
+}
+html[data-theme="dark"] .staff-page-content .module-pretty-hero h1,
+html[data-theme="dark"] .staff-page-content .rb-toolbar h1,
+html[data-theme="dark"] .staff-page-content .ops-module>.module-toolbar h1,
+html[data-theme="dark"] .staff-page-content .room-checks-page>.module-toolbar h1,
+html[data-theme="dark"] .staff-page-content .rs-hero-card h1,
+html[data-theme="dark"] .staff-page-content .overview-title-row h1{
+  color:#f2f6fa!important;
+}
+html[data-theme="dark"] .staff-page-content .module-pretty-hero p,
+html[data-theme="dark"] .staff-page-content .rb-toolbar p,
+html[data-theme="dark"] .staff-page-content .ops-module>.module-toolbar p,
+html[data-theme="dark"] .staff-page-content .room-checks-page>.module-toolbar p,
+html[data-theme="dark"] .staff-page-content .rs-hero-card p{
+  color:#aebbc7!important;
+}
+html[data-theme="dark"] .staff-page-content .module-pretty-hero-stat,
+html[data-theme="dark"] .staff-page-content .shift-snapshot-grid>div{
+  background:rgba(18,27,36,.72)!important;
+  border-color:#344451!important;
+}
+html[data-theme="dark"] .staff-page-content .module-pretty-hero-stat span,
+html[data-theme="dark"] .staff-page-content .module-pretty-hero-stat strong{color:#f2f6fa!important}
+html[data-theme="dark"] .staff-page-content .toolbar,
+html[data-theme="dark"] .staff-page-content .rb-view-controls,
+html[data-theme="dark"] .staff-page-content .rb-breakfast-strip,
+html[data-theme="dark"] .staff-page-content .shift-toolbar,
+html[data-theme="dark"] .staff-page-content .maint-sticky-bar,
+html[data-theme="dark"] .staff-page-content .overview-actions,
+html[data-theme="dark"] .staff-page-content .room-check-summary{
+  background:#18232e!important;
+  border-color:#334250!important;
+}
+html[data-theme="dark"] .staff-page-content .card,
+html[data-theme="dark"] .staff-page-content .rb-room-card,
+html[data-theme="dark"] .staff-page-content .hsk-assigned-card,
+html[data-theme="dark"] .staff-page-content .hsk-table-wrapper,
+html[data-theme="dark"] .staff-page-content .room-check-card,
+html[data-theme="dark"] .staff-page-content .shift-section,
+html[data-theme="dark"] .staff-page-content .maint-room-card,
+html[data-theme="dark"] .staff-page-content .rs-reservation,
+html[data-theme="dark"] .staff-page-content .rs-history,
+html[data-theme="dark"] .staff-page-content .overview-panel,
+html[data-theme="dark"] .staff-page-content .hsk-guide-card,
+html[data-theme="dark"] .staff-page-content .inventory-item{
+  background:linear-gradient(145deg,#18232e,#141c25)!important;
+  border-color:#334250!important;
+  color:#edf3f8!important;
+}
+html[data-theme="dark"] .staff-page-content input,
+html[data-theme="dark"] .staff-page-content select,
+html[data-theme="dark"] .staff-page-content textarea{
+  background:#111923!important;
+  border-color:#3a4857!important;
+  color:#eef4f9!important;
+}
+html[data-theme="dark"] .staff-page-content .ops-secondary-btn,
+html[data-theme="dark"] .staff-page-content .rs-btn.rs-secondary,
+html[data-theme="dark"] .staff-page-content .btn.secondary{
+  background:#202b36!important;
+  border-color:#3a4857!important;
+  color:#eef4f9!important;
+}
+html[data-theme="dark"] .staff-page-content .room-check-header,
+html[data-theme="dark"] .staff-page-content .maint-room-header,
+html[data-theme="dark"] .staff-page-content .rs-row-top{
+  background:linear-gradient(180deg,#202c39,#1a2530)!important;
+  border-color:#334250!important;
+}
+html[data-theme="dark"] .staff-page-content .shift-tabs,
+html[data-theme="dark"] .staff-page-content .maint-filter-row,
+html[data-theme="dark"] .staff-page-content .hsk-resource-tabs{
+  background:#131c25!important;
+  border-color:#334250!important;
+}
+html[data-theme="dark"] .staff-page-content .shift-tabs button.active,
+html[data-theme="dark"] .staff-page-content .maint-filter-row button.active,
+html[data-theme="dark"] .staff-page-content .hsk-resource-tabs button.active{
+  background:#253342!important;
+  color:#f2f6fa!important;
+}
+
+/* Mobile */
+@media(max-width:760px){
+  .staff-page-content .module-pretty-hero{
+    display:grid;
+    align-items:stretch;
+  }
+  .staff-page-content .module-pretty-hero-stat{width:100%}
+  .staff-page-content .module-pretty-hero h1,
+  .staff-page-content .rb-toolbar h1,
+  .staff-page-content .ops-module>.module-toolbar h1,
+  .staff-page-content .room-checks-page>.module-toolbar h1,
+  .staff-page-content .rs-hero-card h1,
+  .staff-page-content .overview-title-row h1{
+    font-size:27px!important;
+  }
+}
