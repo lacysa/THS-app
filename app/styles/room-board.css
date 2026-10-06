@@ -283,3 +283,159 @@
     grid-template-columns:repeat(2,1fr);
   }
 }
+
+
+/* Compact HSK filter menu */
+.rb-view-controls{
+  position:relative;
+  align-items:center;
+}
+.rb-view-actions{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.rb-filter-menu{
+  position:relative;
+}
+.rb-filter-button.is-active{
+  background:#232321;
+  color:#fff;
+  border-color:#232321;
+}
+.rb-filter-panel{
+  position:absolute;
+  z-index:60;
+  top:calc(100% + 7px);
+  left:0;
+  width:min(560px,calc(100vw - 48px));
+  max-height:min(70vh,620px);
+  overflow:auto;
+  padding:12px;
+  border:1px solid var(--ths-line);
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 14px 35px rgba(0,0,0,.14);
+}
+.rb-filter-panel-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--ths-line);
+}
+.rb-filter-panel-head strong{font-size:12px}
+.rb-filter-panel-head button{
+  border:0;
+  background:transparent;
+  color:var(--ths-muted);
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.rb-filter-panel fieldset{
+  margin:10px 0 0;
+  padding:0;
+  border:0;
+}
+.rb-filter-panel legend{
+  margin-bottom:6px;
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--ths-muted);
+}
+.rb-check-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+}
+.rb-check-grid label{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  padding:7px 8px;
+  border:1px solid var(--ths-line);
+  border-radius:7px;
+  background:#fafafa;
+  font-size:10px;
+  cursor:pointer;
+}
+.rb-check-grid input{
+  width:15px;
+  height:15px;
+  flex:none;
+}
+.rb-check-grid span{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:900px){
+  .rb-view-actions{
+    width:100%;
+  }
+  .rb-view-actions>button,
+  .rb-filter-menu{
+    flex:1 1 0;
+  }
+  .rb-filter-menu>.rb-filter-button{
+    width:100%;
+    justify-content:center;
+  }
+}
+
+@media(max-width:560px){
+  .rb-toolbar-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    width:100%;
+  }
+  .rb-toolbar-actions .rb-save{
+    grid-column:1/-1;
+    justify-self:start;
+  }
+  .rb-date-control{
+    grid-column:1/-1;
+    width:100%;
+  }
+  .rb-date-control input{
+    width:100%!important;
+    min-width:0!important;
+  }
+  .rb-refresh-btn,
+  .rb-save-btn{
+    grid-column:auto;
+    width:100%!important;
+    min-width:0;
+    justify-content:center;
+  }
+
+  .rb-filter-panel{
+    position:fixed;
+    left:16px;
+    right:16px;
+    top:auto;
+    bottom:18px;
+    width:auto;
+    max-height:72vh;
+    border-radius:14px;
+  }
+  .rb-check-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .rb-view-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .rb-filter-menu{
+    grid-column:1/-1;
+  }
+}
+
+.rb-filter-grid{display:none!important}
