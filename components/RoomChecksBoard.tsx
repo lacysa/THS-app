@@ -36,7 +36,7 @@ export default function RoomChecksBoard(){
 
   const counts=useMemo(()=>({rooms:rooms.length,passed:rooms.filter(r=>r.inspected&&!r.issueOpen).length,issues:rooms.filter(r=>r.issueOpen).length}),[rooms])
 
-  return <div className="room-checks-page">
+  return <div className="room-checks-page module-pretty-page">
     <div className="module-toolbar">
       <div><div className="module-kicker">Housekeeping Quality</div><h1>Room Checks</h1><p>Checkout and out/in rooms requiring final inspection.</p></div>
       <div className="toolbar-actions"><label className="date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="ops-secondary-btn" onClick={()=>void load(true)}><RefreshCw size={15}/>Refresh</button></div>
