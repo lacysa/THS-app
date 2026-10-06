@@ -72,7 +72,17 @@ export default function ReservationSyncBoard(){
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i)
       const content=await page.getTextContent()
-      let text=(content.items||[]).map((item:any)=>`${item.str||''}${item.hasEOL?'\n':' '}`).join('').replace(/[^\S\r\n]+/g,' ').trim()
+      const positioned=(content.items||[])
+        .filter((item:any)=>String(item.str||'').trim())
+        .map((item:any)=>({text:String(item.str||'').trim(),x:Number(item.transform?.[4]||0),y:Number(item.transform?.[5]||0)}))
+      const rowBuckets:{y:number;items:{text:string;x:number;y:number}[]}[]=[]
+      for(const item of positioned){
+        let row=rowBuckets.find(bucket=>Math.abs(bucket.y-item.y)<=2.2)
+        if(!row){ row={y:item.y,items:[]}; rowBuckets.push(row) }
+        row.items.push(item)
+      }
+      rowBuckets.sort((a,b)=>b.y-a.y)
+      let text=rowBuckets.map(row=>row.items.sort((a,b)=>a.x-b.x).map(item=>item.text).join(' | ')).join('\n').trim()
       if(text.length<180){
         if(!worker){
           setProgress('Starting document reader…')
@@ -178,7 +188,7 @@ export default function ReservationSyncBoard(){
               {stay.products_raw&&<div className="wide"><b>Packages</b><span>{stay.products_raw}</span></div>}
               {stay.innkeeper_notes&&<div className="wide"><b>Innkeeper</b><span>{stay.innkeeper_notes}</span></div>}
               {stay.guest_comments&&<div className="wide"><b>Guest comment</b><span>{stay.guest_comments}</span></div>}
-              {stay.dietary_restrictions&&<div className="wide"><b>Dietary</b><span>{stay.dietary_restrictions}</span></div>}
+              {stay.dietary_restrictions && !/^(no|none|n\/a|no dietary restrictions)$/i.test(String(stay.dietary_restrictions).trim()) && <div className="wide"><b>Dietary</b><span>{stay.dietary_restrictions}</span></div>}
             </div>}
           </article>
         })}
@@ -224,12 +234,12 @@ export default function ReservationSyncBoard(){
             <label>Room<select value={row.roomName||''} onChange={e=>patch(index,{roomName:e.target.value||null})}><option value="">Choose room</option>{rooms.map(room=><option key={room.id}>{room.name}</option>)}</select></label>
             <label>Arrival<input type="date" value={row.arrivalDate||''} onChange={e=>patch(index,{arrivalDate:e.target.value||null})}/></label>
             <label>Checkout<input type="date" value={row.checkoutDate||''} onChange={e=>patch(index,{checkoutDate:e.target.value||null})}/></label>
-            <label>Phone<input value={row.phone||''} onChange={e=>{const digits=e.target.value.replace(/\D/g,'');patch(index,{phone:e.target.value,doorCode:digits.length>=4?digits.slice(-4):null})}}/></label>
             <label>Door code<input value={row.doorCode||''} readOnly/></label>
             <label>Occupancy<input type="number" min="1" max="8" value={row.occupancy||''} onChange={e=>patch(index,{occupancy:e.target.value?Number(e.target.value):null})}/></label>
             <label>Check-in<input value={row.checkInTime||''} onChange={e=>patch(index,{checkInTime:e.target.value})}/></label>
             <label className="wide">Rate / booking product<input value={row.ratePlan||''} onChange={e=>patch(index,{ratePlan:e.target.value})}/></label>
             <label className="wide">Packages / products<input value={row.productsRaw||''} onChange={e=>patch(index,{productsRaw:e.target.value})}/></label>
+            <label className="wide">Dietary restrictions<input value={row.dietaryRestrictions||''} onChange={e=>patch(index,{dietaryRestrictions:e.target.value})}/></label>
             <label className="wide">Innkeeper notes<textarea value={row.innkeeperNotes||''} onChange={e=>patch(index,{innkeeperNotes:e.target.value})}/></label>
             <label className="wide">Guest comments<textarea value={row.guestComments||''} onChange={e=>patch(index,{guestComments:e.target.value})}/></label>
           </div>
