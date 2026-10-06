@@ -16,3 +16,19 @@
 @media(max-width:1100px){.rb-room-main{grid-template-columns:1.2fr 1fr 85px 1fr 105px auto}.rb-end-field{grid-column:2/4}.rb-details-btn{grid-column:6}.rb-detail-grid{grid-template-columns:1fr 1fr}.rb-packages,.rb-notes{grid-column:auto}}
 @media(max-width:900px){.rb-toolbar{align-items:flex-start;flex-direction:column}.rb-toolbar-actions{width:100%}.rb-breakfast-strip{align-items:flex-start;flex-direction:column}.rb-room-main{grid-template-columns:1fr 1fr;gap:10px}.rb-room-name{grid-column:1/-1}.rb-staff-summary{grid-column:1}.rb-progress{grid-column:2}.rb-end-field{grid-column:1/-1}.rb-details-btn{grid-column:1/-1;width:100%}.rb-detail-grid{grid-template-columns:1fr}.rb-packages,.rb-notes{grid-column:auto}}
 @media(max-width:560px){.rb-toolbar-actions>*{flex:1 1 auto}.rb-save{flex:0 0 auto}.rb-room-main{grid-template-columns:1fr}.rb-room-name,.rb-staff-summary,.rb-progress,.rb-end-field,.rb-details-btn{grid-column:auto}.rb-progress{padding:7px 0}.rb-summary-strip{display:grid;grid-template-columns:repeat(3,1fr)}.rb-summary-strip span{text-align:center}}
+
+.rb-breakfast-toggle{
+  border:1px solid var(--ths-line);
+  color:var(--ths-muted);
+  cursor:pointer;
+  font:inherit;
+}
+.rb-breakfast-toggle:hover{
+  border-color:#d9bd72;
+  color:#7c5a14;
+}
+.rb-breakfast-toggle.is-active{
+  background:#fff3d6;
+  border-color:#e5c66f;
+  color:#7c5a14;
+}
