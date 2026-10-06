@@ -84,6 +84,34 @@ export async function POST(req:NextRequest) {
     .single()
 
   if (error || !booking) {
+    // Database also enforces one active booking per room/date. If another
+    // request won the race, reuse that existing booking instead of allowing
+    // a second empty booking to supersede the original menu.
+    if ((error as any)?.code === '23505') {
+      const { data:raceExisting } = await supabase
+        .from('breakfast_bookings')
+        .select('id,guest_token,menu_submitted')
+        .eq('service_date',cycle.serviceDate)
+        .eq('room_id',room.id)
+        .eq('status','scheduled')
+        .maybeSingle()
+
+      if (raceExisting?.menu_submitted) {
+        return NextResponse.json({
+          ok:false,
+          message:'Your breakfast menu has already been received.'
+        },{status:409})
+      }
+
+      if (raceExisting?.guest_token) {
+        return NextResponse.json({
+          ok:true,
+          existing:true,
+          redirectUrl:`/breakfast/menu?token=${encodeURIComponent(raceExisting.guest_token)}`
+        })
+      }
+    }
+
     console.error('Breakfast reservation insert failed:', error)
     return NextResponse.json({ok:false,message:error?.message || 'We could not save that breakfast time. Please try again.'},{status:500})
   }
