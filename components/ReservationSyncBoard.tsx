@@ -135,32 +135,6 @@ export default function ReservationSyncBoard(){
       </div>
     </section>
 
-    {daily.length>0 && <section className="rs-daily-board">
-      <div className="rs-daily-head">
-        <div><div className="rs-kicker">Daily operations</div><h2>{verifyDate} stay information</h2></div>
-        <span>{daily.filter(r=>r.status!=='Vacant').length} occupied / changing rooms</span>
-      </div>
-      <div className="rs-daily-grid">
-        {daily.filter(item=>item.status!=='Vacant').map(item=>{
-          const stay=item.arriving||item.primary||item.departing
-          return <article className={`rs-daily-room status-${String(item.status||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')}`} key={item.roomId}>
-            <div className="rs-daily-room-top"><strong>{item.roomName}</strong><span>{item.status}</span></div>
-            {item.status==='Out/In' && <div className="rs-outin"><span>OUT {item.departing?.guest_name||'—'}</span><span>IN {item.arriving?.guest_name||'—'}</span></div>}
-            {stay && <div className="rs-daily-info">
-              <div><b>Guest</b><span>{stay.guest_name||'—'}</span></div>
-              <div><b>Door</b><span className="rs-door-code">{stay.door_code||'—'}</span></div>
-              <div><b>Stay</b><span>{stay.arrival_date} → {stay.checkout_date}</span></div>
-              <div><b>Check-in</b><span>{stay.check_in_time||'—'}</span></div>
-              {stay.products_raw&&<div className="wide"><b>Packages</b><span>{stay.products_raw}</span></div>}
-              {stay.innkeeper_notes&&<div className="wide"><b>Innkeeper</b><span>{stay.innkeeper_notes}</span></div>}
-              {stay.guest_comments&&<div className="wide"><b>Guest comment</b><span>{stay.guest_comments}</span></div>}
-              {stay.dietary_restrictions && !/^(no|none|n\/a|no dietary restrictions)$/i.test(String(stay.dietary_restrictions).trim()) && <div className="wide"><b>Dietary</b><span>{stay.dietary_restrictions}</span></div>}
-            </div>}
-          </article>
-        })}
-      </div>
-    </section>}
-
     <section className="rs-upload-card">
       <label className={`rs-drop ${file?'has-file':''}`}>
         <input type="file" accept="application/pdf,.pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setRows([]);setError('');setSuccess('')}}/>
