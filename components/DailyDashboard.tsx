@@ -172,8 +172,12 @@ export default function DailyDashboard({
   const declinedBreakfast = breakfast.filter(r=>r.status==='declined')
 
   const hkComplete = housekeeping.filter(r=>r.complete)
-  const roomChecksPassed = housekeeping.filter(r=>Boolean(r.fohCheckInitials))
-  const roomCheckCorrections = housekeeping.filter(r=>r.checkIssueOpen)
+
+  // Only these room states belong in the room-check workflow.
+  const roomCheckEligibleStatuses = new Set(['Checkout','Out/In','Vacant','Arrival'])
+  const roomCheckRooms = housekeeping.filter(r=>roomCheckEligibleStatuses.has(r.reservationStatus))
+  const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials))
+  const roomCheckCorrections = roomCheckRooms.filter(r=>r.checkIssueOpen)
 
   const maintenanceOpen = maintenance.filter(r=>r.status!=='complete')
   const urgentMaintenance = maintenanceOpen.filter(r=>r.priority==='urgent')
@@ -185,7 +189,7 @@ export default function DailyDashboard({
     !splitStaff(row.assignedTo).length &&
     (Boolean(row.serviceType) || ['Checkout','Out/In'].includes(row.reservationStatus))
   )
-  const pendingChecks = housekeeping.filter(row=>row.complete && !row.fohCheckInitials && !row.checkIssueOpen)
+  const pendingChecks = roomCheckRooms.filter(row=>row.complete && !row.fohCheckInitials && !row.checkIssueOpen)
   const arrivals = housekeeping.filter(row=>['Arrival','Out/In'].includes(row.reservationStatus))
   const arrivalsNotReady = arrivals.filter(row=>row.roomCondition!=='Ready')
   const packageRooms = arrivals.filter(row=>row.packages.length>0)
@@ -197,6 +201,7 @@ export default function DailyDashboard({
     roomCheckCorrections.length +
     pendingChecks.length +
     arrivalsNotReady.length +
+    packageRooms.length +
     urgentMaintenance.length +
     openInventory.length
 
@@ -236,30 +241,34 @@ export default function DailyDashboard({
       value:`${hkComplete.length}/${housekeeping.length}`,
       sub:`${housekeeping.filter(r=>r.serviceType.toUpperCase().startsWith('OUT')).length} OUT · ${housekeeping.filter(r=>r.serviceType==='RF').length} RF`,
       icon:BedDouble,
-      href:'/housekeeping'
+      href:'/housekeeping',
+      tone:hkComplete.length===housekeeping.length && housekeeping.length>0 ? 'good' : 'neutral'
     } : null,
     showBreakfast ? {
       label:`Breakfast · ${breakfastDate.slice(5)}`,
       value:String(breakfastScheduled.length),
       sub:`${missingMenus.length} missing · ${receivedMenus.length} received`,
       icon:UtensilsCrossed,
-      href:'/front-desk'
+      href:'/front-desk',
+      tone:missingMenus.length>0 ? 'warning' : 'good'
     } : null,
     showHousekeeping ? {
       label:'Room checks',
-      value:`${roomChecksPassed.length}/${housekeeping.length}`,
-      sub:`${housekeeping.length-roomChecksPassed.length} pending · ${roomCheckCorrections.length} correction${roomCheckCorrections.length===1?'':'s'}`,
+      value:`${roomChecksPassed.length}/${roomCheckRooms.length}`,
+      sub:`${Math.max(0,roomCheckRooms.length-roomChecksPassed.length)} pending · ${roomCheckCorrections.length} correction${roomCheckCorrections.length===1?'':'s'}`,
       icon:ClipboardCheck,
-      href:'/room-checks'
+      href:'/room-checks',
+      tone:roomCheckCorrections.length>0 ? 'danger' : (roomCheckRooms.length>0 && roomChecksPassed.length===roomCheckRooms.length ? 'good' : 'neutral')
     } : null,
     showMaintenance ? {
       label:'Maintenance',
       value:String(maintenanceOpen.length),
       sub:`${urgentMaintenance.length} urgent`,
       icon:Wrench,
-      href:'/maintenance'
+      href:'/maintenance',
+      tone:urgentMaintenance.length>0 ? 'danger' : (maintenanceOpen.length>0 ? 'warning' : 'good')
     } : null
-  ].filter(Boolean) as Array<{label:string;value:string;sub:string;icon:any;href:string}>
+  ].filter(Boolean) as Array<{label:string;value:string;sub:string;icon:any;href:string;tone:'neutral'|'good'|'warning'|'danger'}>
 
   return (
     <div className="daily-dashboard">
@@ -277,8 +286,8 @@ export default function DailyDashboard({
 
       {metrics.length > 0 && (
         <div className="daily-metric-grid">
-          {metrics.map(({label,value,sub,icon:Icon,href})=>(
-            <Link className="daily-metric-card daily-link-card" href={href} key={label}>
+          {metrics.map(({label,value,sub,icon:Icon,href,tone})=>(
+            <Link className={`daily-metric-card daily-link-card tone-${tone}`} href={href} key={label}>
               <span className="daily-metric-icon"><Icon size={17}/></span>
               <div>
                 <span>{label}</span>
@@ -300,49 +309,55 @@ export default function DailyDashboard({
         ) : (
           <div className="daily-attention-groups">
             {missingMenus.length>0 && (
-              <Link href="/front-desk" className="daily-attention-item">
+              <Link href="/front-desk" className="daily-attention-item tone-warning">
                 <span>{missingMenus.length}</span>
                 <div><strong>Missing breakfast menus</strong><small>{missingMenus.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
             {blockedRooms.length>0 && (
-              <Link href="/housekeeping" className="daily-attention-item">
+              <Link href="/housekeeping" className="daily-attention-item tone-danger">
                 <span>{blockedRooms.length}</span>
                 <div><strong>Blocked / hold rooms</strong><small>{blockedRooms.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
             {unassignedService.length>0 && (
-              <Link href="/room-board" className="daily-attention-item">
+              <Link href="/room-board" className="daily-attention-item tone-warning">
                 <span>{unassignedService.length}</span>
                 <div><strong>Service rooms unassigned</strong><small>{unassignedService.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
             {roomCheckCorrections.length>0 && (
-              <Link href="/room-checks" className="daily-attention-item">
+              <Link href="/room-checks" className="daily-attention-item tone-danger">
                 <span>{roomCheckCorrections.length}</span>
                 <div><strong>Rooms need correction</strong><small>{roomCheckCorrections.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
             {pendingChecks.length>0 && (
-              <Link href="/room-checks" className="daily-attention-item">
+              <Link href="/room-checks" className="daily-attention-item tone-info">
                 <span>{pendingChecks.length}</span>
                 <div><strong>Completed rooms awaiting FOH check</strong><small>{pendingChecks.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
             {arrivalsNotReady.length>0 && (
-              <Link href="/housekeeping" className="daily-attention-item">
+              <Link href="/housekeeping" className="daily-attention-item tone-warning">
                 <span>{arrivalsNotReady.length}</span>
                 <div><strong>Arrival rooms not marked Ready</strong><small>{arrivalsNotReady.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
+            {packageRooms.length>0 && (
+              <Link href="/room-board" className="daily-attention-item tone-info">
+                <span>{packageRooms.length}</span>
+                <div><strong>Arrival packages due today</strong><small>{packageRooms.map(r=>`${r.roomName}: ${r.packages.join(', ')}`).join(' · ')}</small></div>
+              </Link>
+            )}
             {urgentMaintenance.length>0 && (
-              <Link href="/maintenance" className="daily-attention-item">
+              <Link href="/maintenance" className="daily-attention-item tone-danger">
                 <span>{urgentMaintenance.length}</span>
                 <div><strong>Urgent maintenance</strong><small>{urgentMaintenance.map(r=>r.location).join(', ')}</small></div>
               </Link>
             )}
             {openInventory.length>0 && (
-              <Link href={openInventory[0]?inventoryHref(openInventory[0].department):'/dashboard'} className="daily-attention-item">
+              <Link href={openInventory[0]?inventoryHref(openInventory[0].department):'/dashboard'} className="daily-attention-item tone-info">
                 <span>{openInventory.length}</span>
                 <div><strong>Open inventory requests</strong><small>{openInventory.map(r=>r.itemName).slice(0,5).join(', ')}</small></div>
               </Link>
@@ -366,7 +381,7 @@ export default function DailyDashboard({
                     <span className={`daily-chip ${row.roomCondition==='Ready'?'done':'warning'}`}>{row.roomCondition || 'Not ready'}</span>
                     {row.assignedTo && <span className="daily-chip">{row.assignedTo}</span>}
                     {row.fohCheckInitials && <span className="daily-chip done">FOH ✓ {row.fohCheckInitials}</span>}
-                    {!row.fohCheckInitials && <span className="daily-chip">Room check pending</span>}
+                    {!row.fohCheckInitials && <span className="daily-chip warning">Room check pending</span>}
                     {row.packages.map(pkg=><span className="daily-chip package" key={pkg}>{pkg}</span>)}
                   </div>
                 </div>
