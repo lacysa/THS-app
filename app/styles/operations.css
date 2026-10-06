@@ -1321,3 +1321,67 @@
     gap:2px;
   }
 }
+
+
+/* Front Desk received booking card refinement */
+.staff-page-content .fd-breakfast-pill.is-received{
+  border-radius:18px;
+  padding:12px 14px 10px;
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb,var(--app-surface,#fff) 94%, #dff3e5 6%),
+      var(--app-surface,#fff));
+  border-color:#bfd2c4;
+  box-shadow:0 10px 24px rgba(35,49,70,.07);
+}
+.staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-main{
+  grid-template-columns:minmax(180px,1fr) auto auto;
+  padding-bottom:8px;
+  border-bottom:1px dashed color-mix(in srgb,var(--app-border,#d7dce3) 78%, transparent);
+}
+.staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-note{
+  padding:8px 0 0;
+}
+.staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-note textarea{
+  min-height:64px;
+  border-radius:12px!important;
+  background:color-mix(in srgb,var(--app-surface,#fff) 97%, #dff3e5 3%)!important;
+}
+.staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-room strong{
+  font-size:13px;
+}
+.staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-room span{
+  font-size:9px;
+}
+.staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-actions{
+  justify-content:flex-end;
+}
+.staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-actions .btn{
+  background:var(--app-surface,#fff);
+}
+html[data-theme="dark"] .staff-page-content .fd-breakfast-pill.is-received{
+  background:linear-gradient(145deg,#1a2a23,#17212b 70%);
+  border-color:#355844;
+}
+html[data-theme="dark"] .staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-main{
+  border-bottom-color:#33453b;
+}
+html[data-theme="dark"] .staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-note textarea{
+  background:#111922!important;
+  color:#f4f7fa!important;
+  border-color:#3a4857!important;
+}
+@media(max-width:900px){
+  .staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-main{
+    grid-template-columns:1fr auto;
+  }
+  .staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-actions{
+    grid-column:1/-1;
+    justify-content:flex-start;
+  }
+}
+@media(max-width:620px){
+  .staff-page-content .fd-breakfast-pill.is-received .fd-breakfast-pill-main{
+    grid-template-columns:1fr;
+  }
+}
