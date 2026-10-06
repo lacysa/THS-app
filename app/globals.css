@@ -918,7 +918,7 @@ html[data-theme="light"] .ops-logo-mark{color:#fff}
 .hsk-metric-row .metric-card{padding:9px 11px;border:1px solid var(--app-border,var(--line));border-radius:10px;background:var(--app-surface,#fff);}
 .hsk-metric-row .metric-card span{display:block;font-size:10px;color:var(--app-muted,var(--muted));text-transform:uppercase;letter-spacing:.04em;}
 .hsk-metric-row .metric-card strong{display:block;margin-top:2px;font-size:20px;line-height:1.05;}
-.hsk-table-wrapper{position:relative;width:100%;max-height:calc(100vh - 290px);min-height:320px;overflow:auto;border:1px solid var(--app-border,var(--line));border-radius:11px;background:var(--app-surface,#fff);}
+.hsk-table-wrapper{position:relative;width:100%;min-height:320px;overflow-x:auto;overflow-y:visible;border:1px solid var(--app-border,var(--line));border-radius:11px;background:var(--app-surface,#fff);}
 .hsk-table{width:100%;min-width:1360px;border-collapse:separate;border-spacing:0;font-size:11px;}
 .hsk-table th{position:sticky;top:0;z-index:12;background:var(--app-surface2,#f4f5f7);color:var(--app-muted,var(--muted));padding:8px 7px;text-align:left;text-transform:uppercase;letter-spacing:.045em;font-size:9px;border-bottom:1px solid var(--app-border,var(--line));white-space:nowrap;}
 .hsk-table td{padding:6px 7px;border-bottom:1px solid var(--app-border,var(--line));vertical-align:middle;background:var(--app-surface,#fff);}
