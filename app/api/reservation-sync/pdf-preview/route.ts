@@ -16,6 +16,8 @@ function norm(v:string){ return String(v||'').toLowerCase().replace(/[^a-z0-9]+/
 
 async function extractPages(file:File){
   if(file.size>12*1024*1024) throw new Error('PDF is too large. Please use an Arrival Report under 12 MB.')
+  const workerModule:any=await import('pdfjs-dist/legacy/build/pdf.worker.mjs')
+  ;(globalThis as any).pdfjsWorker={WorkerMessageHandler:workerModule.WorkerMessageHandler}
   const pdfjs:any=await import('pdfjs-dist/legacy/build/pdf.mjs')
   const data=new Uint8Array(await file.arrayBuffer())
   const loadingTask=pdfjs.getDocument({
