@@ -79,3 +79,10 @@
 .rb-status-field select.rb-status-arrival{border-color:#9fbba8}
 .rb-status-field select.rb-status-vacant{border-color:#b9c0c4}
 .rb-status-field select.rb-status-blocked{border-color:#d3a0a0}
+
+.rb-package-summary{
+  max-width:100%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.25;
+}
