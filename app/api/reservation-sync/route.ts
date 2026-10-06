@@ -177,6 +177,74 @@ export async function POST(req:NextRequest){
   const admin=createSupabaseAdmin()
 
   try{
+    if(body?.action==='previewStructured'){
+      const incoming=Array.isArray(body.reservations)?body.reservations:[]
+      if(!incoming.length) return NextResponse.json({error:'No reservation rows were received from the PMS report.'},{status:400})
+      const rooms=await loadRooms(admin)
+      const roomIdByName=new Map<string,string>(rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
+      const reservations=incoming.map((row:any)=>({
+        ...row,
+        phone:null,
+        reservationKey:String(row.reservationKey||''),
+        reservationNumber:row.reservationNumber?String(row.reservationNumber):null,
+        guestName:String(row.guestName||'').trim(),
+        doorCode:String(row.doorCode||'').replace(/\D/g,'').slice(-4)||null,
+        arrivalDate:validDate(row.arrivalDate)?row.arrivalDate:null,
+        checkoutDate:validDate(row.checkoutDate)?row.checkoutDate:null,
+        roomName:rooms.find((room:any)=>String(room.name)===String(row.roomName))?.name||row.roomName||null,
+        occupancy:Number(row.occupancy)||null,
+        ratePlan:row.ratePlan?String(row.ratePlan).trim():null,
+        checkInTime:row.checkInTime?String(row.checkInTime).trim():null,
+        productsRaw:row.productsRaw?String(row.productsRaw).trim():null,
+        dietaryRestrictions:row.dietaryRestrictions?String(row.dietaryRestrictions).trim():null,
+        referralSource:row.referralSource?String(row.referralSource).trim():null,
+        reasonForVisit:row.reasonForVisit?String(row.reasonForVisit).trim():null,
+        guestComments:row.guestComments?String(row.guestComments).trim():null,
+        innkeeperNotes:row.innkeeperNotes?String(row.innkeeperNotes).trim():null,
+        sourcePage:0,
+        rawText:String(row.rawText||''),
+        confidence:100,
+        warnings:Array.isArray(row.warnings)?row.warnings:[],
+        needsReview:Boolean(row.needsReview)
+      }))
+
+      const keys=reservations.map((row:any)=>row.reservationKey).filter(Boolean)
+      let existing:any[]=[]
+      if(keys.length){
+        const existingResult=await admin.from('reservation_stays')
+          .select('reservation_key,room_id,guest_name,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
+          .in('reservation_key',keys)
+        if(existingResult.error) throw new Error(existingResult.error.message)
+        existing=existingResult.data||[]
+      }
+
+      const oldByKey=new Map<string,any>(existing.map((row:any)=>[String(row.reservation_key),row] as [string,any]))
+      const tracked:any={guestName:'guest_name',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',occupancy:'occupancy',ratePlan:'rate_plan',checkInTime:'check_in_time',productsRaw:'products_raw',dietaryRestrictions:'dietary_restrictions',referralSource:'referral_source',reasonForVisit:'reason_for_visit',guestComments:'guest_comments',innkeeperNotes:'innkeeper_notes'}
+
+      const compared=reservations.map((row:any)=>{
+        const old:any=oldByKey.get(row.reservationKey)
+        const changedFields:any={}
+        if(old){
+          for(const key of Object.keys(tracked)){
+            const before=old[tracked[key]]??null
+            const after=row[key]??null
+            if(String(before??'')!==String(after??'')) changedFields[key]={before,after}
+          }
+          const beforeRoom=String(old.room_id||'')
+          const afterRoom=row.roomName?String(roomIdByName.get(String(row.roomName))||''):''
+          if(beforeRoom!==afterRoom) changedFields.roomName={before:beforeRoom,after:afterRoom}
+        }
+        return {...row,changeType:!old?'new':Object.keys(changedFields).length?'updated':'unchanged',changedFields,include:!row.needsReview}
+      })
+
+      const starts=compared.map((row:any)=>row.arrivalDate).filter(validDate).sort()
+      const ends=compared.map((row:any)=>row.checkoutDate).filter(validDate).sort()
+      const warnings=[]
+      const reviewCount=compared.filter((row:any)=>row.needsReview).length
+      if(reviewCount) warnings.push(String(reviewCount)+' reservation'+(reviewCount===1?'':'s')+' need review before import.')
+
+      return NextResponse.json({reportStartDate:starts[0]||null,reportEndDate:ends[ends.length-1]||null,warnings,reservations:compared})
+    }
     if(body?.action==='preview'){
       const pages=Array.isArray(body.pages)?body.pages.map(String):[]
       if(!pages.length) return NextResponse.json({error:'No report pages were received.'},{status:400})

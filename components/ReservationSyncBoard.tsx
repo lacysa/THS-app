@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, FileUp, RefreshCw, ShieldCheck, TriangleAlert, UploadCloud } from 'lucide-react'
+import { CheckCircle2, ClipboardPaste, FileUp, RefreshCw, ShieldCheck, TriangleAlert, UploadCloud } from 'lucide-react'
 
 type PreviewRow = {
   reservationKey:string
@@ -35,8 +35,110 @@ type Room = {id:string,name:string}
 
 function localDate(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit'}).format(new Date()) }
 
+function isoFromUsDate(value:string){
+  const m=String(value||'').match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})/)
+  return m ? m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0') : null
+}
+
+function cellText(cell:Element){
+  const clone=cell.cloneNode(true) as HTMLElement
+  clone.querySelectorAll('br').forEach(br=>br.replaceWith('\n'))
+  clone.querySelectorAll('div,p').forEach(el=>{
+    el.insertAdjacentText('beforebegin','\n')
+    el.insertAdjacentText('afterend','\n')
+  })
+  return String(clone.textContent||'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/\n\s*\n+/g,'\n').trim()
+}
+
+function extractLabeled(text:string,start:string,stops:string[]){
+  const lower=text.toLowerCase()
+  const startIndex=lower.indexOf(start.toLowerCase())
+  if(startIndex<0) return null
+  const from=startIndex+start.length
+  let end=text.length
+  for(const stop of stops){
+    const idx=lower.indexOf(stop.toLowerCase(),from)
+    if(idx>=0) end=Math.min(end,idx)
+  }
+  return text.slice(from,end).replace(/^[\s:;/\-|]+|[\s:;/\-|]+$/g,'').trim()||null
+}
+
+function parseNoteText(text:string){
+  const dietaryLabel='Do you have any dietary restrictions?'
+  const referralLabel='How did you hear about us?'
+  const reasonLabel='Reason for Your Visit:'
+  const guestLabel='[GUEST COMMENT]:'
+  const innkeeperLabel='[INNKEEPER NOTES]:'
+  return {
+    dietaryRestrictions:extractLabeled(text,dietaryLabel,[referralLabel,reasonLabel,guestLabel,innkeeperLabel]),
+    referralSource:extractLabeled(text,referralLabel,[reasonLabel,guestLabel,innkeeperLabel]),
+    reasonForVisit:extractLabeled(text,reasonLabel,[guestLabel,innkeeperLabel]),
+    guestComments:extractLabeled(text,guestLabel,[innkeeperLabel]),
+    innkeeperNotes:extractLabeled(text,innkeeperLabel,[])
+  }
+}
+
+function parsePmsTableHtml(html:string,roomNames:string[]){
+  const doc=new DOMParser().parseFromString(html,'text/html')
+  const tables=Array.from(doc.querySelectorAll('table'))
+  const table=tables.find(t=>{
+    const txt=String(t.textContent||'').toLowerCase()
+    return txt.includes('arrival')&&txt.includes('checkout')&&txt.includes('room')&&txt.includes('checkin')
+  })
+  if(!table) throw new Error('I could not find the Arrival Report table in the copied page.')
+  const trList=Array.from(table.querySelectorAll('tr'))
+  let headerIndex=-1
+  let headers:string[]=[]
+  for(let i=0;i<trList.length;i++){
+    const cells=Array.from(trList[i].querySelectorAll('th,td')).map(cell=>cellText(cell).toLowerCase())
+    if(cells.some(x=>x==='arrival'||x.startsWith('arrival'))&&cells.some(x=>x==='checkout'||x.startsWith('checkout'))&&cells.some(x=>x.includes('room'))){ headerIndex=i; headers=cells; break }
+  }
+  if(headerIndex<0) throw new Error('The copied table did not contain the expected Arrival Report columns.')
+  const indexOf=(tests:string[])=>headers.findIndex(h=>tests.some(test=>h.includes(test)))
+  const idx={arrival:indexOf(['arrival']),checkout:indexOf(['checkout']),address:indexOf(['address']),room:indexOf(['room']),occ:indexOf(['occ']),product:indexOf(['product']),checkin:indexOf(['checkin'])}
+  const rows:any[]=[]
+  let current:any=null
+  for(let i=headerIndex+1;i<trList.length;i++){
+    const cells=Array.from(trList[i].querySelectorAll('td'))
+    if(!cells.length) continue
+    const values=cells.map(cell=>cellText(cell))
+    const rowText=values.join(' | ').trim()
+    if(!rowText) continue
+    const arrival=idx.arrival>=0?isoFromUsDate(values[idx.arrival]||''):null
+    const checkout=idx.checkout>=0?isoFromUsDate(values[idx.checkout]||''):null
+    if(arrival&&checkout&&idx.room>=0){
+      const addressText=values[idx.address]||''
+      const addressLines=addressText.split('\n').map(x=>x.trim()).filter(Boolean)
+      const guestName=addressLines[0]||''
+      const phoneLine=addressLines.find(line=>/^Phone\s*:/i.test(line))||addressLines.find(line=>/^Cell\s*:/i.test(line))||''
+      const digits=phoneLine.replace(/\D/g,'').slice(-10)
+      const roomText=values[idx.room]||''
+      const roomName=roomNames.find(name=>roomText.toLowerCase().includes(name.toLowerCase())) || roomText.split('\n').map(x=>x.trim()).find(Boolean) || null
+      const reservationNumber=roomText.match(/order\s*[:#]?\s*(\d{4,8})/i)?.[1]||null
+      const escapedRoom=roomName?roomName.replace(/[.*+?^${}()|[\]\\]/g,'\\export default function ReservationSyncBoard(){'):''
+      const ratePlan=roomText.replace(escapedRoom?new RegExp(escapedRoom,'i'):/^$/,'').replace(/\(\s*order\s*[:#]?\s*\d{4,8}\s*\)/ig,'').replace(/\s+/g,' ').trim()||null
+      const occupancy=Number(String(values[idx.occ]||'').match(/\d+/)?.[0]||0)||null
+      const productsRaw=(values[idx.product]||'').trim()||null
+      const checkInTime=(values[idx.checkin]||'').replace(/\s+/g,' ').trim()||null
+      current={
+        reservationKey:reservationNumber?'order:'+reservationNumber:'direct:'+guestName+'|'+roomName+'|'+arrival+'|'+checkout,
+        reservationNumber,guestName,phone:null,doorCode:digits?digits.slice(-4):null,arrivalDate:arrival,checkoutDate:checkout,roomName,occupancy,ratePlan,checkInTime,productsRaw,
+        dietaryRestrictions:null,referralSource:null,reasonForVisit:null,guestComments:null,innkeeperNotes:null,sourcePage:0,rawText:rowText,confidence:100,
+        needsReview:!guestName||!roomName||!reservationNumber||!digits,
+        warnings:[...(!guestName?['Guest name missing']:[]),...(!roomName?['Room missing']:[]),...(!reservationNumber?['Reservation number missing']:[]),...(!digits?['Door code could not be derived']:[])]
+      }
+      rows.push(current)
+      continue
+    }
+    if(current && /dietary restrictions|guest comment|innkeeper notes|reason for your visit|how did you hear/i.test(rowText)){ Object.assign(current,parseNoteText(rowText)); current.rawText += ' '+rowText }
+  }
+  if(!rows.length) throw new Error('No reservation rows were found in the copied Arrival Report.')
+  return rows
+}
+
 export default function ReservationSyncBoard(){
   const [file,setFile]=useState<File|null>(null)
+  const [sourceName,setSourceName]=useState('Arrival Report')
   const [progress,setProgress]=useState('')
   const [pct,setPct]=useState(0)
   const [busy,setBusy]=useState(false)
@@ -209,6 +311,31 @@ export default function ReservationSyncBoard(){
     }
   }
 
+  async function previewStructured(structured:any[],name='PMS Arrival Report'){
+    setBusy(true); setError(''); setSuccess(''); setRows([]); setProgress('Comparing copied PMS data…'); setPct(82)
+    try{
+      const r=await fetch('/api/reservation-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'previewStructured',reservations:structured,fileName:name})})
+      const d=await r.json().catch(()=>({}))
+      if(!r.ok) throw new Error(d.error||'Could not preview copied PMS data.')
+      setRows(d.reservations||[]); setReportStart(d.reportStartDate||null); setReportEnd(d.reportEndDate||null); setWarnings(d.warnings||[]); setSourceName(name)
+      setProgress('Preview ready: '+String((d.reservations||[]).length)+' reservations found.'); setPct(100)
+    }catch(e:any){ setError(e?.message||'Could not read the copied PMS report.'); setProgress(''); setPct(0) }
+    finally{ setBusy(false) }
+  }
+
+  async function pasteFromPms(){
+    setError(''); setSuccess('')
+    try{
+      if(!navigator.clipboard?.read) throw new Error('Clipboard access is unavailable in this browser. Use Chrome or Edge, copy the PMS report page, then try again.')
+      const items=await navigator.clipboard.read()
+      let html=''
+      for(const item of items){ if(!html && item.types.includes('text/html')) html=await (await item.getType('text/html')).text() }
+      if(!html) throw new Error('The clipboard does not contain the Arrival Report table as formatted HTML. On the PMS report page, press Cmd+A then Cmd+C and try again.')
+      const structured=parsePmsTableHtml(html,rooms.map(room=>room.name))
+      await previewStructured(structured,'PMS Arrival Report (copied)')
+    }catch(e:any){ setError(e?.message||'Could not paste the PMS Arrival Report.') }
+  }
+
   async function preview(){
     if(!file) return
     setBusy(true); setError(''); setSuccess(''); setRows([])
@@ -249,7 +376,7 @@ export default function ReservationSyncBoard(){
     setBusy(true); setError(''); setSuccess(''); setProgress('Updating reservations and daily room operations…'); setPct(30)
     try{
       const r=await fetch('/api/reservation-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        action:'commit',fileName:file?.name||'Arrival Report.pdf',reportStartDate:reportStart,reportEndDate:reportEnd,
+        action:'commit',fileName:sourceName||(file?.name||'Arrival Report.pdf'),reportStartDate:reportStart,reportEndDate:reportEnd,
         reservations:rows,warnings,warningCount:warnings.length
       })})
       const d=await r.json().catch(()=>({}))
@@ -280,7 +407,7 @@ export default function ReservationSyncBoard(){
       <div>
         <div className="rs-kicker">PMS → Operations Hub</div>
         <h1>Reservation Sync</h1>
-        <p>Upload the downloadable Arrival Report. The app reads it, compares reservations with the last import, then updates daily room status and stay information without touching housekeeping progress, assignments, sign-offs or EOS work.</p>
+        <p>Copy the live Arrival Report directly from the PMS for the most accurate sync. The app compares reservations with the last import, then updates daily room status and stay information without touching housekeeping progress, assignments, sign-offs or EOS work.</p>
       </div>
       <div className="rs-verify-card">
         <div className="rs-verify-title"><ShieldCheck size={18}/> Daily verification</div>
@@ -290,15 +417,27 @@ export default function ReservationSyncBoard(){
     </section>
 
     <section className="rs-upload-card">
+      <div className="rs-kicker">Recommended · no OCR</div>
+      <h2>Copy directly from the PMS Arrival Report</h2>
+      <p>On the Arrival Report page, press <strong>Cmd+A</strong> then <strong>Cmd+C</strong>. Come back here and click the button below. The app reads the actual table cells instead of trying to interpret a PDF image.</p>
+      <div className="rs-upload-actions">
+        <button className="rs-btn" disabled={busy} onClick={pasteFromPms}>{busy?<RefreshCw className="spin" size={17}/>:<ClipboardPaste size={17}/>} Paste copied PMS report</button>
+        <span className="rs-private-note">Only reservation fields needed for operations are sent. Full phone numbers are discarded after the 4-digit door code is derived.</span>
+      </div>
+    </section>
+
+    <section className="rs-upload-card">
+      <div className="rs-kicker">Fallback</div>
+      <h2>PDF import</h2>
       <label className={`rs-drop ${file?'has-file':''}`}>
-        <input type="file" accept="application/pdf,.pdf" onChange={e=>{setFile(e.target.files?.[0]||null);setRows([]);setError('');setSuccess('')}}/>
+        <input type="file" accept="application/pdf,.pdf" onChange={e=>{const chosen=e.target.files?.[0]||null;setFile(chosen);setSourceName(chosen?.name||'Arrival Report');setRows([]);setError('');setSuccess('')}}/>
         <UploadCloud size={34}/>
         <strong>{file?file.name:'Drop the Arrival Report PDF here'}</strong>
         <span>{file?'Ready to read and compare.':'or click to choose the downloaded PDF'}</span>
       </label>
       <div className="rs-upload-actions">
         <button className="rs-btn" disabled={!file||busy} onClick={preview}>{busy?<RefreshCw className="spin" size={17}/>:<FileUp size={17}/>} Read & preview changes</button>
-        <span className="rs-private-note">The PDF is read locally in this browser. Only the extracted reservation data is sent to the Operations Hub.</span>
+        <span className="rs-private-note">Use this only when copying directly from the PMS is unavailable. Scanned PDFs can require manual review.</span>
       </div>
       {progress && <div className="rs-progress"><div><span style={{width:`${pct}%`}}/></div><small>{progress}</small></div>}
       {error && <div className="rs-alert error"><TriangleAlert size={17}/>{error}</div>}
