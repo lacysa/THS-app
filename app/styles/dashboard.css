@@ -973,3 +973,63 @@
     padding:9px;
   }
 }
+
+
+/* Dashboard priority color system */
+.daily-metric-card{
+  position:relative;
+  overflow:hidden;
+}
+.daily-metric-card::before{
+  content:'';
+  position:absolute;
+  inset:0 auto 0 0;
+  width:4px;
+  background:transparent;
+}
+.daily-metric-card.tone-good::before{background:#6f9a78}
+.daily-metric-card.tone-warning::before{background:#d2a64f}
+.daily-metric-card.tone-danger::before{background:#b85c56}
+.daily-metric-card.tone-good .daily-metric-icon{
+  background:#e9f3eb;
+  color:#45624e;
+}
+.daily-metric-card.tone-warning .daily-metric-icon{
+  background:#fff3df;
+  color:#7c6228;
+}
+.daily-metric-card.tone-danger .daily-metric-icon{
+  background:#f9e7e5;
+  color:#8d403a;
+}
+
+.daily-attention-item{
+  border-left-width:4px;
+}
+.daily-attention-item.tone-danger{
+  border-color:#e1b4ae;
+  border-left-color:#b85c56;
+  background:#fffafa;
+}
+.daily-attention-item.tone-danger>span{
+  background:#f9e7e5;
+  color:#8d403a;
+}
+.daily-attention-item.tone-warning{
+  border-color:#ead6a7;
+  border-left-color:#d2a64f;
+  background:#fffdf7;
+}
+.daily-attention-item.tone-warning>span{
+  background:#fff3df;
+  color:#7c6228;
+}
+.daily-attention-item.tone-info{
+  border-color:#cad7e3;
+  border-left-color:#6f8fae;
+  background:#fbfdff;
+}
+.daily-attention-item.tone-info>span{
+  background:#edf3f8;
+  color:#365776;
+}
