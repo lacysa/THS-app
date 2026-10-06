@@ -726,9 +726,15 @@ export default function HousekeepingBoard() {
                         <BedDouble size={15} />
                         <strong>{row.roomName}</strong>
                       </div>
-                      {row.breakfastTag && (
-                        <span className="hsk-breakfast-badge hsk-breakfast-tag">Breakfast</span>
-                      )}
+                      <button
+                        type="button"
+                        className={`hsk-breakfast-badge hsk-breakfast-toggle ${row.breakfastTag ? 'hsk-breakfast-tag is-active' : ''}`}
+                        aria-pressed={row.breakfastTag}
+                        onClick={() => patch(row.roomId, { breakfastTag: !row.breakfastTag })}
+                        title="Breakfast service the following morning"
+                      >
+                        Breakfast
+                      </button>
                       {row.breakfast.status !== 'none' && (
                         <span className={`hsk-breakfast-badge hsk-breakfast-${row.breakfast.status}`}>
                           {row.breakfast.status === 'needed' && 'Breakfast · menu needed'}
