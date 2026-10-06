@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { BedDouble, Check, ChevronDown, ChevronUp, RefreshCw, Save, Search, SlidersHorizontal, UtensilsCrossed } from 'lucide-react'
 
 type BreakfastStatus = 'none'|'needed'|'received'|'declined'
@@ -78,6 +78,16 @@ function shortTime(value?:string|null){
   const d=new Date(value)
   if(Number.isNaN(d.getTime())) return ''
   return new Intl.DateTimeFormat('en-US',{timeZone:'America/Detroit',hour:'numeric',minute:'2-digit'}).format(d)
+}
+
+function staffHue(name:string){
+  let hash=0
+  for(let i=0;i<name.length;i++) hash=((hash<<5)-hash)+name.charCodeAt(i)
+  return Math.abs(hash)%360
+}
+
+function staffStyle(name:string){
+  return {'--staff-hue':staffHue(name)} as CSSProperties
 }
 
 export default function RoomBoard(){
@@ -573,13 +583,15 @@ export default function RoomBoard(){
                 </button>
                 <div className="rb-collapsed-data">
                   {row.reservationStatus&&<span className={`rb-summary-pill ${statusClass(row.reservationStatus)}`}>{row.reservationStatus}</span>}
-                  {service&&<span className="rb-summary-pill"><b>Service</b> {service}</span>}
+                  {service&&<span className="rb-summary-pill service"><b>Service</b> {service}</span>}
                   {showHousekeepingWorkflow&&<>
-                    <span className="rb-summary-pill"><b>Staff</b> {staff.length?staff.join(', '):'Unassigned'}</span>
-                    <span className="rb-summary-pill"><b>Order</b> {row.cleanOrder??'—'}</span>
-                    <span className={`rb-summary-pill ${row.complete?'is-done':''}`}>{row.complete?'Complete':'In progress'}</span>
+                    {staff.length
+                      ? staff.map(name=><span className="rb-summary-pill staff" style={staffStyle(name)} key={name}><b>Staff</b> {name}</span>)
+                      : <span className="rb-summary-pill staff-unassigned"><b>Staff</b> Unassigned</span>}
+                    <span className="rb-summary-pill order"><b>Order</b> {row.cleanOrder??'—'}</span>
+                    <span className={`rb-summary-pill progress ${row.complete?'is-done':'is-open'}`}>{row.complete?'Complete':'In progress'}</span>
                   </>}
-                  <span className="rb-summary-pill"><b>EOS</b> {row.roomCondition||'—'}</span>
+                  <span className="rb-summary-pill eos"><b>EOS</b> {row.roomCondition||'—'}</span>
                   {row.breakfastTag&&<span className="rb-summary-pill breakfast">Breakfast</span>}
                   {row.stripHold&&<span className="rb-summary-pill warn">{row.stripHold}</span>}
                   {selectedPackages.map(name=><span className="rb-summary-pill package" key={name}>{name}</span>)}
