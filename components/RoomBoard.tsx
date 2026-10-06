@@ -96,6 +96,11 @@ export default function RoomBoard(){
   const [openRooms,setOpenRooms]=useState<Record<string,boolean>>({})
   const [collapsedRooms,setCollapsedRooms]=useState<Record<string,boolean>>({})
   const [search,setSearch]=useState('')
+  const [statusFilter,setStatusFilter]=useState('')
+  const [staffFilter,setStaffFilter]=useState('')
+  const [serviceFilter,setServiceFilter]=useState('')
+  const [progressFilter,setProgressFilter]=useState('')
+  const [breakfastFilter,setBreakfastFilter]=useState('')
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
   const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
@@ -218,11 +223,12 @@ export default function RoomBoard(){
 
   const filteredRows=useMemo(()=>{
     const q=search.trim().toLowerCase()
-    if(!q) return rows
+
     return rows.filter(row=>{
       const packageNames=(row.packageIds||[])
         .map(id=>packageOptions.find(p=>p.id===id)?.name||'')
         .join(' ')
+
       const haystack=[
         row.roomName,
         row.reservationStatus,
@@ -236,9 +242,59 @@ export default function RoomBoard(){
         row.breakfastTag?'breakfast':'',
         packageNames
       ].join(' ').toLowerCase()
-      return haystack.includes(q)
+
+      if(q && !haystack.includes(q)) return false
+      if(statusFilter && row.reservationStatus!==statusFilter) return false
+
+      if(staffFilter){
+        const assigned=splitAssigned(row.assignedTo)
+        if(staffFilter==='__unassigned__'){
+          if(assigned.length) return false
+        }else if(!assigned.includes(staffFilter)){
+          return false
+        }
+      }
+
+      if(serviceFilter){
+        const service=String(row.serviceType||'').toUpperCase()
+        if(serviceFilter==='OUT'){
+          if(!service.startsWith('OUT')) return false
+        }else if(service!==serviceFilter){
+          return false
+        }
+      }
+
+      if(progressFilter==='complete' && !row.complete) return false
+      if(progressFilter==='open' && row.complete) return false
+
+      if(breakfastFilter==='yes' && !row.breakfastTag) return false
+      if(breakfastFilter==='no' && row.breakfastTag) return false
+
+      return true
     })
-  },[rows,search,packageOptions])
+  },[
+    rows,
+    search,
+    packageOptions,
+    statusFilter,
+    staffFilter,
+    serviceFilter,
+    progressFilter,
+    breakfastFilter
+  ])
+
+  const hasFilters=Boolean(
+    search || statusFilter || staffFilter || serviceFilter || progressFilter || breakfastFilter
+  )
+
+  function clearFilters(){
+    setSearch('')
+    setStatusFilter('')
+    setStaffFilter('')
+    setServiceFilter('')
+    setProgressFilter('')
+    setBreakfastFilter('')
+  }
 
   function collapseAll(){
     const next:Record<string,boolean>={}
@@ -275,9 +331,9 @@ export default function RoomBoard(){
       </div>
       <div className="rb-toolbar-actions">
         <span className={`rb-save rb-save-${saveState}`}>{saveLabel}</span>
-        <label>Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
-        <button className="ops-secondary-btn" type="button" onClick={load}><RefreshCw size={15}/>Refresh</button>
-        <button className="ops-primary-btn" type="button" onClick={()=>void saveRows(rowsRef.current,true)}><Save size={15}/>Save all</button>
+        <label className="rb-date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+        <button className="ops-secondary-btn rb-refresh-btn" type="button" onClick={load}><RefreshCw size={15}/>Refresh</button>
+        <button className="ops-primary-btn rb-save-btn" type="button" onClick={()=>void saveRows(rowsRef.current,true)}><Save size={15}/>Save all</button>
       </div>
     </div>
 
@@ -301,6 +357,62 @@ export default function RoomBoard(){
           aria-label="Search HSK"
         />
       </label>
+
+      <div className="rb-filter-grid">
+        <label>
+          <span>Status</span>
+          <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+            <option value="">All statuses</option>
+            {reservationOptions.filter(Boolean).map(v=><option key={v} value={v}>{v}</option>)}
+          </select>
+        </label>
+
+        <label>
+          <span>Staff</span>
+          <select value={staffFilter} onChange={e=>setStaffFilter(e.target.value)}>
+            <option value="">All staff</option>
+            <option value="__unassigned__">Unassigned</option>
+            {staffOptions.map(option=><option key={option.id} value={option.name}>{option.name}</option>)}
+          </select>
+        </label>
+
+        <label>
+          <span>Service</span>
+          <select value={serviceFilter} onChange={e=>setServiceFilter(e.target.value)}>
+            <option value="">All service</option>
+            <option value="OUT">OUT</option>
+            <option value="RF">RF</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Progress</span>
+          <select value={progressFilter} onChange={e=>setProgressFilter(e.target.value)}>
+            <option value="">All progress</option>
+            <option value="open">Open</option>
+            <option value="complete">Complete</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Breakfast</span>
+          <select value={breakfastFilter} onChange={e=>setBreakfastFilter(e.target.value)}>
+            <option value="">All rooms</option>
+            <option value="yes">Breakfast tagged</option>
+            <option value="no">No breakfast</option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          className="ops-secondary-btn rb-clear-filters"
+          onClick={clearFilters}
+          disabled={!hasFilters}
+        >
+          Clear filters
+        </button>
+      </div>
+
       <div className="rb-collapse-actions">
         <button type="button" className="ops-secondary-btn" onClick={collapseAll}>Collapse all</button>
         <button type="button" className="ops-secondary-btn" onClick={expandAll}>Expand all</button>
@@ -308,6 +420,7 @@ export default function RoomBoard(){
     </div>
 
     <div className="rb-summary-strip">
+      <span><b>{filteredRows.length}</b> shown</span>
       <span><b>{rows.length}</b> rooms</span>
       <span><b>{counts.complete}</b> complete</span>
       <span><b>{counts.open}</b> open</span>
