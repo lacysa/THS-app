@@ -38,6 +38,7 @@ type HousekeepingRow = {
   haCheckInitials:string
   fohCheckInitials:string
   checkIssueOpen:boolean
+  inspected:boolean
   packages:string[]
   notes:string
 }
@@ -210,24 +211,39 @@ export default function DailyDashboard({
   const declinedBreakfast = breakfast.filter(r=>r.status==='declined')
 
   // Housekeeping workload:
-  // - Checkout always counts
-  // - Out/In always counts
+  // - Checkout / Out-In always count
+  // - legacy/current OUT service markers also count, even if the row status was overwritten to Vacant
   // - Stayover only counts when RF is requested
   // - Arrival only counts when Housekeeping fixes/corrections are needed
   const housekeepingWorkload = housekeeping.filter(row=>{
     const status=String(row.reservationStatus||'')
     const service=String(row.serviceType||'').toUpperCase()
-    if(status==='Checkout' || status==='Out/In') return true
+    const isOutService=service.startsWith('OUT')
+    if(status==='Checkout' || status==='Out/In' || isOutService) return true
     if(status==='Stayover' && service==='RF') return true
     if(status==='Arrival' && row.checkIssueOpen) return true
     return false
   })
   const hkComplete = housekeepingWorkload.filter(r=>r.complete && !r.checkIssueOpen)
 
-  // Only these room states belong in the room-check workflow.
-  const roomCheckEligibleStatuses = new Set(['Checkout','Out/In','Vacant','Arrival'])
-  const roomCheckRooms = housekeeping.filter(r=>roomCheckEligibleStatuses.has(r.reservationStatus))
-  const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials))
+  // Room-check count reflects rooms actually in the inspection workflow.
+  // Checkout / Out-In (including OUT service markers) always count.
+  // Vacant / Arrival only count once they are ready for inspection, inspected,
+  // signed off, or have an open correction.
+  const roomCheckRooms = housekeeping.filter(row=>{
+    const status=String(row.reservationStatus||'')
+    const service=String(row.serviceType||'').toUpperCase()
+    const condition=String(row.roomCondition||'')
+    const isTurnover=status==='Checkout' || status==='Out/In' || service.startsWith('OUT')
+    const isVacantOrArrival=status==='Vacant' || status==='Arrival'
+    const enteredInspection=
+      row.complete ||
+      row.checkIssueOpen ||
+      Boolean(row.fohCheckInitials) ||
+      ['Ready','Ready for Inspection','Vacant (Clean)'].includes(condition)
+    return isTurnover || (isVacantOrArrival && enteredInspection)
+  })
+  const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials) || r.inspected)
   const roomCheckCorrections = roomCheckRooms.filter(r=>r.checkIssueOpen)
 
   const maintenanceOpen = maintenance.filter(r=>r.status!=='complete')
