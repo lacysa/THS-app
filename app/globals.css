@@ -872,9 +872,11 @@ a.module-card:hover {
 }
 
 /* v12 account themes + settings */
-:root,[data-theme="blue"]{--app-bg:#0c1222;--app-sidebar:#0f172a;--app-surface:#151e32;--app-surface2:#111827;--app-border:#2a3650;--app-text:#f5f7fb;--app-muted:#a9b2c5;--app-accent:#6d6ff5;--app-accent-text:#fff}
+:root,[data-theme="blue"]{--app-bg:#eef7fb;--app-sidebar:#102533;--app-surface:#ffffff;--app-surface2:#e7f2f7;--app-border:#bed2dc;--app-text:#13242d;--app-muted:#546d79;--app-accent:#1d9db8;--app-accent-text:#ffffff}
 [data-theme="light"]{--app-bg:#f5f5f4;--app-sidebar:#ffffff;--app-surface:#ffffff;--app-surface2:#f1f1f1;--app-border:#d4d4d4;--app-text:#151515;--app-muted:#666;--app-accent:#3f3f46;--app-accent-text:#fff}
-[data-theme="dark"]{--app-bg:#0b0c0f;--app-sidebar:#111318;--app-surface:#191c22;--app-surface2:#20242b;--app-border:#343842;--app-text:#f5f6f7;--app-muted:#a8adb7;--app-accent:#d7dae0;--app-accent-text:#111318}
+[data-theme="sage"]{--app-bg:#f2f6f1;--app-sidebar:#213228;--app-surface:#ffffff;--app-surface2:#e9f0e7;--app-border:#c8d6c6;--app-text:#1f2d24;--app-muted:#607166;--app-accent:#5c8d6b;--app-accent-text:#ffffff}
+[data-theme="violet"]{--app-bg:#f6f2fb;--app-sidebar:#2b2340;--app-surface:#ffffff;--app-surface2:#eee7f8;--app-border:#d3c5e8;--app-text:#2b2440;--app-muted:#6c617f;--app-accent:#7f63b8;--app-accent-text:#ffffff}
+[data-theme="dark"]{--app-bg:#0d1117;--app-sidebar:#111821;--app-surface:#171f2a;--app-surface2:#202a36;--app-border:#394756;--app-text:#f7f9fb;--app-muted:#bdc7d1;--app-accent:#59c8d8;--app-accent-text:#071116}
 html[data-theme] body{background:var(--app-bg);color:var(--app-text)}
 html[data-theme] .ops-sidebar{background:var(--app-sidebar)}
 html[data-theme] .ops-main,html[data-theme] .ops-content{background:var(--app-bg);color:var(--app-text)}
@@ -975,4 +977,80 @@ html[data-theme="light"] .ops-logo-mark{color:#fff}
   .hsk-toolbar-actions{justify-content:flex-start;}
   .hsk-metric-row{grid-template-columns:repeat(2,1fr);}
   .hsk-table-wrapper{max-height:none;overflow-y:visible;}
+}
+
+
+/* Theme contrast normalization */
+html[data-theme] .staff-page-content,
+html[data-theme] .staff-ops-main,
+html[data-theme] .ops-content{
+  background:var(--app-bg)!important;
+  color:var(--app-text)!important;
+}
+html[data-theme] .staff-ops-topbar{
+  background:var(--app-surface)!important;
+  color:var(--app-text)!important;
+  border-color:var(--app-border)!important;
+}
+html[data-theme] .staff-page-title strong,
+html[data-theme] .staff-page-title span,
+html[data-theme] .daily-dashboard-hero h1,
+html[data-theme] .daily-dashboard-hero p,
+html[data-theme] .ops-kicker{
+  color:var(--app-text)!important;
+}
+html[data-theme] .daily-panel,
+html[data-theme] .daily-metric-card,
+html[data-theme] .rb-room-card,
+html[data-theme] .rb-breakfast-strip,
+html[data-theme] .rb-summary-strip span,
+html[data-theme] .settings-card{
+  background:var(--app-surface)!important;
+  border-color:var(--app-border)!important;
+  color:var(--app-text)!important;
+}
+html[data-theme] .daily-panel-head,
+html[data-theme] .rb-details,
+html[data-theme] .rb-search,
+html[data-theme] .rb-filter-panel{
+  background:var(--app-surface2)!important;
+  border-color:var(--app-border)!important;
+  color:var(--app-text)!important;
+}
+html[data-theme] input,
+html[data-theme] select,
+html[data-theme] textarea{
+  background:var(--app-surface)!important;
+  color:var(--app-text)!important;
+  border-color:var(--app-border)!important;
+}
+html[data-theme] .ops-nav a,
+html[data-theme] .ops-sidebar-bottom button,
+html[data-theme] .ops-logo{
+  color:#f7fafc;
+}
+html[data-theme="light"] .ops-nav a,
+html[data-theme="light"] .ops-sidebar-bottom button,
+html[data-theme="light"] .ops-logo{
+  color:#222;
+}
+html[data-theme] .ops-nav a.active{
+  background:var(--app-surface)!important;
+  color:var(--app-text)!important;
+}
+html[data-theme="dark"] .daily-snapshot-card{
+  background:
+    radial-gradient(circle at 12% 12%,rgba(35,190,167,.18),transparent 28%),
+    radial-gradient(circle at 84% 20%,rgba(124,92,240,.18),transparent 32%),
+    linear-gradient(135deg,#16202a,#182331 55%,#221c35)!important;
+  border-color:var(--app-border)!important;
+}
+html[data-theme="dark"] .daily-snapshot-head strong,
+html[data-theme="dark"] .daily-progress-row>div:first-child{
+  color:#f7f9fb!important;
+}
+html[data-theme="dark"] .daily-snapshot-head span,
+html[data-theme="dark"] .daily-snapshot-head small,
+html[data-theme="dark"] .daily-progress-row small{
+  color:#bdc7d1!important;
 }
