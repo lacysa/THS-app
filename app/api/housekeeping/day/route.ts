@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
         .order('sort_order'),
       admin
         .from('housekeeping_room_packages')
-        .select('room_id,package_id,source')
+        .select('room_id,package_id')
         .eq('service_date', serviceDate)
     ])
 
@@ -137,9 +137,9 @@ export async function GET(req: NextRequest) {
       const roomId = String((assignment as any).room_id || '')
       const packageId = String((assignment as any).package_id || '')
       if (!roomId || !packageId) continue
-      const current = new Set(packageIdsByRoom.get(roomId) || [])
-      current.add(packageId)
-      packageIdsByRoom.set(roomId,[...current])
+      const current = packageIdsByRoom.get(roomId) || []
+      current.push(packageId)
+      packageIdsByRoom.set(roomId,current)
     }
 
     const breakfastDate = nextDate(serviceDate)
@@ -430,7 +430,6 @@ export async function POST(req: NextRequest) {
       const { error:deletePackageError } = await admin
         .from('housekeeping_room_packages')
         .delete()
-        .eq('source','manual')
         .eq('service_date',serviceDate)
         .in('room_id',roomIds)
       if (deletePackageError) throw new Error(deletePackageError.message)
@@ -442,8 +441,7 @@ export async function POST(req: NextRequest) {
           .map(packageId => ({
             service_date:serviceDate,
             room_id:row.roomId,
-            package_id:packageId,
-            source:'manual'
+            package_id:packageId
           }))
       )
 
