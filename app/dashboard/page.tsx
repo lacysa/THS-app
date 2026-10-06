@@ -4,6 +4,7 @@ import DailyDashboard from '@/components/DailyDashboard'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess, isModuleAllowedForAccess } from '@/lib/access'
+import '../styles/reservation-sync.css'
 import { bohDefaultServiceDate, prettyDate, ymdInHotelTz } from '@/lib/time'
 
 export const dynamic = 'force-dynamic'
@@ -226,6 +227,36 @@ export default async function DashboardPage() {
     note:String(row.note || '')
   }))
 
+  let reservationDaily:any[] = []
+  if (moduleKeys.has('reservation_sync')) {
+    const { data:linkRows, error:linkError } = await admin
+      .from('reservation_daily_links')
+      .select('*')
+      .eq('service_date',today)
+    if (!linkError && linkRows?.length) {
+      const reservationIds=[...new Set(linkRows.flatMap((row:any)=>[
+        row.primary_reservation_id,row.arriving_reservation_id,row.stay_reservation_id,row.departing_reservation_id
+      ]).filter(Boolean).map(String))]
+      let stayRows:any[]=[]
+      if (reservationIds.length) {
+        const { data } = await admin.from('reservation_stays').select('*').in('id',reservationIds)
+        stayRows=data||[]
+      }
+      const stayById=new Map<string,any>(stayRows.map((row:any)=>[String(row.id),row] as [string,any]))
+      reservationDaily=linkRows
+        .map((row:any)=>({
+          roomId:String(row.room_id||''),
+          roomName:roomName(row.room_id,roomMap),
+          status:String(row.reservation_status||'Vacant'),
+          primary:row.primary_reservation_id?stayById.get(String(row.primary_reservation_id))||null:null,
+          arriving:row.arriving_reservation_id?stayById.get(String(row.arriving_reservation_id))||null:null,
+          staying:row.stay_reservation_id?stayById.get(String(row.stay_reservation_id))||null:null,
+          departing:row.departing_reservation_id?stayById.get(String(row.departing_reservation_id))||null:null
+        }))
+        .sort((a:any,b:any)=>(roomSortMap.get(a.roomId)??9999)-(roomSortMap.get(b.roomId)??9999))
+    }
+  }
+
   const displayName = access.preferredName || access.name || 'Staff'
 
   return (
@@ -250,6 +281,8 @@ export default async function DashboardPage() {
         maintenance={maintenance}
         inventory={inventory}
         departmentNotes={departmentNotes}
+        showReservationDaily={moduleKeys.has('reservation_sync')}
+        reservationDaily={reservationDaily}
       />
     </StaffShell>
   )
