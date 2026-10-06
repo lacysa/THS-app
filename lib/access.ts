@@ -88,6 +88,7 @@ const MODULE_PERMISSION:Record<string,string|undefined> = {
   breakfast_menu_manager:'breakfast.menu_manager.view',
   daily_overview:'breakfast.read_only.view',
   housekeeping:'housekeeping.dashboard.view',
+  room_board:'housekeeping.dashboard.view',
   room_checks:'room_checks.view',
   projects:'projects.view',
   breakfast_guest:'breakfast.read_only.view'
