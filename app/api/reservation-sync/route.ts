@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
-import { normalizeEditedReservation } from '@/lib/reservations/import'
+import { normalizeEditedReservation, parseArrivalReportPages } from '@/lib/reservations/import'
 
 export const dynamic = 'force-dynamic'
 
@@ -177,6 +177,64 @@ export async function POST(req:NextRequest){
   const admin=createSupabaseAdmin()
 
   try{
+    if(body?.action==='preview'){
+      const pages=Array.isArray(body.pages)?body.pages.map(String):[]
+      if(!pages.length) return NextResponse.json({error:'No report pages were received.'},{status:400})
+
+      const rooms=await loadRooms(admin)
+      const roomNames=rooms.map((room:any)=>String(room.name))
+      const parsed=parseArrivalReportPages(pages,roomNames)
+      const keys=parsed.reservations.map((row:any)=>row.reservationKey)
+      let existing:any[]=[]
+
+      if(keys.length){
+        const existingResult=await admin.from('reservation_stays')
+          .select('reservation_key,room_id,guest_name,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
+          .in('reservation_key',keys)
+        if(existingResult.error) throw new Error(existingResult.error.message)
+        existing=existingResult.data||[]
+      }
+
+      const oldByKey=new Map<string,any>(existing.map((row:any)=>[String(row.reservation_key),row] as [string,any]))
+      const roomIdByName=new Map<string,string>(rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
+      const tracked:any={
+        guestName:'guest_name',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',
+        occupancy:'occupancy',ratePlan:'rate_plan',checkInTime:'check_in_time',productsRaw:'products_raw',
+        dietaryRestrictions:'dietary_restrictions',referralSource:'referral_source',reasonForVisit:'reason_for_visit',
+        guestComments:'guest_comments',innkeeperNotes:'innkeeper_notes'
+      }
+
+      const reservations=parsed.reservations.map((row:any)=>{
+        const old:any=oldByKey.get(row.reservationKey)
+        const changedFields:any={}
+        if(old){
+          for(const key of Object.keys(tracked)){
+            const before=old[tracked[key]]??null
+            const after=row[key]??null
+            if(String(before??'')!==String(after??'')) changedFields[key]={before,after}
+          }
+          const beforeRoom=String(old.room_id||'')
+          const afterRoom=row.roomName?String(roomIdByName.get(row.roomName)||''):''
+          if(beforeRoom!==afterRoom) changedFields.roomName={before:beforeRoom,after:afterRoom}
+        }
+
+        return {
+          ...row,
+          phone:null,
+          changeType:!old?'new':Object.keys(changedFields).length?'updated':'unchanged',
+          changedFields,
+          include:!row.needsReview
+        }
+      })
+
+      return NextResponse.json({
+        reportStartDate:parsed.reportStartDate,
+        reportEndDate:parsed.reportEndDate,
+        warnings:parsed.warnings,
+        reservations
+      })
+    }
+
     if(body?.action==='verify'){
       if(!validDate(body.serviceDate)) return NextResponse.json({error:'Invalid date'},{status:400})
       const result=await admin.from('reservation_daily_verifications').upsert({

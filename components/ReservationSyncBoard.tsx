@@ -59,18 +59,90 @@ export default function ReservationSyncBoard(){
 
   useEffect(()=>{ void loadMeta(verifyDate) },[verifyDate])
 
+  async function extractPdfLocally(selected:File){
+    if(selected.size>12*1024*1024) throw new Error('PDF is too large. Please use an Arrival Report under 12 MB.')
+    setProgress('Reading PDF in your browser…'); setPct(5)
+
+    const pdfjs:any=await import('pdfjs-dist/legacy/build/pdf.mjs')
+    if(!pdfjs.GlobalWorkerOptions.workerSrc){
+      pdfjs.GlobalWorkerOptions.workerSrc=new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs',import.meta.url).toString()
+    }
+
+    const pdf=await pdfjs.getDocument({
+      data:new Uint8Array(await selected.arrayBuffer()),
+      useWorkerFetch:false,
+      isEvalSupported:false,
+      useSystemFonts:true
+    }).promise
+
+    const pages:string[]=new Array(pdf.numPages)
+    const concurrency=4
+
+    async function readPage(pageNumber:number){
+      const page=await pdf.getPage(pageNumber)
+      try{
+        const content=await page.getTextContent()
+        const positioned=(content.items||[])
+          .filter((item:any)=>String(item?.str||'').trim())
+          .map((item:any)=>({
+            text:String(item?.str||'').trim(),
+            x:Number(item?.transform?.[4]||0),
+            y:Number(item?.transform?.[5]||0)
+          }))
+          .sort((a:any,b:any)=>{
+            const dy=b.y-a.y
+            return Math.abs(dy)>2.2?dy:a.x-b.x
+          })
+
+        const rows:{y:number;items:any[]}[]=[]
+        let current:{y:number;items:any[]}|null=null
+        for(const item of positioned){
+          if(!current || Math.abs(current.y-item.y)>2.2){
+            current={y:item.y,items:[item]}
+            rows.push(current)
+          }else current.items.push(item)
+        }
+
+        const text=rows
+          .map(row=>row.items.sort((a,b)=>a.x-b.x).map(item=>item.text).join(' | '))
+          .join('\n')
+          .trim()
+
+        if(!text || text.length<80) throw new Error(`Page ${pageNumber} did not contain readable report text.`)
+        return text
+      }finally{
+        await page.cleanup?.()
+      }
+    }
+
+    try{
+      for(let start=1;start<=pdf.numPages;start+=concurrency){
+        const pageNumbers=Array.from({length:Math.min(concurrency,pdf.numPages-start+1)},(_,index)=>start+index)
+        const texts=await Promise.all(pageNumbers.map(readPage))
+        pageNumbers.forEach((pageNumber,index)=>{ pages[pageNumber-1]=texts[index] })
+        setPct(Math.min(72,Math.round((Math.min(pdf.numPages,start+concurrency-1)/pdf.numPages)*72)))
+      }
+      return pages
+    }finally{
+      await pdf.destroy?.()
+    }
+  }
+
   async function preview(){
     if(!file) return
     setBusy(true); setError(''); setSuccess(''); setRows([])
     try{
-      setProgress('Reading Arrival Report…'); setPct(15)
-      const form=new FormData()
-      form.append('file',file)
+      const pages=await extractPdfLocally(file)
+      setProgress('Comparing with current reservation data…'); setPct(82)
       const controller=new AbortController()
-      const timeout=window.setTimeout(()=>controller.abort(),45000)
-      const r=await fetch('/api/reservation-sync/pdf-preview',{method:'POST',body:form,signal:controller.signal})
+      const timeout=window.setTimeout(()=>controller.abort(),15000)
+      const r=await fetch('/api/reservation-sync',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'preview',pages,fileName:file.name}),
+        signal:controller.signal
+      })
       window.clearTimeout(timeout)
-      setPct(86); setProgress('Comparing with current reservation data…')
       const d=await r.json().catch(()=>({}))
       if(!r.ok) throw new Error(d.error||'Could not preview this report.')
       setRows(d.reservations||[])
@@ -80,7 +152,7 @@ export default function ReservationSyncBoard(){
       setProgress(`Preview ready: ${(d.reservations||[]).length} reservations found.`)
       setPct(100)
     }catch(e:any){
-      setError(e?.name==='AbortError'?'The report took too long to read. Please try the PDF again.':(e?.message||'Could not read this report.'))
+      setError(e?.name==='AbortError'?'The comparison took too long. Please try again.':(e?.message||'Could not read this report.'))
       setProgress('')
       setPct(0)
     }finally{
@@ -145,7 +217,7 @@ export default function ReservationSyncBoard(){
       </label>
       <div className="rs-upload-actions">
         <button className="rs-btn" disabled={!file||busy} onClick={preview}>{busy?<RefreshCw className="spin" size={17}/>:<FileUp size={17}/>} Read & preview changes</button>
-        <span className="rs-private-note">The PDF is read for this import. Staff never need to upload it to Supabase manually.</span>
+        <span className="rs-private-note">The PDF is read locally in this browser. Only the extracted reservation data is sent to the Operations Hub.</span>
       </div>
       {progress && <div className="rs-progress"><div><span style={{width:`${pct}%`}}/></div><small>{progress}</small></div>}
       {error && <div className="rs-alert error"><TriangleAlert size={17}/>{error}</div>}
