@@ -282,7 +282,14 @@ export default function RoomBoard(){
                     >
                       Breakfast
                     </button>
-                    {selectedPackages.length>0&&<span className="rb-badge">Package</span>}
+                    {selectedPackages.length>0&&(
+                      <span
+                        className="rb-badge rb-package-summary"
+                        title={selectedPackages.join(', ')}
+                      >
+                        {selectedPackages.join(', ')}
+                      </span>
+                    )}
                     {row.stripHold&&<span className="rb-badge warn">{row.stripHold}</span>}
                   </div>
                 </div>
