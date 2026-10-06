@@ -250,6 +250,10 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
       if(!arrivalDate||!checkoutDate) rowWarnings.push('Arrival/checkout dates need review')
       if(!roomName) rowWarnings.push('Room could not be matched')
       if(!phone) rowWarnings.push('Phone number could not be read')
+      const foreignRoom=roomNames.find(room=>room!==roomName && norm(noteText).includes(norm(room)))
+      if(foreignRoom || /\border\s*[:#]?\s*\d{4,8}\b/i.test(noteText)){
+        rowWarnings.push('Notes may contain text from another reservation')
+      }
 
       let confidence=100
       confidence-=rowWarnings.length*18
@@ -275,7 +279,14 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
     if(!existing || row.confidence>existing.confidence) byKey.set(row.reservationKey,row)
   }
 
-  const deduped=[...byKey.values()]
+  const byStay=new Map<string,ParsedReservation>()
+  for(const row of byKey.values()){
+    const stayKey=[norm(row.guestName||''),norm(row.roomName||''),row.arrivalDate||'',row.checkoutDate||''].join('|')
+    const existing=byStay.get(stayKey)
+    if(!existing || row.confidence>existing.confidence) byStay.set(stayKey,row)
+  }
+
+  const deduped=[...byStay.values()]
   if(!deduped.length) warnings.push('No reservation order numbers were detected. The PDF may need OCR review.')
   const reviewCount=deduped.filter(r=>r.needsReview).length
   if(reviewCount) warnings.push(`${reviewCount} reservation${reviewCount===1?'':'s'} need manual review before import.`)
