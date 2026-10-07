@@ -105,6 +105,9 @@ export async function POST(req:NextRequest){
     if(dailyErr) throw new Error(dailyErr.message)
     if(!person)return NextResponse.json({error:'Staff profile not linked.'},{status:403})
     if(!dailyRow)return NextResponse.json({error:'Room is not on the housekeeping board.'},{status:404})
+    if(!dailyRow.housekeeper_attested_by||!dailyRow.housekeeper_attested_at){
+      return NextResponse.json({error:'The housekeeper must submit their own room checklist before inspection.'},{status:400})
+    }
     if(!dailyRow.complete||!dailyRow.ready_for_inspection){
       return NextResponse.json({error:'The housekeeper must complete the room checklist and mark the room Ready for Inspection before inspection.'},{status:400})
     }
