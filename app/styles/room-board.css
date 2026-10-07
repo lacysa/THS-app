@@ -1152,3 +1152,9 @@ html[data-theme="dark"] .rb-note-badge{
 .rb-staff-scope b{font-size:9px;color:var(--ths-muted)}
 .rb-staff-scope button{border:0;background:transparent;color:var(--app-accent,#5877d8);font-size:9px;font-weight:800;cursor:pointer}
 .rb-chip-list button small{display:block;margin-left:3px;font-size:7px;font-weight:600;opacity:.72}
+
+
+/* Dirty carry-forward status */
+.rb-room-card.rb-status-dirty{border-left-color:#b55252}
+.rb-status-field select.rb-status-dirty{background:#fbecec;color:#8a3f3f;border-color:#d9a3a3}
+.rb-summary-pill.rb-status-dirty{background:#fbecec;color:#8a3f3f;border-color:#d9a3a3}
