@@ -65,14 +65,16 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
   }
 
   const admin = createSupabaseAdmin()
-  const { data:overrideRows } = await admin
-    .from('staff_module_access')
-    .select('module_key,allowed')
-    .eq('user_id',user.id)
+  if (member?.id) {
+    const { data:overrideRows } = await admin
+      .from('staff_module_access')
+      .select('module_key,allowed')
+      .eq('staff_member_id',member.id)
 
-  moduleOverrides = Object.fromEntries(
-    (overrideRows || []).map((row:any)=>[String(row.module_key),Boolean(row.allowed)])
-  )
+    moduleOverrides = Object.fromEntries(
+      (overrideRows || []).map((row:any)=>[String(row.module_key),Boolean(row.allowed)])
+    )
+  }
 
   return {
     userId:user.id,
