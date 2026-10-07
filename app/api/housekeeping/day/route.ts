@@ -350,11 +350,15 @@ export async function POST(req: NextRequest) {
             throw new Error('You must correct and pass re-check on the flagged room before completing another room.')
           }
 
-          if (complete && !row.housekeeperAttested) {
-            throw new Error('Please attest that the room is fully cleaned and up to The Hotel Saugatuck standards before completing it.')
+          const attestedAt = existing.housekeeper_attested_at ? new Date(existing.housekeeper_attested_at).getTime() : 0
+          const issueAt = existing.check_issue_at ? new Date(existing.check_issue_at).getTime() : 0
+          const validSelfCheck = Boolean(existing.housekeeper_attested_by && attestedAt > issueAt)
+
+          if (complete && !validSelfCheck) {
+            throw new Error('Complete and submit the room checklist before marking this room complete.')
           }
 
-          const attestedNow = complete && Boolean(row.housekeeperAttested)
+          const attestedNow = complete && validSelfCheck
           return {
             service_date: serviceDate,
             room_id: row.roomId,
@@ -374,8 +378,8 @@ export async function POST(req: NextRequest) {
             next_shift_condition: existing.next_shift_condition || '',
             notes: cleanText(row.notes),
             breakfast_tag: Boolean(existing.breakfast_tag),
-            housekeeper_attested_by: attestedNow ? currentPerson.id : null,
-            housekeeper_attested_at: attestedNow ? (existing.housekeeper_attested_at || now) : null,
+            housekeeper_attested_by: attestedNow ? existing.housekeeper_attested_by : null,
+            housekeeper_attested_at: attestedNow ? existing.housekeeper_attested_at : null,
             ha_signed_by: complete ? existing.ha_signed_by || null : null,
             ha_signed_at: complete ? existing.ha_signed_at || null : null,
             foh_signed_by: complete ? existing.foh_signed_by || null : null,
