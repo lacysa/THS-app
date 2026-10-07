@@ -115,11 +115,13 @@ function canInspect(access:Access|null){
   const perms=access.permissions||[]
   return Boolean(access.isAdmin||perms.includes('room_checks.perform')||caps.some(c=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(c)))
 }
-function isRefresh(row:RoomRow){return normalize(row.reservationStatus)==='stayover'&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
-function requiresSelfCheck(row:RoomRow){return Boolean(row.requiresQualityCheck)&&!isRefresh(row)}
+function isStayover(row:RoomRow){return normalize(row.reservationStatus)==='stayover'}
+function isRefresh(row:RoomRow){return isStayover(row)&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
+function requiresRoomCheck(row:RoomRow){return !isStayover(row)}
+function requiresSelfCheck(row:RoomRow){return Boolean(row.requiresQualityCheck)&&requiresRoomCheck(row)}
 function workflowState(row:RoomRow,inspection?:InspectionRoom){
   if(row.checkIssueOpen||inspection?.issueOpen)return 'correction'
-  if(isRefresh(row)) return row.complete?'complete':'cleaning'
+  if(isStayover(row)) return row.complete?'complete':'cleaning'
   if(requiresSelfCheck(row)&&!row.housekeeperAttested)return 'self'
   if(!row.complete)return 'cleaning'
   if(inspection && !inspection.inspected)return 'inspection'
@@ -274,9 +276,9 @@ export default function UnifiedRoomsBoard(){
     const nextRows=rowsRef.current.map(r=>r.roomId===row.roomId?{
       ...r,
       complete:next,
-      readyForInspection:next&&!isRefresh(r),
+      readyForInspection:next&&requiresRoomCheck(r),
       inspected:false,
-      roomCondition:next?(isRefresh(r)?(r.roomCondition||'Occupied'):'Ready for Inspection'):'Cleaning',
+      roomCondition:next?(isStayover(r)?(r.roomCondition||'Occupied'):'Ready for Inspection'):'Cleaning',
       ...(next?{}:{haSignedBy:null,haSignedName:null,haSignedAt:null,fohSignedBy:null,fohSignedName:null,fohSignedAt:null})
     }:r)
     setRows(nextRows);rowsRef.current=nextRows
@@ -420,10 +422,10 @@ export default function UnifiedRoomsBoard(){
 
             <div className="rooms-progress" aria-label="Room workflow progress">
               <span className={row.complete?'done':''}>Clean</span>
-              {!isRefresh(row)&&<span className={row.housekeeperAttested?'done':''}>Self</span>}
-              {!isRefresh(row)&&<span className={row.inspected?'done':''}>Check</span>}
-              {!isRefresh(row)&&<span className={row.haSignedBy?'done':''}>HA</span>}
-              {!isRefresh(row)&&<span className={row.fohSignedBy?'done':''}>FOH</span>}
+              {requiresRoomCheck(row)&&<span className={row.housekeeperAttested?'done':''}>Self</span>}
+              {requiresRoomCheck(row)&&<span className={row.inspected?'done':''}>Check</span>}
+              {requiresRoomCheck(row)&&<span className={row.haSignedBy?'done':''}>HA</span>}
+              {requiresRoomCheck(row)&&<span className={row.fohSignedBy?'done':''}>FOH</span>}
             </div>
 
             {isOpen&&<div className="rooms-card-body">
@@ -470,11 +472,11 @@ export default function UnifiedRoomsBoard(){
                   </section>)}
 
               <section className="rooms-section">
-                <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isRefresh(row)?'Refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
-                <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isRefresh(row)?'Refresh complete ✓':'Ready for inspection ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
+                <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
+                <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isStayover(row)?'Stayover service complete ✓':'Ready for inspection ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
               </section>
 
-              {canInspect(access)&&inspection&&!isRefresh(row)&&((row.inspected||inspection.inspected)&&!inspection.issueOpen
+              {canInspect(access)&&inspection&&requiresRoomCheck(row)&&((row.inspected||inspection.inspected)&&!inspection.issueOpen
                 ? <section className="rooms-section inspection-section">
                     <div className="rooms-success-line"><Check size={16}/><strong>Room check</strong><span>Pass ✓</span></div>
                   </section>
@@ -486,7 +488,7 @@ export default function UnifiedRoomsBoard(){
                     {failedCount>0&&<div className="rooms-warning-line"><AlertTriangle size={16}/>{failedCount} item{failedCount===1?'':'s'} marked for correction.</div>}
                   </section>)}
 
-              {viewMode==='manager'&&!isRefresh(row)&&<section className="rooms-section rooms-signoffs">
+              {viewMode==='manager'&&requiresRoomCheck(row)&&<section className="rooms-section rooms-signoffs">
                 <div className="rooms-section-heading"><UserRoundCheck size={17}/><div><strong>Final checks</strong><small>Visible only to staff with room-check/sign-off access.</small></div></div>
                 <div className="rooms-signoff-grid">
                   <button type="button" className={row.haSignedBy?'signed':''} disabled={!canHaSignoff||!row.complete} onClick={()=>void signOff(row,'ha')}><span>HA</span><strong>{row.haSignedBy?`${row.haSignedName||'Signed'} ✓`:'Sign off'}</strong></button>
