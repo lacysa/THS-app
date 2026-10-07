@@ -172,6 +172,7 @@ export default async function DashboardPage() {
     fohCheckInitials:row.foh_signed_by ? initials(staffNameMap.get(String(row.foh_signed_by)) || 'Staff') : '',
     checkIssueOpen:Boolean(row.check_issue_open),
     inspected:Boolean(row.inspected),
+    housekeeperAttested:Boolean(row.housekeeper_attested_by),
     packages:packageNamesByRoom.get(String(row.room_id || '')) || [],
     notes:String(row.notes || '')
   })).sort((a:any,b:any)=>
