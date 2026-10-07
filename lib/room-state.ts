@@ -31,6 +31,14 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   if(row.checkIssueOpen)return 'correction'
   if(isRefreshRoom(row))return row.complete?'ready':'refresh'
   if(isStayoverRoom(row))return 'occupied'
+
+  // Arrival/vacant rooms can legitimately begin the day already guest-ready
+  // from the prior shift. A new checkout or Out/In never inherits that state.
+  const reservation=normalizeRoomValue(row.reservationStatus)
+  const condition=normalizeRoomValue(row.roomCondition)
+  const service=String(row.serviceType||'').trim().toUpperCase()
+  if(['arrival','vacant'].includes(reservation)&&['ready','ready for guest','vacant (clean)'].includes(condition)&&!service.startsWith('OUT'))return 'ready'
+
   if(requiresHousekeeperSelfCheck(row)&&!row.housekeeperAttestedBy&&!row.housekeeperAttested)return 'self'
   if(!row.complete)return 'cleaning'
   // A FOH final check is an authorized manager bypass: it completes the final
