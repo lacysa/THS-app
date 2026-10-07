@@ -316,7 +316,31 @@ export default function UnifiedRoomsBoard(){
     })
     const d=await response.json().catch(()=>({}))
     if(!response.ok){setMessage(d.error||'Could not save sign-off.');return}
-    await load()
+
+    // Keep the current card open and preserve scroll position. Sign-off should
+    // update only this room instead of reloading the entire Rooms workspace.
+    setRows(current=>{
+      const next=current.map(currentRow=>{
+        if(currentRow.roomId!==row.roomId)return currentRow
+        if(kind==='ha'){
+          return {
+            ...currentRow,
+            haSignedBy:d.signedBy||d.staffMemberId||currentRow.haSignedBy||'signed',
+            haSignedName:d.signedName||d.staffName||access?.preferredName||access?.name||'Signed',
+            haSignedAt:d.signedAt||new Date().toISOString()
+          }
+        }
+        return {
+          ...currentRow,
+          fohSignedBy:d.signedBy||d.staffMemberId||currentRow.fohSignedBy||'signed',
+          fohSignedName:d.signedName||d.staffName||access?.preferredName||access?.name||'Signed',
+          fohSignedAt:d.signedAt||new Date().toISOString()
+        }
+      })
+      rowsRef.current=next
+      return next
+    })
+    setMessage('')
   }
 
   function assignStaff(row:RoomRow,name:string){
@@ -383,7 +407,7 @@ export default function UnifiedRoomsBoard(){
           return <section key={row.roomId} className={`rooms-card state-${state} ${row.checkIssueOpen?'has-issue':''}`}>
             <button type="button" className="rooms-card-header" onClick={()=>{
               const next=!isOpen;setExpanded(current=>({...current,[row.roomId]:next}))
-              if(next&&requiresSelfCheck(row)&&!selfChecks[row.roomId])void loadSelfCheck(row)
+              if(next&&requiresSelfCheck(row)&&!row.housekeeperAttested&&!selfChecks[row.roomId])void loadSelfCheck(row)
             }}>
               <div className="rooms-card-title">
                 <span className="rooms-chevron">{isOpen?<ChevronDown size={18}/>:<ChevronRight size={18}/>}</span>
@@ -422,37 +446,45 @@ export default function UnifiedRoomsBoard(){
 
               {row.claimableRefresh&&<button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void claimRefresh(row)}><UserRoundCheck size={16}/>Claim refresh</button>}
 
-              {requiresSelfCheck(row)&&<section className="rooms-section">
-                <div className="rooms-section-heading"><ClipboardCheck size={17}/><div><strong>Housekeeper self-check</strong><small>{row.housekeeperAttested?'Submitted':'Confirm each room area before completing the clean.'}</small></div></div>
-                {self?.loading?<div className="rooms-inline-loading">Loading checklist…</div>:self&&<>
-                  <div className="rooms-zone-list">{zones.map(zone=>{
-                    const zoneItems=self.items.filter(i=>i.zone===zone)
-                    const confirmed=zoneItems.every(i=>self.checked.includes(String(i.id)))
-                    const detailsOpen=self.openZones.includes(zone)
-                    return <div className={`rooms-zone ${confirmed?'confirmed':''}`} key={zone}>
-                      <div className="rooms-zone-main">
-                        <button type="button" className="rooms-zone-confirm" disabled={self.submitted} onClick={()=>confirmZone(row.roomId,zone)}>{confirmed?<Check size={17}/>:<span className="rooms-empty-check"/>}<span><strong>{zone}</strong><small>{zoneItems.length} standard{zoneItems.length===1?'':'s'}</small></span></button>
-                        <button type="button" className="rooms-zone-details" onClick={()=>toggleZoneDetails(row.roomId,zone)} aria-label={`Show ${zone} details`}>{detailsOpen?<ChevronDown size={17}/>:<ChevronRight size={17}/>}</button>
-                      </div>
-                      {detailsOpen&&<ul>{zoneItems.map(item=><li key={item.id}>{item.label}</li>)}</ul>}
-                    </div>
-                  })}</div>
-                  {!self.submitted?<button type="button" className="ops-primary-btn rooms-primary-action" disabled={self.saving||self.checked.length!==self.items.length} onClick={()=>void submitSelfCheck(row)}><Check size={16}/>{self.saving?'Submitting…':`Submit self-check (${self.checked.length}/${self.items.length})`}</button>:<div className="rooms-success-line"><Check size={16}/>Self-check attested {self.submittedAt?`at ${shortTime(self.submittedAt)}`:''}</div>}
-                </>}
-              </section>}
+              {requiresSelfCheck(row)&&(row.housekeeperAttested||self?.submitted
+                ? <section className="rooms-section">
+                    <div className="rooms-success-line"><Check size={16}/><strong>Self-check</strong><span>Complete ✓</span></div>
+                  </section>
+                : <section className="rooms-section">
+                    <div className="rooms-section-heading"><ClipboardCheck size={17}/><div><strong>Housekeeper self-check</strong><small>Confirm each room area before completing the clean.</small></div></div>
+                    {self?.loading?<div className="rooms-inline-loading">Loading checklist…</div>:self&&<>
+                      <div className="rooms-zone-list">{zones.map(zone=>{
+                        const zoneItems=self.items.filter(i=>i.zone===zone)
+                        const confirmed=zoneItems.every(i=>self.checked.includes(String(i.id)))
+                        const detailsOpen=self.openZones.includes(zone)
+                        return <div className={`rooms-zone ${confirmed?'confirmed':''}`} key={zone}>
+                          <div className="rooms-zone-main">
+                            <button type="button" className="rooms-zone-confirm" onClick={()=>confirmZone(row.roomId,zone)}>{confirmed?<Check size={17}/>:<span className="rooms-empty-check"/>}<span><strong>{zone}</strong><small>{zoneItems.length} standard{zoneItems.length===1?'':'s'}</small></span></button>
+                            <button type="button" className="rooms-zone-details" onClick={()=>toggleZoneDetails(row.roomId,zone)} aria-label={`Show ${zone} details`}>{detailsOpen?<ChevronDown size={17}/>:<ChevronRight size={17}/>}</button>
+                          </div>
+                          {detailsOpen&&<ul>{zoneItems.map(item=><li key={item.id}>{item.label}</li>)}</ul>}
+                        </div>
+                      })}</div>
+                      <button type="button" className="ops-primary-btn rooms-primary-action" disabled={self.saving||self.checked.length!==self.items.length} onClick={()=>void submitSelfCheck(row)}><Check size={16}/>{self.saving?'Submitting…':`Submit self-check (${self.checked.length}/${self.items.length})`}</button>
+                    </>}
+                  </section>)}
 
               <section className="rooms-section">
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isRefresh(row)?'Refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
                 <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isRefresh(row)?'Refresh complete ✓':'Ready for inspection ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
               </section>
 
-              {canInspect(access)&&inspection&&!isRefresh(row)&&<section className="rooms-section inspection-section">
-                <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Independent room check</strong><small>{inspection.inspected?'Inspection passed':inspection.readyForInspection?`${checkedCount}/${inspection.items.length} standards checked`:'Waiting for housekeeping'}</small></div></div>
-                {inspection.issueOpen&&<div className="rooms-info-callout issue"><strong>Needs correction</strong><span>{inspection.issueNote}</span></div>}
-                {!inspection.readyForInspection&&!inspection.inspected?<div className="rooms-waiting">Housekeeping must finish the room and self-check before inspection.</div>:inspection.inspected?<div className="rooms-success-line"><Check size={16}/>Independent room check passed.</div>:
-                  <div className="rooms-inspection-list">{[...new Set(inspection.items.map(i=>i.zone))].map(zone=><div className="rooms-inspection-zone" key={zone}><h4>{zone}</h4>{inspection.items.filter(i=>i.zone===zone).map(item=><div className={`rooms-inspection-item ${item.passed===true?'pass':item.passed===false?'fail':''}`} key={item.id}><div><strong>{item.label}</strong>{item.passed===false&&<input value={item.note} onChange={e=>updateInspectionNote(row.roomId,item.id,e.target.value)} onBlur={()=>void setInspectionResult(inspection,item,false)} placeholder="What needs correction?"/>}</div><div className="rooms-inspection-actions"><button type="button" className={item.passed===true?'active pass':''} onClick={()=>void setInspectionResult(inspection,item,true)}><Check size={16}/>Pass</button><button type="button" className={item.passed===false?'active fail':''} onClick={()=>void setInspectionResult(inspection,item,false)}><X size={16}/>Fix</button></div></div>)}</div>)}</div>}
-                {failedCount>0&&<div className="rooms-warning-line"><AlertTriangle size={16}/>{failedCount} item{failedCount===1?'':'s'} marked for correction.</div>}
-              </section>}
+              {canInspect(access)&&inspection&&!isRefresh(row)&&((row.inspected||inspection.inspected)&&!inspection.issueOpen
+                ? <section className="rooms-section inspection-section">
+                    <div className="rooms-success-line"><Check size={16}/><strong>Room check</strong><span>Pass ✓</span></div>
+                  </section>
+                : <section className="rooms-section inspection-section">
+                    <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Independent room check</strong><small>{inspection.readyForInspection?`${checkedCount}/${inspection.items.length} standards checked`:'Waiting for housekeeping'}</small></div></div>
+                    {inspection.issueOpen&&<div className="rooms-info-callout issue"><strong>Needs correction</strong><span>{inspection.issueNote}</span></div>}
+                    {!inspection.readyForInspection?<div className="rooms-waiting">Housekeeping must finish the room and self-check before inspection.</div>:
+                      <div className="rooms-inspection-list">{[...new Set(inspection.items.map(i=>i.zone))].map(zone=><div className="rooms-inspection-zone" key={zone}><h4>{zone}</h4>{inspection.items.filter(i=>i.zone===zone).map(item=><div className={`rooms-inspection-item ${item.passed===true?'pass':item.passed===false?'fail':''}`} key={item.id}><div><strong>{item.label}</strong>{item.passed===false&&<input value={item.note} onChange={e=>updateInspectionNote(row.roomId,item.id,e.target.value)} onBlur={()=>void setInspectionResult(inspection,item,false)} placeholder="What needs correction?"/>}</div><div className="rooms-inspection-actions"><button type="button" className={item.passed===true?'active pass':''} onClick={()=>void setInspectionResult(inspection,item,true)}><Check size={16}/>Pass</button><button type="button" className={item.passed===false?'active fail':''} onClick={()=>void setInspectionResult(inspection,item,false)}><X size={16}/>Fix</button></div></div>)}</div>)}</div>}
+                    {failedCount>0&&<div className="rooms-warning-line"><AlertTriangle size={16}/>{failedCount} item{failedCount===1?'':'s'} marked for correction.</div>}
+                  </section>)}
 
               {viewMode==='manager'&&!isRefresh(row)&&<section className="rooms-section rooms-signoffs">
                 <div className="rooms-section-heading"><UserRoundCheck size={17}/><div><strong>Final checks</strong><small>Visible only to staff with room-check/sign-off access.</small></div></div>
