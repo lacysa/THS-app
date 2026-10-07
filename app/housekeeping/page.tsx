@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
-import HousekeepingBoard from '@/components/HousekeepingBoard'
+import HousekeepingWorkspace from '@/components/HousekeepingWorkspace'
 import { canUseModule } from '@/lib/access'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,7 @@ export default async function Page() {
 
   return (
     <StaffShell title="Housekeeping">
-      <HousekeepingBoard />
+      <HousekeepingWorkspace />
     </StaffShell>
   )
 }
