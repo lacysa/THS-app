@@ -261,7 +261,14 @@ export default function RoomBoard(){
       ].join(' ').toLowerCase()
 
       if(q && !haystack.includes(q)) return false
-      if(statusFilters.length && !statusFilters.includes(row.reservationStatus)) return false
+      if(statusFilters.length){
+        const statusMatches=statusFilters.some(filter=>
+          filter==='Arrival'
+            ? row.reservationStatus==='Arrival'||row.reservationStatus==='Out/In'
+            : row.reservationStatus===filter
+        )
+        if(!statusMatches) return false
+      }
 
       if(staffFilters.length){
         const assigned=splitAssigned(row.assignedTo)
@@ -421,7 +428,7 @@ export default function RoomBoard(){
           aria-pressed={statusFilters.includes('Arrival')}
         >
           Arrivals
-          <span>{rows.filter(row=>row.reservationStatus==='Arrival').length}</span>
+          <span>{rows.filter(row=>row.reservationStatus==='Arrival'||row.reservationStatus==='Out/In').length}</span>
         </button>
 
         <div className="rb-filter-menu">
