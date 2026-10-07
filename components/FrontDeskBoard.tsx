@@ -62,6 +62,26 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
 
   async function setBreakfastSkipped(booking:any,skipped:boolean) {
     setError('')
+
+    if (booking.taggedOnly) {
+      const r = await fetch('/api/staff/breakfast-skip',{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          serviceDate:date,
+          roomId:booking.rooms?.id,
+          skipped
+        })
+      })
+      const json = await r.json().catch(()=>({}))
+      if (!r.ok) {
+        setError(json.message || (skipped ? 'Could not skip breakfast.' : 'Could not restore breakfast.'))
+        return
+      }
+      load()
+      return
+    }
+
     const payload:any = {
       id:booking.id,
       status:skipped ? 'declined' : 'scheduled'
@@ -138,7 +158,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
                   <div className="fd-breakfast-pill-main">
                     <div className="fd-breakfast-pill-room">
                       <strong>{b.rooms?.name}</strong>
-                      <span>{b.taggedOnly ? 'Menu Missing' : b.last_name}</span>
+                      <span>{b.taggedOnly ? (b.status==='declined' ? 'Breakfast skipped' : 'Menu Missing') : b.last_name}</span>
                     </div>
                     <div className="fd-breakfast-pill-status">
                       <span className="pill">{b.displayTime}</span>
@@ -146,22 +166,22 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
                         {b.status==='declined' ? 'Skipping breakfast' : b.menu_submitted?'Menu received':'Menu Missing'}
                       </span>
                     </div>
-                    {!b.taggedOnly && (
-                      <div className="fd-breakfast-pill-actions">
-                        <label className={`fd-skip-breakfast-toggle ${b.status==='declined'?'active':''}`}>
-                          <input
-                            type="checkbox"
-                            checked={b.status==='declined'}
-                            onChange={e=>void setBreakfastSkipped(b,e.target.checked)}
-                          />
-                          <span className="fd-skip-switch" aria-hidden="true"><i/></span>
-                          <strong>Skip breakfast</strong>
-                        </label>
+                    <div className="fd-breakfast-pill-actions">
+                      <label className={`fd-skip-breakfast-toggle ${b.status==='declined'?'active':''}`}>
+                        <input
+                          type="checkbox"
+                          checked={b.status==='declined'}
+                          onChange={e=>void setBreakfastSkipped(b,e.target.checked)}
+                        />
+                        <span className="fd-skip-switch" aria-hidden="true"><i/></span>
+                        <strong>Skip breakfast</strong>
+                      </label>
+                      {!b.taggedOnly && <>
                         <button className="btn secondary" disabled={b.status==='declined'} onClick={()=>setEditing({...b,time_slot:String(b.time_slot).slice(0,5)})}>Edit time</button>
                         {b.guest_token && b.status!=='declined' && <a className="btn secondary" href={`/breakfast/menu?token=${encodeURIComponent(b.guest_token)}`} target="_blank" rel="noreferrer">Edit menu</a>}
                         <button className="btn danger" onClick={()=>cancel(b.id)}>Cancel</button>
-                      </div>
-                    )}
+                      </>}
+                    </div>
                   </div>
                   {!b.taggedOnly && b.status!=='declined' && <div className="fd-breakfast-pill-note"><BookingMenuNote bookingId={b.id} initialNote={b.note || ''} /></div>}
                 </div>
