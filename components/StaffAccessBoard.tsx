@@ -32,6 +32,7 @@ export default function StaffAccessBoard(){
   const [loading,setLoading]=useState(true)
   const [message,setMessage]=useState('')
   const [previewOpen,setPreviewOpen]=useState(false)
+  const [previewModuleKey,setPreviewModuleKey]=useState('')
 
   async function load(){
     setLoading(true)
@@ -124,7 +125,10 @@ export default function StaffAccessBoard(){
             <p>{selected.jobTitle||selected.email||''}</p>
           </div>
           <div className="staff-access-header-actions">
-            {!selected.isOwner&&<button type="button" className="staff-access-preview-btn" onClick={()=>setPreviewOpen(true)}>
+            {!selected.isOwner&&<button type="button" className="staff-access-preview-btn" onClick={()=>{
+              setPreviewModuleKey(selected.modules.find(m=>m.effectiveAccess)?.module_key||'')
+              setPreviewOpen(true)
+            }}>
               <Eye size={16}/> Preview view
             </button>}
             <div className="staff-access-summary">
@@ -190,7 +194,12 @@ export default function StaffAccessBoard(){
             <div className="staff-preview-brand">THS</div>
             {previewGroups.map(group=><div className="staff-preview-group" key={group.label}>
               <span>{group.label}</span>
-              {group.items.map(module=><div className="staff-preview-nav-item" key={module.module_key}>{module.label}</div>)}
+              {group.items.map(module=><button
+                type="button"
+                className={`staff-preview-nav-item ${previewModuleKey===module.module_key?'active':''}`}
+                key={module.module_key}
+                onClick={()=>setPreviewModuleKey(module.module_key)}
+              >{module.label}</button>)}
             </div>)}
             {!previewGroups.length&&<div className="staff-preview-empty">No modules currently visible.</div>}
           </aside>
@@ -198,7 +207,7 @@ export default function StaffAccessBoard(){
             <div className="staff-preview-page-head">
               <div>
                 <span>THE HOTEL SAUGATUCK</span>
-                <h3>{selected.modules.find(m=>m.effectiveAccess)?.label||'No access'}</h3>
+                <h3>{selected.modules.find(m=>m.module_key===previewModuleKey)?.label||selected.modules.find(m=>m.effectiveAccess)?.label||'No access'}</h3>
               </div>
               <div className="staff-preview-avatar">{selected.name.slice(0,2).toUpperCase()}</div>
             </div>
@@ -208,10 +217,41 @@ export default function StaffAccessBoard(){
                 <p>It shows the modules and navigation {selected.name} will see after signing in. It does not impersonate their account or expose guest data as them.</p>
               </div>
               <div className="staff-preview-visible-list">
-                <span>VISIBLE MODULES</span>
-                {selected.modules.filter(m=>m.effectiveAccess).map(module=><div key={module.module_key}>
-                  <strong>{module.label}</strong>
-                  <small>{module.override===null?'Role default':'Individual override'}</small>
+                <span>MODULE ACCESS — EDITABLE</span>
+                {selected.modules
+                  .filter(module=>module.module_key!=='staff')
+                  .map(module=><div key={module.module_key} className={!module.effectiveAccess?'is-hidden':''}>
+                  <div className="staff-preview-module-copy">
+                    <strong>{module.label}</strong>
+                    <small>{module.override===null
+                      ? `Role default: ${module.defaultAccess?'Visible':'Hidden'}`
+                      : `Individual override: ${module.effectiveAccess?'Visible':'Hidden'}`}</small>
+                  </div>
+                  <div className="staff-preview-module-actions">
+                    {module.override!==null&&<button
+                      type="button"
+                      className="staff-access-reset"
+                      onClick={()=>void setOverride(module,null)}
+                      title="Reset to role default"
+                    ><RotateCcw size={14}/> Default</button>}
+                    <label className="staff-access-switch">
+                      <input
+                        type="checkbox"
+                        checked={module.effectiveAccess}
+                        disabled={!selected.memberId || !module.enabled}
+                        onChange={e=>{
+                          if(!e.target.checked && previewModuleKey===module.module_key) {
+                            const next=selected.modules.find(m=>m.module_key!==module.module_key&&m.effectiveAccess)
+                            setPreviewModuleKey(next?.module_key||'')
+                          } else if(e.target.checked && !previewModuleKey) {
+                            setPreviewModuleKey(module.module_key)
+                          }
+                          void setOverride(module,e.target.checked)
+                        }}
+                      />
+                      <span>{module.effectiveAccess?'Visible':'Hidden'}</span>
+                    </label>
+                  </div>
                 </div>)}
               </div>
             </div>
