@@ -112,8 +112,9 @@ export async function POST(req: NextRequest) {
       const stripOrHold = Boolean(String(roomRow?.strip_hold || '').trim())
 
       if (!nextBlocked && !stripOrHold) {
+        const roomStatus=String(roomRow?.reservation_status || '').trim().toLowerCase()
         automaticEndOfShiftStatus =
-          String(roomRow?.reservation_status || '').trim().toLowerCase() === 'checkout'
+          ['checkout','vacant','dirty'].includes(roomStatus)
             ? 'Vacant (Clean)'
             : 'Ready'
       }
