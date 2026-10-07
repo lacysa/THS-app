@@ -167,7 +167,7 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
             <span className={`daily-chip ${row.checkIssueOpen?'danger':''}`}>{roomCheckLabel(row)}</span>
           )}
           {row.packages.map(pkg=><span className="daily-chip package" key={pkg}>{pkg}</span>)}
-          {row.notes && <span className="daily-chip note">Note</span>}
+          {row.notes && <span className="daily-chip note daily-note-chip" title={row.notes}><b>Note</b> {row.notes}</span>}
         </div>
       </summary>
       <div className="daily-room-detail">
