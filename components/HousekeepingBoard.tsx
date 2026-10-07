@@ -67,6 +67,7 @@ type StaffOption = {
   id: string
   name: string
   roleLabel?: string
+  fullRoomCleanLimit?: number
   shiftStart?: string | null
   shiftEnd?: string | null
   onSite?: boolean
@@ -157,6 +158,11 @@ function splitAssigned(value: string) {
     .split(',')
     .map(item => item.trim())
     .filter(Boolean)
+}
+
+function isFullRoomClean(row: RoomRow) {
+  const status=normalize(row.reservationStatus)
+  return status==='checkout' || status==='out/in'
 }
 
 function saveStatusLabel(state: SaveState) {
@@ -407,9 +413,29 @@ export default function HousekeepingBoard() {
     })
   }
 
+  function fullCleanCountFor(name:string) {
+    const target=normalize(name)
+    return rowsRef.current.filter(candidate=>
+      isFullRoomClean(candidate) &&
+      splitAssigned(candidate.assignedTo).some(person=>normalize(person)===target)
+    ).length
+  }
+
   function toggleStaff(row: RoomRow, name: string) {
     const current = splitAssigned(row.assignedTo)
-    const next = current.includes(name)
+    const alreadyAssigned=current.includes(name)
+
+    if(!alreadyAssigned && isFullRoomClean(row)){
+      const option=[...staffOptions,...allStaffOptions].find(person=>normalize(person.name)===normalize(name))
+      const limit=Number(option?.fullRoomCleanLimit ?? 2)
+      const currentCount=fullCleanCountFor(name)
+      if(currentCount>=limit){
+        setMessage(`${name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift. Reassign a Checkout/Out-In room or increase their limit first.`)
+        return
+      }
+    }
+
+    const next = alreadyAssigned
       ? current.filter(item => item !== name)
       : [...current, name]
     patch(row.roomId, { assignedTo: next.join(', ') })
@@ -1049,21 +1075,28 @@ export default function HousekeepingBoard() {
                             <div className="hsk-staff-options">
                               {filteredStaff.map(option => {
                                 const checked = selectedStaff.includes(option.name)
+                                const fullCleanCount=fullCleanCountFor(option.name)
+                                const fullCleanLimit=Number(option.fullRoomCleanLimit ?? 2)
+                                const atLimit=isFullRoomClean(row) && !checked && fullCleanCount>=fullCleanLimit
                                 return (
                                   <button
                                     type="button"
                                     key={option.id}
-                                    className={checked ? 'is-selected' : ''}
+                                    className={`${checked ? 'is-selected' : ''} ${atLimit?'is-at-limit':''}`}
                                     onClick={() => toggleStaff(row, option.name)}
+                                    aria-disabled={atLimit}
+                                    title={atLimit?`${option.name} is at their full clean limit (${fullCleanCount}/${fullCleanLimit})`:undefined}
                                   >
                                     <span className="hsk-staff-check">{checked && <Check size={13} />}</span>
                                     <span>
                                       {option.name}
-                                      {!showAllStaff && option.onSite && (
-                                        <small>
-                                          {[option.roleLabel, option.shiftStart && option.shiftEnd ? `${String(option.shiftStart).slice(0,5)}–${String(option.shiftEnd).slice(0,5)}` : ''].filter(Boolean).join(' · ')}
-                                        </small>
-                                      )}
+                                      <small>
+                                        {[
+                                          !showAllStaff && option.onSite ? option.roleLabel : '',
+                                          !showAllStaff && option.onSite && option.shiftStart && option.shiftEnd ? `${String(option.shiftStart).slice(0,5)}–${String(option.shiftEnd).slice(0,5)}` : '',
+                                          `Full cleans ${fullCleanCount}/${fullCleanLimit}`
+                                        ].filter(Boolean).join(' · ')}
+                                      </small>
                                     </span>
                                   </button>
                                 )
