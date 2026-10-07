@@ -259,7 +259,12 @@ export default function DailyDashboard({
     !splitStaff(row.assignedTo).length &&
     (Boolean(row.serviceType) || ['Checkout','Out/In'].includes(row.reservationStatus))
   )
-  const pendingChecks = roomCheckRooms.filter(row=>!row.inspected && !row.fohCheckInitials && !row.checkIssueOpen)
+  const pendingChecks = roomCheckRooms.filter(row=>
+    row.complete &&
+    !row.inspected &&
+    !row.fohCheckInitials &&
+    !row.checkIssueOpen
+  )
   const arrivals = housekeeping.filter(row=>['Arrival','Out/In'].includes(row.reservationStatus))
   const arrivalProgressed = (row:HousekeepingRow) =>
     ['Ready','Occupied'].includes(String(row.roomCondition||''))
