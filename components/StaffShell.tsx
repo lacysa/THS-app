@@ -18,6 +18,7 @@ import {
   Search,
   RefreshCw,
   CalendarDays,
+  BarChart3,
   ShieldCheck,
   ScrollText,
   PanelLeftClose,
@@ -90,7 +91,8 @@ const iconMap: Record<string, any> = {
   laundry_inventory: Package,
   lobby_inventory: Package,
   reservation_sync: RefreshCw,
-  reservations: CalendarDays
+  reservations: CalendarDays,
+  housekeeping_quality: BarChart3
 }
 
 const permissionByModule: Record<string, string | undefined> = {
@@ -133,7 +135,8 @@ const hrefFallback: Record<string, string> = {
   laundry_inventory: '/inventory/laundry',
   lobby_inventory: '/inventory/lobby',
   reservation_sync: '/reservation-sync',
-  reservations: '/reservations'
+  reservations: '/reservations',
+  housekeeping_quality: '/housekeeping/quality'
 }
 
 const breakfastModules = new Set([
@@ -149,6 +152,7 @@ const operationsModules = new Set([
   'room_board',
   'housekeeping_setup',
   'room_checks',
+  'housekeeping_quality',
   'projects',
   'shift_reports',
   'maintenance',

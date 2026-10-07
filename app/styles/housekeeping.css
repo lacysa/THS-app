@@ -507,3 +507,148 @@
     border-left-width:5px;
   }
 }
+
+
+/* Housekeeper self-check before room completion */
+.hsk-self-check{
+  border:1px solid var(--ths-line);
+  border-radius:12px;
+  background:#fbfcfe;
+  overflow:hidden;
+}
+.hsk-self-check-toggle{
+  width:100%;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:9px;
+  align-items:center;
+  border:0;
+  background:transparent;
+  color:var(--ths-text);
+  padding:11px 12px;
+  text-align:left;
+  cursor:pointer;
+}
+.hsk-self-check-toggle>span{
+  display:grid;
+  gap:2px;
+}
+.hsk-self-check-toggle strong{
+  font-size:11px;
+}
+.hsk-self-check-toggle small{
+  color:var(--ths-muted);
+  font-size:9px;
+}
+.hsk-self-check-toggle.complete{
+  background:#f3faf5;
+  color:#3f684d;
+}
+.hsk-self-check-panel{
+  display:grid;
+  gap:10px;
+  padding:12px;
+  border-top:1px solid var(--ths-line);
+  background:#fff;
+}
+.hsk-self-check-zone{
+  display:grid;
+  gap:6px;
+}
+.hsk-self-check-zone h4{
+  margin:0;
+  color:var(--ths-muted);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.hsk-self-check-zone label{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  padding:8px 9px;
+  border:1px solid #e5e9ee;
+  border-radius:9px;
+  background:#fbfcfd;
+  color:var(--ths-text);
+  font-size:10px;
+  line-height:1.35;
+  cursor:pointer;
+}
+.hsk-self-check-zone label.checked{
+  border-color:#bdd6c4;
+  background:#f2faf4;
+}
+.hsk-self-check-zone input{
+  flex:0 0 auto;
+  width:16px!important;
+  height:16px!important;
+  margin-top:1px;
+}
+.hsk-self-check-submit{
+  width:100%;
+}
+.hsk-self-check-confirmation{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:9px 10px;
+  border-radius:9px;
+  background:#edf7f0;
+  color:#386548;
+  font-size:10px;
+  font-weight:800;
+}
+.hsk-self-check-loading{
+  padding:10px;
+  color:var(--ths-muted);
+  font-size:10px;
+}
+
+html[data-theme="dark"] .hsk-self-check{
+  background:#18232e;
+  border-color:#334250;
+}
+html[data-theme="dark"] .hsk-self-check-panel{
+  background:#141d26;
+  border-color:#334250;
+}
+html[data-theme="dark"] .hsk-self-check-zone label{
+  background:#18232e;
+  border-color:#334250;
+  color:#edf3f8;
+}
+html[data-theme="dark"] .hsk-self-check-zone label.checked{
+  background:#1b2c22;
+  border-color:#4c6d56;
+}
+html[data-theme="dark"] .hsk-self-check-toggle.complete{
+  background:#1b2c22;
+  color:#a9d5b5;
+}
+
+
+/* Independent room inspection states */
+.room-check-status.ready{background:#eaf2f8;color:#3d5f7d}
+.room-check-status.waiting{background:#f2f3f4;color:#6c7883}
+.room-check-history-note,
+.room-check-waiting,
+.room-check-passed-note{
+  display:flex;
+  gap:7px;
+  align-items:flex-start;
+  padding:10px 11px;
+  border:1px solid var(--ths-line);
+  border-radius:10px;
+  background:#f8fafc;
+  color:var(--ths-muted);
+  font-size:10px;
+  line-height:1.4;
+}
+.room-check-waiting{display:grid;gap:3px}
+.room-check-waiting strong{color:var(--ths-text);font-size:11px}
+.room-check-passed-note{align-items:center;background:#edf7f0;color:#386548;border-color:#bdd6c4}
+html[data-theme="dark"] .room-check-history-note,
+html[data-theme="dark"] .room-check-waiting{background:#18232e;border-color:#334250;color:#aebbc7}
+html[data-theme="dark"] .room-check-waiting strong{color:#edf3f8}
+html[data-theme="dark"] .room-check-passed-note{background:#1b2c22;border-color:#4c6d56;color:#a9d5b5}

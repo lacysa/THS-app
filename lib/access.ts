@@ -128,6 +128,12 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
     ])
   }
 
+  if (key === 'housekeeping_quality') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'manager','general_manager','operations_manager','owner'
+    ])
+  }
+
   if (key === 'housekeeping_setup') {
     return access.isAdmin || hasAnyCapability(access,[
       'foh_manager','manager','general_manager','operations_manager','owner'
