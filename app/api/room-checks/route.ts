@@ -166,17 +166,21 @@ export async function POST(req:NextRequest){
     const qualityStage:'inspection'|'recheck'=Number(firstInspectionCount||0)===0?'inspection':'recheck'
     const attemptNo=await nextAttempt(admin,date,roomId,qualityStage)
 
-    const {data:selfCheck,error:selfErr}=await admin
-      .from('housekeeping_quality_checks')
-      .select('id,submitted_at')
-      .eq('service_date',date)
-      .eq('room_id',roomId)
-      .eq('stage','self_check')
-      .eq('housekeeper_id',dailyRow.housekeeper_attested_by)
-      .order('submitted_at',{ascending:false})
-      .limit(1)
-      .maybeSingle()
-    if(selfErr) throw new Error(selfErr.message)
+    let selfCheck:any = null
+    if(dailyRow.housekeeper_attested_by){
+      const {data:selfCheckRow,error:selfErr}=await admin
+        .from('housekeeping_quality_checks')
+        .select('id,submitted_at')
+        .eq('service_date',date)
+        .eq('room_id',roomId)
+        .eq('stage','self_check')
+        .eq('housekeeper_id',dailyRow.housekeeper_attested_by)
+        .order('submitted_at',{ascending:false})
+        .limit(1)
+        .maybeSingle()
+      if(selfErr) throw new Error(selfErr.message)
+      selfCheck=selfCheckRow
+    }
 
     const {data:qualityCheck,error:qualityErr}=await admin.from('housekeeping_quality_checks').insert({
       service_date:date,
