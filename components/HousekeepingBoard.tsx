@@ -26,6 +26,7 @@ type RoomRow = {
   sortOrder: number
   reservationStatus: string
   serviceType: string
+  requiresQualityCheck?: boolean
   stripHold: string
   assignedTo: string
   cleanOrder: number | null
@@ -353,9 +354,10 @@ export default function HousekeepingBoard() {
     if (
       checked &&
       viewMode === 'assigned' &&
+      row.requiresQualityCheck &&
       !row.housekeeperAttestedBy
     ) {
-      setMessage('Please attest that this room is fully cleaned and up to The Hotel Saugatuck standards first.')
+      setMessage('Complete and submit the room checklist before finalizing this room clean.')
       return
     }
 
@@ -687,7 +689,7 @@ export default function HousekeepingBoard() {
                   />
                 </label>
 
-                <div className="hsk-self-check">
+                {row.requiresQualityCheck && <div className="hsk-self-check">
                   <button
                     type="button"
                     className={row.housekeeperAttested ? 'hsk-self-check-toggle complete' : 'hsk-self-check-toggle'}
@@ -746,7 +748,7 @@ export default function HousekeepingBoard() {
                       )}
                     </div>
                   )}
-                </div>
+                </div>}
 
                 <button
                   type="button"
@@ -755,7 +757,7 @@ export default function HousekeepingBoard() {
                   disabled={
                     !row.complete &&
                     (
-                      !row.housekeeperAttested ||
+                      (Boolean(row.requiresQualityCheck) && !row.housekeeperAttested) ||
                       Boolean(blockingRoomId && blockingRoomId !== row.roomId)
                     )
                   }
