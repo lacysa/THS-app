@@ -106,7 +106,7 @@ type SelfCheckState = {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
-const reservationOptions = ['', 'Checkout', 'Out/In', 'Stayover', 'Arrival', 'Vacant', 'Blocked']
+const reservationOptions = ['', 'Checkout', 'Out/In', 'Stayover', 'Arrival', 'Vacant', 'Dirty', 'Blocked']
 const conditionOptions = ['', 'Occupied', 'Cleaning', 'Ready for Inspection', 'Ready', 'Vacant', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
 
 function todayDetroit() {
@@ -166,12 +166,12 @@ function splitAssigned(value: string) {
 
 function isFullRoomClean(row: RoomRow) {
   const status=normalize(row.reservationStatus)
-  return status==='checkout' || status==='out/in'
+  return status==='checkout' || status==='out/in' || status==='dirty'
 }
 
 function usesCleaningAssignment(row: RoomRow) {
   const status=normalize(row.reservationStatus)
-  return status==='checkout' || status==='out/in' || status==='stayover'
+  return status==='checkout' || status==='out/in' || status==='stayover' || status==='dirty'
 }
 
 function saveStatusLabel(state: SaveState) {
@@ -463,7 +463,7 @@ export default function HousekeepingBoard() {
       const limit=Number(option?.fullRoomCleanLimit ?? 2)
       const currentCount=fullCleanCountFor(name)
       if(currentCount>=limit){
-        setMessage(`${name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift. Reassign a Checkout/Out-In room or increase their limit first.`)
+        setMessage(`${name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift. Reassign a Checkout/Out-In/Dirty room or increase their limit first.`)
         return
       }
     }
