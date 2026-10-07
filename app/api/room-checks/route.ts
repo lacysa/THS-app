@@ -57,7 +57,8 @@ export async function GET(req:NextRequest){
     .filter((r:any)=>{
       const status=String(r.reservation_status||'').trim().toLowerCase()
       const stripHold=String(r.strip_hold||'').trim().toLowerCase()
-      return status!=='blocked' && !stripHold.includes('hold')
+      const service=String(r.service_type||'').trim().toUpperCase()
+      return status!=='blocked' && !stripHold.includes('hold') && service!=='RF'
     })
     .map((r:any)=>{
       const latest=latestQualityByRoom.get(String(r.room_id))
@@ -66,7 +67,6 @@ export async function GET(req:NextRequest){
       const activeHskService=
         ['checkout','out/in'].includes(status) ||
         service.startsWith('OUT') ||
-        service==='RF' ||
         Boolean(r.check_issue_open)
       return {
         roomId:String(r.room_id),
@@ -118,14 +118,14 @@ export async function POST(req:NextRequest){
     if(!dailyRow)return NextResponse.json({error:'Room is not on the housekeeping board.'},{status:404})
     const status=String(dailyRow.reservation_status||'').trim().toLowerCase()
     const stripHold=String(dailyRow.strip_hold||'').trim().toLowerCase()
-    if(status==='blocked' || stripHold.includes('hold')){
-      return NextResponse.json({error:'Blocked / held rooms do not require room inspection.'},{status:400})
+    const service=String(dailyRow.service_type||'').trim().toUpperCase()
+    if(status==='blocked' || stripHold.includes('hold') || service==='RF'){
+      return NextResponse.json({error:'Blocked, held, and refresh rooms do not require room inspection.'},{status:400})
     }
 
     const activeHskService=
       ['checkout','out/in'].includes(status) ||
       String(dailyRow.service_type||'').trim().toUpperCase().startsWith('OUT') ||
-      String(dailyRow.service_type||'').trim().toUpperCase()==='RF' ||
       Boolean(dailyRow.check_issue_open)
 
     if(activeHskService && (!dailyRow.complete||!dailyRow.ready_for_inspection)){

@@ -240,11 +240,12 @@ export default function DailyDashboard({
   const hkComplete = housekeepingWorkload.filter(r=>r.complete && !r.checkIssueOpen)
 
   // Room checks:
-  // Stayovers do not count toward room-check totals. Blocked / held rooms are also excluded.
+  // Every room is inspected daily except blocked / held rooms and requested RF refreshes.
   const roomCheckRooms = housekeeping.filter(row=>{
     const status=String(row.reservationStatus||'').trim().toLowerCase()
+    const service=String(row.serviceType||'').trim().toUpperCase()
     const stripHold=String(row.stripHold||'').trim().toLowerCase()
-    return status!=='stayover' && status!=='blocked' && !stripHold.includes('hold')
+    return status!=='blocked' && !stripHold.includes('hold') && service!=='RF'
   })
   const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials) || r.inspected)
   const roomCheckCorrections = roomCheckRooms.filter(r=>r.checkIssueOpen)

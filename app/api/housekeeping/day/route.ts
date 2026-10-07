@@ -223,6 +223,10 @@ export async function GET(req: NextRequest) {
           : null,
         strippedAt: savedRow.stripped_at || null,
         assignedTo: savedRow.assigned_to || '',
+        claimableRefresh:
+          String(savedRow.reservation_status||'').trim().toLowerCase()==='stayover' &&
+          String(savedRow.service_type||'').trim().toUpperCase()==='RF' &&
+          !String(savedRow.assigned_to||'').trim(),
         cleanOrder: savedRow.clean_order ?? null,
         complete: Boolean(savedRow.complete),
         readyForInspection: Boolean(savedRow.ready_for_inspection),
@@ -266,13 +270,14 @@ export async function GET(req: NextRequest) {
     })
 
     const visibleRows = assignedOnlyView && currentPerson
-      ? rows.filter((row:any) =>
-          String(row.assignedTo || '')
+      ? rows.filter((row:any) => {
+          const assigned=String(row.assignedTo || '')
             .split(',')
             .map((name:string)=>name.trim().toLowerCase())
             .filter(Boolean)
-            .includes(String(currentPerson.name || '').trim().toLowerCase())
-        )
+          const assignedToMe=assigned.includes(String(currentPerson.name || '').trim().toLowerCase())
+          return assignedToMe || Boolean(row.claimableRefresh)
+        })
       : rows
 
     const stripTasks = assignedOnlyView
@@ -467,6 +472,10 @@ export async function POST(req: NextRequest) {
                 ? requestedService
                 : existing.service_type || ''
 
+          const isRefresh =
+            String(existing.reservation_status||'').trim().toLowerCase()==='stayover' &&
+            safeHousekeeperService.toUpperCase()==='RF'
+
           return {
             service_date: serviceDate,
             room_id: row.roomId,
@@ -476,13 +485,15 @@ export async function POST(req: NextRequest) {
             assigned_to: existing.assigned_to || '',
             clean_order: existing.clean_order ?? null,
             complete,
-            ready_for_inspection: complete && !Boolean(existing.inspected),
-            inspected: Boolean(existing.inspected),
+            ready_for_inspection: isRefresh ? false : complete && !Boolean(existing.inspected),
+            inspected: isRefresh ? false : Boolean(existing.inspected),
             completed_at: complete ? (existing.completed_at || row.completedAt || now) : null,
             inspected_at: existing.inspected_at || null,
-            room_condition: complete
-              ? (existing.room_condition || 'Ready for Inspection')
-              : (existing.room_condition || ''),
+            room_condition: isRefresh
+              ? (existing.room_condition || 'Occupied')
+              : complete
+                ? (existing.room_condition || 'Ready for Inspection')
+                : (existing.room_condition || ''),
             next_shift_condition: existing.next_shift_condition || '',
             notes: cleanText(row.notes),
             breakfast_tag: Boolean(existing.breakfast_tag),
@@ -496,7 +507,10 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const inspected = Boolean(row.inspected)
+        const isRefresh =
+          String(row.reservationStatus||'').trim().toLowerCase()==='stayover' &&
+          String(row.serviceType||'').trim().toUpperCase()==='RF'
+        const inspected = isRefresh ? false : Boolean(row.inspected)
         return {
           service_date: serviceDate,
           room_id: row.roomId,
@@ -510,7 +524,7 @@ export async function POST(req: NextRequest) {
           assigned_to: cleanText(row.assignedTo),
           clean_order: Number.isFinite(row.cleanOrder as number) ? row.cleanOrder : null,
           complete,
-          ready_for_inspection: complete && !inspected,
+          ready_for_inspection: isRefresh ? false : complete && !inspected,
           inspected,
           completed_at: complete ? (existing.completed_at || row.completedAt || now) : null,
           inspected_at: inspected ? (existing.inspected_at || row.inspectedAt || now) : null,

@@ -35,6 +35,7 @@ type RoomRow = {
   strippedByName?: string | null
   strippedAt?: string | null
   assignedTo: string
+  claimableRefresh?: boolean
   cleanOrder: number | null
   complete: boolean
   readyForInspection: boolean
@@ -355,6 +356,23 @@ export default function HousekeepingBoard() {
     setSaveState('idle')
   }
 
+  async function claimRefresh(row:RoomRow){
+    setMessage('')
+    const response=await fetch('/api/housekeeping/claim-refresh',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({serviceDate:dateRef.current,roomId:row.roomId})
+    })
+    const data=await response.json().catch(()=>({}))
+    if(!response.ok){
+      setMessage(data.error||'Could not claim refresh.')
+      if(data.alreadyAssigned) await load()
+      return
+    }
+    setMessage(`${row.roomName} refresh claimed.`)
+    await load()
+  }
+
   async function setStripTask(row:RoomRow,action:'request'|'complete'|'clear'){
     setMessage('')
     const r=await fetch('/api/housekeeping/strip-task',{
@@ -438,11 +456,15 @@ export default function HousekeepingBoard() {
       return
     }
 
+    const isRefresh =
+      normalize(row.reservationStatus)==='stayover' &&
+      String(row.serviceType||'').trim().toUpperCase()==='RF'
+
     patch(row.roomId, {
       complete: true,
-      readyForInspection: true,
+      readyForInspection: isRefresh ? false : true,
       inspected: false,
-      roomCondition: row.roomCondition || 'Ready for Inspection'
+      roomCondition: isRefresh ? (row.roomCondition || 'Occupied') : (row.roomCondition || 'Ready for Inspection')
     })
   }
 
@@ -786,18 +808,18 @@ export default function HousekeepingBoard() {
         <div className="hsk-mobile-workflow-step">
           <div className="hsk-mobile-step-copy">
             <span>1</span>
-            <div><strong>Room complete</strong><small>{row.complete?'Ready for inspection':'Finish cleaning, then mark complete'}</small></div>
+            <div><strong>{isRefresh?'Refresh complete':'Room complete'}</strong><small>{isRefresh?(row.complete?'Refresh finished':'Complete the requested refresh'):row.complete?'Ready for inspection':'Finish cleaning, then mark complete'}</small></div>
           </div>
           <button
             type="button"
             className={row.complete?'hsk-mobile-action success':'hsk-mobile-action primary'}
             onClick={()=>toggleComplete(row,!row.complete)}
           >
-            <Check size={16}/>{row.complete?'Complete ✓':'Mark complete'}
+            <Check size={16}/>{row.complete?(isRefresh?'Refresh complete ✓':'Complete ✓'):(isRefresh?'Mark refresh complete':'Mark complete')}
           </button>
         </div>
 
-        {!row.fohSignedBy && <>
+        {!isRefresh && !row.fohSignedBy && <>
           <div className={`hsk-mobile-workflow-step ${roomCheckState}`}>
             <div className="hsk-mobile-step-copy">
               <span>2</span>
@@ -820,7 +842,7 @@ export default function HousekeepingBoard() {
           {canHaSignoff&&row.checkIssueOpen&&<button type="button" className="hsk-mobile-recheck" onClick={()=>void clearCheckIssue(row)}>Pass re-check</button>}
         </>}
 
-        <div className={`hsk-mobile-workflow-step ${fohState}`}>
+        {!isRefresh && <div className={`hsk-mobile-workflow-step ${fohState}`}>
           <div className="hsk-mobile-step-copy">
             <span>{row.fohSignedBy?'2':'3'}</span>
             <div>
@@ -833,7 +855,7 @@ export default function HousekeepingBoard() {
             : canFohSignoff&&row.complete
               ? <button type="button" className="hsk-mobile-action navy" onClick={()=>void signOff(row,'foh')}>Mark FOH checked</button>
               : <span className="hsk-mobile-waiting">Pending</span>}
-        </div>
+        </div>}
       </section>
 
       <div className="hsk-mobile-secondary">
@@ -874,7 +896,7 @@ export default function HousekeepingBoard() {
           <div className="hsk-title-block">
             <div className="module-kicker">Housekeeping</div>
             <h1>My Rooms</h1>
-            <p>Your assigned rooms are shown below. Shared strip tasks are available to the housekeeping team.</p>
+            <p>Your assigned rooms are shown below. Requested unassigned refreshes can be claimed by on-site Housekeeping staff.</p>
           </div>
 
           <div className="toolbar-actions hsk-toolbar-actions">
@@ -953,6 +975,13 @@ export default function HousekeepingBoard() {
                     {row.complete ? 'Complete ✓' : 'In progress'}
                   </span>
                 </div>
+
+                {row.claimableRefresh && (
+                  <div className="hsk-refresh-claim">
+                    <div><strong>Refresh requested</strong><small>This Stayover is not assigned yet.</small></div>
+                    <button type="button" onClick={()=>void claimRefresh(row)}>Claim refresh</button>
+                  </div>
+                )}
 
                 {row.breakfastTag && (
                   <span className="hsk-breakfast-badge hsk-breakfast-tag">Breakfast</span>
@@ -1059,14 +1088,17 @@ export default function HousekeepingBoard() {
                     !row.complete &&
                     (
                       (Boolean(row.requiresQualityCheck) && !row.housekeeperAttested) ||
-                      Boolean(blockingRoomId && blockingRoomId !== row.roomId)
+                      Boolean(blockingRoomId && blockingRoomId !== row.roomId) ||
+                      Boolean(row.claimableRefresh)
                     )
                   }
                 >
                   <Check size={16} />
                   {row.checkIssueOpen
                     ? 'Ready for re-check'
-                    : row.complete ? 'Mark incomplete' : 'Mark complete'}
+                    : row.complete
+                      ? (String(row.serviceType||'').toUpperCase()==='RF' ? 'Mark refresh incomplete' : 'Mark incomplete')
+                      : (String(row.serviceType||'').toUpperCase()==='RF' ? 'Mark refresh complete' : 'Mark complete')}
                 </button>
               </article>
             ))}
