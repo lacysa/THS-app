@@ -52,10 +52,12 @@ html[data-theme="dark"] .staff-preview-nav-item:first-of-type{background:#d8d8d0
 .daily-staff-editor-date{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.daily-staff-editor-date label{display:grid;gap:4px;font-size:9px;font-weight:800;text-transform:uppercase;color:var(--app-muted)}
 .daily-staff-editor-date input{min-height:38px;border:1px solid var(--app-border);border-radius:10px;background:var(--app-surface);color:var(--app-text);padding:7px 9px}
 .daily-staff-editor-date strong{display:inline-flex;align-items:center;min-height:38px;padding:0 11px;border:1px solid var(--app-border);border-radius:999px;background:var(--app-surface);font-size:10px}
-.daily-staff-editor-list{display:grid}.daily-staff-editor-row{display:grid;grid-template-columns:minmax(150px,1.15fr) 135px minmax(180px,1fr) 110px 110px 82px;gap:10px;align-items:end;padding:11px 14px;border-bottom:1px solid var(--app-border)}
-.daily-staff-editor-row:last-child{border-bottom:0}.daily-staff-editor-row.mode-onsite{background:linear-gradient(90deg,color-mix(in srgb,#65a97b 8%,var(--app-surface)),var(--app-surface) 24%)}
-.daily-staff-editor-row.mode-remote{background:linear-gradient(90deg,color-mix(in srgb,#7a62d7 7%,var(--app-surface)),var(--app-surface) 24%)}
-.daily-staff-editor-row.mode-time_off,.daily-staff-editor-row.mode-unavailable{opacity:.72}
+.daily-staff-editor-list{display:grid}.daily-staff-editor-row{display:grid;grid-template-columns:minmax(150px,1.15fr) 135px minmax(180px,1fr) 110px 110px 82px;gap:10px;align-items:end;padding:11px 14px;border-bottom:1px solid var(--app-border);border-left:4px solid #cfd6de;background:linear-gradient(100deg,color-mix(in srgb,#94a3b8 5%,var(--app-surface)),var(--app-surface) 24%);transition:background .16s ease,border-color .16s ease}
+.daily-staff-editor-row:last-child{border-bottom:0}.daily-staff-editor-row.mode-onsite{border-left-color:#65a97b;background:linear-gradient(100deg,color-mix(in srgb,#65a97b 9%,var(--app-surface)),var(--app-surface) 28%)}
+.daily-staff-editor-row.mode-remote{border-left-color:#7a62d7;background:linear-gradient(100deg,color-mix(in srgb,#7a62d7 8%,var(--app-surface)),var(--app-surface) 28%)}
+.daily-staff-editor-row.mode-time_off{border-left-color:#d7a24d;background:linear-gradient(100deg,color-mix(in srgb,#d7a24d 7%,var(--app-surface)),var(--app-surface) 28%)}
+.daily-staff-editor-row.mode-unavailable{border-left-color:#b96c67;background:linear-gradient(100deg,color-mix(in srgb,#b96c67 7%,var(--app-surface)),var(--app-surface) 28%)}
+.daily-staff-editor-row.mode-unscheduled{border-left-color:#a8b2bd}
 .daily-staff-editor-person strong,.daily-staff-editor-person small{display:block}.daily-staff-editor-person small{margin-top:2px;color:var(--app-muted);font-size:10px}
 .daily-staff-editor-row label{display:grid;gap:4px;min-width:0}.daily-staff-editor-row label>span{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--app-muted)}
 .daily-staff-editor-row input,.daily-staff-editor-row select{width:100%;min-width:0;min-height:36px;border:1px solid var(--app-border);border-radius:9px;background:var(--app-surface);color:var(--app-text);padding:6px 8px}
@@ -75,3 +77,8 @@ html[data-theme="dark"] .daily-staff-editor{background:#17212b;border-color:#344
 .staff-preview-visible-list .staff-access-switch{min-width:104px}
 html[data-theme="dark"] .staff-preview-nav-item:hover,html[data-theme="dark"] .staff-preview-nav-item.active{background:#d8d8d0;color:#161a17}
 @media(max-width:620px){.staff-preview-visible-list>div{align-items:flex-start;flex-direction:column}.staff-preview-module-actions{width:100%;justify-content:space-between}}
+
+.daily-staff-editor-row.mode-onsite select{border-color:color-mix(in srgb,#65a97b 35%,var(--app-border))}
+.daily-staff-editor-row.mode-remote select{border-color:color-mix(in srgb,#7a62d7 30%,var(--app-border))}
+.daily-staff-editor-row.mode-time_off select{border-color:color-mix(in srgb,#d7a24d 32%,var(--app-border))}
+.daily-staff-editor-row.mode-unavailable select{border-color:color-mix(in srgb,#b96c67 30%,var(--app-border))}
