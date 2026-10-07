@@ -16,7 +16,7 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
     setLoading(true)
     setError('')
     try {
-      const r = await fetch(`/api/staff/day?date=${date}`,{cache:'no-store'})
+      const r = await fetch(`/api/staff/day?date=${date}&includeDeclined=1`,{cache:'no-store'})
       const json = await r.json()
       if (!r.ok) throw new Error(json.message || 'Could not load breakfast overview.')
       setData(json)
@@ -32,10 +32,13 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
 
   const dietarySummary = useMemo(()=>{
     const counts = new Map<string,number>()
-    for (const g of data?.groups || []) for (const o of g.orders || []) {
+    for (const g of data?.groups || []) {
+      if (g.breakfastSkipped) continue
+      for (const o of g.orders || []) {
       if (o.meal_declined) continue
       for (const item of splitDietary(o.dietary)) counts.set(item,(counts.get(item)||0)+1)
       if (o.dietary_comments) counts.set(o.dietary_comments,(counts.get(o.dietary_comments)||0)+1)
+      }
     }
     return [...counts.entries()]
   },[data])
@@ -43,9 +46,12 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
   const breakfastCounts = useMemo(()=>{
     const counts = new Map<string,number>()
     const add=(label:string,value:any)=>{ if(value) counts.set(`${label}: ${value}`,(counts.get(`${label}: ${value}`)||0)+1) }
-    for (const g of data?.groups || []) for (const o of g.orders || []) {
-      if (o.meal_declined) continue
-      add('Entrée',o.entree); add('Meat',o.meat); add('Eggs',o.eggs)
+    for (const g of data?.groups || []) {
+      if (g.breakfastSkipped) continue
+      for (const o of g.orders || []) {
+        if (o.meal_declined) continue
+        add('Entrée',o.entree); add('Meat',o.meat); add('Eggs',o.eggs)
+      }
     }
     return [...counts.entries()].sort((a,b)=>b[1]-a[1])
   },[data])
@@ -61,24 +67,25 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
       </div>
 
       {error && <div className="notice error">{error}</div>}
-      {loading ? <div className="card">Loading overview…</div> : data && (
-        <div className="overview-sheet">
+      {loading ? <div className="card">Loading overview…</div> : data && (() => {
+        const serviceBookings=(data.bookings||[]).filter((x:any)=>!x.breakfastSkipped && x.status!=='declined')
+        return <div className="overview-sheet">
           <header className="overview-title-row">
             <div>
               <div className="ops-kicker">The Hotel Saugatuck</div>
               <h1>Daily Breakfast Overview</h1>
               <p>{date}</p>
             </div>
-            <div className="overview-print-date">{data.bookings.length} scheduled</div>
+            <div className="overview-print-date">{serviceBookings.length} scheduled</div>
           </header>
 
           <section className="overview-summary-grid">
             <div className="overview-panel">
               <h3>Overview</h3>
               <div className="overview-metrics">
-                <div><strong>{data.bookings.length}</strong><span>Scheduled rooms</span></div>
-                <div><strong>{data.bookings.filter((x:any)=>x.menu_submitted).length}</strong><span>Menus received</span></div>
-                <div><strong>{data.bookings.filter((x:any)=>!x.menu_submitted).length}</strong><span>Missing menus</span></div>
+                <div><strong>{serviceBookings.length}</strong><span>Scheduled rooms</span></div>
+                <div><strong>{serviceBookings.filter((x:any)=>x.menu_submitted).length}</strong><span>Menus received</span></div>
+                <div><strong>{serviceBookings.filter((x:any)=>!x.menu_submitted).length}</strong><span>Missing menus</span></div>
               </div>
             </div>
             <div className="overview-panel">
@@ -104,19 +111,19 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
               <table className="overview-table">
                 <thead><tr><th>Room</th><th>Time</th><th>Dietary</th><th>Meals</th><th>Beverages</th></tr></thead>
                 <tbody>
-                  {data.groups.filter((g:any)=>!g.unmatched).map((g:any)=><tr key={g.groupKey}>
-                    <td><strong>{g.room}</strong><div className="muted">{g.taggedOnly ? 'Menu Missing' : g.lastName}</div>{g.note && <div className="overview-menu-note"><strong>Menu note:</strong> {g.note}</div>}</td>
-                    <td>{g.displayTime}</td>
-                    <td>{g.orders.length===0 ? <span className="missing-badge">Missing menu</span> : g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.dietary&&<div>{o.dietary}</div>}{o.dietary_comments&&<div className="diet-note">{o.dietary_comments}</div>}</>}</div>)}</td>
-                    <td>{g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.entree&&<div><strong>Entrée:</strong> {o.entree}</div>}{o.meat&&<div><strong>Meat:</strong> {o.meat}</div>}{o.eggs&&<div><strong>Eggs:</strong> {o.eggs}</div>}{o.condiments&&<div><strong>Condiments:</strong> {o.condiments}</div>}</>}</div>)}</td>
-                    <td>{g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.coffee&&<div><strong>Coffee:</strong> {o.coffee}</div>}{o.cream&&<div><strong>Cream:</strong> {o.cream}</div>}{o.juice&&<div><strong>Juice:</strong> {o.juice}</div>}</>}</div>)}</td>
+                  {data.groups.filter((g:any)=>!g.unmatched).map((g:any)=><tr key={g.groupKey} className={g.breakfastSkipped?'overview-skipped-row':''}>
+                    <td><strong>{g.room}</strong><div className="muted">{g.breakfastSkipped?'Breakfast skipped':g.taggedOnly?'Menu Missing':g.lastName}</div>{g.note && <div className="overview-menu-note"><strong>Menu note:</strong> {g.note}</div>}</td>
+                    <td>{g.breakfastSkipped?'—':g.displayTime}</td>
+                    <td>{g.breakfastSkipped ? <span className="pill neutral">Skipped</span> : g.orders.length===0 ? <span className="missing-badge">Missing menu</span> : g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.dietary&&<div>{o.dietary}</div>}{o.dietary_comments&&<div className="diet-note">{o.dietary_comments}</div>}</>}</div>)}</td>
+                    <td>{g.breakfastSkipped ? <span className="muted">No breakfast service</span> : g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.entree&&<div><strong>Entrée:</strong> {o.entree}</div>}{o.meat&&<div><strong>Meat:</strong> {o.meat}</div>}{o.eggs&&<div><strong>Eggs:</strong> {o.eggs}</div>}{o.condiments&&<div><strong>Condiments:</strong> {o.condiments}</div>}</>}</div>)}</td>
+                    <td>{g.breakfastSkipped ? <span className="muted">—</span> : g.orders.map((o:any)=><div className="overview-guest-block" key={o.id}><b>Guest {o.guest_number}</b>{o.meal_declined ? <div><strong>Declined breakfast</strong></div> : <>{o.coffee&&<div><strong>Coffee:</strong> {o.coffee}</div>}{o.cream&&<div><strong>Cream:</strong> {o.cream}</div>}{o.juice&&<div><strong>Juice:</strong> {o.juice}</div>}</>}</div>)}</td>
                   </tr>)}
                 </tbody>
               </table>
             </div>
           </section>
         </div>
-      )}
+      })()}
     </div>
   )
 }
