@@ -694,37 +694,41 @@ export default function UnifiedRoomsBoard(){
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
-              {isManager(access)&&<div className="rooms-manager-edit">
-                <div className="rooms-manager-grid">
-                  <label>Reservation status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
-                  <label>Live condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{conditionOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
-                  <label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
-                  <label>Cleaning order<input type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>
-                  <label>End of shift status<select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>{endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+              {isManager(access)&&<details className="rooms-manager-details">
+                <summary>Edit room details</summary>
+                <div className="rooms-manager-edit">
+                  <div className="rooms-manager-grid">
+                    <label>Reservation status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                    <label>Live condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{conditionOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                    <label>Assign cleaner<select value={assigned[0]||''} disabled={isBlocked(row)} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
+                    <label>Cleaning order<input type="number" min="1" inputMode="numeric" disabled={isBlocked(row)} value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>
+                    <label>End of shift status<select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>{endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                  </div>
+
+                  <div className="rooms-service-controls">
+                    <span>Service</span>
+                    <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>None</button>
+                    <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>setOut(row)}>OUT</button>
+                    <button type="button" className={/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?'active':''} disabled={!String(row.serviceType||'').toUpperCase().startsWith('OUT')} onClick={()=>initialOut(row)}>
+                      {/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?String(row.serviceType||'').toUpperCase():'Initial OUT'}
+                    </button>
+                    <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
+                  </div>
+
+                  <div className="rooms-package-editor">
+                    <span>Room packages</span>
+                    <div>{packageOptions.filter(option=>option.available||row.packageIds.includes(option.id)).map(option=>{
+                      const checked=row.packageIds.includes(option.id)
+                      return <button type="button" key={option.id} className={checked?'selected':''} onClick={()=>togglePackage(row,option.id)}>{checked?<Check size={14}/>:null}{option.name}</button>
+                    })}</div>
+                  </div>
+
+                  <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
                 </div>
+              </details>}
 
-                <div className="rooms-service-controls">
-                  <span>Service</span>
-                  <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>None</button>
-                  <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>setOut(row)}>OUT</button>
-                  <button type="button" className={/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?'active':''} disabled={!String(row.serviceType||'').toUpperCase().startsWith('OUT')} onClick={()=>initialOut(row)}>
-                    {/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?String(row.serviceType||'').toUpperCase():'Initial OUT'}
-                  </button>
-                  <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
-                </div>
-
-                <div className="rooms-package-editor">
-                  <span>Room packages</span>
-                  <div>{packageOptions.filter(option=>option.available||row.packageIds.includes(option.id)).map(option=>{
-                    const checked=row.packageIds.includes(option.id)
-                    return <button type="button" key={option.id} className={checked?'selected':''} onClick={()=>togglePackage(row,option.id)}>{checked?<Check size={14}/>:null}{option.name}</button>
-                  })}</div>
-                </div>
-              </div>}
-
-              {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Selected room items</strong><span>{packageNames.join(', ')}</span></div>}
-
-              <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
+              {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Room items</strong><span>{packageNames.join(', ')}</span></div>}
+              {!isManager(access)&&<label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
 
               {row.claimableRefresh&&<button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void claimRefresh(row)}><UserRoundCheck size={16}/>Claim refresh</button>}
 
