@@ -402,7 +402,7 @@ export async function POST(req: NextRequest) {
 
       for (const row of rows) {
         const status=String(row.reservationStatus||'').trim().toLowerCase()
-        if (!['checkout','out/in'].includes(status)) continue
+        if (!['checkout','out/in','dirty'].includes(status)) continue
         const assigned=String(row.assignedTo||'')
           .split(',')
           .map((name:string)=>name.trim().toLowerCase())
