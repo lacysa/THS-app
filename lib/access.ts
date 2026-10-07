@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/admin'
 
 export type StaffAccess = {
   userId:string
@@ -63,7 +64,8 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     capabilities = (capRows || []).map((row:any)=>row.capability_key).filter(Boolean)
   }
 
-  const { data:overrideRows } = await supabase
+  const admin = createSupabaseAdmin()
+  const { data:overrideRows } = await admin
     .from('staff_module_access')
     .select('module_key,allowed')
     .eq('user_id',user.id)
@@ -115,6 +117,10 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   if (module.published === false && !access.canPreviewUnpublished) return false
 
   const key = String(module.module_key || '')
+
+  if (key === 'staff') {
+    return access.roleName === 'Owner'
+  }
 
   if (Object.prototype.hasOwnProperty.call(access.moduleOverrides,key)) {
     return access.moduleOverrides[key]
