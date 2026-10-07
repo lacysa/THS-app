@@ -1362,3 +1362,132 @@ html[data-theme="dark"] .hsk-setup-tag{
 html[data-theme="dark"] .hsk-setup-tag b{
   background:rgba(255,255,255,.08);
 }
+
+
+/* Independent pre-strip task workflow */
+.hsk-add-strip-task{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:2px 8px;
+  border:1px dashed #c8b86e;
+  border-radius:999px;
+  background:#fffaf0;
+  color:#786419;
+  font-size:8px;
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.hsk-add-strip-task:hover{
+  background:#fff6dd;
+}
+.hsk-strip-needed-tag{
+  background:#FFF6DD!important;
+  border-color:#E3CE8E!important;
+  color:#80631A!important;
+}
+.hsk-stripped-tag{
+  background:#E8F5EE!important;
+  border-color:#A9D5BE!important;
+  color:#286348!important;
+}
+
+.hsk-strip-pool{
+  display:grid;
+  gap:10px;
+  margin-bottom:14px;
+  padding:13px;
+  border:1px solid #eadca9;
+  border-radius:14px;
+  background:linear-gradient(145deg,#fffdf7,#fff8e7);
+  box-shadow:0 7px 18px rgba(89,74,20,.05);
+}
+.hsk-strip-pool-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:end;
+}
+.hsk-strip-pool-head>div{
+  display:grid;
+  gap:2px;
+}
+.hsk-strip-pool-head span{
+  color:#8a7424;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+.hsk-strip-pool-head strong{
+  color:#3f3926;
+  font-size:14px;
+}
+.hsk-strip-pool-head small{
+  max-width:420px;
+  color:#81765a;
+  font-size:9px;
+  line-height:1.35;
+}
+.hsk-strip-pool-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:7px;
+}
+.hsk-strip-pool-grid>button{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:48px;
+  padding:8px 10px;
+  border:1px solid #e4d59f;
+  border-radius:10px;
+  background:#fff;
+  color:#423a23;
+  text-align:left;
+  cursor:pointer;
+}
+.hsk-strip-pool-grid>button:hover{
+  background:#fffaf0;
+  border-color:#d8c47c;
+}
+.hsk-strip-pool-grid>button>span{
+  display:grid;
+  gap:2px;
+}
+.hsk-strip-pool-grid strong{
+  font-size:10px;
+}
+.hsk-strip-pool-grid small{
+  color:#847758;
+  font-size:8px;
+}
+
+@media(max-width:650px){
+  .hsk-strip-pool-head{
+    display:grid;
+    align-items:start;
+  }
+  .hsk-strip-pool-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+html[data-theme="dark"] .hsk-add-strip-task,
+html[data-theme="dark"] .hsk-strip-pool{
+  background:#2a281c;
+  border-color:#5f5730;
+  color:#e4d58b;
+}
+html[data-theme="dark"] .hsk-strip-pool-head strong,
+html[data-theme="dark"] .hsk-strip-pool-grid>button{
+  color:#f0e8c8;
+}
+html[data-theme="dark"] .hsk-strip-pool-grid>button{
+  background:#24251e;
+  border-color:#5a5433;
+}
+html[data-theme="dark"] .hsk-strip-pool-grid>button:hover{
+  background:#2d2c20;
+}
