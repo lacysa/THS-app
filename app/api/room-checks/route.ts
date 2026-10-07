@@ -275,7 +275,7 @@ export async function POST(req:NextRequest){
 
       const currentCondition=String(dailyRow.room_condition||'')
       let passedCondition=currentCondition
-      if(status==='checkout' || status==='vacant') passedCondition='Vacant (Clean)'
+      if(status==='checkout' || status==='vacant' || status==='dirty') passedCondition='Vacant (Clean)'
       else if(status==='out/in') passedCondition='Ready'
       else if(status==='arrival' && currentCondition!=='Occupied') passedCondition='Ready'
 
