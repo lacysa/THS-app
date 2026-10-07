@@ -124,9 +124,10 @@ export async function GET(req:NextRequest) {
   const decorated:any[] = (bookings || []).map((b:any)=>({
     ...b,
     taggedOnly:false,
+    breakfastSkipped:b.status==='declined',
     menu_submitted:Boolean((nativeByBooking.get(b.id)||[]).length || (submissionsByBooking.get(b.id)||[]).length || b.menu_submitted),
     note: noteByBooking.get(b.id) || '',
-    displayTime:formatTime24(String(b.time_slot).slice(0,5))
+    displayTime:b.time_slot ? formatTime24(String(b.time_slot).slice(0,5)) : 'Unscheduled'
   }))
 
   const bookedRoomIds = new Set(decorated.map((b:any)=>String(b.rooms?.id || '')).filter(Boolean))
@@ -164,8 +165,10 @@ export async function GET(req:NextRequest) {
       submissionId:latestLegacy?.id || null,
       room:b.rooms?.name || 'Room',
       lastName:b.last_name,
-      timeSlot:String(b.time_slot).slice(0,5),
+      timeSlot:b.time_slot ? String(b.time_slot).slice(0,5) : null,
       displayTime:b.displayTime,
+      status:b.status,
+      breakfastSkipped:Boolean(b.breakfastSkipped || b.status==='declined'),
       menuSubmitted:Boolean(orders.length || b.menu_submitted),
       unmatched:false,
       taggedOnly:Boolean(b.taggedOnly),
