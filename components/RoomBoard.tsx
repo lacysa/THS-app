@@ -29,7 +29,7 @@ type RoomRow = {
   checkIssueOpen?:boolean
 }
 
-type StaffOption={id:string;name:string}
+type StaffOption={id:string;name:string;roleLabel?:string;shiftStart?:string|null;shiftEnd?:string|null;onSite?:boolean}
 type PackageOption={id:string;name:string;price:number|null;available:boolean}
 type Access={
   name?:string|null
@@ -94,6 +94,8 @@ export default function RoomBoard(){
   const [date,setDate]=useState(todayDetroit())
   const [rows,setRows]=useState<RoomRow[]>([])
   const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
+  const [allStaffOptions,setAllStaffOptions]=useState<StaffOption[]>([])
+  const [showAllStaff,setShowAllStaff]=useState(false)
   const [access,setAccess]=useState<Access|null>(null)
   const [packageOptions,setPackageOptions]=useState<PackageOption[]>([])
   const [breakfastDate,setBreakfastDate]=useState('')
@@ -146,6 +148,8 @@ export default function RoomBoard(){
       setCollapsedRooms(collapsed)
       setOpenRooms({})
       setStaffOptions(d.staffOptions||[])
+      setAllStaffOptions(d.allStaffOptions||d.staffOptions||[])
+      setShowAllStaff(false)
       setPackageOptions(d.packageOptions||[])
       setBreakfastDate(d.breakfast?.serviceDate||'')
       setMenuNeededRooms(d.breakfast?.menuNeededRooms||[])
@@ -745,13 +749,23 @@ export default function RoomBoard(){
 
                 <div className="rb-detail-block">
                   <span>Assigned staff</span>
+                  <div className="rb-staff-scope">
+                    <b>{showAllStaff?'All active staff':'On site today'}</b>
+                    <button type="button" onClick={()=>setShowAllStaff(value=>!value)}>
+                      {showAllStaff?'Show on-site only':'All active staff'}
+                    </button>
+                  </div>
                   <div className="rb-chip-list">
-                    {staffOptions.map(option=>{
+                    {(showAllStaff?allStaffOptions:staffOptions).map(option=>{
                       const checked=staff.includes(option.name)
-                      return <button type="button" key={option.id} className={checked?'is-selected':''} onClick={()=>toggleStaff(row,option.name)}>
-                        {checked&&<Check size={12}/>} {option.name}
+                      const meta=!showAllStaff && option.onSite
+                        ? [option.roleLabel,option.shiftStart&&option.shiftEnd?`${option.shiftStart.slice(0,5)}–${option.shiftEnd.slice(0,5)}`:''].filter(Boolean).join(' · ')
+                        : ''
+                      return <button type="button" key={option.id} className={checked?'is-selected':''} onClick={()=>toggleStaff(row,option.name)} title={meta||undefined}>
+                        {checked&&<Check size={12}/>} {option.name}{meta&&<small>{meta}</small>}
                       </button>
                     })}
+                    {!(showAllStaff?allStaffOptions:staffOptions).length&&<em>No on-site staff scheduled.</em>}
                   </div>
                 </div>
 
