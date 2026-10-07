@@ -163,12 +163,19 @@ export default function UnifiedRoomsBoard(){
   const [canHaSignoff,setCanHaSignoff]=useState(false)
   const [canFohSignoff,setCanFohSignoff]=useState(false)
   const [refreshRoomId,setRefreshRoomId]=useState('')
+  const [managerDisplay,setManagerDisplay]=useState<'cards'|'table'>('cards')
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
   const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
 
   useEffect(()=>{rowsRef.current=rows},[rows])
   useEffect(()=>{dateRef.current=date},[date])
+  useEffect(()=>{
+    try{
+      const saved=window.localStorage.getItem('ths-rooms-manager-view')
+      if(saved==='table'||saved==='cards')setManagerDisplay(saved)
+    }catch{}
+  },[])
 
   async function load(){
     setLoading(true);setMessage('');setSaveState('idle');setSelfChecks({})
@@ -475,6 +482,19 @@ export default function UnifiedRoomsBoard(){
     setExpanded(current=>({...current,[row.roomId]:true}))
   }
 
+  function chooseManagerDisplay(next:'cards'|'table'){
+    setManagerDisplay(next)
+    try{window.localStorage.setItem('ths-rooms-manager-view',next)}catch{}
+  }
+
+  function openRoomCard(row:RoomRow){
+    chooseManagerDisplay('cards')
+    setExpanded(current=>({...current,[row.roomId]:true}))
+    window.requestAnimationFrame(()=>{
+      document.getElementById(`room-card-${row.roomId}`)?.scrollIntoView({block:'start',behavior:'smooth'})
+    })
+  }
+
   const checkByRoom=useMemo(()=>new Map(inspectionRooms.map(r=>[r.roomId,r])),[inspectionRooms])
   const activeRows=useMemo(()=>rows.filter(row=>!isStayover(row)||isRefresh(row)),[rows])
   const inactiveStayovers=useMemo(()=>rows.filter(row=>isStayover(row)&&!isRefresh(row)),[rows])
@@ -521,6 +541,11 @@ export default function UnifiedRoomsBoard(){
       </div>
     </div>}
 
+    {viewMode==='manager'&&isManager(access)&&<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
+      <button type="button" className={managerDisplay==='cards'?'active':''} onClick={()=>chooseManagerDisplay('cards')}>Cards</button>
+      <button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>
+    </div>}
+
     <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
       {([
         ['all','All',counts.all],['cleaning','Cleaning',counts.cleaning],['self','Self-check',counts.self],
@@ -532,7 +557,96 @@ export default function UnifiedRoomsBoard(){
     {message&&<div className="module-message">{message}</div>}
 
     {loading?<div className="module-empty">Loading rooms…</div>:filtered.length===0?<div className="module-empty">No rooms in this view.</div>:
-      <div className="rooms-card-list">
+      viewMode==='manager'&&isManager(access)&&managerDisplay==='table'
+        ? <div className="rooms-table-shell">
+            <div className="rooms-table-scroll">
+              <table className="rooms-table">
+                <thead>
+                  <tr>
+                    <th className="rooms-table-sticky">Room</th>
+                    <th>Status</th>
+                    <th>OUT / RF</th>
+                    <th>Staff</th>
+                    <th>Order</th>
+                    <th>Complete</th>
+                    <th>Room checks</th>
+                    <th>End of shift</th>
+                    <th>Packages</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(row=>{
+                    const state=workflowState(row,checkByRoom.get(row.roomId))
+                    const assigned=splitAssigned(row.assignedTo)
+                    const selectedPackages=(row.packageIds||[]).map(id=>packageOptions.find(p=>p.id===id)?.name).filter(Boolean) as string[]
+                    const outValue=String(row.serviceType||'').toUpperCase()
+                    return <tr key={row.roomId} className={row.checkIssueOpen?'has-issue':''}>
+                      <td className="rooms-table-sticky">
+                        <button type="button" className="rooms-table-room" onClick={()=>openRoomCard(row)}>
+                          <strong>{row.roomName}</strong>
+                          <small>{row.reservationStatus||'No status'}</small>
+                        </button>
+                      </td>
+                      <td>
+                        <select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>
+                          {reservationOptions.map(value=><option key={value||'blank'} value={value}>{value||'—'}</option>)}
+                        </select>
+                      </td>
+                      <td>
+                        <div className="rooms-table-service">
+                          <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>—</button>
+                          <button type="button" className={outValue.startsWith('OUT')?'active':''} onClick={()=>setOut(row)}>OUT</button>
+                          <button type="button" className={/^OUT-[A-Z]{2,4}$/.test(outValue)?'active':''} disabled={!outValue.startsWith('OUT')} onClick={()=>initialOut(row)}>
+                            {/^OUT-[A-Z]{2,4}$/.test(outValue)?outValue:'Initial'}
+                          </button>
+                          <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
+                        </div>
+                      </td>
+                      <td>
+                        <select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}>
+                          <option value="">Unassigned</option>
+                          {staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}
+                        </select>
+                      </td>
+                      <td>
+                        <input className="rooms-table-order" type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
+                      </td>
+                      <td className="rooms-table-center">
+                        <button type="button" className={row.complete?'rooms-table-check complete':'rooms-table-check'} onClick={()=>void toggleComplete(row)} title={row.complete?'Mark incomplete':'Mark complete'}>
+                          {row.complete?'✓':'○'}
+                        </button>
+                      </td>
+                      <td>
+                        <button type="button" className={`rooms-table-workflow ${state}`} onClick={()=>openRoomCard(row)}>
+                          <span>{state==='correction'?'Correction':state==='self'?'Self-check':state==='inspection'?'Room check':state==='foh'?'FOH check':state==='complete'?'Complete':'Cleaning'}</span>
+                          <small>{row.checkIssueOpen?'Needs attention':row.fohSignedBy?'HA ✓ · FOH ✓':row.inspected?'Check ✓':row.housekeeperAttested?'Self ✓':'Open check'}</small>
+                        </button>
+                      </td>
+                      <td>
+                        <select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>
+                          {endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'—'}</option>)}
+                        </select>
+                      </td>
+                      <td>
+                        <details className="rooms-table-packages">
+                          <summary>{selectedPackages.length?selectedPackages.join(', '):'Select packages'}</summary>
+                          <div>{packageOptions.filter(option=>option.available||row.packageIds.includes(option.id)).map(option=>{
+                            const checked=row.packageIds.includes(option.id)
+                            return <button type="button" key={option.id} className={checked?'selected':''} onClick={event=>{event.preventDefault();togglePackage(row,option.id)}}>{checked?'✓ ':''}{option.name}</button>
+                          })}</div>
+                        </details>
+                      </td>
+                      <td>
+                        <input className="rooms-table-notes" value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Notes"/>
+                      </td>
+                    </tr>
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        : <div className="rooms-card-list">
         {filtered.map(row=>{
           const inspection=checkByRoom.get(row.roomId)
           const state=workflowState(row,inspection)
