@@ -1008,3 +1008,57 @@ html[data-theme="dark"] .rb-progress{
     flex:0 0 auto;
   }
 }
+
+
+/* Final desktop Room Board alignment */
+@media(min-width:1081px){
+  .rb-room-main{
+    grid-template-columns:
+      minmax(160px,1.25fr)
+      minmax(115px,.86fr)
+      minmax(100px,.70fr)
+      minmax(100px,.82fr)
+      72px
+      minmax(110px,.82fr)
+      minmax(135px,1fr)
+      82px!important;
+    gap:8px!important;
+    padding:12px!important;
+  }
+
+  .rb-room-main>*{
+    min-width:0!important;
+  }
+
+  .rb-room-main .rb-field,
+  .rb-room-main .rb-staff-summary,
+  .rb-room-main .rb-progress-field,
+  .rb-room-main .rb-details-btn{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
+  .rb-room-main select,
+  .rb-room-main input,
+  .rb-room-main .rb-progress,
+  .rb-room-main .rb-details-btn{
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+
+  .rb-staff-summary strong{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .rb-room-card[data-workflow="minimal"] .rb-room-main{
+    grid-template-columns:
+      minmax(190px,1.35fr)
+      minmax(125px,.88fr)
+      minmax(105px,.72fr)
+      minmax(145px,1fr)
+      82px!important;
+  }
+}

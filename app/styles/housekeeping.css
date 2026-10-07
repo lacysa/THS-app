@@ -706,3 +706,53 @@ html[data-theme="dark"] .room-check-passed-note{background:#1b2c22;border-color:
 html[data-theme="dark"] .hsk-table thead th:first-child{
   background:#202c39!important;
 }
+
+
+/* Strong horizontal-scroll enforcement for manager housekeeping board */
+.staff-page-content .hsk-table-wrapper{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow-x:scroll!important;
+  overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  scrollbar-width:auto!important;
+  scrollbar-color:#9aa8b6 #eef2f5!important;
+}
+
+.staff-page-content .hsk-table-wrapper::-webkit-scrollbar{
+  height:12px!important;
+}
+.staff-page-content .hsk-table-wrapper::-webkit-scrollbar-track{
+  background:#eef2f5!important;
+  border-radius:999px!important;
+}
+.staff-page-content .hsk-table-wrapper::-webkit-scrollbar-thumb{
+  background:#9aa8b6!important;
+  border:3px solid #eef2f5!important;
+  border-radius:999px!important;
+}
+
+.staff-page-content .hsk-table{
+  width:1500px!important;
+  min-width:1500px!important;
+  max-width:none!important;
+  table-layout:auto!important;
+}
+
+.staff-page-content .hsk-table th,
+.staff-page-content .hsk-table td{
+  white-space:nowrap!important;
+}
+
+html[data-theme="dark"] .staff-page-content .hsk-table-wrapper{
+  scrollbar-color:#667789 #1c2630!important;
+}
+html[data-theme="dark"] .staff-page-content .hsk-table-wrapper::-webkit-scrollbar-track{
+  background:#1c2630!important;
+}
+html[data-theme="dark"] .staff-page-content .hsk-table-wrapper::-webkit-scrollbar-thumb{
+  background:#667789!important;
+  border-color:#1c2630!important;
+}
