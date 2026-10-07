@@ -215,6 +215,13 @@ export async function GET(req: NextRequest) {
           ['checkout','out/in'].includes(String(savedRow.reservation_status||'').trim().toLowerCase()) ||
           String(savedRow.service_type||'').trim().toUpperCase().startsWith('OUT'),
         stripHold: savedRow.strip_hold || '',
+        stripStatus: savedRow.strip_status || '',
+        stripRequestedAt: savedRow.strip_requested_at || null,
+        strippedBy: savedRow.stripped_by || null,
+        strippedByName: savedRow.stripped_by
+          ? (peopleById.get(String(savedRow.stripped_by)) as any)?.name || 'Staff'
+          : null,
+        strippedAt: savedRow.stripped_at || null,
         assignedTo: savedRow.assigned_to || '',
         cleanOrder: savedRow.clean_order ?? null,
         complete: Boolean(savedRow.complete),
@@ -268,6 +275,10 @@ export async function GET(req: NextRequest) {
         )
       : rows
 
+    const stripTasks = assignedOnlyView
+      ? rows.filter((row:any)=>row.stripStatus==='needed')
+      : []
+
     const menuNeededRooms = visibleRows
       .filter((row: any) => row.breakfast.status === 'needed')
       .map((row: any) => row.roomName)
@@ -278,6 +289,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       rows: visibleRows,
+      stripTasks,
       blockingRoomId: blockingRoom?.roomId || null,
       blockingRoomName: blockingRoom?.roomName || null,
       viewMode: assignedOnlyView ? 'assigned' : 'manager',
@@ -486,6 +498,10 @@ export async function POST(req: NextRequest) {
           reservation_status: cleanText(row.reservationStatus),
           service_type: cleanText(row.serviceType),
           strip_hold: cleanText(row.stripHold),
+          strip_status: ['','needed','stripped'].includes(cleanText((row as any).stripStatus)) ? cleanText((row as any).stripStatus) : '',
+          strip_requested_at: cleanText((row as any).stripStatus)==='needed' ? (existing.strip_requested_at || now) : existing.strip_requested_at || null,
+          stripped_by: cleanText((row as any).stripStatus)==='stripped' ? (existing.stripped_by || null) : null,
+          stripped_at: cleanText((row as any).stripStatus)==='stripped' ? (existing.stripped_at || now) : null,
           assigned_to: cleanText(row.assignedTo),
           clean_order: Number.isFinite(row.cleanOrder as number) ? row.cleanOrder : null,
           complete,
