@@ -301,7 +301,7 @@ export function normalizeEditedReservation(row:any, roomNames:string[]):ParsedRe
   const arrivalDate=/^20\d{2}-\d{2}-\d{2}$/.test(String(row.arrivalDate||''))?String(row.arrivalDate):null
   const checkoutDate=/^20\d{2}-\d{2}-\d{2}$/.test(String(row.checkoutDate||''))?String(row.checkoutDate):null
   const reservationNumber=clean(row.reservationNumber)
-  const reservationKey=reservationNumber?`order:${reservationNumber}`:stableFallbackKey([row.guestName,arrivalDate,checkoutDate,roomName])
+  const reservationKey=reservationNumber&&roomName?`order:${reservationNumber}|room:${roomName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')}`:stableFallbackKey([row.guestName,arrivalDate,checkoutDate,roomName])
   const warnings:string[]=[]
   if(!clean(row.guestName)) warnings.push('Guest name is required')
   if(!arrivalDate||!checkoutDate) warnings.push('Valid arrival and checkout dates are required')
