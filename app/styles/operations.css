@@ -1385,3 +1385,25 @@ html[data-theme="dark"] .staff-page-content .fd-breakfast-pill.is-received .fd-b
     grid-template-columns:1fr;
   }
 }
+
+
+/* Skipped breakfast state */
+.kitchen-skipped-breakfast{
+  background:#f1f3f5;
+  border-color:#d4dae0;
+  color:#5f6973;
+}
+.overview-skipped-row{
+  background:color-mix(in srgb,var(--app-surface2,#f4f6f8) 78%,transparent);
+}
+.overview-skipped-row td{
+  color:var(--app-muted,#68737f);
+}
+html[data-theme="dark"] .kitchen-skipped-breakfast{
+  background:#242c35;
+  border-color:#46515d;
+  color:#c7d0d8;
+}
+html[data-theme="dark"] .overview-skipped-row{
+  background:#1d2630;
+}
