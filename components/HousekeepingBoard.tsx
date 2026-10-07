@@ -797,30 +797,32 @@ export default function HousekeepingBoard() {
           </button>
         </div>
 
-        <div className={`hsk-mobile-workflow-step ${roomCheckState}`}>
-          <div className="hsk-mobile-step-copy">
-            <span>2</span>
-            <div>
-              <strong>Room check</strong>
-              <small>{row.haSignedBy?`Passed by ${row.haSignedName} ${formatShortTime(row.haSignedAt)}`:row.checkIssueOpen?'Correction required':row.complete?'Ready for HA inspection':'Waiting for room completion'}</small>
+        {!row.fohSignedBy && <>
+          <div className={`hsk-mobile-workflow-step ${roomCheckState}`}>
+            <div className="hsk-mobile-step-copy">
+              <span>2</span>
+              <div>
+                <strong>Room check</strong>
+                <small>{row.haSignedBy?`Passed by ${row.haSignedName} ${formatShortTime(row.haSignedAt)}`:row.checkIssueOpen?'Correction required':row.complete?'Ready for HA inspection':'Waiting for room completion'}</small>
+              </div>
             </div>
+            {row.haSignedBy
+              ? <span className="hsk-mobile-pass">Passed ✓</span>
+              : canHaSignoff&&row.complete&&!row.checkIssueOpen
+                ? <button type="button" className="hsk-mobile-action success" onClick={()=>void signOff(row,'ha')}>Pass room check</button>
+                : <span className="hsk-mobile-waiting">{row.checkIssueOpen?'Needs fix':'Pending'}</span>}
           </div>
-          {row.haSignedBy
-            ? <span className="hsk-mobile-pass">Passed ✓</span>
-            : canHaSignoff&&row.complete&&!row.checkIssueOpen
-              ? <button type="button" className="hsk-mobile-action success" onClick={()=>void signOff(row,'ha')}>Pass room check</button>
-              : <span className="hsk-mobile-waiting">{row.checkIssueOpen?'Needs fix':'Pending'}</span>}
-        </div>
 
-        {canHaSignoff&&row.complete&&!row.haSignedBy&&<div className="hsk-mobile-issue-box">
-          <input value={issueDrafts[row.roomId]||''} onChange={e=>setIssueDrafts(current=>({...current,[row.roomId]:e.target.value}))} placeholder="Problem found during inspection…"/>
-          <button type="button" onClick={()=>void flagCheckIssue(row)}>Needs fix</button>
-        </div>}
-        {canHaSignoff&&row.checkIssueOpen&&<button type="button" className="hsk-mobile-recheck" onClick={()=>void clearCheckIssue(row)}>Pass re-check</button>}
+          {canHaSignoff&&row.complete&&!row.haSignedBy&&<div className="hsk-mobile-issue-box">
+            <input value={issueDrafts[row.roomId]||''} onChange={e=>setIssueDrafts(current=>({...current,[row.roomId]:e.target.value}))} placeholder="Problem found during inspection…"/>
+            <button type="button" onClick={()=>void flagCheckIssue(row)}>Needs fix</button>
+          </div>}
+          {canHaSignoff&&row.checkIssueOpen&&<button type="button" className="hsk-mobile-recheck" onClick={()=>void clearCheckIssue(row)}>Pass re-check</button>}
+        </>}
 
         <div className={`hsk-mobile-workflow-step ${fohState}`}>
           <div className="hsk-mobile-step-copy">
-            <span>3</span>
+            <span>{row.fohSignedBy?'2':'3'}</span>
             <div>
               <strong>FOH check</strong>
               <small>{row.fohSignedBy?`Signed by ${row.fohSignedName} ${formatShortTime(row.fohSignedAt)}`:row.complete?'Ready for FOH sign-off':'Waiting for room completion'}</small>
@@ -829,7 +831,7 @@ export default function HousekeepingBoard() {
           {row.fohSignedBy
             ? <span className="hsk-mobile-pass">Signed ✓</span>
             : canFohSignoff&&row.complete
-              ? <button type="button" className="hsk-mobile-action navy" onClick={()=>void signOff(row,'foh')}>FOH sign</button>
+              ? <button type="button" className="hsk-mobile-action navy" onClick={()=>void signOff(row,'foh')}>Mark FOH checked</button>
               : <span className="hsk-mobile-waiting">Pending</span>}
         </div>
       </section>
@@ -1460,40 +1462,42 @@ export default function HousekeepingBoard() {
 
                     <td className="hsk-signoff-cell">
                       <div className="hsk-signoff-stack">
-                        <div className={row.haSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
-                          <span className="hsk-signoff-label">HA</span>
-                          {row.haSignedBy ? (
-                            <span className="hsk-signoff-value">✓ {row.haSignedName} {formatShortTime(row.haSignedAt)}</span>
-                          ) : canHaSignoff && row.complete ? (
-                            <button type="button" onClick={() => void signOff(row, 'ha')}>Pass</button>
-                          ) : (
-                            <span className="hsk-signoff-pending">Pending</span>
-                          )}
-                        </div>
-
-                        {canHaSignoff && row.complete && !row.haSignedBy && (
-                          <div className="hsk-check-issue">
-                            <input
-                              value={issueDrafts[row.roomId] || ''}
-                              onChange={e=>setIssueDrafts(current=>({...current,[row.roomId]:e.target.value}))}
-                              placeholder="Problem found…"
-                            />
-                            <button type="button" onClick={()=>void flagCheckIssue(row)}>Needs fix</button>
+                        {!row.fohSignedBy && <>
+                          <div className={row.haSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
+                            <span className="hsk-signoff-label">HA</span>
+                            {row.haSignedBy ? (
+                              <span className="hsk-signoff-value">✓ {row.haSignedName} {formatShortTime(row.haSignedAt)}</span>
+                            ) : canHaSignoff && row.complete ? (
+                              <button type="button" onClick={() => void signOff(row, 'ha')}>Pass</button>
+                            ) : (
+                              <span className="hsk-signoff-pending">Pending</span>
+                            )}
                           </div>
-                        )}
 
-                        {canHaSignoff && row.checkIssueOpen && (
-                          <button type="button" className="hsk-pass-recheck" onClick={()=>void clearCheckIssue(row)}>
-                            Pass re-check
-                          </button>
-                        )}
+                          {canHaSignoff && row.complete && !row.haSignedBy && (
+                            <div className="hsk-check-issue">
+                              <input
+                                value={issueDrafts[row.roomId] || ''}
+                                onChange={e=>setIssueDrafts(current=>({...current,[row.roomId]:e.target.value}))}
+                                placeholder="Problem found…"
+                              />
+                              <button type="button" onClick={()=>void flagCheckIssue(row)}>Needs fix</button>
+                            </div>
+                          )}
+
+                          {canHaSignoff && row.checkIssueOpen && (
+                            <button type="button" className="hsk-pass-recheck" onClick={()=>void clearCheckIssue(row)}>
+                              Pass re-check
+                            </button>
+                          )}
+                        </>}
 
                         <div className={row.fohSignedBy ? 'hsk-signoff done' : 'hsk-signoff'}>
                           <span className="hsk-signoff-label">FOH</span>
                           {row.fohSignedBy ? (
                             <span className="hsk-signoff-value">✓ {row.fohSignedName} {formatShortTime(row.fohSignedAt)}</span>
                           ) : canFohSignoff && row.complete ? (
-                            <button type="button" onClick={() => void signOff(row, 'foh')}>Sign</button>
+                            <button type="button" onClick={() => void signOff(row, 'foh')}>Check</button>
                           ) : (
                             <span className="hsk-signoff-pending">Pending</span>
                           )}
