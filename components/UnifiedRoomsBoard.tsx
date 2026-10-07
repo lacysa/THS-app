@@ -93,6 +93,8 @@ type SelfCheck={
 type SaveState='idle'|'saving'|'saved'|'error'
 type Filter='all'|'cleaning'|'self'|'inspection'|'correction'|'complete'
 
+const reservationOptions=['','Checkout','Out/In','Stayover','Arrival','Vacant','Dirty','Blocked']
+const conditionOptions=['','Occupied','Cleaning','Ready for Inspection','Ready','Vacant','Vacant (Clean)','Vacant (Dirty)','Vacant (Blocked)','Out of Order']
 const endOfShiftOptions=['','Occupied','Ready','Vacant (Clean)','Vacant (Dirty)','Vacant (Blocked)','Out of Order']
 
 function todayDetroit(){
@@ -148,6 +150,7 @@ export default function UnifiedRoomsBoard(){
   const [saveState,setSaveState]=useState<SaveState>('idle')
   const [canHaSignoff,setCanHaSignoff]=useState(false)
   const [canFohSignoff,setCanFohSignoff]=useState(false)
+  const [refreshRoomId,setRefreshRoomId]=useState('')
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
   const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
@@ -407,8 +410,48 @@ export default function UnifiedRoomsBoard(){
     patch(row.roomId,{assignedTo:name})
   }
 
+  function setRefresh(row:RoomRow){
+    if(!isManager(access))return
+    patch(row.roomId,{
+      serviceType:'RF',
+      complete:false,
+      readyForInspection:false,
+      inspected:false,
+      roomCondition:row.roomCondition||'Occupied',
+      haSignedBy:null,haSignedName:null,haSignedAt:null,
+      fohSignedBy:null,fohSignedName:null,fohSignedAt:null
+    })
+  }
+
+  function clearService(row:RoomRow){
+    if(!isManager(access))return
+    patch(row.roomId,{serviceType:''})
+  }
+
+  function setOut(row:RoomRow){
+    if(!isManager(access))return
+    patch(row.roomId,{serviceType:'OUT'})
+  }
+
+  function togglePackage(row:RoomRow,packageId:string){
+    if(!isManager(access))return
+    const current=Array.isArray(row.packageIds)?row.packageIds:[]
+    const next=current.includes(packageId)?current.filter(id=>id!==packageId):[...current,packageId]
+    patch(row.roomId,{packageIds:next})
+  }
+
+  function promoteSelectedRefresh(){
+    const row=rowsRef.current.find(r=>r.roomId===refreshRoomId)
+    if(!row)return
+    setRefresh(row)
+    setRefreshRoomId('')
+    setExpanded(current=>({...current,[row.roomId]:true}))
+  }
+
   const checkByRoom=useMemo(()=>new Map(inspectionRooms.map(r=>[r.roomId,r])),[inspectionRooms])
-  const filtered=useMemo(()=>rows.filter(row=>{
+  const activeRows=useMemo(()=>rows.filter(row=>!isStayover(row)||isRefresh(row)),[rows])
+  const inactiveStayovers=useMemo(()=>rows.filter(row=>isStayover(row)&&!isRefresh(row)),[rows])
+  const filtered=useMemo(()=>activeRows.filter(row=>{
     if(filter==='all')return true
     const state=workflowState(row,checkByRoom.get(row.roomId))
     if(filter==='cleaning')return state==='cleaning'
@@ -416,16 +459,16 @@ export default function UnifiedRoomsBoard(){
     if(filter==='inspection')return state==='inspection'||state==='foh'
     if(filter==='correction')return state==='correction'
     return state==='complete'
-  }),[rows,filter,checkByRoom])
+  }),[activeRows,filter,checkByRoom])
 
   const counts=useMemo(()=>({
-    all:rows.length,
-    cleaning:rows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='cleaning').length,
-    self:rows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='self').length,
-    inspection:rows.filter(r=>['inspection','foh'].includes(workflowState(r,checkByRoom.get(r.roomId)))).length,
-    correction:rows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='correction').length,
-    complete:rows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='complete').length
-  }),[rows,checkByRoom])
+    all:activeRows.length,
+    cleaning:activeRows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='cleaning').length,
+    self:activeRows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='self').length,
+    inspection:activeRows.filter(r=>['inspection','foh'].includes(workflowState(r,checkByRoom.get(r.roomId)))).length,
+    correction:activeRows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='correction').length,
+    complete:activeRows.filter(r=>workflowState(r,checkByRoom.get(r.roomId))==='complete').length
+  }),[activeRows,checkByRoom])
 
   return <div className="rooms-workspace module-pretty-page">
     <div className="module-toolbar rooms-toolbar">
@@ -439,6 +482,17 @@ export default function UnifiedRoomsBoard(){
         <button type="button" className="ops-secondary-btn" onClick={()=>void load()}><RefreshCw size={15}/>Refresh</button>
       </div>
     </div>
+
+    {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<div className="rooms-refresh-adder">
+      <div><strong>Add refresh</strong><span>Stayovers stay out of the room workflow until you mark one RF.</span></div>
+      <div className="rooms-refresh-adder-actions">
+        <select value={refreshRoomId} onChange={e=>setRefreshRoomId(e.target.value)}>
+          <option value="">Choose stayover…</option>
+          {inactiveStayovers.map(row=><option key={row.roomId} value={row.roomId}>{row.roomName}</option>)}
+        </select>
+        <button type="button" className="ops-primary-btn" disabled={!refreshRoomId} onClick={promoteSelectedRefresh}>Mark RF</button>
+      </div>
+    </div>}
 
     <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
       {([
@@ -496,12 +550,32 @@ export default function UnifiedRoomsBoard(){
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
-              {isManager(access)&&<div className="rooms-manager-row">
-                <label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
-                <label>End of shift status<select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>{endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+              {isManager(access)&&<div className="rooms-manager-edit">
+                <div className="rooms-manager-grid">
+                  <label>Reservation status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                  <label>Live condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{conditionOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                  <label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
+                  <label>Cleaning order<input type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>
+                  <label>End of shift status<select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>{endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                </div>
+
+                <div className="rooms-service-controls">
+                  <span>Service</span>
+                  <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>None</button>
+                  <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>setOut(row)}>OUT</button>
+                  <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
+                </div>
+
+                <div className="rooms-package-editor">
+                  <span>Room packages</span>
+                  <div>{packageOptions.filter(option=>option.available||row.packageIds.includes(option.id)).map(option=>{
+                    const checked=row.packageIds.includes(option.id)
+                    return <button type="button" key={option.id} className={checked?'selected':''} onClick={()=>togglePackage(row,option.id)}>{checked?<Check size={14}/>:null}{option.name}</button>
+                  })}</div>
+                </div>
               </div>}
 
-              {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Room items</strong><span>{packageNames.join(', ')}</span></div>}
+              {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Selected room items</strong><span>{packageNames.join(', ')}</span></div>}
 
               <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
 
