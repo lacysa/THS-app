@@ -358,7 +358,7 @@ export async function POST(req: NextRequest) {
             throw new Error('Complete and submit the room checklist before marking this room complete.')
           }
 
-          const attestedNow = complete && validSelfCheck
+          const attestedNow = validSelfCheck
           return {
             service_date: serviceDate,
             room_id: row.roomId,
