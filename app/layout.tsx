@@ -16,6 +16,7 @@ import './styles/notifications.css'
 import './styles/shift-reports.css'
 import './styles/maintenance.css'
 import './styles/surfaces.css'
+import './styles/staff-access.css'
 import './styles/module-polish.css'
 
 export const viewport: Viewport = {
