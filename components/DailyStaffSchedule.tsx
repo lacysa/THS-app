@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 
 type ScheduleRow={
   id:string
