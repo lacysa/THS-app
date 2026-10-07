@@ -333,15 +333,20 @@
   background:rgba(248,250,252,.72);
   overflow:hidden;
 }
-.rooms-manager-details summary{
+.rooms-manager-details-toggle{
+  width:100%;
+  border:0;
+  background:transparent;
+  color:inherit;
   cursor:pointer;
-  list-style:none;
   padding:11px 13px;
   font-weight:800;
+  text-align:left;
 }
-.rooms-manager-details summary::-webkit-details-marker{display:none}
-.rooms-manager-details[open] summary{border-bottom:1px solid var(--line,#e4e7ec)}
-.rooms-manager-details .rooms-manager-edit{padding:13px}
+.rooms-manager-details .rooms-manager-edit{
+  padding:13px;
+  border-top:1px solid var(--line,#e4e7ec);
+}
 .rooms-blocked-note{
   display:flex;
   gap:8px;
