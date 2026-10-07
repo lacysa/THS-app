@@ -1568,3 +1568,414 @@ html[data-theme="dark"] .staff-page-content .department-inventory-link{
   background:linear-gradient(145deg,#18232e,#141c25)!important;
   border-color:var(--module-border)!important;
 }
+
+
+/* ============================================================
+   MUTED STATUS PALETTE
+   Cool pastel coding for status, with red reserved for real problems.
+   ============================================================ */
+
+.staff-page-content{
+  --status-ready-bg:#E8F5EE;
+  --status-ready-border:#A9D5BE;
+  --status-ready-text:#286348;
+
+  --status-stayover-bg:#E8F3F7;
+  --status-stayover-border:#A8CCD8;
+  --status-stayover-text:#356779;
+
+  --status-checkout-bg:#F4EAF0;
+  --status-checkout-border:#D7B7C8;
+  --status-checkout-text:#7A4A63;
+
+  --status-dirty-bg:#F9E7EA;
+  --status-dirty-border:#DFACB4;
+  --status-dirty-text:#8D3E4B;
+
+  --status-strip-bg:#FFF6DD;
+  --status-strip-border:#E3CE8E;
+  --status-strip-text:#80631A;
+
+  --status-progress-bg:#EEEAFB;
+  --status-progress-border:#C7BCE8;
+  --status-progress-text:#5D4B91;
+
+  --status-neutral-bg:#F1F4F7;
+  --status-neutral-border:#CDD5DF;
+  --status-neutral-text:#526173;
+
+  --status-blocked-bg:#ECEFF3;
+  --status-blocked-border:#AEB8C5;
+  --status-blocked-text:#344054;
+
+  --status-hold-bg:#FFF5E0;
+  --status-hold-border:#E7C878;
+  --status-hold-text:#7A5812;
+
+  --status-outin-bg:#EAF0F7;
+  --status-outin-border:#B7C8DA;
+  --status-outin-text:#45637C;
+
+  --alert-success-bg:#E6F4EC;
+  --alert-success-border:#8FC5A8;
+  --alert-success-text:#2F6D50;
+
+  --alert-info-bg:#E8F2FA;
+  --alert-info-border:#9FC4DE;
+  --alert-info-text:#365F7D;
+
+  --alert-warning-bg:#FFF3D7;
+  --alert-warning-border:#E2C16E;
+  --alert-warning-text:#785817;
+
+  --alert-error-bg:#FBE7E9;
+  --alert-error-border:#E0A2AA;
+  --alert-error-text:#8B3641;
+
+  --alert-neutral-bg:#EEF0F4;
+  --alert-neutral-border:#C5CBD4;
+  --alert-neutral-text:#475467;
+}
+
+/* Reservation-status pills and selectors */
+.staff-page-content .rb-summary-pill.rb-status-arrival,
+.staff-page-content .rb-status-field select.rb-status-arrival,
+.staff-page-content .daily-status-arrival,
+.staff-page-content .reservation-status-arrival .reservation-card-head span{
+  background:var(--status-ready-bg)!important;
+  border-color:var(--status-ready-border)!important;
+  color:var(--status-ready-text)!important;
+}
+
+.staff-page-content .rb-summary-pill.rb-status-stayover,
+.staff-page-content .rb-status-field select.rb-status-stayover,
+.staff-page-content .daily-status-stayover,
+.staff-page-content .reservation-status-stayover .reservation-card-head span{
+  background:var(--status-stayover-bg)!important;
+  border-color:var(--status-stayover-border)!important;
+  color:var(--status-stayover-text)!important;
+}
+
+.staff-page-content .rb-summary-pill.rb-status-checkout,
+.staff-page-content .rb-status-field select.rb-status-checkout,
+.staff-page-content .daily-status-checkout,
+.staff-page-content .reservation-status-checkout .reservation-card-head span{
+  background:var(--status-checkout-bg)!important;
+  border-color:var(--status-checkout-border)!important;
+  color:var(--status-checkout-text)!important;
+}
+
+.staff-page-content .rb-summary-pill.rb-status-out-in,
+.staff-page-content .rb-status-field select.rb-status-out-in,
+.staff-page-content .daily-status-out-in,
+.staff-page-content .reservation-status-out-in .reservation-card-head span{
+  background:var(--status-outin-bg)!important;
+  border-color:var(--status-outin-border)!important;
+  color:var(--status-outin-text)!important;
+}
+
+.staff-page-content .rb-summary-pill.rb-status-vacant,
+.staff-page-content .rb-status-field select.rb-status-vacant,
+.staff-page-content .daily-status-vacant{
+  background:var(--status-neutral-bg)!important;
+  border-color:var(--status-neutral-border)!important;
+  color:var(--status-neutral-text)!important;
+}
+
+.staff-page-content .rb-summary-pill.rb-status-blocked,
+.staff-page-content .rb-status-field select.rb-status-blocked,
+.staff-page-content .daily-status-blocked{
+  background:var(--status-blocked-bg)!important;
+  border-color:var(--status-blocked-border)!important;
+  color:var(--status-blocked-text)!important;
+}
+
+/* Reservation / room-card accent rails */
+.staff-page-content .rb-room-card.rb-status-arrival,
+.staff-page-content .reservation-card.reservation-status-arrival,
+.staff-page-content .daily-room-card.daily-status-arrival{
+  border-left-color:var(--status-ready-border)!important;
+}
+.staff-page-content .rb-room-card.rb-status-stayover,
+.staff-page-content .reservation-card.reservation-status-stayover,
+.staff-page-content .daily-room-card.daily-status-stayover{
+  border-left-color:var(--status-stayover-border)!important;
+}
+.staff-page-content .rb-room-card.rb-status-checkout,
+.staff-page-content .reservation-card.reservation-status-checkout,
+.staff-page-content .daily-room-card.daily-status-checkout{
+  border-left-color:var(--status-checkout-border)!important;
+}
+.staff-page-content .rb-room-card.rb-status-out-in,
+.staff-page-content .reservation-card.reservation-status-out-in,
+.staff-page-content .daily-room-card.daily-status-out-in{
+  border-left-color:var(--status-outin-border)!important;
+}
+.staff-page-content .rb-room-card.rb-status-vacant,
+.staff-page-content .daily-room-card.daily-status-vacant{
+  border-left-color:var(--status-neutral-border)!important;
+}
+.staff-page-content .rb-room-card.rb-status-blocked,
+.staff-page-content .daily-room-card.daily-status-blocked{
+  border-left-color:var(--status-blocked-border)!important;
+}
+
+/* Keep card bodies pale, with only a very soft status wash */
+.staff-page-content .rb-room-card.rb-status-arrival,
+.staff-page-content .reservation-card.reservation-status-arrival{
+  background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--status-ready-bg) 42%,#fff))!important;
+}
+.staff-page-content .rb-room-card.rb-status-stayover,
+.staff-page-content .reservation-card.reservation-status-stayover{
+  background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--status-stayover-bg) 42%,#fff))!important;
+}
+.staff-page-content .rb-room-card.rb-status-checkout,
+.staff-page-content .reservation-card.reservation-status-checkout{
+  background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--status-checkout-bg) 42%,#fff))!important;
+}
+.staff-page-content .rb-room-card.rb-status-out-in,
+.staff-page-content .reservation-card.reservation-status-out-in{
+  background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--status-outin-bg) 42%,#fff))!important;
+}
+.staff-page-content .rb-room-card.rb-status-vacant{
+  background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--status-neutral-bg) 44%,#fff))!important;
+}
+.staff-page-content .rb-room-card.rb-status-blocked{
+  background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--status-blocked-bg) 46%,#fff))!important;
+}
+
+/* Operational workflow states override reservation rails when more important */
+.staff-page-content .rb-room-card.is-in-progress,
+.staff-page-content .hsk-assigned-card.in-progress{
+  border-left-color:var(--status-progress-border)!important;
+}
+.staff-page-content .rb-room-card.is-complete,
+.staff-page-content .hsk-assigned-card.complete{
+  border-left-color:var(--status-ready-border)!important;
+}
+.staff-page-content .rb-room-card[data-room-condition="Vacant (Dirty)"],
+.staff-page-content .hsk-assigned-card[data-room-condition="Vacant (Dirty)"]{
+  border-left-color:var(--status-dirty-border)!important;
+  background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--status-dirty-bg) 44%,#fff))!important;
+}
+.staff-page-content .rb-room-card[data-strip-hold="Strip"],
+.staff-page-content .hsk-assigned-card[data-strip-hold="Strip"]{
+  border-left-color:var(--status-strip-border)!important;
+}
+.staff-page-content .rb-room-card[data-strip-hold="Hold"],
+.staff-page-content .hsk-assigned-card[data-strip-hold="Hold"]{
+  border-left-color:var(--status-hold-border)!important;
+}
+
+/* Room Board workflow pills */
+.staff-page-content .rb-summary-pill.progress.is-open{
+  background:var(--status-progress-bg)!important;
+  border-color:var(--status-progress-border)!important;
+  color:var(--status-progress-text)!important;
+}
+.staff-page-content .rb-summary-pill.progress.is-done,
+.staff-page-content .rb-summary-pill.is-done,
+.staff-page-content .hsk-complete-pill.done{
+  background:var(--status-ready-bg)!important;
+  border-color:var(--status-ready-border)!important;
+  color:var(--status-ready-text)!important;
+}
+.staff-page-content .rb-summary-pill.warn{
+  background:var(--status-hold-bg)!important;
+  border-color:var(--status-hold-border)!important;
+  color:var(--status-hold-text)!important;
+}
+.staff-page-content .rb-room-card[data-strip-hold="Strip"] .rb-summary-pill.warn{
+  background:var(--status-strip-bg)!important;
+  border-color:var(--status-strip-border)!important;
+  color:var(--status-strip-text)!important;
+}
+.staff-page-content .rb-room-card[data-strip-hold="Hold"] .rb-summary-pill.warn{
+  background:var(--status-hold-bg)!important;
+  border-color:var(--status-hold-border)!important;
+  color:var(--status-hold-text)!important;
+}
+
+/* End-of-shift / condition controls */
+.staff-page-content .rb-room-card[data-room-condition="Ready"] .rb-summary-pill.eos,
+.staff-page-content .rb-room-card[data-room-condition="Vacant (Clean)"] .rb-summary-pill.eos,
+.staff-page-content .rb-room-card[data-room-condition="Ready for Inspection"] .rb-summary-pill.eos{
+  background:var(--status-ready-bg)!important;
+  border-color:var(--status-ready-border)!important;
+  color:var(--status-ready-text)!important;
+}
+.staff-page-content .rb-room-card[data-room-condition="Cleaning"] .rb-summary-pill.eos{
+  background:var(--status-progress-bg)!important;
+  border-color:var(--status-progress-border)!important;
+  color:var(--status-progress-text)!important;
+}
+.staff-page-content .rb-room-card[data-room-condition="Vacant (Dirty)"] .rb-summary-pill.eos{
+  background:var(--status-dirty-bg)!important;
+  border-color:var(--status-dirty-border)!important;
+  color:var(--status-dirty-text)!important;
+}
+.staff-page-content .rb-room-card[data-room-condition="Vacant"] .rb-summary-pill.eos{
+  background:var(--status-neutral-bg)!important;
+  border-color:var(--status-neutral-border)!important;
+  color:var(--status-neutral-text)!important;
+}
+.staff-page-content .rb-room-card[data-room-condition="Vacant (Blocked)"] .rb-summary-pill.eos,
+.staff-page-content .rb-room-card[data-room-condition="Out of Order"] .rb-summary-pill.eos{
+  background:var(--status-blocked-bg)!important;
+  border-color:var(--status-blocked-border)!important;
+  color:var(--status-blocked-text)!important;
+}
+
+/* Housekeeping table reservation status */
+.staff-page-content .hsk-table tbody tr.hsk-status-arrival td:first-child{border-left-color:var(--status-ready-border)!important}
+.staff-page-content .hsk-table tbody tr.hsk-status-stayover td:first-child{border-left-color:var(--status-stayover-border)!important}
+.staff-page-content .hsk-table tbody tr.hsk-status-checkout td:first-child{border-left-color:var(--status-checkout-border)!important}
+.staff-page-content .hsk-table tbody tr.hsk-status-out-in td:first-child{border-left-color:var(--status-outin-border)!important}
+.staff-page-content .hsk-table tbody tr.hsk-status-vacant td:first-child{border-left-color:var(--status-neutral-border)!important}
+.staff-page-content .hsk-table tbody tr.hsk-status-blocked td:first-child{border-left-color:var(--status-blocked-border)!important}
+
+.staff-page-content .hsk-status-select.hsk-status-arrival{background:var(--status-ready-bg)!important;border-color:var(--status-ready-border)!important;color:var(--status-ready-text)!important}
+.staff-page-content .hsk-status-select.hsk-status-stayover{background:var(--status-stayover-bg)!important;border-color:var(--status-stayover-border)!important;color:var(--status-stayover-text)!important}
+.staff-page-content .hsk-status-select.hsk-status-checkout{background:var(--status-checkout-bg)!important;border-color:var(--status-checkout-border)!important;color:var(--status-checkout-text)!important}
+.staff-page-content .hsk-status-select.hsk-status-out-in{background:var(--status-outin-bg)!important;border-color:var(--status-outin-border)!important;color:var(--status-outin-text)!important}
+.staff-page-content .hsk-status-select.hsk-status-vacant{background:var(--status-neutral-bg)!important;border-color:var(--status-neutral-border)!important;color:var(--status-neutral-text)!important}
+.staff-page-content .hsk-status-select.hsk-status-blocked{background:var(--status-blocked-bg)!important;border-color:var(--status-blocked-border)!important;color:var(--status-blocked-text)!important}
+
+/* Room-check pass/fail and correction states */
+.staff-page-content .room-check-status.pass,
+.staff-page-content .room-check-passed-note,
+.staff-page-content .room-check-item.pass,
+.staff-page-content .room-check-actions button.active.pass{
+  background:var(--status-ready-bg)!important;
+  border-color:var(--status-ready-border)!important;
+  color:var(--status-ready-text)!important;
+}
+.staff-page-content .room-check-status.fail,
+.staff-page-content .room-check-summary span.warning,
+.staff-page-content .room-check-item.fail,
+.staff-page-content .room-check-actions button.active.fail,
+.staff-page-content .hsk-correction-alert{
+  background:var(--status-dirty-bg)!important;
+  border-color:var(--status-dirty-border)!important;
+  color:var(--status-dirty-text)!important;
+}
+.staff-page-content .room-check-status.ready{
+  background:var(--alert-info-bg)!important;
+  border-color:var(--alert-info-border)!important;
+  color:var(--alert-info-text)!important;
+}
+.staff-page-content .room-check-status.waiting{
+  background:var(--status-neutral-bg)!important;
+  border-color:var(--status-neutral-border)!important;
+  color:var(--status-neutral-text)!important;
+}
+
+/* Dashboard status chips and stronger alerts */
+.staff-page-content .daily-chip.done,
+.staff-page-content .daily-state.done{
+  background:var(--status-ready-bg)!important;
+  border-color:var(--status-ready-border)!important;
+  color:var(--status-ready-text)!important;
+}
+.staff-page-content .daily-chip.warning,
+.staff-page-content .daily-state.warning,
+.staff-page-content .daily-attention-item.tone-warning,
+.staff-page-content .daily-metric-card.tone-warning{
+  background:var(--alert-warning-bg)!important;
+  border-color:var(--alert-warning-border)!important;
+  color:var(--alert-warning-text)!important;
+}
+.staff-page-content .daily-chip.danger,
+.staff-page-content .daily-state.danger,
+.staff-page-content .daily-attention-item.tone-danger,
+.staff-page-content .daily-metric-card.tone-danger{
+  background:var(--alert-error-bg)!important;
+  border-color:var(--alert-error-border)!important;
+  color:var(--alert-error-text)!important;
+}
+
+/* Generic alert language */
+.staff-page-content .notice.success,
+.staff-page-content .rs-alert.success,
+.staff-page-content .module-message.success{
+  background:var(--alert-success-bg)!important;
+  border:1px solid var(--alert-success-border)!important;
+  color:var(--alert-success-text)!important;
+}
+.staff-page-content .notice.info,
+.staff-page-content .rs-alert.info{
+  background:var(--alert-info-bg)!important;
+  border:1px solid var(--alert-info-border)!important;
+  color:var(--alert-info-text)!important;
+}
+.staff-page-content .notice.warning,
+.staff-page-content .rs-alert.warning{
+  background:var(--alert-warning-bg)!important;
+  border:1px solid var(--alert-warning-border)!important;
+  color:var(--alert-warning-text)!important;
+}
+.staff-page-content .notice.error,
+.staff-page-content .rs-alert.error{
+  background:var(--alert-error-bg)!important;
+  border:1px solid var(--alert-error-border)!important;
+  color:var(--alert-error-text)!important;
+}
+
+/* Dark mode keeps hue meaning while reducing brightness */
+html[data-theme="dark"] .staff-page-content{
+  --status-ready-bg:#193128;
+  --status-ready-border:#5F8F74;
+  --status-ready-text:#BDE4CB;
+
+  --status-stayover-bg:#182E38;
+  --status-stayover-border:#608B9C;
+  --status-stayover-text:#B8DCE7;
+
+  --status-checkout-bg:#30232B;
+  --status-checkout-border:#8F6B7E;
+  --status-checkout-text:#E3C1D2;
+
+  --status-dirty-bg:#352126;
+  --status-dirty-border:#9A626B;
+  --status-dirty-text:#EDBBC2;
+
+  --status-strip-bg:#332E1C;
+  --status-strip-border:#9A873F;
+  --status-strip-text:#E9D98C;
+
+  --status-progress-bg:#28243A;
+  --status-progress-border:#786EAA;
+  --status-progress-text:#D7CFF4;
+
+  --status-neutral-bg:#222A33;
+  --status-neutral-border:#596674;
+  --status-neutral-text:#C6D0DA;
+
+  --status-blocked-bg:#242A31;
+  --status-blocked-border:#66717E;
+  --status-blocked-text:#D4D9E0;
+
+  --status-hold-bg:#332B1A;
+  --status-hold-border:#9A7E39;
+  --status-hold-text:#EBD28A;
+
+  --status-outin-bg:#202B38;
+  --status-outin-border:#657E98;
+  --status-outin-text:#C8D8E7;
+
+  --alert-success-bg:#193128;
+  --alert-success-border:#5F8F74;
+  --alert-success-text:#BDE4CB;
+  --alert-info-bg:#182C3A;
+  --alert-info-border:#6086A1;
+  --alert-info-text:#C0DBED;
+  --alert-warning-bg:#332B1A;
+  --alert-warning-border:#9A7E39;
+  --alert-warning-text:#EBD28A;
+  --alert-error-bg:#352126;
+  --alert-error-border:#9A626B;
+  --alert-error-text:#EDBBC2;
+  --alert-neutral-bg:#242A31;
+  --alert-neutral-border:#66717E;
+  --alert-neutral-text:#D4D9E0;
+}

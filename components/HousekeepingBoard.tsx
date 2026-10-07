@@ -634,7 +634,14 @@ export default function HousekeepingBoard() {
         ) : (
           <div className="hsk-assigned-grid">
             {rows.map(row => (
-              <article id={`room-${row.roomId}`} className={`hsk-assigned-card ${row.complete ? 'complete' : ''}`} key={row.roomId}>
+              <article
+                id={`room-${row.roomId}`}
+                className={`hsk-assigned-card ${row.complete ? 'complete' : 'in-progress'}`}
+                data-reservation-status={row.reservationStatus||''}
+                data-room-condition={row.roomCondition||''}
+                data-strip-hold={row.stripHold||''}
+                key={row.roomId}
+              >
                 <div className="hsk-assigned-card-head">
                   <div>
                     <div className="hsk-room-cell">
