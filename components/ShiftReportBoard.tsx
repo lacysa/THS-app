@@ -137,9 +137,8 @@ export default function ShiftReportBoard() {
       completed:hk.filter(r=>r.complete).length,
       refreshes:hk.filter(r=>String(r.serviceType||'').toUpperCase()==='RF').length,
       holds:hk.filter(r=>String(r.stripHold||'').toLowerCase().includes('hold')).length,
-      menusReceived:breakfast.filter(r=>r.status==='scheduled'&&r.menuSubmitted).length,
-      menusMissing:breakfast.filter(r=>r.status==='scheduled'&&!r.menuSubmitted),
-      breakfastDeclined:breakfast.filter(r=>r.status==='declined').length,
+      menusReceived:breakfast.filter(r=>r.status==='scheduled'&&!r.breakfastSkipped&&r.menuSubmitted).length,
+      menusMissing:breakfast.filter(r=>r.status==='scheduled'&&!r.breakfastSkipped&&!r.menuSubmitted),
       maintenanceOpen:maintenance.filter(r=>r.status!=='complete'),
       maintenanceComplete:maintenance.filter(r=>r.status==='complete')
     }
@@ -293,7 +292,7 @@ export default function ShiftReportBoard() {
 
       <section className="shift-print-section">
         <h3>Breakfast · {auto.breakfastDate}</h3>
-        <p><strong>{summary.menusReceived + summary.menusMissing.length + summary.breakfastDeclined} rooms expected</strong> · {summary.menusReceived} menus received · {summary.menusMissing.length} missing · {summary.breakfastDeclined} declined</p>
+        <p><strong>{summary.menusReceived + summary.menusMissing.length} rooms expected</strong> · {summary.menusReceived} menus received · {summary.menusMissing.length} missing</p>
         {summary.menusMissing.length>0 && <div className="shift-print-bullets">
           <strong>Missing menus</strong>
           <ul>{summary.menusMissing.map((r:any)=><li key={`print-menu-${r.roomId}`}>{r.roomName}</li>)}</ul>
@@ -347,8 +346,8 @@ export default function ShiftReportBoard() {
       <section className="shift-section">
         <h3>Breakfast · {auto.breakfastDate}</h3>
         <div className="shift-breakfast-overview">
-          <strong>{summary.menusReceived + summary.menusMissing.length + summary.breakfastDeclined} rooms expected</strong>
-          <span>{summary.menusReceived} menus received · {summary.menusMissing.length} missing · {summary.breakfastDeclined} declined</span>
+          <strong>{summary.menusReceived + summary.menusMissing.length} rooms expected</strong>
+          <span>{summary.menusReceived} menus received · {summary.menusMissing.length} missing</span>
         </div>
         {summary.menusMissing.length>0 && <div className="shift-missing-menu-list">
           <strong>Missing menus</strong>
