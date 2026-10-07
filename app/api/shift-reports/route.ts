@@ -51,17 +51,20 @@ function authorInitials(name:string) {
 async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: string) {
   const breakfastDate = nextDate(date)
 
-  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes, breakfastTagRes] = await Promise.all([
+  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes, breakfastTagRes, todayStaffRes, tomorrowStaffRes, tomorrowHousekeepingRes] = await Promise.all([
     admin.from('rooms').select('id,name,sort_order,active').eq('active', true).order('sort_order'),
     admin.from('housekeeping_daily_rooms').select('*').eq('service_date', date),
     admin.from('breakfast_bookings').select('room_id,status,menu_submitted,time_slot').eq('service_date', breakfastDate),
     admin.from('maintenance_work_orders').select('*').order('created_at', { ascending: false }),
     admin.from('room_notes').select('*').or(`service_date.eq.${date},note_type.eq.persistent`).order('created_at', { ascending: false }),
     admin.from('staff_members').select('id,name'),
-    admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', date).eq('breakfast_tag', true)
+    admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', date).eq('breakfast_tag', true),
+    admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',date).eq('work_mode','onsite'),
+    admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',breakfastDate).eq('work_mode','onsite'),
+    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,service_type,strip_hold,check_issue_open').eq('service_date',breakfastDate)
   ])
 
-  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error
+  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error || todayStaffRes.error || tomorrowStaffRes.error || tomorrowHousekeepingRes.error
   if (error) throw new Error(error.message)
 
   const rooms = roomsRes.data || []
@@ -129,7 +132,36 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
       createdByName: n.created_by ? staffById.get(String(n.created_by)) || 'Staff' : 'Staff'
     }))
 
-  return { breakfastDate, housekeeping, breakfast, maintenance, roomNotes }
+  const mapStaffSchedule = (rows:any[]) => (rows || []).map((row:any)=>({
+    staffMemberId:String(row.staff_member_id),
+    name:staffById.get(String(row.staff_member_id)) || 'Staff',
+    roleLabel:String(row.role_label || ''),
+    shiftStart:row.shift_start || null,
+    shiftEnd:row.shift_end || null
+  })).sort((a:any,b:any)=>String(a.shiftStart||'').localeCompare(String(b.shiftStart||'')) || a.name.localeCompare(b.name))
+
+  const todayStaff = mapStaffSchedule(todayStaffRes.data || [])
+  const tomorrowStaff = mapStaffSchedule(tomorrowStaffRes.data || [])
+
+  const tomorrowHousekeeping = (tomorrowHousekeepingRes.data || []).map((row:any)=>({
+    roomId:String(row.room_id),
+    roomName:roomById.get(String(row.room_id)) || 'Room',
+    reservationStatus:String(row.reservation_status || ''),
+    serviceType:String(row.service_type || ''),
+    stripHold:String(row.strip_hold || ''),
+    checkIssueOpen:Boolean(row.check_issue_open)
+  }))
+
+  return {
+    breakfastDate,
+    housekeeping,
+    breakfast,
+    maintenance,
+    roomNotes,
+    todayStaff,
+    tomorrowStaff,
+    tomorrowHousekeeping
+  }
 }
 
 export async function GET(req: NextRequest) {
