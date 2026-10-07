@@ -83,7 +83,8 @@ export async function GET(req: NextRequest) {
       { data: saved, error: savedError },
       peopleData,
       { data: packageCatalog, error: packageCatalogError },
-      { data: roomPackageRows, error: roomPackageError }
+      { data: roomPackageRows, error: roomPackageError },
+      { data: scheduleRows, error: scheduleError }
     ] = await Promise.all([
       admin
         .from('rooms')
@@ -102,13 +103,18 @@ export async function GET(req: NextRequest) {
       admin
         .from('housekeeping_room_packages')
         .select('room_id,package_id,source')
-        .eq('service_date', serviceDate)
+        .eq('service_date', serviceDate),
+      admin
+        .from('staff_daily_schedule')
+        .select('staff_member_id,shift_start,shift_end,role_label,work_mode')
+        .eq('schedule_date', serviceDate)
     ])
 
     if (roomError) throw new Error(roomError.message)
     if (savedError) throw new Error(savedError.message)
     if (packageCatalogError) throw new Error(packageCatalogError.message)
     if (roomPackageError) throw new Error(roomPackageError.message)
+    if (scheduleError) throw new Error(scheduleError.message)
 
     const peopleById = new Map<string, any>()
     for (const person of peopleData.people) peopleById.set(String((person as any).id), person)
@@ -125,9 +131,32 @@ export async function GET(req: NextRequest) {
       currentCaps.has('housekeeping') &&
       !['manager','general_manager','operations_manager','owner'].some(cap => currentCaps.has(cap))
 
-    const staffOptions = peopleData.people
+    const allStaffOptions = peopleData.people
       .filter((person: any) => person.active !== false)
-      .map((person: any) => ({ id: person.id, name: person.name }))
+      .map((person: any) => ({ id: person.id, name: person.name, roleLabel: person.job_title || '', shiftStart: null, shiftEnd: null, onSite: false }))
+
+    const scheduleByMember = new Map<string, any>()
+    for (const row of scheduleRows || []) {
+      scheduleByMember.set(String((row as any).staff_member_id), row)
+    }
+
+    const onsiteStaffOptions = peopleData.people
+      .filter((person: any) => person.active !== false)
+      .map((person: any) => {
+        const schedule = scheduleByMember.get(String(person.id))
+        if (!schedule || schedule.work_mode !== 'onsite') return null
+        return {
+          id: person.id,
+          name: person.name,
+          roleLabel: schedule.role_label || person.job_title || '',
+          shiftStart: schedule.shift_start || null,
+          shiftEnd: schedule.shift_end || null,
+          onSite: true
+        }
+      })
+      .filter(Boolean)
+
+    const staffOptions = onsiteStaffOptions.length ? onsiteStaffOptions : allStaffOptions
 
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
@@ -244,6 +273,12 @@ export async function GET(req: NextRequest) {
       blockingRoomName: blockingRoom?.roomName || null,
       viewMode: assignedOnlyView ? 'assigned' : 'manager',
       staffOptions,
+      onsiteStaffOptions,
+      allStaffOptions,
+      staffing: {
+        hasSchedule: (scheduleRows || []).length > 0,
+        onSiteCount: onsiteStaffOptions.length
+      },
       packageOptions: (packageCatalog || []).map((pkg:any)=>({
         id:String(pkg.id),
         name:String(pkg.name || ''),
