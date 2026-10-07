@@ -70,6 +70,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'The room must be marked complete before sign-off.' }, { status: 400 })
     }
 
+    if (kind === 'ha') {
+      const { data:qualityPass, error:qualityError } = await admin
+        .from('housekeeping_quality_checks')
+        .select('id,submitted_at,status,stage')
+        .eq('service_date',serviceDate)
+        .eq('room_id',roomId)
+        .in('stage',['inspection','recheck'])
+        .eq('status','pass')
+        .order('submitted_at',{ascending:false})
+        .limit(1)
+        .maybeSingle()
+
+      if (qualityError) throw new Error(qualityError.message)
+      if (!qualityPass) {
+        return NextResponse.json(
+          { error:'Complete and pass the independent room inspection checklist before HA sign-off.' },
+          { status:400 }
+        )
+      }
+    }
+
     const now = new Date().toISOString()
 
     let automaticEndOfShiftStatus:string | null = null
