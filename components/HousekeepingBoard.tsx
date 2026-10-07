@@ -65,6 +65,10 @@ type RoomRow = {
 type StaffOption = {
   id: string
   name: string
+  roleLabel?: string
+  shiftStart?: string | null
+  shiftEnd?: string | null
+  onSite?: boolean
 }
 
 type RoomPackageOption = {
@@ -165,6 +169,8 @@ export default function HousekeepingBoard() {
   const [date, setDate] = useState(todayDetroit())
   const [rows, setRows] = useState<RoomRow[]>([])
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
+  const [allStaffOptions, setAllStaffOptions] = useState<StaffOption[]>([])
+  const [showAllStaff, setShowAllStaff] = useState(false)
   const [packageOptions, setPackageOptions] = useState<RoomPackageOption[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -232,6 +238,8 @@ export default function HousekeepingBoard() {
       rowsRef.current = loadedRows
       setViewMode(d.viewMode === 'assigned' ? 'assigned' : 'manager')
       setStaffOptions(d.staffOptions || [])
+      setAllStaffOptions(d.allStaffOptions || d.staffOptions || [])
+      setShowAllStaff(false)
       setPackageOptions(d.packageOptions || [])
       setCanHaSignoff(Boolean(d.signoffAccess?.canHaSignoff))
       setCanFohSignoff(Boolean(d.signoffAccess?.canFohSignoff))
@@ -593,9 +601,12 @@ export default function HousekeepingBoard() {
 
   const filteredStaff = useMemo(() => {
     const q = staffSearch.trim().toLowerCase()
-    if (!q) return staffOptions
-    return staffOptions.filter(option => option.name.toLowerCase().includes(q))
-  }, [staffOptions, staffSearch])
+    const source = showAllStaff ? allStaffOptions : staffOptions
+    if (!q) return source
+    return source.filter(option =>
+      [option.name, option.roleLabel].filter(Boolean).join(' ').toLowerCase().includes(q)
+    )
+  }, [staffOptions, allStaffOptions, showAllStaff, staffSearch])
 
   useEffect(()=>{
     if(viewMode!=='manager'||loading) return
@@ -991,8 +1002,14 @@ export default function HousekeepingBoard() {
                                 autoFocus
                                 value={staffSearch}
                                 onChange={e => setStaffSearch(e.target.value)}
-                                placeholder="Search current staff"
+                                placeholder={showAllStaff ? 'Search all active staff' : 'Search on-site staff'}
                               />
+                            </div>
+                            <div className="hsk-staff-scope">
+                              <strong>{showAllStaff ? 'All active staff' : 'On site today'}</strong>
+                              <button type="button" onClick={() => setShowAllStaff(value => !value)}>
+                                {showAllStaff ? 'On-site only' : 'All active staff'}
+                              </button>
                             </div>
                             <div className="hsk-staff-options">
                               {filteredStaff.map(option => {
@@ -1005,11 +1022,18 @@ export default function HousekeepingBoard() {
                                     onClick={() => toggleStaff(row, option.name)}
                                   >
                                     <span className="hsk-staff-check">{checked && <Check size={13} />}</span>
-                                    {option.name}
+                                    <span>
+                                      {option.name}
+                                      {!showAllStaff && option.onSite && (
+                                        <small>
+                                          {[option.roleLabel, option.shiftStart && option.shiftEnd ? `${String(option.shiftStart).slice(0,5)}–${String(option.shiftEnd).slice(0,5)}` : ''].filter(Boolean).join(' · ')}
+                                        </small>
+                                      )}
+                                    </span>
                                   </button>
                                 )
                               })}
-                              {!filteredStaff.length && <div className="hsk-no-staff">No matching active staff.</div>}
+                              {!filteredStaff.length && <div className="hsk-no-staff">{showAllStaff ? 'No matching active staff.' : 'No on-site staff scheduled for this day.'}</div>}
                             </div>
                           </div>
                         )}
