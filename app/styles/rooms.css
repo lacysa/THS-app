@@ -404,3 +404,25 @@
   .rooms-card-body{padding-bottom:18px}
   .rooms-primary-action{box-shadow:0 8px 20px rgba(30,41,59,.12)}
 }
+
+
+/* Focus-first mobile room workflow */
+.rooms-progress-summary{display:flex;align-items:center;gap:10px;padding:0 16px 13px;color:var(--muted,#667085);font-size:11px;min-width:0}
+.rooms-progress-summary>span:first-child{white-space:nowrap}.rooms-progress-summary>span:first-child strong{color:var(--text,#182230)}
+.rooms-progress-dots{display:flex;gap:4px;align-items:center}.rooms-progress-dots i{display:block;width:7px;height:7px;border-radius:999px;background:#d7dde5}.rooms-progress-dots i.done{background:#5f8f78}
+.rooms-next-action{margin-left:auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#4c5b69;font-size:11px}
+.rooms-details-drawer{border:1px solid var(--line,#e1e5ea);border-radius:13px;background:rgba(248,250,252,.72);overflow:hidden}
+.rooms-details-drawer>summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:12px;font-weight:800;color:#56616d;display:flex;align-items:center;justify-content:space-between}
+.rooms-details-drawer>summary::-webkit-details-marker{display:none}.rooms-details-drawer>summary:after{content:'+';font-size:17px;line-height:1;color:#7a8794}.rooms-details-drawer[open]>summary:after{content:'–'}
+.rooms-details-drawer .rooms-manager-edit{padding:0 12px 12px}
+.state-self .cleaning-section,.state-self .inspection-section,.state-self .rooms-signoffs{display:none}
+.state-cleaning .self-check-section,.state-cleaning .inspection-section,.state-cleaning .rooms-signoffs{display:none}
+.state-inspection .self-check-section,.state-inspection .cleaning-section,.state-inspection .rooms-signoffs{display:none}
+.state-final .self-check-section,.state-final .cleaning-section,.state-final .inspection-section{display:none}
+.state-ready .self-check-section,.state-ready .cleaning-section,.state-ready .inspection-section,.state-ready .rooms-signoffs{display:none}
+@media(max-width:700px){
+  .rooms-card-list{gap:9px}.rooms-card{border-radius:16px}.rooms-card-header{padding:13px 13px 8px}.rooms-card-title strong{font-size:17px}
+  .rooms-state-pill{font-size:11px;padding:6px 8px;max-width:44%;overflow:hidden;text-overflow:ellipsis}
+  .rooms-progress-summary{padding:0 13px 10px;gap:8px}.rooms-next-action{font-size:10px}
+  .rooms-card-body{padding:12px 13px 15px;gap:12px}
+}
