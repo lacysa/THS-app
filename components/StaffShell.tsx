@@ -387,6 +387,32 @@ export default function StaffShell({
     operationsModules.has(item.module_key)
   )
 
+  const nestedChildrenByParent: Record<string, string[]> = {
+    reservations: ['reservation_sync'],
+    housekeeping: ['room_checks', 'housekeeping_quality']
+  }
+
+  const nestedChildKeys = new Set(
+    Object.values(nestedChildrenByParent).flat()
+  )
+
+  const operationRoots = operationsNav.filter(
+    item => !nestedChildKeys.has(item.module_key)
+  )
+
+  const nestedChildrenFor = (parentKey: string) =>
+    (nestedChildrenByParent[parentKey] || [])
+      .map(key => operationsNav.find(item => item.module_key === key))
+      .filter(Boolean) as ModuleRow[]
+
+  const orphanedNestedChildren = operationsNav.filter(item => {
+    if (!nestedChildKeys.has(item.module_key)) return false
+    const parentEntry = Object.entries(nestedChildrenByParent)
+      .find(([, children]) => children.includes(item.module_key))
+    if (!parentEntry) return false
+    return !operationsNav.some(parent => parent.module_key === parentEntry[0])
+  })
+
   const otherNav = nav.filter(
     item =>
       item.module_key !== 'dashboard' &&
@@ -435,10 +461,7 @@ export default function StaffShell({
     router.push(href)
   }
 
-  const renderNavLink = (item: ModuleRow) => {
-    const Icon =
-      iconMap[item.module_key] || LayoutGrid
-
+  const itemIsActive = (item: ModuleRow) => {
     const href =
       hrefFallback[item.module_key] ||
       item.href ||
@@ -447,24 +470,42 @@ export default function StaffShell({
     const exactOnlyRoutes =
       new Set(['/dashboard', '/breakfast'])
 
-    const active =
-      exactOnlyRoutes.has(href)
-        ? pathname === href
-        : (
-            pathname === href ||
-            pathname.startsWith(`${href}/`)
-          )
+    return exactOnlyRoutes.has(href)
+      ? pathname === href
+      : (
+          pathname === href ||
+          pathname.startsWith(`${href}/`)
+        )
+  }
 
+  const renderNavLink = (
+    item: ModuleRow,
+    options?: { nested?: boolean; parentActive?: boolean }
+  ) => {
+    const Icon =
+      iconMap[item.module_key] || LayoutGrid
+
+    const href =
+      hrefFallback[item.module_key] ||
+      item.href ||
+      '#'
+
+    const active = itemIsActive(item)
     const preview = item.published === false
+    const nested = Boolean(options?.nested)
 
     return (
       <Link
         key={item.module_key}
         href={href}
-        className={active ? 'active' : ''}
+        className={[
+          active ? 'active' : '',
+          nested ? 'sidebar-nested-link' : '',
+          options?.parentActive ? 'sidebar-parent-active' : ''
+        ].filter(Boolean).join(' ')}
       >
         <span className="sidebar-link-icon">
-          <Icon size={17} />
+          <Icon size={nested ? 14 : 17} />
         </span>
 
         <span className="sidebar-link-label">
@@ -477,6 +518,29 @@ export default function StaffShell({
           </em>
         )}
       </Link>
+    )
+  }
+
+  const renderOperationItem = (item: ModuleRow) => {
+    const children = nestedChildrenFor(item.module_key)
+    const childActive = children.some(itemIsActive)
+
+    if (!children.length) {
+      return renderNavLink(item)
+    }
+
+    return (
+      <div
+        className={`sidebar-nav-group ${childActive ? 'has-active-child' : ''}`}
+        key={item.module_key}
+      >
+        {renderNavLink(item, { parentActive: childActive })}
+        <div className="sidebar-nested-links">
+          {children.map(child =>
+            renderNavLink(child, { nested: true })
+          )}
+        </div>
+      </div>
     )
   }
 
@@ -571,7 +635,10 @@ export default function StaffShell({
                 Operations
               </div>
 
-              {operationsNav.map(renderNavLink)}
+              {operationRoots.map(renderOperationItem)}
+              {orphanedNestedChildren.map(item =>
+                renderNavLink(item)
+              )}
             </div>
           )}
 
