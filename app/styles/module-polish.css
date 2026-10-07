@@ -556,3 +556,834 @@ html[data-theme="dark"] .staff-page-content .hsk-resource-tabs button.active{
     font-size:27px!important;
   }
 }
+
+
+/* ============================================================
+   2026-10 DYNAMIC PASTEL MODULE SYSTEM
+   Inspired by the mobile Room Checks treatment:
+   soft atmospheric gradients, floating white cards, colored rails,
+   pill summaries, responsive motion, and touch-first controls.
+   Loaded last so the system is consistent across every module.
+   ============================================================ */
+
+.staff-page-content{
+  --module-accent:#7895ad;
+  --module-accent-rgb:120,149,173;
+  --module-aqua:rgba(91,220,211,.20);
+  --module-blue:rgba(131,198,255,.18);
+  --module-violet:rgba(154,126,255,.20);
+  --module-surface:#ffffff;
+  --module-surface-soft:rgba(255,255,255,.78);
+  --module-border:rgba(113,133,154,.20);
+  --module-border-strong:rgba(102,124,147,.28);
+  --module-shadow:0 14px 34px rgba(48,72,110,.09);
+  --module-shadow-float:0 18px 42px rgba(48,72,110,.13);
+  --module-radius:20px;
+  --module-radius-card:17px;
+  --module-gradient:
+    radial-gradient(circle at 7% 5%,var(--module-aqua),transparent 34%),
+    radial-gradient(circle at 96% 10%,var(--module-violet),transparent 38%),
+    linear-gradient(135deg,#fbfeff 0%,#f3fbff 44%,#f8f4ff 100%);
+}
+
+/* Per-module personalities without losing one visual language */
+.staff-page-content .front-desk-page{--module-accent:#6f91b4;--module-accent-rgb:111,145,180}
+.staff-page-content .breakfast-overview-page{--module-accent:#c79b53;--module-accent-rgb:199,155,83}
+.staff-page-content .rb-page{--module-accent:#6f8ea8;--module-accent-rgb:111,142,168}
+.staff-page-content .hsk-module{--module-accent:#738eaa;--module-accent-rgb:115,142,170}
+.staff-page-content .room-checks-page{--module-accent:#7f9ab4;--module-accent-rgb:127,154,180}
+.staff-page-content .quality-page{--module-accent:#668fa2;--module-accent-rgb:102,143,162}
+.staff-page-content .reservations-page{--module-accent:#6f9a82;--module-accent-rgb:111,154,130}
+.staff-page-content .rs-wrap{--module-accent:#758ca7;--module-accent-rgb:117,140,167}
+.staff-page-content .shift-page{--module-accent:#8a79a7;--module-accent-rgb:138,121,167}
+.staff-page-content .maintenance-page{--module-accent:#b38c59;--module-accent-rgb:179,140,89}
+.staff-page-content .inventory-page{--module-accent:#668e8c;--module-accent-rgb:102,142,140}
+.staff-page-content .department-board{--module-accent:#758ca7;--module-accent-rgb:117,140,167}
+.staff-page-content .hsk-resource-page{--module-accent:#7e91a0;--module-accent-rgb:126,145,160}
+.staff-page-content .daily-dashboard{--module-accent:#6f8fb0;--module-accent-rgb:111,143,176}
+
+/* Page background gets a quiet glow instead of flat clinical gray */
+.staff-ops-main,
+.staff-page-content{
+  background:
+    radial-gradient(circle at 2% 4%,rgba(115,220,214,.055),transparent 26%),
+    radial-gradient(circle at 98% 4%,rgba(146,122,245,.06),transparent 29%),
+    var(--ths-ivory)!important;
+}
+
+/* One hero language everywhere */
+.staff-page-content .module-pretty-hero,
+.staff-page-content .rb-toolbar,
+.staff-page-content .ops-module>.module-toolbar,
+.staff-page-content .room-checks-page>.module-toolbar,
+.staff-page-content .rs-hero-card,
+.staff-page-content .overview-title-row,
+.staff-page-content .hsk-resource-topbar,
+.staff-page-content .reservations-snapshot,
+.staff-page-content .quality-hero,
+.staff-page-content .daily-visual-overview{
+  border:1px solid var(--module-border)!important;
+  border-radius:var(--module-radius)!important;
+  background:var(--module-gradient)!important;
+  box-shadow:var(--module-shadow)!important;
+  overflow:hidden;
+  isolation:isolate;
+}
+
+.staff-page-content .module-pretty-hero::before,
+.staff-page-content .rb-toolbar::before,
+.staff-page-content .ops-module>.module-toolbar::before,
+.staff-page-content .room-checks-page>.module-toolbar::before,
+.staff-page-content .rs-hero-card::before,
+.staff-page-content .overview-title-row::before,
+.staff-page-content .quality-hero::before{
+  content:"";
+  position:absolute;
+  width:180px;
+  height:180px;
+  right:-75px;
+  top:-95px;
+  border-radius:50%;
+  background:rgba(var(--module-accent-rgb),.08);
+  pointer-events:none;
+  z-index:-1;
+}
+
+.staff-page-content .module-pretty-hero,
+.staff-page-content .rb-toolbar,
+.staff-page-content .ops-module>.module-toolbar,
+.staff-page-content .room-checks-page>.module-toolbar,
+.staff-page-content .rs-hero-card,
+.staff-page-content .overview-title-row,
+.staff-page-content .hsk-resource-topbar{
+  padding:22px!important;
+}
+
+.staff-page-content .module-pretty-hero h1,
+.staff-page-content .rb-toolbar h1,
+.staff-page-content .ops-module>.module-toolbar h1,
+.staff-page-content .room-checks-page>.module-toolbar h1,
+.staff-page-content .rs-hero-card h1,
+.staff-page-content .overview-title-row h1,
+.staff-page-content .hsk-resource-topbar h1{
+  font-size:34px!important;
+  letter-spacing:-.035em!important;
+  line-height:1.02!important;
+}
+
+.staff-page-content .module-kicker,
+.staff-page-content .ops-kicker,
+.staff-page-content .rs-kicker,
+.staff-page-content .reservations-kicker{
+  color:color-mix(in srgb,var(--module-accent) 78%,#415366)!important;
+  letter-spacing:.13em!important;
+}
+
+/* Floating utility controls */
+.staff-page-content .module-pretty-toolbar,
+.staff-page-content .toolbar,
+.staff-page-content .rb-view-controls,
+.staff-page-content .rb-breakfast-strip,
+.staff-page-content .shift-toolbar,
+.staff-page-content .maint-sticky-bar,
+.staff-page-content .overview-actions,
+.staff-page-content .room-check-summary,
+.staff-page-content .reservations-date-controls,
+.staff-page-content .quality-range{
+  border:1px solid var(--module-border)!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.86)!important;
+  box-shadow:0 8px 24px rgba(48,72,110,.07)!important;
+  backdrop-filter:blur(16px) saturate(1.15);
+  -webkit-backdrop-filter:blur(16px) saturate(1.15);
+}
+
+/* Touch controls now feel like components instead of form fields */
+.staff-page-content input,
+.staff-page-content select,
+.staff-page-content textarea{
+  min-height:42px;
+  border:1px solid rgba(111,130,150,.25)!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.94)!important;
+  box-shadow:0 2px 8px rgba(48,72,110,.035)!important;
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease,transform .16s ease;
+}
+
+.staff-page-content input:focus,
+.staff-page-content select:focus,
+.staff-page-content textarea:focus{
+  border-color:rgba(var(--module-accent-rgb),.55)!important;
+  outline:0!important;
+  box-shadow:
+    0 0 0 4px rgba(var(--module-accent-rgb),.10),
+    0 7px 18px rgba(48,72,110,.07)!important;
+  background:#fff!important;
+}
+
+.staff-page-content button,
+.staff-page-content a,
+.staff-page-content summary{
+  -webkit-tap-highlight-color:transparent;
+}
+
+.staff-page-content .ops-primary-btn,
+.staff-page-content .rs-btn:not(.rs-secondary),
+.staff-page-content .btn:not(.secondary):not(.danger){
+  min-height:42px;
+  border-radius:12px!important;
+  border:1px solid rgba(15,28,42,.08)!important;
+  background:linear-gradient(145deg,#24303d,#161e27)!important;
+  box-shadow:0 8px 18px rgba(26,39,56,.14)!important;
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease!important;
+}
+
+.staff-page-content .ops-secondary-btn,
+.staff-page-content .rs-btn.rs-secondary,
+.staff-page-content .btn.secondary{
+  min-height:42px;
+  border-radius:12px!important;
+  border:1px solid var(--module-border)!important;
+  background:rgba(255,255,255,.90)!important;
+  box-shadow:0 5px 14px rgba(48,72,110,.055)!important;
+  transition:transform .16s ease,box-shadow .16s ease,background .16s ease!important;
+}
+
+@media(hover:hover){
+  .staff-page-content .ops-primary-btn:hover,
+  .staff-page-content .rs-btn:hover,
+  .staff-page-content .btn:hover,
+  .staff-page-content .ops-secondary-btn:hover{
+    transform:translateY(-2px)!important;
+    box-shadow:0 12px 24px rgba(48,72,110,.12)!important;
+  }
+}
+
+/* Universal content card treatment */
+.staff-page-content .card,
+.staff-page-content .rb-room-card,
+.staff-page-content .hsk-assigned-card,
+.staff-page-content .hsk-table-wrapper,
+.staff-page-content .room-check-card,
+.staff-page-content .shift-section,
+.staff-page-content .maint-add-card,
+.staff-page-content .maint-room-card,
+.staff-page-content .maint-ticket,
+.staff-page-content .rs-upload-card,
+.staff-page-content .rs-reservation,
+.staff-page-content .rs-history,
+.staff-page-content .overview-panel,
+.staff-page-content .hsk-guide-card,
+.staff-page-content .hsk-zone-card,
+.staff-page-content .department-note-card,
+.staff-page-content .inventory-request-card,
+.staff-page-content .inventory-catalog,
+.staff-page-content .inventory-add-card,
+.staff-page-content .inventory-item,
+.staff-page-content .reservation-card,
+.staff-page-content .quality-card,
+.staff-page-content .quality-metrics>div,
+.staff-page-content .daily-panel,
+.staff-page-content .daily-metric-card,
+.staff-page-content .daily-room-card,
+.staff-page-content .daily-attention-item{
+  border:1px solid var(--module-border)!important;
+  border-radius:var(--module-radius-card)!important;
+  background:
+    radial-gradient(circle at 100% 0,rgba(var(--module-accent-rgb),.045),transparent 35%),
+    linear-gradient(145deg,#fff,#fbfdff)!important;
+  box-shadow:0 10px 26px rgba(48,72,110,.075)!important;
+  transition:
+    transform .18s cubic-bezier(.2,.8,.2,1),
+    box-shadow .18s cubic-bezier(.2,.8,.2,1),
+    border-color .18s ease,
+    background .18s ease;
+}
+
+/* Accent rails make scan-heavy cards visually legible */
+.staff-page-content .rb-room-card,
+.staff-page-content .hsk-assigned-card,
+.staff-page-content .room-check-card,
+.staff-page-content .maint-room-card,
+.staff-page-content .rs-reservation,
+.staff-page-content .reservation-card,
+.staff-page-content .daily-room-card{
+  border-left:5px solid rgba(var(--module-accent-rgb),.80)!important;
+}
+
+.staff-page-content .hsk-assigned-card.complete,
+.staff-page-content .room-check-card:not(.has-issue):has(.room-check-status.pass){
+  border-left-color:#6f9d7b!important;
+}
+
+.staff-page-content .room-check-card.has-issue,
+.staff-page-content .rs-reservation.needs-review{
+  border-left-color:#c97864!important;
+}
+
+@media(hover:hover){
+  .staff-page-content .rb-room-card:hover,
+  .staff-page-content .hsk-assigned-card:hover,
+  .staff-page-content .room-check-card:hover,
+  .staff-page-content .maint-room-card:hover,
+  .staff-page-content .rs-reservation:hover,
+  .staff-page-content .reservation-card:hover,
+  .staff-page-content .quality-card:hover,
+  .staff-page-content .inventory-item:hover,
+  .staff-page-content .daily-panel:hover{
+    transform:translateY(-2px);
+    border-color:rgba(var(--module-accent-rgb),.30)!important;
+    box-shadow:var(--module-shadow-float)!important;
+  }
+}
+
+/* Card headers look like the Room Checks cards */
+.staff-page-content .room-check-header,
+.staff-page-content .reservation-card-head,
+.staff-page-content .maint-room-header,
+.staff-page-content .rs-row-top,
+.staff-page-content .daily-panel-head,
+.staff-page-content .daily-hk-group>summary,
+.staff-page-content .rb-room-summary{
+  background:
+    linear-gradient(180deg,rgba(252,254,255,.98),rgba(247,250,253,.96))!important;
+  border-color:rgba(112,132,153,.15)!important;
+}
+
+/* Soft status pills / counts */
+.staff-page-content .room-check-summary,
+.staff-page-content .rb-summary-strip,
+.staff-page-content .rs-stats,
+.staff-page-content .reservations-summary-grid,
+.staff-page-content .quality-metrics{
+  gap:10px!important;
+}
+
+.staff-page-content .room-check-summary>span,
+.staff-page-content .rb-summary-strip>span,
+.staff-page-content .pill,
+.staff-page-content .status-badge,
+.staff-page-content .hsk-complete-pill,
+.staff-page-content .rs-change,
+.staff-page-content .reservation-card-head span,
+.staff-page-content .daily-chip,
+.staff-page-content .daily-state{
+  border:1px solid rgba(112,132,153,.16)!important;
+  border-radius:999px!important;
+  background:rgba(245,249,252,.92)!important;
+  color:#586c80!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+.staff-page-content .room-check-summary>span,
+.staff-page-content .rb-summary-strip>span{
+  padding:7px 12px!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+
+/* Stats = airy, tactile and immediately scannable */
+.staff-page-content .rs-stats>div,
+.staff-page-content .reservations-summary-grid>div,
+.staff-page-content .quality-metrics>div,
+.staff-page-content .shift-snapshot-grid>div,
+.staff-page-content .overview-metrics>div{
+  border:1px solid rgba(112,132,153,.14)!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.82)!important;
+  box-shadow:0 7px 18px rgba(48,72,110,.055)!important;
+}
+
+/* Tables become soft floating data surfaces */
+.staff-page-content table{
+  border-collapse:separate!important;
+  border-spacing:0!important;
+}
+
+.staff-page-content .hsk-table-wrapper,
+.staff-page-content .quality-table-wrap,
+.staff-page-content .overview-panel:has(table){
+  overflow:auto;
+  border-radius:18px!important;
+  box-shadow:0 10px 28px rgba(48,72,110,.07)!important;
+}
+
+.staff-page-content th{
+  background:linear-gradient(180deg,#f8fbfd,#f2f6fa)!important;
+  color:#657689!important;
+  font-size:9px!important;
+  letter-spacing:.055em!important;
+  text-transform:uppercase!important;
+  border-color:rgba(112,132,153,.15)!important;
+}
+
+.staff-page-content td{
+  border-color:rgba(112,132,153,.12)!important;
+}
+
+.staff-page-content tbody tr{
+  transition:background .14s ease;
+}
+
+@media(hover:hover){
+  .staff-page-content tbody tr:hover td{
+    background:rgba(var(--module-accent-rgb),.035)!important;
+  }
+}
+
+/* Expand/collapse feels dynamic but remains very light */
+.staff-page-content details>summary,
+.staff-page-content .room-check-header,
+.staff-page-content .hsk-self-check-toggle{
+  transition:background .16s ease,color .16s ease,transform .16s ease;
+}
+
+.staff-page-content details[open]>summary,
+.staff-page-content .room-check-card:has(.room-check-body) .room-check-header{
+  background:linear-gradient(180deg,#fff,#f5f9fc)!important;
+}
+
+.staff-page-content details[open]>*:not(summary),
+.staff-page-content .room-check-body,
+.staff-page-content .hsk-self-check-panel{
+  animation:moduleReveal .18s ease-out both;
+}
+
+@keyframes moduleReveal{
+  from{opacity:.45;transform:translateY(-4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Room Checks gets the exact airy mobile energy the user liked */
+.staff-page-content .room-check-list{
+  display:grid!important;
+  gap:12px!important;
+}
+
+.staff-page-content .room-check-card{
+  overflow:hidden!important;
+}
+
+.staff-page-content .room-check-header{
+  min-height:72px!important;
+  padding:15px 16px!important;
+}
+
+.staff-page-content .room-check-header>div{
+  gap:10px!important;
+}
+
+.staff-page-content .room-check-header strong{
+  font-size:16px!important;
+  letter-spacing:-.015em;
+}
+
+.staff-page-content .room-check-header small{
+  margin-top:3px!important;
+  color:#758290!important;
+  font-size:10px!important;
+}
+
+.staff-page-content .room-check-status{
+  min-width:52px;
+  padding:7px 9px!important;
+  border-radius:999px!important;
+  background:#edf5fb!important;
+  color:#4e718d!important;
+  font-size:9px!important;
+}
+
+.staff-page-content .room-check-zone{
+  overflow:hidden;
+  border:1px solid rgba(112,132,153,.12);
+  border-radius:14px;
+  background:#fff;
+}
+
+.staff-page-content .room-check-zone h3{
+  margin:0!important;
+  padding:10px 12px!important;
+  background:linear-gradient(180deg,#f8fbfd,#f4f8fb)!important;
+}
+
+.staff-page-content .room-check-item{
+  padding:11px 12px!important;
+  border-top:1px solid rgba(112,132,153,.11)!important;
+}
+
+.staff-page-content .room-check-actions button{
+  min-height:36px!important;
+  border-radius:10px!important;
+}
+
+/* Housekeeping self-check mirrors independent room-check visual language */
+.staff-page-content .hsk-self-check{
+  border-radius:14px!important;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(48,72,110,.045);
+}
+
+.staff-page-content .hsk-self-check-zone label{
+  border-radius:11px!important;
+  transition:background .14s ease,border-color .14s ease,transform .14s ease;
+}
+
+.staff-page-content .hsk-self-check-zone label.checked{
+  background:linear-gradient(135deg,#f1faf4,#f7fcf8)!important;
+  border-color:#bad6c1!important;
+}
+
+/* Reservation and quality modules use the same visual depth */
+.staff-page-content .reservations-snapshot,
+.staff-page-content .quality-hero{
+  box-shadow:var(--module-shadow)!important;
+}
+
+.staff-page-content .reservation-card{
+  overflow:hidden!important;
+}
+
+.staff-page-content .reservation-door{
+  border:1px solid rgba(var(--module-accent-rgb),.12)!important;
+  border-radius:12px!important;
+  background:rgba(var(--module-accent-rgb),.09)!important;
+}
+
+.staff-page-content .quality-person-track,
+.staff-page-content .quality-miss-row i,
+.staff-page-content .rs-progress>div{
+  background:#edf3f7!important;
+  border-radius:999px!important;
+}
+
+.staff-page-content .quality-person-track span,
+.staff-page-content .quality-miss-row i b,
+.staff-page-content .rs-progress span{
+  background:linear-gradient(90deg,#62c8c0,#6d8bd0,#8e78d1)!important;
+  border-radius:999px!important;
+}
+
+/* Dashboard now belongs to the same family too */
+.staff-page-content .daily-dashboard{
+  gap:18px!important;
+}
+
+.staff-page-content .daily-dashboard-hero{
+  padding:2px 0 4px!important;
+}
+
+.staff-page-content .daily-dashboard-hero h1{
+  font-size:32px!important;
+  letter-spacing:-.03em;
+}
+
+.staff-page-content .daily-visual-overview{
+  padding:18px!important;
+}
+
+.staff-page-content .daily-metric-card{
+  border-radius:999px!important;
+  background:rgba(255,255,255,.86)!important;
+}
+
+.staff-page-content .daily-metric-icon{
+  background:rgba(var(--module-accent-rgb),.11)!important;
+  color:color-mix(in srgb,var(--module-accent) 82%,#34495d)!important;
+}
+
+.staff-page-content .daily-panel{
+  overflow:hidden!important;
+}
+
+.staff-page-content .daily-attention-item{
+  background:rgba(255,255,255,.88)!important;
+}
+
+/* Sidebar/topbar are cleaner on touch devices so modules feel cohesive */
+@media(max-width:900px){
+  .staff-ops-topbar{
+    min-height:72px!important;
+    padding:10px 16px!important;
+    background:rgba(255,255,255,.92)!important;
+    backdrop-filter:blur(18px) saturate(1.15)!important;
+    -webkit-backdrop-filter:blur(18px) saturate(1.15)!important;
+  }
+
+  .mobile-nav-toggle{
+    width:44px!important;
+    height:44px!important;
+    flex-basis:44px!important;
+    border:1px solid rgba(112,132,153,.22)!important;
+    border-radius:12px!important;
+    background:rgba(255,255,255,.95)!important;
+    box-shadow:0 5px 16px rgba(48,72,110,.07)!important;
+  }
+
+  .staff-page-title strong{
+    font-size:20px!important;
+    line-height:1.05!important;
+    letter-spacing:-.02em!important;
+  }
+
+  .staff-page-content{
+    padding:18px 14px calc(38px + env(safe-area-inset-bottom))!important;
+  }
+
+  .staff-page-content .module-pretty-page,
+  .staff-page-content .rb-page,
+  .staff-page-content .ops-module,
+  .staff-page-content .room-checks-page,
+  .staff-page-content .shift-page,
+  .staff-page-content .maintenance-page,
+  .staff-page-content .rs-wrap,
+  .staff-page-content .breakfast-overview-page,
+  .staff-page-content .department-board,
+  .staff-page-content .inventory-page,
+  .staff-page-content .hsk-resource-page,
+  .staff-page-content .quality-page,
+  .staff-page-content .reservations-page,
+  .staff-page-content .daily-dashboard{
+    gap:16px!important;
+  }
+
+  .staff-page-content .module-pretty-hero,
+  .staff-page-content .rb-toolbar,
+  .staff-page-content .ops-module>.module-toolbar,
+  .staff-page-content .room-checks-page>.module-toolbar,
+  .staff-page-content .rs-hero-card,
+  .staff-page-content .overview-title-row,
+  .staff-page-content .hsk-resource-topbar,
+  .staff-page-content .quality-hero{
+    padding:22px 18px!important;
+    border-radius:22px!important;
+  }
+
+  .staff-page-content .module-pretty-hero,
+  .staff-page-content .rb-toolbar,
+  .staff-page-content .ops-module>.module-toolbar,
+  .staff-page-content .room-checks-page>.module-toolbar,
+  .staff-page-content .quality-hero{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:18px!important;
+  }
+
+  .staff-page-content .module-pretty-hero h1,
+  .staff-page-content .rb-toolbar h1,
+  .staff-page-content .ops-module>.module-toolbar h1,
+  .staff-page-content .room-checks-page>.module-toolbar h1,
+  .staff-page-content .rs-hero-card h1,
+  .staff-page-content .overview-title-row h1,
+  .staff-page-content .hsk-resource-topbar h1{
+    font-size:31px!important;
+  }
+
+  .staff-page-content .toolbar-actions,
+  .staff-page-content .rb-toolbar-actions,
+  .staff-page-content .reservations-date-controls,
+  .staff-page-content .quality-range{
+    width:100%!important;
+  }
+
+  .staff-page-content .date-control,
+  .staff-page-content .rb-date-control,
+  .staff-page-content .reservations-date-controls label{
+    width:100%!important;
+    min-width:0!important;
+  }
+
+  .staff-page-content .date-control input,
+  .staff-page-content .rb-date-control input,
+  .staff-page-content .reservations-date-controls input{
+    width:100%!important;
+  }
+
+  .staff-page-content .room-check-summary{
+    padding:10px 12px!important;
+    gap:8px!important;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+
+  .staff-page-content .room-check-summary::-webkit-scrollbar{display:none}
+
+  .staff-page-content .room-check-summary>span{
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+}
+
+@media(max-width:620px){
+  .staff-page-content{
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+
+  .staff-page-content .module-pretty-hero,
+  .staff-page-content .rb-toolbar,
+  .staff-page-content .ops-module>.module-toolbar,
+  .staff-page-content .room-checks-page>.module-toolbar,
+  .staff-page-content .rs-hero-card,
+  .staff-page-content .overview-title-row,
+  .staff-page-content .quality-hero{
+    padding:20px 16px!important;
+  }
+
+  .staff-page-content .module-pretty-hero h1,
+  .staff-page-content .rb-toolbar h1,
+  .staff-page-content .ops-module>.module-toolbar h1,
+  .staff-page-content .room-checks-page>.module-toolbar h1,
+  .staff-page-content .rs-hero-card h1,
+  .staff-page-content .overview-title-row h1{
+    font-size:30px!important;
+  }
+
+  .staff-page-content .toolbar-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:9px!important;
+  }
+
+  .staff-page-content .toolbar-actions>button,
+  .staff-page-content .toolbar-actions>.ops-primary-btn,
+  .staff-page-content .toolbar-actions>.ops-secondary-btn{
+    width:100%!important;
+    justify-content:center!important;
+  }
+
+  .staff-page-content .room-check-header{
+    min-height:78px!important;
+    padding:14px!important;
+  }
+
+  .staff-page-content .room-check-header strong{
+    font-size:17px!important;
+  }
+
+  .staff-page-content .reservation-card,
+  .staff-page-content .room-check-card,
+  .staff-page-content .hsk-assigned-card,
+  .staff-page-content .maint-room-card,
+  .staff-page-content .rb-room-card{
+    border-radius:18px!important;
+  }
+
+  .staff-page-content .quality-metrics,
+  .staff-page-content .reservations-summary-grid,
+  .staff-page-content .rs-stats,
+  .staff-page-content .daily-metric-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  .staff-page-content .quality-metrics>div,
+  .staff-page-content .reservations-summary-grid>div,
+  .staff-page-content .rs-stats>div{
+    min-height:86px;
+  }
+
+  .staff-page-content .daily-panel,
+  .staff-page-content .quality-card{
+    border-radius:18px!important;
+  }
+}
+
+/* Respect users who prefer less motion */
+@media(prefers-reduced-motion:reduce){
+  .staff-page-content *,
+  .staff-page-content *::before,
+  .staff-page-content *::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+}
+
+/* Dark mode keeps the same depth and hierarchy instead of flattening */
+html[data-theme="dark"] .staff-page-content{
+  --module-surface:#17212b;
+  --module-surface-soft:rgba(22,32,43,.86);
+  --module-border:rgba(150,170,190,.18);
+  --module-border-strong:rgba(160,180,200,.25);
+  --module-shadow:0 14px 34px rgba(0,0,0,.20);
+  --module-shadow-float:0 18px 42px rgba(0,0,0,.28);
+  --module-aqua:rgba(63,190,184,.12);
+  --module-blue:rgba(84,142,203,.12);
+  --module-violet:rgba(124,95,206,.16);
+  --module-gradient:
+    radial-gradient(circle at 7% 5%,var(--module-aqua),transparent 34%),
+    radial-gradient(circle at 96% 10%,var(--module-violet),transparent 38%),
+    linear-gradient(135deg,#17222d 0%,#192632 48%,#211d31 100%);
+}
+
+html[data-theme="dark"] .staff-ops-main,
+html[data-theme="dark"] .staff-page-content{
+  background:
+    radial-gradient(circle at 2% 4%,rgba(80,190,184,.04),transparent 26%),
+    radial-gradient(circle at 98% 4%,rgba(125,101,220,.05),transparent 29%),
+    #10171f!important;
+}
+
+html[data-theme="dark"] .staff-page-content .card,
+html[data-theme="dark"] .staff-page-content .rb-room-card,
+html[data-theme="dark"] .staff-page-content .hsk-assigned-card,
+html[data-theme="dark"] .staff-page-content .room-check-card,
+html[data-theme="dark"] .staff-page-content .shift-section,
+html[data-theme="dark"] .staff-page-content .maint-add-card,
+html[data-theme="dark"] .staff-page-content .maint-room-card,
+html[data-theme="dark"] .staff-page-content .maint-ticket,
+html[data-theme="dark"] .staff-page-content .rs-upload-card,
+html[data-theme="dark"] .staff-page-content .rs-reservation,
+html[data-theme="dark"] .staff-page-content .rs-history,
+html[data-theme="dark"] .staff-page-content .overview-panel,
+html[data-theme="dark"] .staff-page-content .hsk-guide-card,
+html[data-theme="dark"] .staff-page-content .hsk-zone-card,
+html[data-theme="dark"] .staff-page-content .department-note-card,
+html[data-theme="dark"] .staff-page-content .inventory-request-card,
+html[data-theme="dark"] .staff-page-content .inventory-catalog,
+html[data-theme="dark"] .staff-page-content .inventory-add-card,
+html[data-theme="dark"] .staff-page-content .inventory-item,
+html[data-theme="dark"] .staff-page-content .reservation-card,
+html[data-theme="dark"] .staff-page-content .quality-card,
+html[data-theme="dark"] .staff-page-content .quality-metrics>div,
+html[data-theme="dark"] .staff-page-content .daily-panel,
+html[data-theme="dark"] .staff-page-content .daily-metric-card,
+html[data-theme="dark"] .staff-page-content .daily-room-card,
+html[data-theme="dark"] .staff-page-content .daily-attention-item{
+  background:
+    radial-gradient(circle at 100% 0,rgba(var(--module-accent-rgb),.055),transparent 35%),
+    linear-gradient(145deg,#18232e,#141c25)!important;
+  color:#eef4f9!important;
+  border-color:var(--module-border)!important;
+}
+
+html[data-theme="dark"] .staff-page-content .module-pretty-toolbar,
+html[data-theme="dark"] .staff-page-content .toolbar,
+html[data-theme="dark"] .staff-page-content .rb-view-controls,
+html[data-theme="dark"] .staff-page-content .rb-breakfast-strip,
+html[data-theme="dark"] .staff-page-content .shift-toolbar,
+html[data-theme="dark"] .staff-page-content .maint-sticky-bar,
+html[data-theme="dark"] .staff-page-content .overview-actions,
+html[data-theme="dark"] .staff-page-content .room-check-summary,
+html[data-theme="dark"] .staff-page-content .quality-range{
+  background:rgba(22,32,43,.88)!important;
+  border-color:var(--module-border)!important;
+}
+
+html[data-theme="dark"] .staff-page-content input,
+html[data-theme="dark"] .staff-page-content select,
+html[data-theme="dark"] .staff-page-content textarea{
+  background:#111923!important;
+  border-color:rgba(160,180,200,.22)!important;
+  color:#eef4f9!important;
+}
+
+html[data-theme="dark"] .staff-page-content .room-check-header,
+html[data-theme="dark"] .staff-page-content .reservation-card-head,
+html[data-theme="dark"] .staff-page-content .maint-room-header,
+html[data-theme="dark"] .staff-page-content .rs-row-top,
+html[data-theme="dark"] .staff-page-content .daily-panel-head,
+html[data-theme="dark"] .staff-page-content .daily-hk-group>summary{
+  background:linear-gradient(180deg,#202c39,#1a2530)!important;
+  border-color:var(--module-border)!important;
+}
