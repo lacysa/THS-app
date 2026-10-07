@@ -93,6 +93,8 @@ type SelfCheck={
 type SaveState='idle'|'saving'|'saved'|'error'
 type Filter='all'|'cleaning'|'self'|'inspection'|'correction'|'complete'
 
+const endOfShiftOptions=['','Occupied','Ready','Vacant (Clean)','Vacant (Dirty)','Vacant (Blocked)','Out of Order']
+
 function todayDetroit(){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 }
@@ -477,12 +479,14 @@ export default function UnifiedRoomsBoard(){
               <div className="rooms-meta-grid">
                 <div><span>Assigned</span><strong>{assigned.length?assigned.join(', '):'Unassigned'}</strong></div>
                 <div><span>Condition</span><strong>{row.roomCondition||'—'}</strong></div>
+                {row.nextShiftCondition&&<div><span>End of shift</span><strong>{row.nextShiftCondition}</strong></div>}
                 {row.housekeeperAttestedAt&&<div><span>Self-check</span><strong>{shortTime(row.housekeeperAttestedAt)}</strong></div>}
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
               {isManager(access)&&<div className="rooms-manager-row">
                 <label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
+                <label>End of shift status<select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>{endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
               </div>}
 
               {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Room items</strong><span>{packageNames.join(', ')}</span></div>}
