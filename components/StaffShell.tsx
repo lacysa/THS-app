@@ -55,6 +55,8 @@ type Access = {
   theme: 'light' | 'blue' | 'sage' | 'violet' | 'dark'
   roleName: string | null
   isAdmin: boolean
+  isPreviewMode?: boolean
+  previewOwnerUserId?: string | null
 }
 
 type NotificationRow = {
@@ -365,7 +367,6 @@ export default function StaffShell({
         .filter(
           m =>
             m.module_key !== 'breakfast_menu_manager' &&
-            m.module_key !== 'room_board' &&
             !m.module_key.endsWith('_inventory')
         )
         .sort(
@@ -544,6 +545,11 @@ export default function StaffShell({
     )
   }
 
+  async function exitPreview(){
+    await fetch('/api/staff-preview',{method:'DELETE'}).catch(()=>null)
+    window.location.assign('/staff')
+  }
+
   function toggleSidebar() {
     setSidebarCollapsed(current => {
       const next = !current
@@ -553,7 +559,16 @@ export default function StaffShell({
   }
 
   return (
-    <main className={`ops-app staff-ops-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
+    <main className={`ops-app staff-ops-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''} ${access?.isPreviewMode ? 'staff-view-as-mode' : ''}`}>
+      {access?.isPreviewMode && (
+        <div className="staff-view-as-banner">
+          <div>
+            <strong>Owner preview</strong>
+            <span>Viewing the app as {displayName}. This preview is read-only.</span>
+          </div>
+          <button type="button" onClick={()=>void exitPreview()}>Exit preview</button>
+        </div>
+      )}
 
       <aside className={`ops-sidebar staff-ops-sidebar ${sidebarCollapsed && !mobileNavOpen ? 'collapsed' : ''} ${mobileNavOpen ? 'mobile-open' : ''}`}>
 
@@ -940,7 +955,7 @@ export default function StaffShell({
 
         </header>
 
-        <div className="ops-content staff-page-content">
+        <div className={`ops-content staff-page-content ${access?.isPreviewMode ? 'staff-preview-readonly' : ''}`}>
           {children}
         </div>
 
