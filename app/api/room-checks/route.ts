@@ -129,7 +129,7 @@ export async function POST(req:NextRequest){
       Boolean(dailyRow.check_issue_open)
 
     if(activeHskService && (!dailyRow.complete||!dailyRow.ready_for_inspection)){
-      return NextResponse.json({error:'The room must be complete and marked Ready for Inspection before inspection.'},{status:400})
+      return NextResponse.json({error:'The room must be complete and ready for room check before inspection.'},{status:400})
     }
 
     const now=new Date().toISOString()
@@ -299,7 +299,8 @@ export async function POST(req:NextRequest){
       allPassed,
       complete:true,
       stage:qualityStage,
-      inspectionCheckId:qualityCheck.id
+      inspectionCheckId:qualityCheck.id,
+      issue:failed.length?failed.map((i:any)=>{const res=resultByItem.get(String(i.id));return `${i.label}${res?.note?`: ${res.note}`:''}`}).join(' · '):''
     })
   }catch(error:any){
     return NextResponse.json({error:error?.message||'Could not save room check.'},{status:500})
