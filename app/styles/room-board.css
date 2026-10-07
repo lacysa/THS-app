@@ -1145,3 +1145,10 @@ html[data-theme="dark"] .rb-note-badge{
   border-color:#3a5268!important;
   color:#b7cadb!important;
 }
+
+
+/* Daily staff assignment scope */
+.rb-staff-scope{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 4px}
+.rb-staff-scope b{font-size:9px;color:var(--ths-muted)}
+.rb-staff-scope button{border:0;background:transparent;color:var(--app-accent,#5877d8);font-size:9px;font-weight:800;cursor:pointer}
+.rb-chip-list button small{display:block;margin-left:3px;font-size:7px;font-weight:600;opacity:.72}
