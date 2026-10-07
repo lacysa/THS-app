@@ -14,7 +14,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
     setLoading(true)
     setError('')
     try {
-      const r = await fetch(`/api/staff/day?date=${date}`,{cache:'no-store'})
+      const r = await fetch(`/api/staff/day?date=${date}&includeDeclined=1`,{cache:'no-store'})
       const json = await r.json()
       if (!r.ok) throw new Error(json.message || 'Could not load breakfast data.')
       setData(json)
@@ -55,6 +55,28 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
     const json = await r.json().catch(()=>({}))
     if (!r.ok) {
       setError(json.message || 'Could not cancel the booking.')
+      return
+    }
+    load()
+  }
+
+  async function setBreakfastSkipped(booking:any,skipped:boolean) {
+    setError('')
+    const payload:any = {
+      id:booking.id,
+      status:skipped ? 'declined' : 'scheduled'
+    }
+    // Restoring breakfast should re-check the existing time slot capacity.
+    if (!skipped && booking.time_slot) payload.time_slot=String(booking.time_slot).slice(0,5)
+
+    const r = await fetch('/api/staff/booking',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    })
+    const json = await r.json().catch(()=>({}))
+    if (!r.ok) {
+      setError(json.message || (skipped ? 'Could not skip breakfast.' : 'Could not restore breakfast.'))
       return
     }
     load()
@@ -112,7 +134,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
             <div className="timeline fd-breakfast-list">
               {data.bookings.length===0 && <div className="muted">No breakfast bookings for this date.</div>}
               {data.bookings.map((b:any)=>(
-                <div className={`fd-breakfast-pill ${b.menu_submitted?'is-received':'is-missing'}`} id={`booking-${b.id}`} key={b.id}>
+                <div className={`fd-breakfast-pill ${b.status==='declined'?'is-declined':b.menu_submitted?'is-received':'is-missing'}`} id={`booking-${b.id}`} key={b.id}>
                   <div className="fd-breakfast-pill-main">
                     <div className="fd-breakfast-pill-room">
                       <strong>{b.rooms?.name}</strong>
@@ -120,17 +142,28 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
                     </div>
                     <div className="fd-breakfast-pill-status">
                       <span className="pill">{b.displayTime}</span>
-                      <span className={`pill ${b.menu_submitted ? 'success' : 'warning'}`}>{b.menu_submitted?'Menu received':'Menu Missing'}</span>
+                      <span className={`pill ${b.status==='declined' ? 'neutral' : b.menu_submitted ? 'success' : 'warning'}`}>
+                        {b.status==='declined' ? 'Skipping breakfast' : b.menu_submitted?'Menu received':'Menu Missing'}
+                      </span>
                     </div>
                     {!b.taggedOnly && (
                       <div className="fd-breakfast-pill-actions">
-                        <button className="btn secondary" onClick={()=>setEditing({...b,time_slot:String(b.time_slot).slice(0,5)})}>Edit time</button>
-                        {b.guest_token && <a className="btn secondary" href={`/breakfast/menu?token=${encodeURIComponent(b.guest_token)}`} target="_blank" rel="noreferrer">Edit menu</a>}
+                        <label className={`fd-skip-breakfast-toggle ${b.status==='declined'?'active':''}`}>
+                          <input
+                            type="checkbox"
+                            checked={b.status==='declined'}
+                            onChange={e=>void setBreakfastSkipped(b,e.target.checked)}
+                          />
+                          <span className="fd-skip-switch" aria-hidden="true"><i/></span>
+                          <strong>Skip breakfast</strong>
+                        </label>
+                        <button className="btn secondary" disabled={b.status==='declined'} onClick={()=>setEditing({...b,time_slot:String(b.time_slot).slice(0,5)})}>Edit time</button>
+                        {b.guest_token && b.status!=='declined' && <a className="btn secondary" href={`/breakfast/menu?token=${encodeURIComponent(b.guest_token)}`} target="_blank" rel="noreferrer">Edit menu</a>}
                         <button className="btn danger" onClick={()=>cancel(b.id)}>Cancel</button>
                       </div>
                     )}
                   </div>
-                  {!b.taggedOnly && <div className="fd-breakfast-pill-note"><BookingMenuNote bookingId={b.id} initialNote={b.note || ''} /></div>}
+                  {!b.taggedOnly && b.status!=='declined' && <div className="fd-breakfast-pill-note"><BookingMenuNote bookingId={b.id} initialNote={b.note || ''} /></div>}
                 </div>
               ))}
             </div>
