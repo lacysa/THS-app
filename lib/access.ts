@@ -16,6 +16,7 @@ export type StaffAccess = {
   canManageModules:boolean
   permissions:string[]
   capabilities:string[]
+  moduleOverrides:Record<string,boolean>
 }
 
 export async function getStaffAccess():Promise<StaffAccess|null> {
@@ -34,6 +35,7 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
 
   let permissions:string[] = []
   let capabilities:string[] = []
+  let moduleOverrides:Record<string,boolean> = {}
   if ((profile as any).role_id) {
     const { data:rows } = await supabase
       .from('role_permissions')
@@ -61,6 +63,15 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     capabilities = (capRows || []).map((row:any)=>row.capability_key).filter(Boolean)
   }
 
+  const { data:overrideRows } = await supabase
+    .from('staff_module_access')
+    .select('module_key,allowed')
+    .eq('user_id',user.id)
+
+  moduleOverrides = Object.fromEntries(
+    (overrideRows || []).map((row:any)=>[String(row.module_key),Boolean(row.allowed)])
+  )
+
   return {
     userId:user.id,
     name:(profile as any).name || user.email || 'Staff',
@@ -76,7 +87,8 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     canPreviewUnpublished:Boolean(roleRaw?.can_preview_unpublished),
     canManageModules:Boolean(roleRaw?.can_manage_modules),
     permissions,
-    capabilities
+    capabilities,
+    moduleOverrides
   }
 }
 
@@ -103,6 +115,10 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   if (module.published === false && !access.canPreviewUnpublished) return false
 
   const key = String(module.module_key || '')
+
+  if (Object.prototype.hasOwnProperty.call(access.moduleOverrides,key)) {
+    return access.moduleOverrides[key]
+  }
 
   if (key === 'laundry' || key === 'laundry_inventory') {
     return access.isAdmin || hasAnyCapability(access,[
