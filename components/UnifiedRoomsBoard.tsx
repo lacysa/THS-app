@@ -152,7 +152,9 @@ export default function UnifiedRoomsBoard(){
   const [canHaSignoff,setCanHaSignoff]=useState(false)
   const [canFohSignoff,setCanFohSignoff]=useState(false)
   const [refreshRoomId,setRefreshRoomId]=useState('')
-  const [managerDisplay,setManagerDisplay]=useState<'cards'|'table'>('cards')
+  const [managerDisplay,setManagerDisplay]=useState<'focus'|'cards'|'table'>('focus')
+  const [selectedRoomId,setSelectedRoomId]=useState('')
+  const [roomSearch,setRoomSearch]=useState('')
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
   const saveTimers=useRef<Record<string,ReturnType<typeof setTimeout>>>({})
@@ -165,11 +167,11 @@ export default function UnifiedRoomsBoard(){
     const query=window.matchMedia('(max-width: 900px)')
     const sync=()=>{
       setIsCompact(query.matches)
-      if(query.matches){setManagerDisplay('cards');setFilter(current=>current==='all'?'active':current)}
+      if(query.matches){setManagerDisplay('focus');setFilter(current=>current==='all'?'active':current)}
       else{
         try{
           const saved=window.localStorage.getItem('ths-rooms-manager-view')
-          if(saved==='table'||saved==='cards')setManagerDisplay(saved)
+          if(saved==='table'||saved==='cards'||saved==='focus')setManagerDisplay(saved)
         }catch{}
       }
     }
@@ -504,14 +506,15 @@ export default function UnifiedRoomsBoard(){
     setExpanded(current=>({...current,[row.roomId]:true}))
   }
 
-  function chooseManagerDisplay(next:'cards'|'table'){
+  function chooseManagerDisplay(next:'focus'|'cards'|'table'){
     if(isCompact&&next==='table')return
     setManagerDisplay(next)
     try{window.localStorage.setItem('ths-rooms-manager-view',next)}catch{}
   }
 
   function openRoomCard(row:RoomRow){
-    chooseManagerDisplay('cards')
+    chooseManagerDisplay('focus')
+    setSelectedRoomId(row.roomId)
     setExpanded(current=>({...current,[row.roomId]:true}))
     window.requestAnimationFrame(()=>{
       document.getElementById(`room-card-${row.roomId}`)?.scrollIntoView({block:'start',behavior:'smooth'})
@@ -532,6 +535,10 @@ export default function UnifiedRoomsBoard(){
     return state==='ready'
   }),[activeRows,filter,checkByRoom])
 
+  const searchedRows=useMemo(()=>filtered.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[filtered,roomSearch])
+  const selectedRow=searchedRows.find(row=>row.roomId===selectedRoomId)||searchedRows[0]
+  const displayRows=managerDisplay==='focus'?(selectedRow?[selectedRow]:[]):searchedRows
+  function focusRoom(row:RoomRow){setSelectedRoomId(row.roomId);setExpanded(current=>({...current,[row.roomId]:true}));if(requiresSelfCheck(row)&&!row.housekeeperAttested&&!selfChecks[row.roomId])void loadSelfCheck(row)}
   const counts=useMemo(()=>({
     active:activeRows.filter(r=>!['ready','blocked','occupied'].includes(roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen}))).length,
     all:activeRows.length,
@@ -566,9 +573,10 @@ export default function UnifiedRoomsBoard(){
       </div>
     </div>}
 
-    {viewMode==='manager'&&isManager(access)&&!isCompact&&<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
+    {<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
+      <button type="button" className={managerDisplay==='focus'?'active':''} onClick={()=>chooseManagerDisplay('focus')}>Focus</button>
       <button type="button" className={managerDisplay==='cards'?'active':''} onClick={()=>chooseManagerDisplay('cards')}>Cards</button>
-      <button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>
+      {viewMode==='manager'&&isManager(access)&&!isCompact&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
     </div>}
 
     <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
@@ -578,10 +586,21 @@ export default function UnifiedRoomsBoard(){
       ] as Array<[Filter,string,number]>).map(([key,label,count])=><button key={key} type="button" className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<span>{count}</span></button>)}
     </div>
 
+    <div className="rooms-workflow-overview"><div><strong>{counts.complete}<span> / {counts.all}</span></strong><small>Rooms complete</small></div><div><strong>{counts.correction}</strong><small>Needs correction</small></div><div><strong>{counts.inspection}</strong><small>Awaiting checks</small></div></div>
+    <label className="rooms-search-field"><span>Find a room or team member</span><input type="search" value={roomSearch} onChange={e=>setRoomSearch(e.target.value)} placeholder="Search rooms, staff, status…" /></label>
+    {managerDisplay==='focus'&&!loading&&searchedRows.length>0&&<div className="rooms-focus-layout">
+      <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
+      <div className="rooms-room-picker" role="group" aria-label="Select room">
+        {searchedRows.map(row=>{const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen});return <button type="button" key={row.roomId} aria-pressed={selectedRow?.roomId===row.roomId} className={`rooms-picker-item ${state} ${selectedRow?.roomId===row.roomId?'chosen':''}`} onClick={()=>focusRoom(row)}>
+          <span className="rooms-picker-name">{row.roomName}</span><span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span><span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':state==='occupied'?'Occupied':'Clean'}</span>
+        </button>})}
+      </div>
+      <div className="rooms-focus-heading rooms-focus-detail-title"><strong>Room details</strong><span>Changes save without leaving this page</span></div>
+    </div>}
     <div className={`rooms-save-state ${saveState}`}>{saveState==='saving'?'Saving…':saveState==='error'?'Save failed':saveState==='saved'?'Saved ✓':''}</div>
     {message&&<div className="module-message">{message}</div>}
 
-    {loading?<div className="module-empty">Loading rooms…</div>:filtered.length===0?<div className="module-empty">No rooms in this view.</div>:
+    {loading?<div className="module-empty">Loading rooms…</div>:searchedRows.length===0?<div className="module-empty">No rooms match this view.</div>:
       viewMode==='manager'&&isManager(access)&&managerDisplay==='table'
         ? <div className="rooms-table-shell">
             <div className="rooms-table-scroll">
@@ -600,7 +619,7 @@ export default function UnifiedRoomsBoard(){
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(row=>{
+                  {searchedRows.map(row=>{
                     const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})
                     const assigned=splitAssigned(row.assignedTo)
                     const selectedPackages=(row.packageIds||[]).map(id=>packageOptions.find(p=>p.id===id)?.name).filter(Boolean) as string[]
@@ -658,11 +677,11 @@ export default function UnifiedRoomsBoard(){
             </div>
           </div>
         : <div className="rooms-card-list">
-        {filtered.map(row=>{
+        {displayRows.map(row=>{
           const inspection=checkByRoom.get(row.roomId)
           const effectiveRow={...row,checkIssueOpen:row.checkIssueOpen||inspection?.issueOpen}
           const state=roomWorkflowState(effectiveRow)
-          const isOpen=Boolean(expanded[row.roomId])
+          const isOpen=managerDisplay==='focus'||Boolean(expanded[row.roomId])
           const self=selfChecks[row.roomId]
           const zones=[...new Set((self?.items||[]).map(i=>i.zone))]
           const assigned=splitAssigned(row.assignedTo)
