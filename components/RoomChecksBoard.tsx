@@ -29,12 +29,49 @@ export default function RoomChecksBoard(){
       setMessage('This room is not ready for inspection yet. The housekeeper must submit their checklist and finalize the clean first.')
       return
     }
-    setRooms(current=>current.map(r=>r.roomId===room.roomId?{...r,items:r.items.map(i=>i.id===item.id?{...i,passed}:i)}:r))
+
+    const previousPassed=item.passed
     const currentItem=rooms.find(r=>r.roomId===room.roomId)?.items.find(i=>i.id===item.id)
-    const r=await fetch('/api/room-checks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:room.roomId,itemId:item.id,passed,note:currentItem?.note??item.note})})
-    const d=await r.json().catch(()=>({}))
-    if(!r.ok){setMessage(d.error||'Could not save room check.');await load();return}
-    await load()
+    const note=currentItem?.note??item.note
+
+    // Save optimistically so the checklist stays exactly where the inspector is working.
+    setRooms(current=>current.map(r=>r.roomId===room.roomId
+      ? {...r,items:r.items.map(i=>i.id===item.id?{...i,passed}:i)}
+      : r
+    ))
+
+    const response=await fetch('/api/room-checks',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({date,roomId:room.roomId,itemId:item.id,passed,note})
+    })
+    const d=await response.json().catch(()=>({}))
+
+    if(!response.ok){
+      // Revert only this item. Do not reload the whole board or disturb scroll/open state.
+      setRooms(current=>current.map(r=>r.roomId===room.roomId
+        ? {...r,items:r.items.map(i=>i.id===item.id?{...i,passed:previousPassed}:i)}
+        : r
+      ))
+      setMessage(d.error||'Could not save room check.')
+      return
+    }
+
+    setMessage('')
+
+    // When the final checklist item completes the inspection, update the room locally.
+    // The API remains the source of truth; a manual Refresh will reconcile everything.
+    if(d.complete){
+      setRooms(current=>current.map(r=>{
+        if(r.roomId!==room.roomId) return r
+        return {
+          ...r,
+          inspected:Boolean(d.allPassed),
+          issueOpen:!d.allPassed,
+          readyForInspection:false
+        }
+      }))
+    }
   }
   function updateNote(roomId:string,itemId:string,note:string){setRooms(current=>current.map(r=>r.roomId===roomId?{...r,items:r.items.map(i=>i.id===itemId?{...i,note}:i)}:r))}
 
