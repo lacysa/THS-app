@@ -128,11 +128,8 @@ export async function POST(req:NextRequest){
       String(dailyRow.service_type||'').trim().toUpperCase()==='RF' ||
       Boolean(dailyRow.check_issue_open)
 
-    if(activeHskService && (!dailyRow.housekeeper_attested_by||!dailyRow.housekeeper_attested_at)){
-      return NextResponse.json({error:'The housekeeper must submit their own room checklist before inspection.'},{status:400})
-    }
     if(activeHskService && (!dailyRow.complete||!dailyRow.ready_for_inspection)){
-      return NextResponse.json({error:'The housekeeper must complete the room checklist and mark the room Ready for Inspection before inspection.'},{status:400})
+      return NextResponse.json({error:'The room must be complete and marked Ready for Inspection before inspection.'},{status:400})
     }
 
     const now=new Date().toISOString()
