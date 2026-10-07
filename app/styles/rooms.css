@@ -336,3 +336,71 @@
 .rooms-card.state-blocked .rooms-section{display:none}
 .rooms-table-workflow.blocked{background:#eef0f2;color:#58616b;border-color:#d8dde3}
 .rooms-table-check:disabled{opacity:.45;cursor:not-allowed}
+
+/* THS boutique operations polish — keep Rooms lively without turning it into a clinical grid. */
+.rooms-toolbar{
+  position:relative;
+  overflow:hidden;
+  padding:18px!important;
+  border:1px solid rgba(80,110,150,.18)!important;
+  border-radius:20px!important;
+  background:
+    radial-gradient(circle at 10% 10%,rgba(58,220,190,.19),transparent 30%),
+    radial-gradient(circle at 88% 18%,rgba(126,92,255,.17),transparent 34%),
+    linear-gradient(135deg,#f8fbff 0%,#eef7ff 54%,#f6efff 100%)!important;
+  box-shadow:0 16px 38px rgba(48,72,110,.10)!important;
+}
+.rooms-toolbar:after{
+  content:"";
+  position:absolute;
+  width:210px;height:210px;border-radius:999px;
+  right:-95px;bottom:-125px;
+  background:rgba(255,255,255,.42);
+  pointer-events:none;
+}
+.rooms-card{
+  background:linear-gradient(150deg,rgba(255,255,255,.99),rgba(248,251,255,.98));
+  transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+}
+@media (hover:hover){
+  .rooms-card:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(45,63,94,.09)}
+}
+.rooms-card.state-correction{box-shadow:0 8px 24px rgba(141,71,65,.08)}
+.rooms-state-pill.ready{background:linear-gradient(135deg,#e1f3e8,#edf8f2);color:#315d4d}
+.rooms-state-pill.final{background:linear-gradient(135deg,#eceafd,#f5f2ff);color:#5b4d8d}
+.rooms-state-pill.refresh{background:linear-gradient(135deg,#e6f5f2,#effaf8);color:#35685e}
+.rooms-state-pill.occupied{background:#f1f3f5;color:#56606a}
+.rooms-live-condition{
+  display:inline-flex;align-items:center;min-height:34px;
+  padding:7px 10px;border-radius:999px;font-weight:800;font-size:12px;
+  background:#f3f5f7;color:#52606d;white-space:nowrap;
+}
+.rooms-live-condition.ready{background:#e7f1eb;color:#315d4d}
+.rooms-live-condition.correction{background:#f8e8e5;color:#8d443b}
+.rooms-live-condition.inspection{background:#e8f0f7;color:#365f7b}
+.rooms-live-condition.final{background:#eeeafd;color:#5b4d8d}
+.rooms-table-static{font-weight:800;color:#3d4754}
+.rooms-manager-context{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+}
+.rooms-manager-context>div{
+  padding:10px 11px;border:1px solid rgba(95,112,132,.10);border-radius:12px;
+  background:linear-gradient(145deg,#fbfcfe,#f6f9fc);display:grid;gap:3px;
+}
+.rooms-manager-context span{font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--muted,#667085)}
+.rooms-manager-context strong{font-size:13px;color:var(--text,#182230)}
+.rooms-table{min-width:1110px}
+.rooms-table-workflow.ready{background:#e7f1eb;color:#315d4d;border-color:#c3d9ce}
+.rooms-table-workflow.final{background:#eeeafd;color:#5b4d8d;border-color:#d7d0ee}
+.rooms-save-state.saved{color:#376451}
+.rooms-primary-action{box-shadow:0 7px 18px rgba(32,37,43,.10)}
+@media (max-width:900px){
+  .rooms-table-shell{display:none!important}
+  .rooms-card-list{display:grid!important}
+}
+@media (max-width:700px){
+  .rooms-toolbar{padding:14px!important;border-radius:16px!important}
+  .rooms-manager-context{grid-template-columns:1fr 1fr}
+  .rooms-card-body{padding-bottom:18px}
+  .rooms-primary-action{box-shadow:0 8px 20px rgba(30,41,59,.12)}
+}

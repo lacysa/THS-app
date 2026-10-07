@@ -3,6 +3,7 @@
 import { CalendarDays, ChevronLeft, ChevronRight, DoorOpen, Package, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { derivedLiveCondition, roomNextAction, roomWorkflowLabel } from '@/lib/room-state'
 
 type Stay={
   guest_name?:string|null
@@ -31,6 +32,8 @@ type Row={
   complete?:boolean
   inspected?:boolean
   fohChecked?:boolean
+  haChecked?:boolean
+  housekeeperAttested?:boolean
   checkIssueOpen?:boolean
 }
 
@@ -140,21 +143,19 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
                 : null
           const dietary=cleanDiet(stay?.dietary_restrictions)
           const outMarked=/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())
-          const readyForNextArrival=
-            Boolean(row.fohChecked) ||
-            ['vacant (clean)','ready'].includes(String(row.nextShiftCondition||'').trim().toLowerCase()) ||
-            ['vacant (clean)','ready'].includes(String(row.roomCondition||'').trim().toLowerCase())
-          const operationalState=row.checkIssueOpen
-            ? 'Needs correction'
-            : ['ready','vacant (clean)'].includes(String(row.roomCondition||'').trim().toLowerCase())
-              ? 'Ready'
-              : row.fohChecked
-                ? 'FOH checked'
-                : row.inspected
-                  ? 'Room check passed'
-                  : row.complete
-                    ? (row.roomCondition||'Complete')
-                    : (row.roomCondition||'Not ready')
+          const roomState={
+            reservationStatus:status,
+            serviceType:row.serviceType,
+            complete:row.complete,
+            inspected:row.inspected,
+            fohSignedBy:row.fohChecked?'foh':null,
+            haSignedBy:row.haChecked?'ha':null,
+            housekeeperAttested:row.housekeeperAttested,
+            checkIssueOpen:row.checkIssueOpen,
+            roomCondition:row.roomCondition
+          }
+          const operationalState=derivedLiveCondition(roomState)
+          const readyForNextArrival=roomWorkflowLabel(roomState)==='Ready for guest' || ['ready for guest','vacant (clean)'].includes(operationalState.toLowerCase())
           return <article className={'reservation-card '+statusClass(status)} key={row.roomId}>
             <div className="reservation-card-head">
               <div><strong>{row.roomName}</strong><span>{status}</span></div>
@@ -164,7 +165,7 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
             <div className="reservation-live-room-state">
               <span>Room status</span>
               <strong>{operationalState}</strong>
-              {row.nextShiftCondition&&<small>EOS: {row.nextShiftCondition}</small>}
+              <small>{roomNextAction(roomState)}</small>
             </div>
 
             {status==='Out/In' && <div className="reservation-outin">

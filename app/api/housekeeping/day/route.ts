@@ -351,6 +351,193 @@ export async function GET(req: NextRequest) {
   }
 }
 
+
+export async function PATCH(req: NextRequest) {
+  const access = await getStaffAccess()
+  if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (access.isPreviewMode) return NextResponse.json({ error: 'Owner staff preview is read-only.' }, { status: 403 })
+
+  const payload = await req.json().catch(() => null)
+  const serviceDate = payload?.serviceDate
+  const roomId = cleanText(payload?.roomId)
+  const requested = payload?.patch && typeof payload.patch === 'object' ? payload.patch : {}
+
+  if (!validDate(serviceDate) || !roomId) {
+    return NextResponse.json({ error: 'Invalid room update.' }, { status: 400 })
+  }
+
+  const admin = createSupabaseAdmin()
+  const now = new Date().toISOString()
+
+  try {
+    const peopleData = await getPeopleAndCapabilities(admin)
+    const currentPerson = peopleData.people.find((person:any) => person.auth_user_id === access.userId) as any | undefined
+    const currentCaps = currentPerson
+      ? peopleData.byMember.get(String(currentPerson.id)) || new Set<string>()
+      : new Set<string>()
+    const manager = access.isAdmin || ['manager','general_manager','operations_manager','owner'].some(cap=>currentCaps.has(cap))
+    const housekeepingOnly = !manager && currentCaps.has('housekeeping')
+
+    const { data: existing, error: existingError } = await admin
+      .from('housekeeping_daily_rooms')
+      .select('*')
+      .eq('service_date', serviceDate)
+      .eq('room_id', roomId)
+      .maybeSingle()
+    if (existingError) throw new Error(existingError.message)
+    if (!existing) return NextResponse.json({ error: 'Room is not on this day.' }, { status: 404 })
+
+    if (housekeepingOnly && currentPerson) {
+      const assigned = String(existing.assigned_to || '').split(',').map((name:string)=>name.trim().toLowerCase()).filter(Boolean)
+      const isMine = assigned.includes(String(currentPerson.name || '').trim().toLowerCase())
+      const claimableRefresh = String(existing.reservation_status||'').trim().toLowerCase()==='stayover' && String(existing.service_type||'').trim().toUpperCase()==='RF' && !assigned.length
+      if (!isMine && !claimableRefresh) return NextResponse.json({ error: 'This room is not assigned to you.' }, { status: 403 })
+    }
+
+    const allowedForHousekeeping = new Set(['notes','complete','readyForInspection','inspected','roomCondition'])
+    if (!manager) {
+      const disallowed = Object.keys(requested).filter(key=>!allowedForHousekeeping.has(key))
+      if (disallowed.length) return NextResponse.json({ error: 'Manager access is required for that room change.' }, { status: 403 })
+    }
+
+    if (manager && Object.prototype.hasOwnProperty.call(requested,'assignedTo')) {
+      const proposedName = cleanText(requested.assignedTo)
+      if (proposedName) {
+        const person = peopleData.people.find((p:any)=>String(p.name||'').trim().toLowerCase()===proposedName.toLowerCase()) as any
+        if (!person) return NextResponse.json({ error: 'Choose an active staff member.' }, { status: 400 })
+        const status = String(existing.reservation_status||'').trim().toLowerCase()
+        if (['checkout','out/in','dirty'].includes(status)) {
+          const { data: dayRows, error: countError } = await admin
+            .from('housekeeping_daily_rooms')
+            .select('room_id,reservation_status,assigned_to')
+            .eq('service_date',serviceDate)
+          if (countError) throw new Error(countError.message)
+          const fullCleanCount=(dayRows||[]).filter((row:any)=>{
+            if(String(row.room_id)===roomId)return false
+            if(!['checkout','out/in','dirty'].includes(String(row.reservation_status||'').trim().toLowerCase()))return false
+            return String(row.assigned_to||'').split(',').map((v:string)=>v.trim().toLowerCase()).includes(proposedName.toLowerCase())
+          }).length
+          const limit=Number(person.full_room_clean_limit??2)
+          if(fullCleanCount+1>limit){
+            return NextResponse.json({error:`${person.name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift.`},{status:400})
+          }
+        }
+      }
+    }
+
+    const dbPatch:any={updated_at:now}
+    if (manager && Object.prototype.hasOwnProperty.call(requested,'assignedTo')) dbPatch.assigned_to=cleanText(requested.assignedTo)
+    if (manager && Object.prototype.hasOwnProperty.call(requested,'cleanOrder')) dbPatch.clean_order=Number.isFinite(Number(requested.cleanOrder))&&requested.cleanOrder!==null&&requested.cleanOrder!==''?Number(requested.cleanOrder):null
+    if (manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')) dbPatch.service_type=cleanText(requested.serviceType)
+    if (manager && Object.prototype.hasOwnProperty.call(requested,'stripHold')) dbPatch.strip_hold=cleanText(requested.stripHold)
+    if (Object.prototype.hasOwnProperty.call(requested,'notes')) dbPatch.notes=cleanText(requested.notes)
+
+    const completeRequested = Object.prototype.hasOwnProperty.call(requested,'complete')
+    if (completeRequested) {
+      const complete=Boolean(requested.complete)
+      const status=String(existing.reservation_status||'').trim().toLowerCase()
+      const service=String((requested.serviceType ?? existing.service_type)||'').trim().toUpperCase()
+      const isRefresh=status==='stayover'&&service==='RF'
+      const requiresQuality=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(existing.check_issue_open)
+      const attestedAt=existing.housekeeper_attested_at?new Date(existing.housekeeper_attested_at).getTime():0
+      const issueAt=existing.check_issue_at?new Date(existing.check_issue_at).getTime():0
+      const validSelfCheck=Boolean(existing.housekeeper_attested_by&&attestedAt>issueAt)
+      if(complete&&requiresQuality&&!validSelfCheck){
+        return NextResponse.json({error:'Complete and submit the room self-check before marking the clean complete.'},{status:400})
+      }
+      dbPatch.complete=complete
+      dbPatch.ready_for_inspection=!isRefresh&&complete
+      dbPatch.inspected=false
+      dbPatch.completed_at=complete?(existing.completed_at||now):null
+      dbPatch.inspected_at=null
+      dbPatch.room_condition=isRefresh?'Occupied':complete?'Ready for Room Check':'Cleaning'
+      if(!complete){
+        dbPatch.ha_signed_by=null; dbPatch.ha_signed_at=null
+        dbPatch.foh_signed_by=null; dbPatch.foh_signed_at=null
+      }
+      if(existing.check_issue_open&&complete){
+        dbPatch.check_issue_open=true
+      }
+    } else if (manager && Object.prototype.hasOwnProperty.call(requested,'roomCondition')) {
+      dbPatch.room_condition=cleanText(requested.roomCondition)
+    }
+
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')){
+      const nextService=cleanText(requested.serviceType).toUpperCase()
+      const existingService=String(existing.service_type||'').trim().toUpperCase()
+      if(nextService!==existingService && (nextService==='RF'||existingService==='RF')){
+        dbPatch.complete=false
+        dbPatch.ready_for_inspection=false
+        dbPatch.inspected=false
+        dbPatch.completed_at=null
+        dbPatch.inspected_at=null
+        dbPatch.housekeeper_attested_by=null
+        dbPatch.housekeeper_attested_at=null
+        dbPatch.ha_signed_by=null
+        dbPatch.ha_signed_at=null
+        dbPatch.foh_signed_by=null
+        dbPatch.foh_signed_at=null
+        dbPatch.room_condition=nextService==='RF'?'Occupied':'Cleaning'
+      }
+    }
+
+    const { error:updateError } = await admin
+      .from('housekeeping_daily_rooms')
+      .update(dbPatch)
+      .eq('service_date',serviceDate)
+      .eq('room_id',roomId)
+    if(updateError) throw new Error(updateError.message)
+
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'packageIds')){
+      const requestedIds:string[]=[...new Set<string>(Array.isArray(requested.packageIds)?requested.packageIds.map((value:any)=>String(value)):[])]
+      const { data:catalog,error:catalogError }=await admin.from('room_package_catalog').select('id')
+      if(catalogError)throw new Error(catalogError.message)
+      const valid=new Set((catalog||[]).map((row:any)=>String(row.id)))
+      const packageIds=requestedIds.filter((id:string)=>valid.has(id))
+      const {error:deleteError}=await admin.from('housekeeping_room_packages').delete().eq('source','manual').eq('service_date',serviceDate).eq('room_id',roomId)
+      if(deleteError)throw new Error(deleteError.message)
+      if(packageIds.length){
+        const {error:insertError}=await admin.from('housekeeping_room_packages').insert(packageIds.map((packageId:string)=>({service_date:serviceDate,room_id:roomId,package_id:packageId,source:'manual'})))
+        if(insertError)throw new Error(insertError.message)
+      }
+    }
+
+    const { data:fresh,error:freshError }=await admin
+      .from('housekeeping_daily_rooms')
+      .select('*')
+      .eq('service_date',serviceDate)
+      .eq('room_id',roomId)
+      .single()
+    if(freshError)throw new Error(freshError.message)
+
+    return NextResponse.json({
+      ok:true,
+      savedAt:now,
+      row:{
+        assignedTo:fresh.assigned_to||'',
+        cleanOrder:fresh.clean_order??null,
+        serviceType:fresh.service_type||'',
+        complete:Boolean(fresh.complete),
+        readyForInspection:Boolean(fresh.ready_for_inspection),
+        inspected:Boolean(fresh.inspected),
+        completedAt:fresh.completed_at||null,
+        inspectedAt:fresh.inspected_at||null,
+        roomCondition:fresh.room_condition||'',
+        notes:fresh.notes||'',
+        housekeeperAttested:Boolean(fresh.housekeeper_attested_by),
+        housekeeperAttestedBy:fresh.housekeeper_attested_by||null,
+        checkIssueOpen:Boolean(fresh.check_issue_open),
+        checkIssueNote:fresh.check_issue_note||'',
+        haSignedBy:fresh.ha_signed_by||null,
+        fohSignedBy:fresh.foh_signed_by||null,
+        ...(Object.prototype.hasOwnProperty.call(requested,'packageIds')?{packageIds:Array.isArray(requested.packageIds)?requested.packageIds:[]}: {})
+      }
+    })
+  } catch (error:any) {
+    return NextResponse.json({ error:error?.message||'Could not update room.' },{status:500})
+  }
+}
+
 export async function POST(req: NextRequest) {
   const access = await getStaffAccess()
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -510,7 +697,7 @@ export async function POST(req: NextRequest) {
             room_condition: isRefresh
               ? (existing.room_condition || 'Occupied')
               : complete
-                ? (existing.room_condition || 'Ready for Inspection')
+                ? (existing.room_condition || 'Ready for Room Check')
                 : (existing.room_condition || ''),
             next_shift_condition: existing.next_shift_condition || '',
             notes: cleanText(row.notes),
