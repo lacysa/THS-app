@@ -76,7 +76,7 @@
 .rooms-signoff-grid button span{font-size:11px;color:var(--muted,#667085)}
 .rooms-signoff-grid button.signed{background:rgba(55,100,81,.07);border-color:rgba(55,100,81,.25)}
 .rooms-signoff-grid button:disabled{opacity:.55;cursor:not-allowed}
-@media (min-width:920px){
+@media (min-width:1280px){
   .rooms-card-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
   .rooms-card:has(.rooms-card-body){grid-column:span 2}
   .rooms-toolbar{display:flex;justify-content:space-between;gap:20px}
@@ -98,4 +98,30 @@
   .rooms-inspection-item{grid-template-columns:1fr}
   .rooms-inspection-actions{display:grid;grid-template-columns:1fr 1fr}
   .rooms-inspection-actions button{justify-content:center;min-height:42px}
+}
+.rooms-refresh-adder{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;margin:0 0 12px;border:1px solid var(--line,#dfe3e8);border-radius:14px;background:var(--card,#fff)}
+.rooms-refresh-adder>div:first-child{display:grid;gap:2px}
+.rooms-refresh-adder>div:first-child span{font-size:12px;color:var(--muted,#667085)}
+.rooms-refresh-adder-actions{display:flex;gap:8px;min-width:360px}
+.rooms-refresh-adder-actions select{flex:1;border:1px solid var(--line,#d0d5dd);border-radius:10px;padding:9px 10px;background:var(--card,#fff);color:inherit}
+.rooms-manager-edit{display:grid;gap:12px}
+.rooms-manager-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rooms-manager-grid label{display:grid;gap:6px;font-weight:700;font-size:13px}
+.rooms-manager-grid select,.rooms-manager-grid input{width:100%;border:1px solid var(--line,#d0d5dd);border-radius:10px;background:var(--card,#fff);color:inherit;padding:10px 11px;font:inherit}
+.rooms-service-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.rooms-service-controls>span,.rooms-package-editor>span{font-size:12px;font-weight:800;color:var(--muted,#667085);text-transform:uppercase;letter-spacing:.04em}
+.rooms-service-controls button,.rooms-package-editor button{border:1px solid var(--line,#d0d5dd);background:var(--card,#fff);border-radius:999px;padding:8px 11px;font-weight:800;color:inherit;cursor:pointer}
+.rooms-service-controls button.active,.rooms-package-editor button.selected{background:#e7f1eb;border-color:#a8c7b8;color:#315d4d}
+.rooms-package-editor{display:grid;gap:8px}
+.rooms-package-editor>div{display:flex;gap:7px;flex-wrap:wrap}
+.rooms-package-editor button{display:flex;align-items:center;gap:5px}
+@media (max-width:1100px){
+  .rooms-card-list{grid-template-columns:1fr!important}
+  .rooms-card:has(.rooms-card-body){grid-column:auto!important}
+  .rooms-refresh-adder{align-items:stretch;flex-direction:column}
+  .rooms-refresh-adder-actions{min-width:0;width:100%}
+}
+@media (max-width:700px){
+  .rooms-manager-grid{grid-template-columns:1fr}
+  .rooms-refresh-adder-actions{display:grid;grid-template-columns:1fr auto}
 }
