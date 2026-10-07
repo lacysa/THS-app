@@ -26,6 +26,12 @@ type Row={
   staying:Stay|null
   departing:Stay|null
   serviceType?:string
+  roomCondition?:string
+  nextShiftCondition?:string
+  complete?:boolean
+  inspected?:boolean
+  fohChecked?:boolean
+  checkIssueOpen?:boolean
 }
 
 function addDay(value:string,amount:number){
@@ -134,10 +140,25 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
                 : null
           const dietary=cleanDiet(stay?.dietary_restrictions)
           const turnoverReady=/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())
+          const operationalState=row.checkIssueOpen
+            ? 'Needs correction'
+            : row.fohChecked
+              ? 'FOH checked'
+              : row.inspected
+                ? 'Room check passed'
+                : row.complete
+                  ? (row.roomCondition||'Complete')
+                  : (row.roomCondition||'In progress')
           return <article className={'reservation-card '+statusClass(status)} key={row.roomId}>
             <div className="reservation-card-head">
               <div><strong>{row.roomName}</strong><span>{status}</span></div>
               {!isCheckoutOnly && stay?.door_code && <div className="reservation-door"><DoorOpen size={15}/><b>{stay.door_code}</b></div>}
+            </div>
+
+            <div className="reservation-live-room-state">
+              <span>Room status</span>
+              <strong>{operationalState}</strong>
+              {row.nextShiftCondition&&<small>EOS: {row.nextShiftCondition}</small>}
             </div>
 
             {status==='Out/In' && <div className="reservation-outin">

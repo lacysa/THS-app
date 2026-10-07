@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
 import ReservationsBoard from '@/components/ReservationsBoard'
+import LiveDataRefresh from '@/components/LiveDataRefresh'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { canUseModule } from '@/lib/access'
 import { ymdInHotelTz } from '@/lib/time'
@@ -24,14 +25,14 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const [roomsRes,linksRes,housekeepingRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate),
-    admin.from('housekeeping_daily_rooms').select('room_id,service_type').eq('service_date',serviceDate)
+    admin.from('housekeeping_daily_rooms').select('room_id,service_type,room_condition,next_shift_condition,complete,inspected,foh_signed_by,check_issue_open').eq('service_date',serviceDate)
   ])
 
   const rooms=roomsRes.data||[]
   const links=linksRes.data||[]
   const housekeeping=housekeepingRes.data||[]
-  const serviceTypeByRoom=new Map<string,string>(
-    housekeeping.map((row:any)=>[String(row.room_id||''),String(row.service_type||'')])
+  const housekeepingByRoom=new Map<string,any>(
+    housekeeping.map((row:any)=>[String(row.room_id||''),row])
   )
   const roomNameById=new Map<string,string>(rooms.map((room:any)=>[String(room.id),String(room.name)]))
   const sortById=new Map<string,number>(rooms.map((room:any)=>[String(room.id),Number(room.sort_order??9999)]))
@@ -55,10 +56,16 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
       arriving:row.arriving_reservation_id?stayById.get(String(row.arriving_reservation_id))||null:null,
       staying:row.stay_reservation_id?stayById.get(String(row.stay_reservation_id))||null:null,
       departing:row.departing_reservation_id?stayById.get(String(row.departing_reservation_id))||null:null,
-      serviceType:serviceTypeByRoom.get(String(row.room_id||''))||''
+      serviceType:String(housekeepingByRoom.get(String(row.room_id||''))?.service_type||''),
+      roomCondition:String(housekeepingByRoom.get(String(row.room_id||''))?.room_condition||''),
+      nextShiftCondition:String(housekeepingByRoom.get(String(row.room_id||''))?.next_shift_condition||''),
+      complete:Boolean(housekeepingByRoom.get(String(row.room_id||''))?.complete),
+      inspected:Boolean(housekeepingByRoom.get(String(row.room_id||''))?.inspected),
+      fohChecked:Boolean(housekeepingByRoom.get(String(row.room_id||''))?.foh_signed_by),
+      checkIssueOpen:Boolean(housekeepingByRoom.get(String(row.room_id||''))?.check_issue_open)
     }))
     .filter((row:any)=>row.status!=='Vacant')
     .sort((a:any,b:any)=>(sortById.get(a.roomId)??9999)-(sortById.get(b.roomId)??9999))
 
-  return <StaffShell title="Reservations"><ReservationsBoard serviceDate={serviceDate} rows={rows}/></StaffShell>
+  return <StaffShell title="Reservations"><LiveDataRefresh intervalMs={10000}/><ReservationsBoard serviceDate={serviceDate} rows={rows}/></StaffShell>
 }

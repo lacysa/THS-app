@@ -566,7 +566,11 @@ export async function POST(req: NextRequest) {
     }
 
     // EOS Vacant (Dirty) must become tomorrow's cleaning workload immediately.
-    const dirtyRows = upserts.filter((row:any)=>String(row.room_condition||'').trim()==='Vacant (Dirty)')
+    // next_shift_condition is the dedicated EOS field; room_condition is only
+    // retained as a fallback for legacy rows created before Rooms consolidation.
+    const dirtyRows = upserts.filter((row:any)=>
+      String(row.next_shift_condition||row.room_condition||'').trim()==='Vacant (Dirty)'
+    )
     if (dirtyRows.length) {
       const tomorrow = nextDate(serviceDate)
       const dirtyRoomIds = dirtyRows.map((row:any)=>String(row.room_id))

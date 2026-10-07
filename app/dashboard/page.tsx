@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
 import DailyDashboard from '@/components/DailyDashboard'
+import LiveDataRefresh from '@/components/LiveDataRefresh'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess, isModuleAllowedForAccess } from '@/lib/access'
@@ -166,6 +167,7 @@ export default async function DashboardPage() {
     complete:Boolean(row.complete),
     stripHold:String(row.strip_hold || ''),
     roomCondition:String(row.room_condition || ''),
+    nextShiftCondition:String(row.next_shift_condition || ''),
     haCheckInitials:row.ha_signed_by ? initials(staffNameMap.get(String(row.ha_signed_by)) || 'Staff') : '',
     fohCheckInitials:row.foh_signed_by ? initials(staffNameMap.get(String(row.foh_signed_by)) || 'Staff') : '',
     checkIssueOpen:Boolean(row.check_issue_open),
@@ -289,6 +291,7 @@ export default async function DashboardPage() {
 
   return (
     <StaffShell title="Dashboard">
+      <LiveDataRefresh intervalMs={10000}/>
       <DailyDashboard
         displayName={displayName}
         todayLabel={prettyDate(today)}
