@@ -86,7 +86,9 @@ export default async function DashboardPage() {
       moduleKeys.has('front_desk') ||
       moduleKeys.has('kitchen') ||
       moduleKeys.has('daily_overview') ||
-      moduleKeys.has('breakfast_guest')
+      moduleKeys.has('breakfast_guest') ||
+      moduleKeys.has('housekeeping') ||
+      moduleKeys.has('housekeeping')
     )
       ? admin.from('breakfast_bookings').select('*').eq('service_date',breakfastDate).in('status',['scheduled','declined']).order('time_slot')
       : Promise.resolve({data:[],error:null}),
