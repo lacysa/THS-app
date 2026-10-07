@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
+import { cookies } from 'next/headers'
 
 export type StaffAccess = {
   userId:string
@@ -18,73 +19,68 @@ export type StaffAccess = {
   permissions:string[]
   capabilities:string[]
   moduleOverrides:Record<string,boolean>
+  isPreviewMode?:boolean
+  previewOwnerUserId?:string|null
 }
 
-export async function getStaffAccess():Promise<StaffAccess|null> {
-  const supabase = await createSupabaseServerClient()
-  const { data:{ user } } = await supabase.auth.getUser()
-  if (!user) return null
+async function loadAccessForUser(userId:string):Promise<StaffAccess|null> {
+  const admin=createSupabaseAdmin()
 
-  const { data:profile } = await supabase
+  const {data:profile}=await admin
     .from('staff_profiles')
     .select('user_id,name,preferred_name,email,phone,job_title,theme_preference,active,role_id,staff_roles(name,is_admin,can_preview_unpublished,can_manage_modules)')
-    .eq('user_id',user.id)
+    .eq('user_id',userId)
     .maybeSingle()
 
-  if (!profile || profile.active === false) return null
-  const roleRaw:any = Array.isArray((profile as any).staff_roles) ? (profile as any).staff_roles[0] : (profile as any).staff_roles
+  if(!profile || (profile as any).active===false) return null
 
-  let permissions:string[] = []
-  let capabilities:string[] = []
-  let moduleOverrides:Record<string,boolean> = {}
-  if ((profile as any).role_id) {
-    const { data:rows } = await supabase
+  const roleRaw:any=Array.isArray((profile as any).staff_roles)
+    ? (profile as any).staff_roles[0]
+    : (profile as any).staff_roles
+
+  let permissions:string[]=[]
+  let capabilities:string[]=[]
+  let moduleOverrides:Record<string,boolean>={}
+
+  if((profile as any).role_id){
+    const {data:rows}=await admin
       .from('role_permissions')
       .select('allowed,app_permissions(permission_key)')
       .eq('role_id',(profile as any).role_id)
       .eq('allowed',true)
 
-    permissions = (rows || []).map((row:any)=>{
-      const ap = Array.isArray(row.app_permissions) ? row.app_permissions[0] : row.app_permissions
+    permissions=(rows||[]).map((row:any)=>{
+      const ap=Array.isArray(row.app_permissions)?row.app_permissions[0]:row.app_permissions
       return ap?.permission_key
     }).filter(Boolean)
   }
 
-  const { data:member } = await supabase
+  const {data:member}=await admin
     .from('staff_members')
     .select('id')
-    .eq('auth_user_id',user.id)
+    .eq('auth_user_id',userId)
     .maybeSingle()
 
-  if (member?.id) {
-    const { data:capRows } = await supabase
-      .from('staff_member_capabilities')
-      .select('capability_key')
-      .eq('staff_member_id',member.id)
-    capabilities = (capRows || []).map((row:any)=>row.capability_key).filter(Boolean)
-  }
-
-  const admin = createSupabaseAdmin()
-  if (member?.id) {
-    const { data:overrideRows } = await admin
-      .from('staff_module_access')
-      .select('module_key,allowed')
-      .eq('staff_member_id',member.id)
-
-    moduleOverrides = Object.fromEntries(
-      (overrideRows || []).map((row:any)=>[String(row.module_key),Boolean(row.allowed)])
+  if(member?.id){
+    const [{data:capRows},{data:overrideRows}]=await Promise.all([
+      admin.from('staff_member_capabilities').select('capability_key').eq('staff_member_id',member.id),
+      admin.from('staff_module_access').select('module_key,allowed').eq('staff_member_id',member.id)
+    ])
+    capabilities=(capRows||[]).map((row:any)=>row.capability_key).filter(Boolean)
+    moduleOverrides=Object.fromEntries(
+      (overrideRows||[]).map((row:any)=>[String(row.module_key),Boolean(row.allowed)])
     )
   }
 
   return {
-    userId:user.id,
-    name:(profile as any).name || user.email || 'Staff',
+    userId:String((profile as any).user_id),
+    name:(profile as any).name || (profile as any).email || 'Staff',
     preferredName:(profile as any).preferred_name || null,
-    email:(profile as any).email || user.email || null,
-    phone:(profile as any).phone || user.phone || null,
+    email:(profile as any).email || null,
+    phone:(profile as any).phone || null,
     jobTitle:(profile as any).job_title || null,
     theme:((profile as any).theme_preference || 'blue') as 'light'|'blue'|'sage'|'violet'|'dark',
-    active:(profile as any).active !== false,
+    active:(profile as any).active!==false,
     roleId:(profile as any).role_id || null,
     roleName:roleRaw?.name || null,
     isAdmin:Boolean(roleRaw?.is_admin),
@@ -93,6 +89,35 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     permissions,
     capabilities,
     moduleOverrides
+  }
+}
+
+export async function getStaffAccess():Promise<StaffAccess|null> {
+  const supabase=await createSupabaseServerClient()
+  const {data:{user}}=await supabase.auth.getUser()
+  if(!user) return null
+
+  const actualAccess=await loadAccessForUser(user.id)
+  if(!actualAccess) return null
+
+  const cookieStore=await cookies()
+  const previewUserId=cookieStore.get('ths-preview-user')?.value || ''
+
+  if(actualAccess.roleName==='Owner' && previewUserId && previewUserId!==user.id){
+    const previewAccess=await loadAccessForUser(previewUserId)
+    if(previewAccess){
+      return {
+        ...previewAccess,
+        isPreviewMode:true,
+        previewOwnerUserId:user.id
+      }
+    }
+  }
+
+  return {
+    ...actualAccess,
+    isPreviewMode:false,
+    previewOwnerUserId:null
   }
 }
 
@@ -120,7 +145,13 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   const key = String(module.module_key || '')
 
   if (key === 'staff') {
-    return access.roleName === 'Owner'
+    return access.roleName === 'Owner' && !access.isPreviewMode
+  }
+
+  if (key === 'room_board') {
+    return access.isAdmin || hasAnyCapability(access,[
+      'foh_manager','manager','general_manager','operations_manager','owner'
+    ])
   }
 
   if (Object.prototype.hasOwnProperty.call(access.moduleOverrides,key)) {
