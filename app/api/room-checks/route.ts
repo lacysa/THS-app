@@ -54,7 +54,11 @@ export async function GET(req:NextRequest){
   }
 
   const checkRooms=(daily||[])
-    .filter((r:any)=>['checkout','out/in'].includes(String(r.reservation_status||'').toLowerCase())||String(r.service_type||'').toUpperCase().startsWith('OUT'))
+    .filter((r:any)=>{
+      const status=String(r.reservation_status||'').trim().toLowerCase()
+      const stripHold=String(r.strip_hold||'').trim().toLowerCase()
+      return status!=='blocked' && !stripHold.includes('hold')
+    })
     .map((r:any)=>{
       const latest=latestQualityByRoom.get(String(r.room_id))
       return {
@@ -65,7 +69,10 @@ export async function GET(req:NextRequest){
         serviceType:r.service_type||'',
         assignedTo:r.assigned_to||'',
         complete:Boolean(r.complete),
-        readyForInspection:Boolean(r.ready_for_inspection),
+        readyForInspection:Boolean(r.ready_for_inspection) || (
+          !String(r.service_type||'').trim() &&
+          !['checkout','out/in'].includes(String(r.reservation_status||'').trim().toLowerCase())
+        ),
         issueOpen:Boolean(r.check_issue_open),
         issueNote:r.check_issue_note||'',
         inspected:Boolean(r.inspected),
@@ -105,10 +112,21 @@ export async function POST(req:NextRequest){
     if(dailyErr) throw new Error(dailyErr.message)
     if(!person)return NextResponse.json({error:'Staff profile not linked.'},{status:403})
     if(!dailyRow)return NextResponse.json({error:'Room is not on the housekeeping board.'},{status:404})
-    if(!dailyRow.housekeeper_attested_by||!dailyRow.housekeeper_attested_at){
+    const status=String(dailyRow.reservation_status||'').trim().toLowerCase()
+    const stripHold=String(dailyRow.strip_hold||'').trim().toLowerCase()
+    if(status==='blocked' || stripHold.includes('hold')){
+      return NextResponse.json({error:'Blocked / held rooms do not require room inspection.'},{status:400})
+    }
+
+    const activeHskService=
+      ['checkout','out/in'].includes(status) ||
+      String(dailyRow.service_type||'').trim().toUpperCase().startsWith('OUT') ||
+      String(dailyRow.service_type||'').trim().toUpperCase()==='RF'
+
+    if(activeHskService && (!dailyRow.housekeeper_attested_by||!dailyRow.housekeeper_attested_at)){
       return NextResponse.json({error:'The housekeeper must submit their own room checklist before inspection.'},{status:400})
     }
-    if(!dailyRow.complete||!dailyRow.ready_for_inspection){
+    if(activeHskService && (!dailyRow.complete||!dailyRow.ready_for_inspection)){
       return NextResponse.json({error:'The housekeeper must complete the room checklist and mark the room Ready for Inspection before inspection.'},{status:400})
     }
 
