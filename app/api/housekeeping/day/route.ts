@@ -156,7 +156,7 @@ export async function GET(req: NextRequest) {
       })
       .filter(Boolean)
 
-    const staffOptions = onsiteStaffOptions.length ? onsiteStaffOptions : allStaffOptions
+    const staffOptions = (scheduleRows || []).length ? onsiteStaffOptions : allStaffOptions
 
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
