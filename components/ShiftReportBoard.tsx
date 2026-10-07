@@ -9,6 +9,9 @@ type AutoData = {
   breakfast:any[]
   maintenance:any[]
   roomNotes:any[]
+  todayStaff:any[]
+  tomorrowStaff:any[]
+  tomorrowHousekeeping:any[]
 }
 
 type Report = {
@@ -49,7 +52,7 @@ export default function ShiftReportBoard() {
   const [shift,setShift] = useState('Daily')
   const [tab,setTab] = useState<'report'|'room-notes'|'handoff'|'management'>('report')
   const [report,setReport] = useState<Report|null>(null)
-  const [auto,setAuto] = useState<AutoData>({breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[]})
+  const [auto,setAuto] = useState<AutoData>({breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[],todayStaff:[],tomorrowStaff:[],tomorrowHousekeeping:[]})
   const [canManage,setCanManage] = useState(false)
   const [currentStaffName,setCurrentStaffName] = useState('Staff')
   const [loading,setLoading] = useState(true)
@@ -75,7 +78,7 @@ export default function ShiftReportBoard() {
       if (!reportRes.ok) throw new Error(rd.error || 'Could not load shift report.')
       if (!notesRes.ok) throw new Error(nd.error || 'Could not load room notes.')
       setReport(rd.report || null)
-      setAuto(rd.auto || {breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[]})
+      setAuto(rd.auto || {breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[],todayStaff:[],tomorrowStaff:[],tomorrowHousekeeping:[]})
       setCanManage(Boolean(rd.access?.canManageReport))
       setCurrentStaffName(rd.access?.currentStaffName || 'Staff')
       const r = rd.report || {}
@@ -133,14 +136,43 @@ export default function ShiftReportBoard() {
     const hk = auto.housekeeping || []
     const breakfast = auto.breakfast || []
     const maintenance = auto.maintenance || []
+    const tomorrowHk = auto.tomorrowHousekeeping || []
+
+    const needsService = (row:any) => {
+      const status=String(row.reservationStatus||'').trim().toLowerCase()
+      const service=String(row.serviceType||'').trim().toUpperCase()
+      if(status==='checkout' || status==='out/in') return true
+      if(status==='stayover' && service==='RF') return true
+      if((status==='arrival' || status==='vacant' || status==='blocked') && row.checkIssueOpen) return true
+      return false
+    }
+
+    const tomorrowCleans = tomorrowHk.filter((row:any)=>{
+      const status=String(row.reservationStatus||'').trim().toLowerCase()
+      const service=String(row.serviceType||'').trim().toUpperCase()
+      return status==='checkout' || status==='out/in' || (status==='stayover' && service==='RF')
+    })
+
+    const tomorrowRefreshes = tomorrowHk.filter((row:any)=>String(row.serviceType||'').trim().toUpperCase()==='RF')
+    const scheduledBreakfast = breakfast.filter((r:any)=>r.status==='scheduled'&&!r.breakfastSkipped)
+    const menusReceived = scheduledBreakfast.filter((r:any)=>r.menuSubmitted).length
+    const menusMissing = scheduledBreakfast.filter((r:any)=>!r.menuSubmitted)
+
     return {
-      completed:hk.filter(r=>r.complete).length,
-      refreshes:hk.filter(r=>String(r.serviceType||'').toUpperCase()==='RF').length,
-      holds:hk.filter(r=>String(r.stripHold||'').toLowerCase().includes('hold')).length,
-      menusReceived:breakfast.filter(r=>r.status==='scheduled'&&!r.breakfastSkipped&&r.menuSubmitted).length,
-      menusMissing:breakfast.filter(r=>r.status==='scheduled'&&!r.breakfastSkipped&&!r.menuSubmitted),
-      maintenanceOpen:maintenance.filter(r=>r.status!=='complete'),
-      maintenanceComplete:maintenance.filter(r=>r.status==='complete')
+      completed:hk.filter((r:any)=>needsService(r)&&r.complete).length,
+      roomCleans:hk.filter(needsService).length,
+      refreshes:hk.filter((r:any)=>String(r.serviceType||'').toUpperCase()==='RF').length,
+      holds:hk.filter((r:any)=>String(r.stripHold||'').toLowerCase().includes('hold')).length,
+      menusReceived,
+      menusMissing,
+      breakfastExpected:scheduledBreakfast.length,
+      dessertsTonight:menusReceived,
+      todayStaff:auto.todayStaff || [],
+      tomorrowStaff:auto.tomorrowStaff || [],
+      tomorrowCleans:tomorrowCleans.length,
+      tomorrowRefreshes:tomorrowRefreshes.length,
+      maintenanceOpen:maintenance.filter((r:any)=>r.status!=='complete'),
+      maintenanceComplete:maintenance.filter((r:any)=>r.status==='complete')
     }
   },[auto])
 
@@ -272,15 +304,29 @@ export default function ShiftReportBoard() {
       </header>
 
       <section className="shift-print-section shift-print-snapshot">
-        <h3>Shift Snapshot</h3>
+        <h3>Today · {date}</h3>
         <div className="shift-print-summary-grid shift-print-summary-six">
+          <div><span>Staff on site</span><strong>{summary.todayStaff.length}</strong></div>
+          <div><span>Room cleans</span><strong>{summary.roomCleans}</strong></div>
           <div><span>Rooms completed</span><strong>{summary.completed}</strong></div>
           <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
-          <div><span>Holds</span><strong>{summary.holds}</strong></div>
           <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
-          <div><span>Menus missing</span><strong>{summary.menusMissing.length}</strong></div>
-          <div><span>Open maintenance</span><strong>{summary.maintenanceOpen.length}</strong></div>
+          <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
         </div>
+        {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site:</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
+      </section>
+
+      <section className="shift-print-section">
+        <h3>Tomorrow · {auto.breakfastDate}</h3>
+        <div className="shift-print-summary-grid shift-print-summary-six">
+          <div><span>Staff scheduled</span><strong>{summary.tomorrowStaff.length}</strong></div>
+          <div><span>Room cleans</span><strong>{summary.tomorrowCleans}</strong></div>
+          <div><span>Refreshes</span><strong>{summary.tomorrowRefreshes}</strong></div>
+          <div><span>Breakfast rooms</span><strong>{summary.breakfastExpected}</strong></div>
+          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
+          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
+        </div>
+        {summary.tomorrowStaff.length>0 && <p className="shift-print-narrative"><strong>Scheduled:</strong> {summary.tomorrowStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
       {actionItems.length>0 && <section className="shift-print-section">
@@ -321,16 +367,41 @@ export default function ShiftReportBoard() {
     </div>
 
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-report-flow">
-      <section className="shift-section shift-snapshot-section">
-        <h3>Shift Snapshot</h3>
+      <section className="shift-section shift-snapshot-section shift-day-section">
+        <div className="shift-day-heading">
+          <div><span>TODAY</span><h3>{date}</h3></div>
+          <small>Current staffing, housekeeping workload, and menu status</small>
+        </div>
         <div className="shift-snapshot-grid">
+          <div><span>Staff on site</span><strong>{summary.todayStaff.length}</strong></div>
+          <div><span>Room cleans</span><strong>{summary.roomCleans}</strong></div>
           <div><span>Rooms completed</span><strong>{summary.completed}</strong></div>
           <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
-          <div><span>Holds</span><strong>{summary.holds}</strong></div>
           <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
-          <div><span>Menus missing</span><strong>{summary.menusMissing.length}</strong></div>
-          <div><span>Open maintenance</span><strong>{summary.maintenanceOpen.length}</strong></div>
+          <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
         </div>
+        {summary.todayStaff.length>0 && <div className="shift-staff-strip">
+          {summary.todayStaff.map((person:any)=><span key={person.staffMemberId}><strong>{person.name}</strong><small>{person.roleLabel||'On site'}</small></span>)}
+        </div>}
+      </section>
+
+      <section className="shift-section shift-snapshot-section shift-tomorrow-section">
+        <div className="shift-day-heading">
+          <div><span>TOMORROW</span><h3>{auto.breakfastDate}</h3></div>
+          <small>What the next day is already scheduled to require</small>
+        </div>
+        <div className="shift-snapshot-grid">
+          <div><span>Staff scheduled</span><strong>{summary.tomorrowStaff.length}</strong></div>
+          <div><span>Room cleans</span><strong>{summary.tomorrowCleans}</strong></div>
+          <div><span>Refreshes</span><strong>{summary.tomorrowRefreshes}</strong></div>
+          <div><span>Breakfast rooms</span><strong>{summary.breakfastExpected}</strong></div>
+          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
+          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
+        </div>
+        {summary.tomorrowStaff.length>0 && <div className="shift-staff-strip">
+          {summary.tomorrowStaff.map((person:any)=><span key={person.staffMemberId}><strong>{person.name}</strong><small>{person.roleLabel||'Scheduled'}</small></span>)}
+        </div>}
+        <p className="shift-dessert-note">Desserts tonight currently follows tomorrow breakfast rooms with a received menu and excludes skipped breakfast rooms.</p>
       </section>
 
       <section className="shift-section shift-action-section">
