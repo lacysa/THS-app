@@ -326,3 +326,13 @@
 @media (max-width:700px){
   .rooms-view-toggle{display:none}
 }
+
+/* Keep card view operationally lean. Package editing remains available in Table view. */
+.rooms-card .rooms-package-editor{display:none}
+
+/* Blocked / held rooms are awareness-only, not housekeeping work. */
+.rooms-state-pill.blocked{background:#eef0f2;color:#58616b}
+.rooms-card.state-blocked .rooms-progress{display:none}
+.rooms-card.state-blocked .rooms-section{display:none}
+.rooms-table-workflow.blocked{background:#eef0f2;color:#58616b;border-color:#d8dde3}
+.rooms-table-check:disabled{opacity:.45;cursor:not-allowed}
