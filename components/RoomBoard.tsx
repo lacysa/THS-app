@@ -141,6 +141,10 @@ export default function RoomBoard(){
       const next=d.rows||[]
       setRows(next)
       rowsRef.current=next
+      const collapsed:Record<string,boolean>={}
+      for(const row of next) collapsed[String(row.roomId)]=true
+      setCollapsedRooms(collapsed)
+      setOpenRooms({})
       setStaffOptions(d.staffOptions||[])
       setPackageOptions(d.packageOptions||[])
       setBreakfastDate(d.breakfast?.serviceDate||'')
