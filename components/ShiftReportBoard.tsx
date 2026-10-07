@@ -139,30 +139,25 @@ export default function ShiftReportBoard() {
     const maintenance = auto.maintenance || []
     const tomorrowHk = auto.tomorrowHousekeeping || []
 
-    const needsService = (row:any) => {
+    const isFullRoomClean = (row:any) => {
       const status=String(row.reservationStatus||'').trim().toLowerCase()
-      const service=String(row.serviceType||'').trim().toUpperCase()
-      if(status==='checkout' || status==='out/in') return true
-      if(status==='stayover' && service==='RF') return true
-      if((status==='arrival' || status==='vacant' || status==='blocked') && row.checkIssueOpen) return true
-      return false
+      return status==='checkout' || status==='out/in'
     }
 
-    const tomorrowCleans = tomorrowHk.filter((row:any)=>{
-      const status=String(row.reservationStatus||'').trim().toLowerCase()
-      const service=String(row.serviceType||'').trim().toUpperCase()
-      return status==='checkout' || status==='out/in' || (status==='stayover' && service==='RF')
-    })
+    const isRefresh = (row:any) =>
+      String(row.reservationStatus||'').trim().toLowerCase()==='stayover' &&
+      String(row.serviceType||'').trim().toUpperCase()==='RF'
 
-    const tomorrowRefreshes = tomorrowHk.filter((row:any)=>String(row.serviceType||'').trim().toUpperCase()==='RF')
+    const tomorrowCleans = tomorrowHk.filter(isFullRoomClean)
+    const tomorrowRefreshes = tomorrowHk.filter(isRefresh)
     const scheduledBreakfast = breakfast.filter((r:any)=>r.status==='scheduled'&&!r.breakfastSkipped)
     const menusReceived = scheduledBreakfast.filter((r:any)=>r.menuSubmitted).length
     const menusMissing = scheduledBreakfast.filter((r:any)=>!r.menuSubmitted)
 
     return {
-      completed:hk.filter((r:any)=>needsService(r)&&r.complete).length,
-      roomCleans:hk.filter(needsService).length,
-      refreshes:hk.filter((r:any)=>String(r.serviceType||'').toUpperCase()==='RF').length,
+      completed:hk.filter((r:any)=>isFullRoomClean(r)&&r.complete).length,
+      roomCleans:hk.filter(isFullRoomClean).length,
+      refreshes:hk.filter(isRefresh).length,
       holds:hk.filter((r:any)=>String(r.stripHold||'').toLowerCase().includes('hold')).length,
       menusReceived,
       menusMissing,
