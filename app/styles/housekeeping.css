@@ -626,3 +626,29 @@ html[data-theme="dark"] .hsk-self-check-toggle.complete{
   background:#1b2c22;
   color:#a9d5b5;
 }
+
+
+/* Independent room inspection states */
+.room-check-status.ready{background:#eaf2f8;color:#3d5f7d}
+.room-check-status.waiting{background:#f2f3f4;color:#6c7883}
+.room-check-history-note,
+.room-check-waiting,
+.room-check-passed-note{
+  display:flex;
+  gap:7px;
+  align-items:flex-start;
+  padding:10px 11px;
+  border:1px solid var(--ths-line);
+  border-radius:10px;
+  background:#f8fafc;
+  color:var(--ths-muted);
+  font-size:10px;
+  line-height:1.4;
+}
+.room-check-waiting{display:grid;gap:3px}
+.room-check-waiting strong{color:var(--ths-text);font-size:11px}
+.room-check-passed-note{align-items:center;background:#edf7f0;color:#386548;border-color:#bdd6c4}
+html[data-theme="dark"] .room-check-history-note,
+html[data-theme="dark"] .room-check-waiting{background:#18232e;border-color:#334250;color:#aebbc7}
+html[data-theme="dark"] .room-check-waiting strong{color:#edf3f8}
+html[data-theme="dark"] .room-check-passed-note{background:#1b2c22;border-color:#4c6d56;color:#a9d5b5}
