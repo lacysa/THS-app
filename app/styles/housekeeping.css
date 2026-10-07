@@ -652,3 +652,57 @@ html[data-theme="dark"] .room-check-history-note,
 html[data-theme="dark"] .room-check-waiting{background:#18232e;border-color:#334250;color:#aebbc7}
 html[data-theme="dark"] .room-check-waiting strong{color:#edf3f8}
 html[data-theme="dark"] .room-check-passed-note{background:#1b2c22;border-color:#4c6d56;color:#a9d5b5}
+
+
+/* ============================================================
+   HOUSEKEEPING TABLE — KEEP HORIZONTAL SCROLL INSIDE THE CARD
+   ============================================================ */
+.hsk-table-wrapper{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow-x:auto!important;
+  overflow-y:visible!important;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;
+  scrollbar-gutter:stable;
+  touch-action:pan-x pan-y;
+}
+
+.hsk-table{
+  width:max-content!important;
+  min-width:1180px!important;
+  table-layout:auto!important;
+}
+
+.hsk-table th,
+.hsk-table td{
+  white-space:nowrap;
+}
+
+.hsk-table th:first-child,
+.hsk-table td:first-child{
+  position:sticky;
+  left:0;
+  z-index:3;
+  background:inherit;
+}
+
+.hsk-table thead th:first-child{
+  z-index:4;
+  background:linear-gradient(180deg,#f8fbfd,#f2f6fa)!important;
+}
+
+@media(max-width:900px){
+  .hsk-table{
+    min-width:1120px!important;
+  }
+
+  .hsk-table-wrapper{
+    border-radius:16px;
+  }
+}
+
+html[data-theme="dark"] .hsk-table thead th:first-child{
+  background:#202c39!important;
+}

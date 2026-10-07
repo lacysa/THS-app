@@ -974,3 +974,37 @@ html[data-theme="dark"] .rb-progress{
   background:#111923;
   border-color:rgba(160,180,200,.22);
 }
+
+
+/* Quick reservation-status filters */
+.rb-arrival-filter{
+  gap:7px!important;
+  white-space:nowrap;
+}
+.rb-arrival-filter>span{
+  display:grid;
+  place-items:center;
+  min-width:22px;
+  height:22px;
+  padding:0 6px;
+  border:1px solid var(--status-ready-border,#A9D5BE);
+  border-radius:999px;
+  background:var(--status-ready-bg,#E8F5EE);
+  color:var(--status-ready-text,#286348);
+  font-size:9px;
+  font-weight:900;
+}
+.rb-arrival-filter.is-active{
+  border-color:var(--status-ready-border,#A9D5BE)!important;
+  background:var(--status-ready-bg,#E8F5EE)!important;
+  color:var(--status-ready-text,#286348)!important;
+  box-shadow:0 6px 16px rgba(40,99,72,.08)!important;
+}
+.rb-arrival-filter.is-active>span{
+  background:rgba(255,255,255,.7);
+}
+@media(max-width:900px){
+  .rb-arrival-filter{
+    flex:0 0 auto;
+  }
+}
