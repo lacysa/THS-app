@@ -1209,3 +1209,156 @@ html[data-theme="dark"] .housekeeping-limit-message{
   background:#1b2631;
   color:#c2ccd6;
 }
+
+
+/* Progressive-disclosure setup fields on the manager Housekeeping board */
+.hsk-room-column{
+  min-width:250px;
+  max-width:330px;
+}
+.hsk-room-setup-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+  margin:6px 0 5px;
+}
+.hsk-setup-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:24px;
+  max-width:100%;
+  padding:2px 6px 2px 8px;
+  border:1px solid #cfd8e1;
+  border-radius:999px;
+  background:#f4f7f9;
+  color:#526476;
+  font-size:8px;
+  font-weight:850;
+  line-height:1;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.hsk-setup-tag span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.hsk-setup-tag b{
+  display:grid;
+  place-items:center;
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
+  border-radius:50%;
+  background:rgba(255,255,255,.75);
+  font-size:11px;
+  font-weight:800;
+  line-height:1;
+}
+.hsk-setup-tag:hover{
+  filter:brightness(.985);
+  box-shadow:0 2px 7px rgba(48,72,110,.08);
+}
+
+.hsk-setup-tag.hsk-status-checkout{
+  background:#F4EAF0;
+  border-color:#D7B7C8;
+  color:#7A4A63;
+}
+.hsk-setup-tag.hsk-status-out-in{
+  background:#EAF0F7;
+  border-color:#B7C8DA;
+  color:#45637C;
+}
+.hsk-setup-tag.hsk-status-stayover{
+  background:#E8F3F7;
+  border-color:#A8CCD8;
+  color:#356779;
+}
+.hsk-setup-tag.hsk-status-arrival{
+  background:#E8F5EE;
+  border-color:#A9D5BE;
+  color:#286348;
+}
+.hsk-setup-tag.hsk-status-vacant{
+  background:#F1F4F7;
+  border-color:#CDD5DF;
+  color:#526173;
+}
+.hsk-setup-tag.hsk-status-blocked{
+  background:#ECEFF3;
+  border-color:#AEB8C5;
+  color:#344054;
+}
+.hsk-setup-service{
+  background:#E8F3F7;
+  border-color:#A8CCD8;
+  color:#356779;
+}
+.hsk-setup-strip{
+  background:#FFF6DD;
+  border-color:#E3CE8E;
+  color:#80631A;
+}
+.hsk-setup-staff{
+  background:#EEEAFB;
+  border-color:#C7BCE8;
+  color:#5D4B91;
+}
+
+.hsk-setup-cell{
+  transition:width .16s ease,min-width .16s ease,padding .16s ease;
+}
+.hsk-setup-cell.is-collapsed{
+  width:24px!important;
+  min-width:24px!important;
+  max-width:24px!important;
+  padding-left:3px!important;
+  padding-right:3px!important;
+}
+
+/* Let the table shrink as setup fields collapse instead of forcing a permanent 1500px width. */
+.staff-page-content .hsk-table{
+  width:max-content!important;
+  min-width:100%!important;
+  max-width:none!important;
+  table-layout:auto!important;
+}
+.staff-page-content .hsk-table th:nth-child(2),
+.staff-page-content .hsk-table th:nth-child(3),
+.staff-page-content .hsk-table th:nth-child(4),
+.staff-page-content .hsk-table th:nth-child(5){
+  min-width:62px;
+}
+.staff-page-content .hsk-table td:nth-child(2):has(.hsk-status-select){
+  min-width:130px;
+}
+.staff-page-content .hsk-table td:nth-child(3):has(.hsk-out-controls){
+  min-width:128px;
+}
+.staff-page-content .hsk-table td:nth-child(4):has(select){
+  min-width:116px;
+}
+.staff-page-content .hsk-table td:nth-child(5):has(.hsk-staff-picker){
+  min-width:180px;
+}
+
+@media(max-width:900px){
+  .hsk-room-column{
+    min-width:225px;
+    max-width:290px;
+  }
+  .hsk-setup-tag{
+    min-height:26px;
+    font-size:9px;
+  }
+}
+
+html[data-theme="dark"] .hsk-setup-tag{
+  background:#202c37;
+  border-color:#3b4a58;
+  color:#d5dee7;
+}
+html[data-theme="dark"] .hsk-setup-tag b{
+  background:rgba(255,255,255,.08);
+}

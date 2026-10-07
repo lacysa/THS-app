@@ -165,6 +165,11 @@ function isFullRoomClean(row: RoomRow) {
   return status==='checkout' || status==='out/in'
 }
 
+function usesCleaningAssignment(row: RoomRow) {
+  const status=normalize(row.reservationStatus)
+  return status==='checkout' || status==='out/in' || status==='stayover'
+}
+
 function saveStatusLabel(state: SaveState) {
   if (state === 'saving') return 'Saving…'
   if (state === 'saved') return 'Saved ✓'
@@ -962,6 +967,11 @@ export default function HousekeepingBoard() {
                 const envelopeInitialed = /^OUT-[A-Z]{2,4}$/.test(outRf)
                 const selectedStaff = splitAssigned(row.assignedTo)
                 const selectedPackageIds = Array.isArray(row.packageIds) ? row.packageIds : []
+                const hasStatus = Boolean(String(row.reservationStatus||'').trim())
+                const assignmentActive = usesCleaningAssignment(row)
+                const hasService = Boolean(String(row.serviceType||'').trim())
+                const hasStripHold = Boolean(String(row.stripHold||'').trim())
+                const hasStaff = selectedStaff.length>0
 
                 return (
                   <tr
@@ -974,6 +984,51 @@ export default function HousekeepingBoard() {
                         <BedDouble size={15} />
                         <strong>{row.roomName}</strong>
                       </div>
+
+                      <div className="hsk-room-setup-tags">
+                        {hasStatus && (
+                          <button
+                            type="button"
+                            className={`hsk-setup-tag hsk-setup-status ${reservationStatusClass(row.reservationStatus)}`}
+                            onClick={()=>patch(row.roomId,{reservationStatus:''})}
+                            title="Clear status to change it"
+                          >
+                            <span>{row.reservationStatus}</span><b aria-hidden="true">×</b>
+                          </button>
+                        )}
+                        {hasService && (
+                          <button
+                            type="button"
+                            className="hsk-setup-tag hsk-setup-service"
+                            onClick={()=>clearOutRf(row)}
+                            title="Clear OUT / RF"
+                          >
+                            <span>{outRf}</span><b aria-hidden="true">×</b>
+                          </button>
+                        )}
+                        {hasStripHold && (
+                          <button
+                            type="button"
+                            className="hsk-setup-tag hsk-setup-strip"
+                            onClick={()=>patch(row.roomId,{stripHold:''})}
+                            title="Clear strip / hold"
+                          >
+                            <span>{row.stripHold}</span><b aria-hidden="true">×</b>
+                          </button>
+                        )}
+                        {selectedStaff.map(name=>(
+                          <button
+                            type="button"
+                            key={name}
+                            className="hsk-setup-tag hsk-setup-staff"
+                            onClick={()=>toggleStaff(row,name)}
+                            title={`Unassign ${name}`}
+                          >
+                            <span>{name}</span><b aria-hidden="true">×</b>
+                          </button>
+                        ))}
+                      </div>
+
                       <button
                         type="button"
                         className={`hsk-breakfast-badge hsk-breakfast-toggle ${row.breakfastTag ? 'hsk-breakfast-tag is-active' : ''}`}
@@ -992,20 +1047,22 @@ export default function HousekeepingBoard() {
                       )}
                     </td>
 
-                    <td>
-                      <select
-                        className={`hsk-status-select ${reservationStatusClass(row.reservationStatus)}`}
-                        value={row.reservationStatus}
-                        onChange={e => patch(row.roomId, { reservationStatus: e.target.value })}
-                      >
-                        {reservationOptions.map(value => (
-                          <option key={value} value={value}>{value || '—'}</option>
-                        ))}
-                      </select>
+                    <td className={hasStatus?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
+                      {!hasStatus && (
+                        <select
+                          className={`hsk-status-select ${reservationStatusClass(row.reservationStatus)}`}
+                          value={row.reservationStatus}
+                          onChange={e => patch(row.roomId, { reservationStatus: e.target.value })}
+                        >
+                          {reservationOptions.map(value => (
+                            <option key={value} value={value}>{value || 'Set status'}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
 
-                    <td>
-                      <div className="hsk-out-controls">
+                    <td className={(!assignmentActive||hasService)?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
+                      {assignmentActive && !hasService && <div className="hsk-out-controls">
                         <div className="hsk-out-buttons">
                           <button type="button" onClick={() => clearOutRf(row)} className={!outRf ? 'is-active' : ''}>—</button>
                           <button type="button" onClick={() => markOut(row)} className={isOut ? 'is-active' : ''}>OUT</button>
@@ -1019,17 +1076,17 @@ export default function HousekeepingBoard() {
                             )}
                           </div>
                         )}
-                      </div>
+                      </div>}
                     </td>
 
-                    <td>
-                      <select value={row.stripHold} onChange={e => patch(row.roomId, { stripHold: e.target.value })}>
-                        {stripOptions.map(value => <option key={value} value={value}>{value || '—'}</option>)}
-                      </select>
+                    <td className={(!assignmentActive||hasStripHold)?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
+                      {assignmentActive && !hasStripHold && <select value={row.stripHold} onChange={e => patch(row.roomId, { stripHold: e.target.value })}>
+                        {stripOptions.map(value => <option key={value} value={value}>{value || 'Set hold'}</option>)}
+                      </select>}
                     </td>
 
-                    <td className="hsk-staff-cell">
-                      <div className="hsk-staff-picker">
+                    <td className={`hsk-staff-cell hsk-setup-cell ${(!assignmentActive||hasStaff)?'is-collapsed':''}`}>
+                      {assignmentActive && !hasStaff && <div className="hsk-staff-picker">
                         <button
                           type="button"
                           className="hsk-staff-trigger"
@@ -1113,7 +1170,7 @@ export default function HousekeepingBoard() {
                           </div>,
                           document.body
                         )}
-                      </div>
+                      </div>}
                     </td>
 
                     <td>
