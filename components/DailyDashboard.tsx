@@ -271,8 +271,10 @@ export default function DailyDashboard({
   )
   const pendingChecks = roomCheckRooms.filter(row=>row.complete && !row.fohCheckInitials && !row.checkIssueOpen)
   const arrivals = housekeeping.filter(row=>['Arrival','Out/In'].includes(row.reservationStatus))
-  const arrivalsNotReady = arrivals.filter(row=>row.roomCondition!=='Ready')
-  const arrivalsReady = arrivals.filter(row=>row.roomCondition==='Ready')
+  const arrivalProgressed = (row:HousekeepingRow) =>
+    ['Ready','Occupied'].includes(String(row.roomCondition||''))
+  const arrivalsNotReady = arrivals.filter(row=>!arrivalProgressed(row))
+  const arrivalsReady = arrivals.filter(arrivalProgressed)
   const packageRooms = arrivals.filter(row=>row.packages.length>0)
 
   const pct = (done:number,total:number) => total>0 ? Math.round((done/total)*100) : 0
@@ -294,7 +296,7 @@ export default function DailyDashboard({
 
   const blockedIds = new Set(blockedRooms.map(r=>r.id))
   const arrivalIds = new Set(arrivals.map(r=>r.id))
-  const completeIds = new Set(housekeeping.filter(r=>r.complete || r.roomCondition==='Ready').map(r=>r.id))
+  const completeIds = new Set(housekeeping.filter(r=>r.complete || ['Ready','Occupied'].includes(String(r.roomCondition||''))).map(r=>r.id))
 
   const hkGroups = [
     {
@@ -524,7 +526,7 @@ export default function DailyDashboard({
                 <div>
                   <strong>{row.roomName}</strong>
                   <div className="daily-room-pills">
-                    <span className={`daily-chip ${row.roomCondition==='Ready'?'done':'warning'}`}>{row.roomCondition || 'Not ready'}</span>
+                    <span className={`daily-chip ${arrivalProgressed(row)?'done':'warning'}`}>{row.roomCondition || 'Not ready'}</span>
                     {splitStaff(row.assignedTo).map(name=><span className="daily-chip staff" style={staffStyle(name)} key={name}>{name}</span>)}
                     {row.fohCheckInitials && <span className="daily-chip done">FOH ✓ {row.fohCheckInitials}</span>}
                     {!row.fohCheckInitials && <span className="daily-chip warning">Room check pending</span>}
