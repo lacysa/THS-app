@@ -756,3 +756,62 @@ html[data-theme="dark"] .staff-page-content .hsk-table-wrapper::-webkit-scrollba
   background:#667789!important;
   border-color:#1c2630!important;
 }
+
+
+/* Always-visible horizontal control for the manager Housekeeping board */
+.hsk-top-scrollbar{
+  width:100%;
+  max-width:100%;
+  height:18px;
+  overflow-x:scroll;
+  overflow-y:hidden;
+  border:1px solid #d7dee6;
+  border-radius:999px;
+  background:#edf2f6;
+  box-shadow:inset 0 1px 3px rgba(48,72,110,.06);
+  scrollbar-width:auto;
+  scrollbar-color:#8fa0b1 #edf2f6;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x;
+}
+
+.hsk-top-scrollbar-inner{
+  width:1500px;
+  height:1px;
+}
+
+.hsk-top-scrollbar::-webkit-scrollbar{
+  height:16px;
+}
+.hsk-top-scrollbar::-webkit-scrollbar-track{
+  background:#edf2f6;
+  border-radius:999px;
+}
+.hsk-top-scrollbar::-webkit-scrollbar-thumb{
+  background:#8fa0b1;
+  border:4px solid #edf2f6;
+  border-radius:999px;
+}
+
+.hsk-table-wrapper{
+  margin-top:4px;
+}
+
+@media(max-width:900px){
+  .hsk-top-scrollbar-inner{
+    width:1500px;
+  }
+}
+
+html[data-theme="dark"] .hsk-top-scrollbar{
+  border-color:#334250;
+  background:#1c2630;
+  scrollbar-color:#667789 #1c2630;
+}
+html[data-theme="dark"] .hsk-top-scrollbar::-webkit-scrollbar-track{
+  background:#1c2630;
+}
+html[data-theme="dark"] .hsk-top-scrollbar::-webkit-scrollbar-thumb{
+  background:#667789;
+  border-color:#1c2630;
+}
