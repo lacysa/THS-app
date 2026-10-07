@@ -32,7 +32,7 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const [roomsRes,linksRes,housekeepingRes,priorHousekeepingRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate),
-    admin.from('housekeeping_daily_rooms').select('room_id,service_type,room_condition,next_shift_condition,complete,inspected,foh_signed_by,check_issue_open').eq('service_date',serviceDate),
+    admin.from('housekeeping_daily_rooms').select('room_id,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open').eq('service_date',serviceDate),
     admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',priorDate)
   ])
 
@@ -80,6 +80,8 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
         complete:Boolean(current.complete),
         inspected:Boolean(current.inspected),
         fohChecked:Boolean(current.foh_signed_by),
+        haChecked:Boolean(current.ha_signed_by),
+        housekeeperAttested:Boolean(current.housekeeper_attested_by),
         checkIssueOpen:Boolean(current.check_issue_open)
       }
     })
