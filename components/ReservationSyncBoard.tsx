@@ -30,6 +30,7 @@ type PreviewRow = {
   include:boolean
   rawText:string
   sourceSection?:'stayover'|'reservation'
+  allowMissingDoorCode?:boolean
 }
 
 type Room = {id:string,name:string}
@@ -520,6 +521,45 @@ export default function ReservationSyncBoard(){
 
   function patch(index:number,patch:Partial<PreviewRow>){ setRows(current=>current.map((r,i)=>i===index?{...r,...patch}:r)) }
 
+  function setDoorCode(index:number,value:string){
+    const digits=String(value||'').replace(/\D/g,'').slice(-4)
+    setRows(current=>current.map((row,i)=>{
+      if(i!==index) return row
+      const otherWarnings=(row.warnings||[]).filter(w=>!/door code/i.test(w))
+      const warnings=digits.length===4
+        ? otherWarnings
+        : [...otherWarnings,'Door code must be 4 digits or bypassed']
+      const needsReview=warnings.length>0
+      return {
+        ...row,
+        doorCode:digits||null,
+        allowMissingDoorCode:false,
+        warnings,
+        needsReview,
+        include:needsReview?false:row.include
+      }
+    }))
+  }
+
+  function setDoorCodeBypass(index:number,bypassed:boolean){
+    setRows(current=>current.map((row,i)=>{
+      if(i!==index) return row
+      const otherWarnings=(row.warnings||[]).filter(w=>!/door code/i.test(w))
+      const hasValidCode=String(row.doorCode||'').replace(/\D/g,'').length===4
+      const warnings=bypassed||hasValidCode
+        ? otherWarnings
+        : [...otherWarnings,'Door code could not be derived']
+      const needsReview=warnings.length>0
+      return {
+        ...row,
+        allowMissingDoorCode:bypassed,
+        warnings,
+        needsReview,
+        include:needsReview?false:true
+      }
+    }))
+  }
+
   async function commit(){
     const selected=rows.filter(r=>r.include)
     if(!selected.length) return
@@ -610,7 +650,27 @@ export default function ReservationSyncBoard(){
             <label>Room<select value={row.roomName||''} onChange={e=>patch(index,{roomName:e.target.value||null})}><option value="">Choose room</option>{rooms.map(room=><option key={room.id}>{room.name}</option>)}</select></label>
             <label>Arrival<input type="date" value={row.arrivalDate||''} onChange={e=>patch(index,{arrivalDate:e.target.value||null})}/></label>
             <label>Checkout<input type="date" value={row.checkoutDate||''} onChange={e=>patch(index,{checkoutDate:e.target.value||null})}/></label>
-            <label>Door code<input value={row.doorCode||''} readOnly/></label>
+            <label className="rs-door-code-field">
+              Door code
+              <input
+                inputMode="numeric"
+                maxLength={4}
+                placeholder={row.allowMissingDoorCode?'No code required':'4 digits'}
+                value={row.doorCode||''}
+                disabled={Boolean(row.allowMissingDoorCode)}
+                onChange={e=>setDoorCode(index,e.target.value)}
+              />
+              <span className="rs-door-code-help">Enter a 4-digit code, or bypass if the PMS has no phone number.</span>
+            </label>
+            <label className={`rs-door-bypass ${row.allowMissingDoorCode?'active':''}`}>
+              <input
+                type="checkbox"
+                checked={Boolean(row.allowMissingDoorCode)}
+                onChange={e=>setDoorCodeBypass(index,e.target.checked)}
+              />
+              <span className="rs-door-bypass-switch" aria-hidden="true"><i/></span>
+              <span><strong>Bypass door code</strong><small>Import this reservation without a code</small></span>
+            </label>
             <label>Occupancy<input type="number" min="1" max="8" value={row.occupancy||''} onChange={e=>patch(index,{occupancy:e.target.value?Number(e.target.value):null})}/></label>
             <label>Check-in<input value={row.checkInTime||''} onChange={e=>patch(index,{checkInTime:e.target.value})}/></label>
             <label className="wide">Rate / booking product<input value={row.ratePlan||''} onChange={e=>patch(index,{ratePlan:e.target.value})}/></label>
