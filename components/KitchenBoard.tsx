@@ -14,7 +14,7 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
     setLoading(true)
     setError('')
     try {
-      const boardRes = await fetch(`/api/staff/day?date=${date}`,{cache:'no-store'})
+      const boardRes = await fetch(`/api/staff/day?date=${date}&includeDeclined=1`,{cache:'no-store'})
       const json = await boardRes.json()
       if (!boardRes.ok) throw new Error(json.message || 'Could not load the kitchen board.')
       setData(json)
@@ -72,7 +72,7 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
               <section className="kitchen-time-section" key={section.key}>
                 <div className="kitchen-time-header">
                   <strong>{section.label}</strong>
-                  <span>{section.groups.length} {section.groups.length===1?'room':'rooms'}</span>
+                  <span>{section.groups.filter((g:any)=>!g.breakfastSkipped).length} {section.groups.filter((g:any)=>!g.breakfastSkipped).length===1?'room':'rooms'}</span>
                 </div>
                 <div className="kitchen-time-grid">
                   {[...section.groups, ...Array(Math.max(0, 2 - section.groups.length)).fill(null)].map((g:any,index:number)=> g ? (
@@ -83,12 +83,16 @@ export default function KitchenBoard({initialDate}:{initialDate:string}) {
                           {g.lastName && <div className="muted">{g.lastName}</div>}
                         </div>
                         <div className="ticket-badges">
-                          {!g.menuSubmitted && <span className="pill warning">Missing menu</span>}
+                          {g.breakfastSkipped
+                            ? <span className="pill neutral">Skipped</span>
+                            : !g.menuSubmitted && <span className="pill warning">Missing menu</span>}
                           {g.unmatched && <span className="pill warning">Unmatched</span>}
                         </div>
                       </div>
 
-                      {g.orders.length===0 ? (
+                      {g.breakfastSkipped ? (
+                        <div className="notice kitchen-skipped-breakfast">Breakfast skipped — no kitchen service needed.</div>
+                      ) : g.orders.length===0 ? (
                         <div className="notice kitchen-missing-menu">{g.menuSubmitted ? 'Menu received, but no meal selections were saved.' : 'No breakfast menu received.'}</div>
                       ) : (
                         <div className="order-lines kitchen-order-lines">
