@@ -82,7 +82,8 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     inspected: Boolean(row.inspected),
     roomCondition: row.room_condition || '',
     nextShiftCondition: row.next_shift_condition || '',
-    notes: row.notes || ''
+    notes: row.notes || '',
+    checkIssueOpen: Boolean(row.check_issue_open)
   }))
 
   const breakfast:any[] = (breakfastRes.data || []).map((row: any) => ({
