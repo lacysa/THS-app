@@ -39,7 +39,7 @@ type Access={
   isAdmin?:boolean
 }
 
-const reservationOptions=['','Checkout','Out/In','Stayover','Arrival','Vacant','Blocked']
+const reservationOptions=['','Checkout','Out/In','Stayover','Arrival','Vacant','Dirty','Blocked']
 const conditionOptions=['','Occupied','Cleaning','Ready for Inspection','Ready','Vacant','Vacant (Clean)','Vacant (Dirty)','Vacant (Blocked)','Out of Order']
 const stripOptions=['','Strip','Hold']
 
@@ -235,7 +235,7 @@ export default function RoomBoard(){
 
   function isFullRoomClean(row:RoomRow){
     const status=normalize(row.reservationStatus)
-    return status==='checkout'||status==='out/in'
+    return status==='checkout'||status==='out/in'||status==='dirty'
   }
 
   function fullCleanCountFor(name:string){
@@ -255,7 +255,7 @@ export default function RoomBoard(){
       const limit=Number(option?.fullRoomCleanLimit??2)
       const currentCount=fullCleanCountFor(name)
       if(currentCount>=limit){
-        setMessage(`${name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift. Reassign a Checkout/Out-In room or increase their limit first.`)
+        setMessage(`${name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift. Reassign a Checkout/Out-In/Dirty room or increase their limit first.`)
         return
       }
     }
