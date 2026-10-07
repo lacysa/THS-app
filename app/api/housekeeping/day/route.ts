@@ -173,6 +173,9 @@ export async function GET(req: NextRequest) {
         sortOrder: room.sort_order,
         reservationStatus: savedRow.reservation_status || '',
         serviceType: savedRow.service_type || '',
+        requiresQualityCheck:
+          ['checkout','out/in'].includes(String(savedRow.reservation_status||'').trim().toLowerCase()) ||
+          String(savedRow.service_type||'').trim().toUpperCase().startsWith('OUT'),
         stripHold: savedRow.strip_hold || '',
         assignedTo: savedRow.assigned_to || '',
         cleanOrder: savedRow.clean_order ?? null,
@@ -350,15 +353,18 @@ export async function POST(req: NextRequest) {
             throw new Error('You must correct and pass re-check on the flagged room before completing another room.')
           }
 
+          const requiresQualityCheck =
+            ['checkout','out/in'].includes(String(existing.reservation_status||'').trim().toLowerCase()) ||
+            String(existing.service_type||'').trim().toUpperCase().startsWith('OUT')
           const attestedAt = existing.housekeeper_attested_at ? new Date(existing.housekeeper_attested_at).getTime() : 0
           const issueAt = existing.check_issue_at ? new Date(existing.check_issue_at).getTime() : 0
           const validSelfCheck = Boolean(existing.housekeeper_attested_by && attestedAt > issueAt)
 
-          if (complete && !validSelfCheck) {
+          if (complete && requiresQualityCheck && !validSelfCheck) {
             throw new Error('Complete and submit the room checklist before marking this room complete.')
           }
 
-          const attestedNow = validSelfCheck
+          const attestedNow = requiresQualityCheck ? validSelfCheck : Boolean(existing.housekeeper_attested_by)
           return {
             service_date: serviceDate,
             room_id: row.roomId,
