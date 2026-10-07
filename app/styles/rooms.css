@@ -326,3 +326,48 @@
 @media (max-width:700px){
   .rooms-view-toggle{display:none}
 }
+
+.rooms-manager-details{
+  border:1px solid var(--line,#dfe3e8);
+  border-radius:12px;
+  background:rgba(248,250,252,.7);
+  overflow:hidden;
+}
+.rooms-manager-details summary{
+  cursor:pointer;
+  list-style:none;
+  padding:11px 13px;
+  font-weight:800;
+}
+.rooms-manager-details summary::-webkit-details-marker{display:none}
+.rooms-manager-details[open] summary{
+  border-bottom:1px solid var(--line,#e4e7ec);
+}
+.rooms-manager-details .rooms-manager-edit{
+  padding:13px;
+}
+.rooms-blocked-note{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  padding:11px 12px;
+  border-radius:11px;
+  background:rgba(100,116,139,.08);
+  color:var(--muted,#667085);
+}
+.rooms-blocked-note strong{color:var(--text,#182230)}
+.rooms-state-pill.blocked{
+  background:#eef0f2;
+  color:#58616b;
+}
+.rooms-table-workflow.blocked{
+  background:#eef0f2;
+  color:#58616b;
+  border-color:#d8dde3;
+  cursor:default;
+}
+.rooms-table-muted{
+  color:var(--muted,#98a2b3);
+  font-weight:700;
+}
