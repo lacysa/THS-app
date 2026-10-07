@@ -42,7 +42,7 @@ async function getPeopleAndCapabilities(admin: ReturnType<typeof createSupabaseA
   const [{ data: people, error: peopleError }, { data: caps, error: capsError }] = await Promise.all([
     admin
       .from('staff_members')
-      .select('id,auth_user_id,name,job_title,active')
+      .select('id,auth_user_id,name,job_title,active,full_room_clean_limit')
       .eq('active', true)
       .order('name'),
     admin
@@ -133,7 +133,15 @@ export async function GET(req: NextRequest) {
 
     const allStaffOptions = peopleData.people
       .filter((person: any) => person.active !== false)
-      .map((person: any) => ({ id: person.id, name: person.name, roleLabel: person.job_title || '', shiftStart: null, shiftEnd: null, onSite: false }))
+      .map((person: any) => ({
+        id: person.id,
+        name: person.name,
+        roleLabel: person.job_title || '',
+        fullRoomCleanLimit: Number(person.full_room_clean_limit ?? 2),
+        shiftStart: null,
+        shiftEnd: null,
+        onSite: false
+      }))
 
     const scheduleByMember = new Map<string, any>()
     for (const row of scheduleRows || []) {
@@ -149,6 +157,7 @@ export async function GET(req: NextRequest) {
           id: person.id,
           name: person.name,
           roleLabel: schedule.role_label || person.job_title || '',
+          fullRoomCleanLimit: Number(person.full_room_clean_limit ?? 2),
           shiftStart: schedule.shift_start || null,
           shiftEnd: schedule.shift_end || null,
           onSite: true
@@ -363,6 +372,37 @@ export async function POST(req: NextRequest) {
     if (existingError) throw new Error(existingError.message)
     const existingByRoom = new Map<string, any>()
     for (const row of existingRows || []) existingByRoom.set(String((row as any).room_id), row)
+
+    if (!assignedOnlyView) {
+      const fullCleanCounts = new Map<string,number>()
+      const limitsByName = new Map<string,number>(
+        peopleData.people.map((person:any)=>[
+          String(person.name||'').trim().toLowerCase(),
+          Number(person.full_room_clean_limit ?? 2)
+        ])
+      )
+
+      for (const row of rows) {
+        const status=String(row.reservationStatus||'').trim().toLowerCase()
+        if (!['checkout','out/in'].includes(status)) continue
+        const assigned=String(row.assignedTo||'')
+          .split(',')
+          .map((name:string)=>name.trim().toLowerCase())
+          .filter(Boolean)
+
+        for (const name of assigned) {
+          fullCleanCounts.set(name,(fullCleanCounts.get(name)||0)+1)
+        }
+      }
+
+      for (const [name,count] of fullCleanCounts) {
+        const limit=limitsByName.get(name) ?? 2
+        if (count>limit) {
+          const person=peopleData.people.find((p:any)=>String(p.name||'').trim().toLowerCase()===name)
+          throw new Error(`${person?.name||name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift. Remove or reassign a full clean before saving.`)
+        }
+      }
+    }
 
     const upserts = rows
       .filter(row => {
