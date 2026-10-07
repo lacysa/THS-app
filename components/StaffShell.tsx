@@ -27,7 +27,8 @@ import {
   Building2,
   BookOpen,
   Menu,
-  X
+  X,
+  UsersRound
 } from 'lucide-react'
 
 type ModuleRow = {
@@ -92,7 +93,8 @@ const iconMap: Record<string, any> = {
   lobby_inventory: Package,
   reservation_sync: RefreshCw,
   reservations: CalendarDays,
-  housekeeping_quality: BarChart3
+  housekeeping_quality: BarChart3,
+  staff: UsersRound
 }
 
 const permissionByModule: Record<string, string | undefined> = {
@@ -136,7 +138,8 @@ const hrefFallback: Record<string, string> = {
   lobby_inventory: '/inventory/lobby',
   reservation_sync: '/reservation-sync',
   reservations: '/reservations',
-  housekeeping_quality: '/housekeeping/quality'
+  housekeeping_quality: '/housekeeping/quality',
+  staff: '/staff'
 }
 
 const breakfastModules = new Set([
@@ -165,7 +168,8 @@ const operationsModules = new Set([
   'laundry_inventory',
   'lobby_inventory',
   'reservation_sync',
-  'reservations'
+  'reservations',
+  'staff'
 ])
 
 function initials(name: string) {
