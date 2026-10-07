@@ -89,6 +89,14 @@ type ReservationDailyRow = {
   departing:ReservationStay|null
 }
 
+type TodayStaffRow = {
+  id:string
+  name:string
+  roleLabel:string
+  shiftStart:string
+  shiftEnd:string
+}
+
 type Props = {
   displayName:string
   todayLabel:string
@@ -106,6 +114,7 @@ type Props = {
   departmentNotes:DepartmentNote[]
   showReservationDaily:boolean
   reservationDaily:ReservationDailyRow[]
+  todayStaff:TodayStaffRow[]
 }
 
 function formatTime(value:string) {
@@ -206,7 +215,8 @@ export default function DailyDashboard({
   inventory,
   departmentNotes,
   showReservationDaily,
-  reservationDaily
+  reservationDaily,
+  todayStaff
 }:Props) {
   const breakfastScheduled = breakfast.filter(r=>r.status==='scheduled' && !r.breakfastSkipped)
   const missingMenus = breakfastScheduled.filter(r=>!r.menuSubmitted)
@@ -596,16 +606,23 @@ export default function DailyDashboard({
         {showHousekeeping && (
           <section className="daily-panel">
             <div className="daily-panel-head">
-              <div><Users size={17}/><strong>Staff today</strong></div>
-              <span>{assignedStaff.length} assigned</span>
+              <div><Users size={17}/><strong>Today&apos;s staff</strong></div>
+              <span>{todayStaff.length} on site</span>
             </div>
             <div className="daily-staff-list">
-              {assignedStaff.length
-                ? assignedStaff.map(name=>{
-                    const count=housekeeping.filter(r=>splitStaff(r.assignedTo).includes(name)).length
-                    return <span className="daily-staff-person" style={staffStyle(name)} key={name}><strong>{name}</strong><small>{count} room{count===1?'':'s'}</small></span>
+              {todayStaff.length
+                ? todayStaff.map(person=>{
+                    const roomCount=housekeeping.filter(r=>splitStaff(r.assignedTo).includes(person.name)).length
+                    return <span className="daily-staff-person" style={staffStyle(person.name)} key={person.id}>
+                      <strong>{person.name}</strong>
+                      <small>
+                        {person.roleLabel || 'On site'}
+                        {person.shiftStart && person.shiftEnd ? ` · ${formatTime(person.shiftStart)}–${formatTime(person.shiftEnd)}` : ''}
+                        {roomCount ? ` · ${roomCount} room${roomCount===1?'':'s'}` : ''}
+                      </small>
+                    </span>
                   })
-                : <div className="daily-empty">No housekeeping staff assigned yet.</div>}
+                : <div className="daily-empty">No on-site staff schedule entered for today.</div>}
             </div>
           </section>
         )}
