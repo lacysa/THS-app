@@ -299,6 +299,9 @@ export default function UnifiedRoomsBoard(){
 
   async function setInspectionResult(room:InspectionRoom,item:CheckItem,passed:boolean){
     const note=item.note||''
+    const roomElement=document.getElementById(`room-card-${room.roomId}`)
+    const beforeTop=roomElement?.getBoundingClientRect().top ?? null
+
     setInspectionRooms(current=>current.map(r=>r.roomId===room.roomId?{...r,items:r.items.map(i=>i.id===item.id?{...i,passed}:i)}:r))
     const response=await fetch('/api/room-checks',{
       method:'POST',headers:{'content-type':'application/json'},
@@ -344,12 +347,21 @@ export default function UnifiedRoomsBoard(){
         return next
       })
       setMessage('')
+
+      if(beforeTop!==null){
+        window.requestAnimationFrame(()=>{
+          window.requestAnimationFrame(()=>{
+            const after=document.getElementById(`room-card-${room.roomId}`)?.getBoundingClientRect().top
+            if(after!==undefined)window.scrollBy({top:after-beforeTop,left:0,behavior:'auto'})
+          })
+        })
+      }
       return
     }
 
-    // A completed inspection with a failed item changes correction state in
-    // several backend records, so reconcile only that uncommon path.
-    if(d.complete)await load()
+    // Failed inspections can alter several backend records and correction
+    // assignments. Reconcile that path only; successful completion never reloads.
+    if(d.complete&&d.failed>0)await load()
   }
 
   function updateInspectionNote(roomId:string,itemId:string,note:string){
@@ -451,7 +463,7 @@ export default function UnifiedRoomsBoard(){
           const checkedCount=inspection?.items.filter(i=>i.passed!==null).length||0
           const packageNames=(row.packageIds||[]).map(id=>packageOptions.find(p=>p.id===id)?.name).filter(Boolean)
 
-          return <section key={row.roomId} className={`rooms-card state-${state} ${row.checkIssueOpen?'has-issue':''}`}>
+          return <section id={`room-card-${row.roomId}`} key={row.roomId} className={`rooms-card state-${state} ${row.checkIssueOpen?'has-issue':''}`}>
             <button type="button" className="rooms-card-header" onClick={()=>{
               const next=!isOpen;setExpanded(current=>({...current,[row.roomId]:next}))
               if(next&&requiresSelfCheck(row)&&!row.housekeeperAttested&&!selfChecks[row.roomId])void loadSelfCheck(row)
