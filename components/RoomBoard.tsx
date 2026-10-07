@@ -573,6 +573,7 @@ export default function RoomBoard(){
             data-room-condition={row.roomCondition||''}
             data-strip-hold={row.stripHold||''}
             data-reservation-status={row.reservationStatus||''}
+            data-workflow={showHousekeepingWorkflow?'full':'minimal'}
             key={row.roomId}
           >
             {collapsed ? (
@@ -670,13 +671,16 @@ export default function RoomBoard(){
                   <input type="number" min="1" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
                 </label>
 
-                <label className="rb-progress">
-                  <input type="checkbox" checked={row.complete} onChange={e=>patch(row.roomId,{
-                    complete:e.target.checked,
-                    roomCondition:e.target.checked?(row.roomCondition||'Ready for Inspection'):row.roomCondition
-                  })}/>
-                  <span>{row.complete?'Complete ✓':'In progress'}</span>
-                </label>
+                <div className="rb-field rb-progress-field">
+                  <span>Progress</span>
+                  <label className="rb-progress">
+                    <input type="checkbox" checked={row.complete} onChange={e=>patch(row.roomId,{
+                      complete:e.target.checked,
+                      roomCondition:e.target.checked?(row.roomCondition||'Ready for Inspection'):row.roomCondition
+                    })}/>
+                    <span>{row.complete?'Complete ✓':'In progress'}</span>
+                  </label>
+                </div>
               </>}
 
               <label className="rb-field rb-end-field">

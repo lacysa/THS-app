@@ -726,3 +726,251 @@ html[data-theme="dark"] .rb-save-saved{
 html[data-theme="dark"] .rb-save-error{
   color:#efaaa5!important;
 }
+
+
+/* Room Board alignment refresh */
+.rb-room-main{
+  grid-template-columns:
+    minmax(170px,1.25fr)
+    minmax(128px,.9fr)
+    minmax(105px,.72fr)
+    minmax(130px,.95fr)
+    84px
+    minmax(118px,.82fr)
+    minmax(160px,1fr)
+    92px;
+  column-gap:12px;
+  row-gap:8px;
+  padding:12px 14px;
+  align-items:end;
+}
+
+.rb-room-card[data-workflow="minimal"] .rb-room-main{
+  grid-template-columns:
+    minmax(200px,1.35fr)
+    minmax(135px,.85fr)
+    minmax(115px,.72fr)
+    minmax(170px,1fr)
+    92px;
+}
+
+.rb-room-card[data-workflow="minimal"] .rb-room-name{grid-column:1}
+.rb-room-card[data-workflow="minimal"] .rb-status-field{grid-column:2}
+.rb-room-card[data-workflow="minimal"] .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field){grid-column:3}
+.rb-room-card[data-workflow="minimal"] .rb-end-field{grid-column:4}
+.rb-room-card[data-workflow="minimal"] .rb-details-btn{grid-column:5}
+
+.rb-room-name{
+  min-height:44px;
+  align-items:center;
+}
+.rb-room-name>div{min-width:0}
+.rb-room-name strong{
+  display:block;
+  font-size:14px;
+  line-height:1.1;
+}
+.rb-badges{
+  margin-top:5px;
+  align-items:center;
+}
+.rb-mini-collapse{
+  align-self:center;
+  margin-left:auto;
+}
+
+.rb-field{
+  min-width:0;
+  align-self:end;
+}
+.rb-field>span,
+.rb-detail-block>span{
+  min-height:11px;
+  margin-bottom:1px;
+}
+.rb-field select,
+.rb-field input{
+  min-height:42px;
+}
+
+.rb-staff-summary{
+  min-height:54px;
+  align-content:end;
+}
+.rb-staff-summary strong{
+  display:flex;
+  align-items:center;
+  min-height:42px;
+  padding:0 2px;
+  font-size:10px;
+  line-height:1.25;
+}
+
+.rb-order-summary input{
+  height:42px;
+}
+
+.rb-progress-field{
+  min-width:0;
+}
+.rb-progress{
+  min-height:42px;
+  width:100%;
+  padding:0 10px;
+  border:1px solid #d6dde5;
+  border-radius:10px;
+  background:rgba(255,255,255,.94);
+  justify-content:flex-start;
+  white-space:nowrap;
+}
+.rb-progress input{
+  width:17px!important;
+  height:17px!important;
+  min-height:17px!important;
+  flex:0 0 17px;
+  margin:0;
+}
+.rb-progress span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.rb-end-field select{
+  min-height:42px;
+}
+
+.rb-details-btn{
+  min-height:42px;
+  width:100%;
+  align-self:end;
+  white-space:nowrap;
+}
+
+@media(max-width:1250px){
+  .rb-room-main{
+    grid-template-columns:
+      minmax(155px,1.2fr)
+      minmax(120px,.9fr)
+      100px
+      minmax(120px,.9fr)
+      76px
+      minmax(112px,.82fr)
+      minmax(145px,1fr)
+      86px;
+    column-gap:9px;
+  }
+
+  .rb-room-card[data-workflow="minimal"] .rb-room-main{
+    grid-template-columns:
+      minmax(180px,1.3fr)
+      minmax(125px,.85fr)
+      minmax(105px,.72fr)
+      minmax(150px,1fr)
+      86px;
+  }
+}
+
+@media(max-width:1080px){
+  .rb-room-main,
+  .rb-room-card[data-workflow="minimal"] .rb-room-main{
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    gap:10px;
+    align-items:end;
+  }
+
+  .rb-room-name{grid-column:1/5}
+  .rb-status-field{grid-column:5/8}
+  .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field):not(.rb-staff-summary):not(.rb-order-summary):not(.rb-progress-field){
+    grid-column:8/10;
+  }
+
+  .rb-staff-summary{grid-column:1/5}
+  .rb-order-summary{grid-column:5/7}
+  .rb-progress-field{grid-column:7/10}
+  .rb-end-field{grid-column:10/13}
+  .rb-details-btn{grid-column:10/13}
+
+  .rb-room-card[data-workflow="minimal"] .rb-room-name{grid-column:1/5}
+  .rb-room-card[data-workflow="minimal"] .rb-status-field{grid-column:5/8}
+  .rb-room-card[data-workflow="minimal"] .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field){
+    grid-column:8/10;
+  }
+  .rb-room-card[data-workflow="minimal"] .rb-end-field{grid-column:10/13}
+  .rb-room-card[data-workflow="minimal"] .rb-details-btn{grid-column:10/13}
+}
+
+@media(max-width:900px){
+  .rb-room-main,
+  .rb-room-card[data-workflow="minimal"] .rb-room-main{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px 12px;
+    padding:14px;
+  }
+
+  .rb-room-name,
+  .rb-room-card[data-workflow="minimal"] .rb-room-name{
+    grid-column:1/-1;
+  }
+
+  .rb-status-field,
+  .rb-room-card[data-workflow="minimal"] .rb-status-field{
+    grid-column:1;
+  }
+
+  .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field):not(.rb-staff-summary):not(.rb-order-summary):not(.rb-progress-field),
+  .rb-room-card[data-workflow="minimal"] .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field){
+    grid-column:2;
+  }
+
+  .rb-staff-summary{grid-column:1}
+  .rb-order-summary{grid-column:2}
+  .rb-progress-field{grid-column:1/-1}
+  .rb-end-field,
+  .rb-room-card[data-workflow="minimal"] .rb-end-field{
+    grid-column:1/-1;
+  }
+  .rb-details-btn,
+  .rb-room-card[data-workflow="minimal"] .rb-details-btn{
+    grid-column:1/-1;
+  }
+
+  .rb-progress{
+    justify-content:center;
+  }
+}
+
+@media(max-width:560px){
+  .rb-room-main,
+  .rb-room-card[data-workflow="minimal"] .rb-room-main{
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+
+  .rb-status-field,
+  .rb-room-main>.rb-field,
+  .rb-staff-summary,
+  .rb-order-summary,
+  .rb-progress-field,
+  .rb-end-field,
+  .rb-details-btn,
+  .rb-room-card[data-workflow="minimal"] .rb-room-name,
+  .rb-room-card[data-workflow="minimal"] .rb-status-field,
+  .rb-room-card[data-workflow="minimal"] .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field),
+  .rb-room-card[data-workflow="minimal"] .rb-end-field,
+  .rb-room-card[data-workflow="minimal"] .rb-details-btn{
+    grid-column:1!important;
+  }
+
+  .rb-room-name{
+    grid-column:1!important;
+  }
+
+  .rb-staff-summary strong{
+    min-height:36px;
+  }
+}
+
+html[data-theme="dark"] .rb-progress{
+  background:#111923;
+  border-color:rgba(160,180,200,.22);
+}
