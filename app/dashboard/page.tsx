@@ -118,9 +118,7 @@ export default async function DashboardPage() {
     )
       ? admin.from('breakfast_menu_notes').select('booking_id,note')
       : Promise.resolve({data:[],error:null}),
-    moduleKeys.has('housekeeping')
-      ? admin.from('staff_members').select('id,name')
-      : Promise.resolve({data:[],error:null}),
+    admin.from('staff_members').select('id,name').eq('active',true),
     moduleKeys.has('housekeeping')
       ? admin.from('room_package_catalog').select('id,name')
       : Promise.resolve({data:[],error:null}),
