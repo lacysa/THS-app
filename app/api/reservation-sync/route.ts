@@ -22,6 +22,12 @@ function addDay(value:string){
   return date.toISOString().slice(0,10)
 }
 
+function previousDay(value:string){
+  const date=new Date(value+'T12:00:00Z')
+  date.setUTCDate(date.getUTCDate()-1)
+  return date.toISOString().slice(0,10)
+}
+
 function eachDate(start:string,end:string){
   const out:string[]=[]
   let current=start
@@ -62,6 +68,16 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   if(blockedResult.error) throw new Error(blockedResult.error.message)
   const blocked=new Set((blockedResult.data||[]).map((row:any)=>String(row.service_date)+'|'+String(row.room_id)))
 
+  const dirtyResult=await admin.from('housekeeping_daily_rooms')
+    .select('service_date,room_id,room_condition')
+    .gte('service_date',previousDay(start))
+    .lt('service_date',end)
+    .eq('room_condition','Vacant (Dirty)')
+  if(dirtyResult.error) throw new Error(dirtyResult.error.message)
+  const dirtyCarry=new Set(
+    (dirtyResult.data||[]).map((row:any)=>addDay(String(row.service_date))+'|'+String(row.room_id))
+  )
+
   for(const date of eachDate(start,end)){
     for(const room of rooms){
       const roomStays=stays.filter((stay:any)=>String(stay.room_id)===String(room.id))
@@ -87,7 +103,14 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
       })
 
       if(!blocked.has(date+'|'+room.id)){
-        hsk.push({service_date:date,room_id:room.id,reservation_status:status,updated_at:new Date().toISOString()})
+        const carryDirty=dirtyCarry.has(date+'|'+room.id)
+        hsk.push({
+          service_date:date,
+          room_id:room.id,
+          reservation_status:carryDirty && status==='Vacant' ? 'Dirty' : status,
+          ...(carryDirty ? {service_type:'OUT'} : {}),
+          updated_at:new Date().toISOString()
+        })
       }
     }
   }
