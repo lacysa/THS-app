@@ -58,7 +58,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     admin.from('maintenance_work_orders').select('*').order('created_at', { ascending: false }),
     admin.from('room_notes').select('*').or(`service_date.eq.${date},note_type.eq.persistent`).order('created_at', { ascending: false }),
     admin.from('staff_members').select('id,name'),
-    admin.from('housekeeping_daily_rooms').select('room_id').eq('service_date', date).eq('breakfast_tag', true)
+    admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', date).eq('breakfast_tag', true)
   ])
 
   const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error
@@ -86,6 +86,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     roomId: row.room_id,
     roomName: roomById.get(String(row.room_id)) || 'Room',
     status: row.status,
+    breakfastSkipped: row.status==='declined',
     menuSubmitted: Boolean(row.menu_submitted),
     timeSlot: row.time_slot || null,
     taggedOnly:false
@@ -98,7 +99,8 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     breakfast.push({
       roomId,
       roomName: roomById.get(roomId) || 'Room',
-      status:'scheduled',
+      status:(tagged as any).breakfast_skipped ? 'declined' : 'scheduled',
+      breakfastSkipped:Boolean((tagged as any).breakfast_skipped),
       menuSubmitted:false,
       timeSlot:null,
       taggedOnly:true
