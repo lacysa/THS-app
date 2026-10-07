@@ -1979,3 +1979,91 @@ html[data-theme="dark"] .staff-page-content{
   --alert-neutral-border:#66717E;
   --alert-neutral-text:#D4D9E0;
 }
+
+
+/* Front Desk guest breakfast opt-out */
+.staff-page-content .fd-breakfast-pill.is-declined{
+  border-left-color:var(--status-neutral-border,#CDD5DF)!important;
+  background:linear-gradient(145deg,#fff,#f5f7f9)!important;
+  opacity:.94;
+}
+.staff-page-content .fd-breakfast-pill.is-declined .fd-breakfast-pill-room strong{
+  color:var(--status-neutral-text,#526173)!important;
+}
+.staff-page-content .fd-skip-breakfast-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:38px;
+  padding:0 10px;
+  border:1px solid rgba(112,132,153,.18);
+  border-radius:11px;
+  background:rgba(255,255,255,.88);
+  color:#4f6072;
+  font-size:9px;
+  font-weight:800;
+  cursor:pointer;
+  user-select:none;
+  white-space:nowrap;
+  transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.staff-page-content .fd-skip-breakfast-toggle input{
+  position:absolute!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  width:1px!important;
+  height:1px!important;
+}
+.staff-page-content .fd-skip-switch{
+  position:relative;
+  width:30px;
+  height:18px;
+  flex:0 0 30px;
+  border:1px solid #c9d1d9;
+  border-radius:999px;
+  background:#eef1f4;
+  transition:background .16s ease,border-color .16s ease;
+}
+.staff-page-content .fd-skip-switch i{
+  position:absolute;
+  top:2px;
+  left:2px;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 4px rgba(44,58,75,.22);
+  transition:transform .16s ease;
+}
+.staff-page-content .fd-skip-breakfast-toggle.active{
+  border-color:var(--status-neutral-border,#CDD5DF);
+  background:var(--status-neutral-bg,#F1F4F7);
+  color:var(--status-neutral-text,#526173);
+}
+.staff-page-content .fd-skip-breakfast-toggle.active .fd-skip-switch{
+  background:#7a8794;
+  border-color:#7a8794;
+}
+.staff-page-content .fd-skip-breakfast-toggle.active .fd-skip-switch i{
+  transform:translateX(12px);
+}
+.staff-page-content .fd-breakfast-pill-actions .btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  transform:none!important;
+}
+@media(max-width:720px){
+  .staff-page-content .fd-skip-breakfast-toggle{
+    width:100%;
+    justify-content:flex-start;
+    min-height:42px;
+  }
+}
+html[data-theme="dark"] .staff-page-content .fd-breakfast-pill.is-declined{
+  background:linear-gradient(145deg,#1a222b,#171d24)!important;
+}
+html[data-theme="dark"] .staff-page-content .fd-skip-breakfast-toggle{
+  background:#1c2630;
+  border-color:#3a4653;
+  color:#c9d2db;
+}
