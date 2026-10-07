@@ -239,22 +239,12 @@ export default function DailyDashboard({
   })
   const hkComplete = housekeepingWorkload.filter(r=>r.complete && !r.checkIssueOpen)
 
-  // Room-check count reflects rooms actually in the inspection workflow.
-  // Checkout / Out-In (including OUT service markers) always count.
-  // Vacant / Arrival only count once they are ready for inspection, inspected,
-  // signed off, or have an open correction.
+  // Room checks:
+  // Every room on the daily board requires inspection except blocked / held rooms.
   const roomCheckRooms = housekeeping.filter(row=>{
-    const status=String(row.reservationStatus||'')
-    const service=String(row.serviceType||'').toUpperCase()
-    const condition=String(row.roomCondition||'')
-    const isTurnover=status==='Checkout' || status==='Out/In' || service.startsWith('OUT')
-    const isVacantOrArrival=status==='Vacant' || status==='Arrival'
-    const enteredInspection=
-      row.complete ||
-      row.checkIssueOpen ||
-      Boolean(row.fohCheckInitials) ||
-      ['Ready','Ready for Inspection','Vacant (Clean)'].includes(condition)
-    return isTurnover || (isVacantOrArrival && enteredInspection)
+    const status=String(row.reservationStatus||'').trim().toLowerCase()
+    const stripHold=String(row.stripHold||'').trim().toLowerCase()
+    return status!=='blocked' && !stripHold.includes('hold')
   })
   const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials) || r.inspected)
   const roomCheckCorrections = roomCheckRooms.filter(r=>r.checkIssueOpen)
@@ -269,7 +259,7 @@ export default function DailyDashboard({
     !splitStaff(row.assignedTo).length &&
     (Boolean(row.serviceType) || ['Checkout','Out/In'].includes(row.reservationStatus))
   )
-  const pendingChecks = roomCheckRooms.filter(row=>row.complete && !row.fohCheckInitials && !row.checkIssueOpen)
+  const pendingChecks = roomCheckRooms.filter(row=>!row.inspected && !row.fohCheckInitials && !row.checkIssueOpen)
   const arrivals = housekeeping.filter(row=>['Arrival','Out/In'].includes(row.reservationStatus))
   const arrivalProgressed = (row:HousekeepingRow) =>
     ['Ready','Occupied'].includes(String(row.roomCondition||''))
