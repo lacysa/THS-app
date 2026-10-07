@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { RotateCcw, Search, ShieldCheck, UsersRound } from 'lucide-react'
+import { Eye, RotateCcw, Search, ShieldCheck, UsersRound, X } from 'lucide-react'
 
 type ModuleAccess={
   module_key:string
@@ -15,6 +15,7 @@ type ModuleAccess={
 }
 type StaffRow={
   userId:string
+  memberId:string|null
   name:string
   fullName:string
   email:string|null
@@ -30,6 +31,7 @@ export default function StaffAccessBoard(){
   const [search,setSearch]=useState('')
   const [loading,setLoading]=useState(true)
   const [message,setMessage]=useState('')
+  const [previewOpen,setPreviewOpen]=useState(false)
 
   async function load(){
     setLoading(true)
@@ -57,7 +59,7 @@ export default function StaffAccessBoard(){
     const r=await fetch('/api/staff-access',{
       method:'POST',
       headers:{'content-type':'application/json'},
-      body:JSON.stringify({user_id:selected.userId,module_key:module.module_key,allowed})
+      body:JSON.stringify({user_id:selected.userId,staff_member_id:selected.memberId,module_key:module.module_key,allowed})
     })
     const d=await r.json().catch(()=>({}))
     if(!r.ok){setMessage(d.error||'Could not update access.');return}
@@ -74,6 +76,12 @@ export default function StaffAccessBoard(){
   }
 
   if(loading) return <div className="staff-access-loading">Loading staff…</div>
+
+  const previewGroups=selected ? [
+    {label:'Overview',items:selected.modules.filter(m=>m.effectiveAccess&&m.department==='overview')},
+    {label:'Breakfast',items:selected.modules.filter(m=>m.effectiveAccess&&m.department==='breakfast')},
+    {label:'Operations',items:selected.modules.filter(m=>m.effectiveAccess&&!['overview','breakfast'].includes(m.department))}
+  ].filter(group=>group.items.length) : []
 
   return <div className="staff-access-page">
     {message&&<div className="staff-access-message">{message}</div>}
@@ -115,10 +123,15 @@ export default function StaffAccessBoard(){
             <h2>{selected.name}</h2>
             <p>{selected.jobTitle||selected.email||''}</p>
           </div>
-          <div className="staff-access-summary">
-            <ShieldCheck size={18}/>
-            <strong>{selected.modules.filter(m=>m.effectiveAccess).length}</strong>
-            <span>modules visible</span>
+          <div className="staff-access-header-actions">
+            {!selected.isOwner&&<button type="button" className="staff-access-preview-btn" onClick={()=>setPreviewOpen(true)}>
+              <Eye size={16}/> Preview view
+            </button>}
+            <div className="staff-access-summary">
+              <ShieldCheck size={18}/>
+              <strong>{selected.modules.filter(m=>m.effectiveAccess).length}</strong>
+              <span>modules visible</span>
+            </div>
           </div>
         </header>
 
@@ -150,7 +163,7 @@ export default function StaffAccessBoard(){
                   <input
                     type="checkbox"
                     checked={module.effectiveAccess}
-                    disabled={selected.isOwner || module.module_key==='staff'}
+                    disabled={selected.isOwner || module.module_key==='staff' || !selected.memberId || !module.enabled}
                     onChange={e=>void setOverride(module,e.target.checked)}
                   />
                   <span>{module.effectiveAccess?'Visible':'Hidden'}</span>
@@ -160,5 +173,51 @@ export default function StaffAccessBoard(){
         </div>
       </section>}
     </div>
+
+    {selected&&previewOpen&&<div className="staff-preview-backdrop" role="dialog" aria-modal="true" aria-label={`Preview as ${selected.name}`}>
+      <div className="staff-preview-modal">
+        <div className="staff-preview-topbar">
+          <div>
+            <span>OWNER PREVIEW</span>
+            <strong>Previewing {selected.name}</strong>
+            <small>{selected.jobTitle||selected.roleName||'Staff'}</small>
+          </div>
+          <button type="button" onClick={()=>setPreviewOpen(false)} aria-label="Close preview"><X size={18}/></button>
+        </div>
+
+        <div className="staff-preview-shell">
+          <aside>
+            <div className="staff-preview-brand">THS</div>
+            {previewGroups.map(group=><div className="staff-preview-group" key={group.label}>
+              <span>{group.label}</span>
+              {group.items.map(module=><div className="staff-preview-nav-item" key={module.module_key}>{module.label}</div>)}
+            </div>)}
+            {!previewGroups.length&&<div className="staff-preview-empty">No modules currently visible.</div>}
+          </aside>
+          <main>
+            <div className="staff-preview-page-head">
+              <div>
+                <span>THE HOTEL SAUGATUCK</span>
+                <h3>{selected.modules.find(m=>m.effectiveAccess)?.label||'No access'}</h3>
+              </div>
+              <div className="staff-preview-avatar">{selected.name.slice(0,2).toUpperCase()}</div>
+            </div>
+            <div className="staff-preview-content">
+              <div className="staff-preview-card">
+                <strong>This is an access preview.</strong>
+                <p>It shows the modules and navigation {selected.name} will see after signing in. It does not impersonate their account or expose guest data as them.</p>
+              </div>
+              <div className="staff-preview-visible-list">
+                <span>VISIBLE MODULES</span>
+                {selected.modules.filter(m=>m.effectiveAccess).map(module=><div key={module.module_key}>
+                  <strong>{module.label}</strong>
+                  <small>{module.override===null?'Role default':'Individual override'}</small>
+                </div>)}
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>}
   </div>
 }
