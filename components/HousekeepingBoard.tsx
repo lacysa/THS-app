@@ -184,6 +184,9 @@ export default function HousekeepingBoard() {
   const [openPackageRoomId, setOpenPackageRoomId] = useState<string | null>(null)
   const [selfChecks,setSelfChecks] = useState<Record<string,SelfCheckState>>({})
   const rowsRef = useRef<RoomRow[]>([])
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
+  const topScrollRef = useRef<HTMLDivElement | null>(null)
+  const syncingScrollRef = useRef(false)
   const dateRef = useRef(date)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -845,7 +848,31 @@ export default function HousekeepingBoard() {
       {loading ? (
         <div className="module-empty">Loading rooms…</div>
       ) : (
-        <div className="hsk-table-wrapper">
+        <>
+          <div
+            className="hsk-top-scrollbar"
+            ref={topScrollRef}
+            onScroll={e=>{
+              if(syncingScrollRef.current) return
+              syncingScrollRef.current=true
+              if(tableScrollRef.current) tableScrollRef.current.scrollLeft=e.currentTarget.scrollLeft
+              requestAnimationFrame(()=>{ syncingScrollRef.current=false })
+            }}
+            aria-label="Scroll housekeeping table horizontally"
+          >
+            <div className="hsk-top-scrollbar-inner"/>
+          </div>
+
+          <div
+            className="hsk-table-wrapper"
+            ref={tableScrollRef}
+            onScroll={e=>{
+              if(syncingScrollRef.current) return
+              syncingScrollRef.current=true
+              if(topScrollRef.current) topScrollRef.current.scrollLeft=e.currentTarget.scrollLeft
+              requestAnimationFrame(()=>{ syncingScrollRef.current=false })
+            }}
+          >
           <table className="hsk-table">
             <thead>
               <tr>
@@ -1106,7 +1133,8 @@ export default function HousekeepingBoard() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   )
