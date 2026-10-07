@@ -657,6 +657,7 @@ export default function RoomBoard(){
                       </span>
                     )}
                     {row.stripHold&&<span className="rb-badge warn">{row.stripHold}</span>}
+                    {row.notes&&<span className="rb-badge rb-note-badge" title={row.notes}><b>Note</b> {row.notes}</span>}
                   </div>
                 </div>
                 <button
