@@ -14,7 +14,8 @@ import {
   Search,
   Check,
   ChevronDown,
-  UtensilsCrossed
+  UtensilsCrossed,
+  ClipboardCheck
 } from 'lucide-react'
 
 type BreakfastStatus = 'none' | 'needed' | 'received' | 'declined'
@@ -78,6 +79,17 @@ type Access = {
   email?: string | null
   roleName?: string | null
   isAdmin?: boolean
+}
+
+type ChecklistItem = { id:string; zone:string; label:string; sort_order?:number }
+type SelfCheckState = {
+  open:boolean
+  loading:boolean
+  saving:boolean
+  items:ChecklistItem[]
+  checked:string[]
+  submitted:boolean
+  submittedAt?:string|null
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
@@ -169,6 +181,7 @@ export default function HousekeepingBoard() {
   const [openStaffRoomId, setOpenStaffRoomId] = useState<string | null>(null)
   const [staffSearch, setStaffSearch] = useState('')
   const [openPackageRoomId, setOpenPackageRoomId] = useState<string | null>(null)
+  const [selfChecks,setSelfChecks] = useState<Record<string,SelfCheckState>>({})
   const rowsRef = useRef<RoomRow[]>([])
   const dateRef = useRef(date)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -195,6 +208,7 @@ export default function HousekeepingBoard() {
     setMessage('')
     setDirty(false)
     setSaveState('idle')
+    setSelfChecks({})
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
 
@@ -391,6 +405,97 @@ export default function HousekeepingBoard() {
     return names.length ? names.join(', ') : 'Select packages'
   }
 
+
+  async function loadSelfCheck(room:RoomRow) {
+    const current=selfChecks[room.roomId]
+    if(current?.items?.length){
+      setSelfChecks(state=>({...state,[room.roomId]:{...current,open:!current.open}}))
+      return
+    }
+
+    setSelfChecks(state=>({...state,[room.roomId]:{
+      open:true,loading:true,saving:false,items:[],checked:[],submitted:false,submittedAt:null
+    }}))
+
+    try{
+      const r=await fetch(`/api/housekeeping/self-check?date=${encodeURIComponent(dateRef.current)}&roomId=${encodeURIComponent(room.roomId)}`,{cache:'no-store'})
+      const d=await r.json().catch(()=>({}))
+      if(!r.ok) throw new Error(d.error||'Could not load room checklist.')
+      setSelfChecks(state=>({...state,[room.roomId]:{
+        open:true,
+        loading:false,
+        saving:false,
+        items:d.items||[],
+        checked:d.submitted?(d.items||[]).map((item:any)=>String(item.id)):[],
+        submitted:Boolean(d.submitted),
+        submittedAt:d.submittedAt||null
+      }}))
+    }catch(error:any){
+      setSelfChecks(state=>({...state,[room.roomId]:{
+        open:true,loading:false,saving:false,items:[],checked:[],submitted:false,submittedAt:null
+      }}))
+      setMessage(error?.message||'Could not load room checklist.')
+    }
+  }
+
+  function toggleSelfCheckItem(roomId:string,itemId:string){
+    setSelfChecks(state=>{
+      const current=state[roomId]
+      if(!current || current.submitted) return state
+      const checked=current.checked.includes(itemId)
+        ? current.checked.filter(id=>id!==itemId)
+        : [...current.checked,itemId]
+      return {...state,[roomId]:{...current,checked}}
+    })
+  }
+
+  async function submitSelfCheck(room:RoomRow){
+    const current=selfChecks[room.roomId]
+    if(!current || current.saving) return
+    if(current.checked.length!==current.items.length){
+      setMessage('Check every room checklist item before submitting.')
+      return
+    }
+
+    setSelfChecks(state=>({...state,[room.roomId]:{...current,saving:true}}))
+    try{
+      const r=await fetch('/api/housekeeping/self-check',{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({
+          date:dateRef.current,
+          roomId:room.roomId,
+          checkedItemIds:current.checked
+        })
+      })
+      const d=await r.json().catch(()=>({}))
+      if(!r.ok) throw new Error(d.error||'Could not submit room checklist.')
+
+      setSelfChecks(state=>({...state,[room.roomId]:{
+        ...state[room.roomId],
+        saving:false,
+        submitted:true,
+        submittedAt:d.submittedAt||new Date().toISOString()
+      }}))
+
+      setRows(currentRows=>{
+        const next=currentRows.map(item=>item.roomId===room.roomId?{
+          ...item,
+          housekeeperAttested:true,
+          housekeeperAttestedBy:d.housekeeperId||'self',
+          housekeeperAttestedName:d.housekeeperName||access?.preferredName||access?.name||'You',
+          housekeeperAttestedAt:d.submittedAt||new Date().toISOString()
+        }:item)
+        rowsRef.current=next
+        return next
+      })
+      setMessage(`${room.roomName} checklist submitted. You can now mark the room complete.`)
+    }catch(error:any){
+      setSelfChecks(state=>({...state,[room.roomId]:{...state[room.roomId],saving:false}}))
+      setMessage(error?.message||'Could not submit room checklist.')
+    }
+  }
+
   async function flagCheckIssue(row:RoomRow) {
     const note = (issueDrafts[row.roomId] || '').trim()
     if (!note) {
@@ -437,14 +542,6 @@ export default function HousekeepingBoard() {
     await load()
   }
 
-  async function attestRoom(row:RoomRow, checked:boolean) {
-    patch(row.roomId,{
-      housekeeperAttested: checked,
-      housekeeperAttestedBy: checked ? 'pending-self' : null,
-      housekeeperAttestedName: checked ? (access?.preferredName || access?.name || 'You') : null,
-      housekeeperAttestedAt: checked ? new Date().toISOString() : null
-    })
-  }
 
   async function signOff(row: RoomRow, kind: 'ha' | 'foh') {
     if (!row.complete) {
@@ -590,15 +687,66 @@ export default function HousekeepingBoard() {
                   />
                 </label>
 
-                <label className="hsk-attestation">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(row.housekeeperAttested)}
-                    onChange={e => void attestRoom(row,e.target.checked)}
-                    disabled={row.complete}
-                  />
-                  <span>I attest that this room has been fully cleaned, reset, and meets The Hotel Saugatuck standards.</span>
-                </label>
+                <div className="hsk-self-check">
+                  <button
+                    type="button"
+                    className={row.housekeeperAttested ? 'hsk-self-check-toggle complete' : 'hsk-self-check-toggle'}
+                    onClick={()=>void loadSelfCheck(row)}
+                  >
+                    <ClipboardCheck size={16}/>
+                    <span>
+                      <strong>{row.housekeeperAttested ? 'Room checklist complete' : 'Complete room checklist'}</strong>
+                      <small>{row.housekeeperAttestedAt ? `Submitted ${formatShortTime(row.housekeeperAttestedAt)}` : 'Required before the room can be finalized'}</small>
+                    </span>
+                    <ChevronDown size={16}/>
+                  </button>
+
+                  {selfChecks[row.roomId]?.open && (
+                    <div className="hsk-self-check-panel">
+                      {selfChecks[row.roomId]?.loading ? (
+                        <div className="hsk-self-check-loading">Loading checklist…</div>
+                      ) : (
+                        <>
+                          {[...new Set((selfChecks[row.roomId]?.items||[]).map(item=>item.zone))].map(zone=>(
+                            <section key={zone} className="hsk-self-check-zone">
+                              <h4>{zone}</h4>
+                              {(selfChecks[row.roomId]?.items||[]).filter(item=>item.zone===zone).map(item=>(
+                                <label key={item.id} className={selfChecks[row.roomId]?.checked.includes(item.id)?'checked':''}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selfChecks[row.roomId]?.checked.includes(item.id)||false}
+                                    onChange={()=>toggleSelfCheckItem(row.roomId,item.id)}
+                                    disabled={Boolean(selfChecks[row.roomId]?.submitted)}
+                                  />
+                                  <span>{item.label}</span>
+                                </label>
+                              ))}
+                            </section>
+                          ))}
+                          {!selfChecks[row.roomId]?.submitted && (
+                            <button
+                              type="button"
+                              className="ops-primary-btn hsk-self-check-submit"
+                              onClick={()=>void submitSelfCheck(row)}
+                              disabled={
+                                Boolean(selfChecks[row.roomId]?.saving) ||
+                                (selfChecks[row.roomId]?.checked.length||0)!==(selfChecks[row.roomId]?.items.length||0)
+                              }
+                            >
+                              <Check size={16}/>
+                              {selfChecks[row.roomId]?.saving?'Submitting…':'Submit room checklist'}
+                            </button>
+                          )}
+                          {selfChecks[row.roomId]?.submitted && (
+                            <div className="hsk-self-check-confirmation">
+                              <Check size={15}/> Checklist attested and locked for this attempt.
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <button
                   type="button"
