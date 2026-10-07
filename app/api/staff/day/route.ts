@@ -44,7 +44,7 @@ export async function GET(req:NextRequest) {
   const admin = createSupabaseAdmin()
   const { data:taggedBreakfastRooms,error:taggedBreakfastError } = await admin
     .from('housekeeping_daily_rooms')
-    .select('room_id,rooms(id,name,sort_order)')
+    .select('room_id,breakfast_skipped,breakfast_skipped_at,rooms(id,name,sort_order)')
     .eq('service_date',previousDate(date))
     .eq('breakfast_tag',true)
 
@@ -137,12 +137,14 @@ export async function GET(req:NextRequest) {
       service_date:date,
       last_name:'',
       time_slot:null,
-      status:'scheduled',
+      status:row.breakfast_skipped ? 'declined' : 'scheduled',
       menu_submitted:false,
       latest_submission_id:null,
       guest_token:null,
       rooms:row.rooms,
       taggedOnly:true,
+      breakfastSkipped:Boolean(row.breakfast_skipped),
+      breakfastSkippedAt:row.breakfast_skipped_at||null,
       note:'',
       displayTime:'Unscheduled'
     }))
