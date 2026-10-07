@@ -25,10 +25,10 @@ export async function GET() {
       .eq('active',true)
       .order('name'),
     admin.from('app_modules').select('*').eq('active',true).order('sort_order'),
-    admin.from('staff_members').select('id,auth_user_id'),
+    admin.from('staff_members').select('id,auth_user_id,name,job_title,active').eq('active',true),
     admin.from('staff_member_capabilities').select('staff_member_id,capability_key'),
     admin.from('role_permissions').select('role_id,allowed,app_permissions(permission_key)').eq('allowed',true),
-    admin.from('staff_module_access').select('user_id,module_key,allowed')
+    admin.from('staff_module_access').select('staff_member_id,module_key,allowed')
   ])
 
   if(profilesError) return NextResponse.json({error:profilesError.message},{status:400})
@@ -55,12 +55,12 @@ export async function GET() {
     permissionsByRole.set(id,list)
   }
 
-  const overrideByUser=new Map<string,Record<string,boolean>>()
+  const overrideByMember=new Map<string,Record<string,boolean>>()
   for(const row of overrides||[]){
-    const userId=String(row.user_id)
-    const map=overrideByUser.get(userId)||{}
+    const memberId=String(row.staff_member_id)
+    const map=overrideByMember.get(memberId)||{}
     map[String(row.module_key)]=Boolean(row.allowed)
-    overrideByUser.set(userId,map)
+    overrideByMember.set(memberId,map)
   }
 
   const staff=(profiles||[]).map((profile:any)=>{
@@ -83,7 +83,7 @@ export async function GET() {
       canManageModules:Boolean(roleRaw?.can_manage_modules),
       permissions:profile.role_id ? (permissionsByRole.get(String(profile.role_id))||[]) : [],
       capabilities:memberId ? (capsByMember.get(memberId)||[]) : [],
-      moduleOverrides:overrideByUser.get(userId)||{}
+      moduleOverrides:memberId ? (overrideByMember.get(memberId)||{}) : {}
     }
 
     const moduleAccess=(modules||[]).map((module:any)=>{
@@ -104,6 +104,7 @@ export async function GET() {
 
     return {
       userId,
+      memberId:memberId||null,
       name:profile.preferred_name||profile.name||'Staff',
       fullName:profile.name||'Staff',
       email:profile.email||null,
@@ -123,27 +124,31 @@ export async function POST(req:NextRequest) {
 
   const body=await req.json()
   const userId=String(body.user_id||'')
+  const memberId=String(body.staff_member_id||'')
   const moduleKey=String(body.module_key||'')
   const allowed=body.allowed
 
-  if(!userId || !moduleKey) return NextResponse.json({error:'Missing staff member or module.'},{status:400})
+  if(!userId || !memberId || !moduleKey) return NextResponse.json({error:'Missing staff member or module.'},{status:400})
   if(allowed!==null && typeof allowed!=='boolean') return NextResponse.json({error:'Invalid access value.'},{status:400})
   if(userId===access!.userId) return NextResponse.json({error:'Owner access cannot be changed here.'},{status:400})
   if(moduleKey==='staff') return NextResponse.json({error:'Staff management is Owner-only.'},{status:400})
 
   const admin=createSupabaseAdmin()
 
+  const {data:member}=await admin.from('staff_members').select('id,auth_user_id').eq('id',memberId).eq('auth_user_id',userId).maybeSingle()
+  if(!member) return NextResponse.json({error:'Staff member mapping was not found.'},{status:404})
+
   if(allowed===null){
-    const {error}=await admin.from('staff_module_access').delete().eq('user_id',userId).eq('module_key',moduleKey)
+    const {error}=await admin.from('staff_module_access').delete().eq('staff_member_id',memberId).eq('module_key',moduleKey)
     if(error) return NextResponse.json({error:error.message},{status:400})
   }else{
     const {error}=await admin.from('staff_module_access').upsert({
-      user_id:userId,
+      staff_member_id:memberId,
       module_key:moduleKey,
       allowed,
       updated_by:access!.userId,
       updated_at:new Date().toISOString()
-    },{onConflict:'user_id,module_key'})
+    },{onConflict:'staff_member_id,module_key'})
     if(error) return NextResponse.json({error:error.message},{status:400})
   }
 
