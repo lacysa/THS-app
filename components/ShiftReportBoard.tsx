@@ -12,6 +12,7 @@ type AutoData = {
   todayStaff:any[]
   tomorrowStaff:any[]
   tomorrowHousekeeping:any[]
+  tomorrowDessertRooms:any[]
 }
 
 type Report = {
@@ -52,7 +53,7 @@ export default function ShiftReportBoard() {
   const [shift,setShift] = useState('Daily')
   const [tab,setTab] = useState<'report'|'room-notes'|'handoff'|'management'>('report')
   const [report,setReport] = useState<Report|null>(null)
-  const [auto,setAuto] = useState<AutoData>({breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[],todayStaff:[],tomorrowStaff:[],tomorrowHousekeeping:[]})
+  const [auto,setAuto] = useState<AutoData>({breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[],todayStaff:[],tomorrowStaff:[],tomorrowHousekeeping:[],tomorrowDessertRooms:[]})
   const [canManage,setCanManage] = useState(false)
   const [currentStaffName,setCurrentStaffName] = useState('Staff')
   const [loading,setLoading] = useState(true)
@@ -78,7 +79,7 @@ export default function ShiftReportBoard() {
       if (!reportRes.ok) throw new Error(rd.error || 'Could not load shift report.')
       if (!notesRes.ok) throw new Error(nd.error || 'Could not load room notes.')
       setReport(rd.report || null)
-      setAuto(rd.auto || {breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[],todayStaff:[],tomorrowStaff:[],tomorrowHousekeeping:[]})
+      setAuto(rd.auto || {breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[],todayStaff:[],tomorrowStaff:[],tomorrowHousekeeping:[],tomorrowDessertRooms:[]})
       setCanManage(Boolean(rd.access?.canManageReport))
       setCurrentStaffName(rd.access?.currentStaffName || 'Staff')
       const r = rd.report || {}
@@ -166,7 +167,8 @@ export default function ShiftReportBoard() {
       menusReceived,
       menusMissing,
       breakfastExpected:scheduledBreakfast.length,
-      dessertsTonight:menusReceived,
+      dessertsTonight:(auto.tomorrowDessertRooms || []).length,
+      dessertRooms:auto.tomorrowDessertRooms || [],
       todayStaff:auto.todayStaff || [],
       tomorrowStaff:auto.tomorrowStaff || [],
       tomorrowCleans:tomorrowCleans.length,
@@ -316,19 +318,6 @@ export default function ShiftReportBoard() {
         {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site:</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
-      <section className="shift-print-section">
-        <h3>Tomorrow · {auto.breakfastDate}</h3>
-        <div className="shift-print-summary-grid shift-print-summary-six">
-          <div><span>Staff scheduled</span><strong>{summary.tomorrowStaff.length}</strong></div>
-          <div><span>Room cleans</span><strong>{summary.tomorrowCleans}</strong></div>
-          <div><span>Refreshes</span><strong>{summary.tomorrowRefreshes}</strong></div>
-          <div><span>Breakfast rooms</span><strong>{summary.breakfastExpected}</strong></div>
-          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
-          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
-        </div>
-        {summary.tomorrowStaff.length>0 && <p className="shift-print-narrative"><strong>Scheduled:</strong> {summary.tomorrowStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
-      </section>
-
       {actionItems.length>0 && <section className="shift-print-section">
         <h3>Action Required / Handoff</h3>
         <ul className="shift-print-action-list">
@@ -363,6 +352,21 @@ export default function ShiftReportBoard() {
       {draft.suppliesNotes.trim() && <section className="shift-print-section"><h3>Supplies / Inventory</h3><p>{authoredText(draft.suppliesNotes,'supplies')}</p></section>}
       {draft.tomorrowNotes.trim() && <section className="shift-print-section"><h3>Tomorrow / Follow-up</h3><p>{authoredText(draft.tomorrowNotes,'tomorrow')}</p></section>}
       {draft.generalNotes.trim() && <section className="shift-print-section"><h3>General Notes</h3><p>{authoredText(draft.generalNotes,'general')}</p></section>}
+
+      <section className="shift-print-section">
+        <h3>Tomorrow · {auto.breakfastDate}</h3>
+        <div className="shift-print-summary-grid shift-print-summary-six">
+          <div><span>Staff scheduled</span><strong>{summary.tomorrowStaff.length}</strong></div>
+          <div><span>Room cleans</span><strong>{summary.tomorrowCleans}</strong></div>
+          <div><span>Refreshes</span><strong>{summary.tomorrowRefreshes}</strong></div>
+          <div><span>Breakfast rooms</span><strong>{summary.breakfastExpected}</strong></div>
+          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
+          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
+        </div>
+        {summary.tomorrowStaff.length>0 && <p className="shift-print-narrative"><strong>Scheduled:</strong> {summary.tomorrowStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
+        {summary.dessertRooms.length>0 && <p className="shift-print-narrative"><strong>Dessert rooms:</strong> {summary.dessertRooms.map((r:any)=>r.roomName).join(', ')}</p>}
+      </section>
+
       {draft.managementNotes.trim() && <section className="shift-print-section"><h3>Management Notes</h3><p>{authoredText(draft.managementNotes,'management')}</p></section>}
     </div>
 
@@ -383,25 +387,6 @@ export default function ShiftReportBoard() {
         {summary.todayStaff.length>0 && <div className="shift-staff-strip">
           {summary.todayStaff.map((person:any)=><span key={person.staffMemberId}><strong>{person.name}</strong><small>{person.roleLabel||'On site'}</small></span>)}
         </div>}
-      </section>
-
-      <section className="shift-section shift-snapshot-section shift-tomorrow-section">
-        <div className="shift-day-heading">
-          <div><span>TOMORROW</span><h3>{auto.breakfastDate}</h3></div>
-          <small>What the next day is already scheduled to require</small>
-        </div>
-        <div className="shift-snapshot-grid">
-          <div><span>Staff scheduled</span><strong>{summary.tomorrowStaff.length}</strong></div>
-          <div><span>Room cleans</span><strong>{summary.tomorrowCleans}</strong></div>
-          <div><span>Refreshes</span><strong>{summary.tomorrowRefreshes}</strong></div>
-          <div><span>Breakfast rooms</span><strong>{summary.breakfastExpected}</strong></div>
-          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
-          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
-        </div>
-        {summary.tomorrowStaff.length>0 && <div className="shift-staff-strip">
-          {summary.tomorrowStaff.map((person:any)=><span key={person.staffMemberId}><strong>{person.name}</strong><small>{person.roleLabel||'Scheduled'}</small></span>)}
-        </div>}
-        <p className="shift-dessert-note">Desserts tonight currently follows tomorrow breakfast rooms with a received menu and excludes skipped breakfast rooms.</p>
       </section>
 
       <section className="shift-section shift-action-section">
@@ -441,6 +426,30 @@ export default function ShiftReportBoard() {
       <section className="shift-section"><h3>Supplies / Inventory</h3>{textarea('suppliesNotes','Supplies','Running low, ordered today, deliveries received.','supplies')}</section>
       <section className="shift-section"><h3>Tomorrow / Follow-up</h3>{textarea('tomorrowNotes','Tomorrow priorities','Room follow-up, breakfast outstanding, maintenance carryover, priority tasks.','tomorrow')}</section>
       <section className="shift-section"><h3>General Notes</h3>{textarea('generalNotes','General notes','Anything else that belongs in the daily record.','general')}</section>
+
+      <section className="shift-section shift-snapshot-section shift-tomorrow-section">
+        <div className="shift-day-heading">
+          <div><span>TOMORROW</span><h3>{auto.breakfastDate}</h3></div>
+          <small>Scheduled staffing, room workload, breakfast, and tonight&apos;s dessert prep</small>
+        </div>
+        <div className="shift-snapshot-grid">
+          <div><span>Staff scheduled</span><strong>{summary.tomorrowStaff.length}</strong></div>
+          <div><span>Room cleans</span><strong>{summary.tomorrowCleans}</strong></div>
+          <div><span>Refreshes</span><strong>{summary.tomorrowRefreshes}</strong></div>
+          <div><span>Breakfast rooms</span><strong>{summary.breakfastExpected}</strong></div>
+          <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
+          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
+        </div>
+        {summary.tomorrowStaff.length>0 && <div className="shift-staff-strip">
+          {summary.tomorrowStaff.map((person:any)=><span key={person.staffMemberId}><strong>{person.name}</strong><small>{person.roleLabel||'Scheduled'}</small></span>)}
+        </div>}
+        {summary.dessertRooms.length>0 && <div className="shift-dessert-rooms">
+          <strong>Dessert rooms</strong>
+          <span>{summary.dessertRooms.map((room:any)=>room.roomName).join(', ')}</span>
+        </div>}
+        <p className="shift-dessert-note">Desserts are counted from tomorrow&apos;s breakfast-inclusive room rates, not from menu submission timing.</p>
+      </section>
+
       <section className="shift-section full"><h3>Management Notes</h3>{textarea('managementNotes','Manager-only notes','Attendance concerns, performance issues, guest compensation decisions, incidents, disciplinary matters, or other restricted notes.','management')}</section>
     </div> : tab==='room-notes' ? <div className="shift-section full">
       <h3>Room Notes</h3>
