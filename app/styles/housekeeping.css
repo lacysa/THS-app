@@ -1631,3 +1631,17 @@ html[data-theme="dark"] .hsk-add-hold-task{
   border-color:#655b88;
   color:#d8cff4;
 }
+
+
+/* Dirty carry-forward status */
+.hsk-table tbody tr.hsk-status-dirty td:first-child{border-left-color:#b55252}
+.hsk-status-select.hsk-status-dirty{
+  background:#fbecec;
+  border-color:#d9a3a3;
+  color:#8a3f3f;
+}
+.hsk-setup-status.hsk-status-dirty{
+  background:#fbecec;
+  border-color:#d9a3a3;
+  color:#8a3f3f;
+}
