@@ -980,3 +980,11 @@ html[data-theme="dark"] .hsk-assigned-service-controls button.active{
   border-color:#557187;
   color:#dceaf4;
 }
+
+
+/* Keep both unified views constrained to the Housekeeping content column. */
+.housekeeping-workspace .rb-page,
+.housekeeping-workspace .hsk-module{
+  min-width:0;
+  max-width:100%;
+}
