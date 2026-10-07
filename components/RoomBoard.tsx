@@ -29,7 +29,7 @@ type RoomRow = {
   checkIssueOpen?:boolean
 }
 
-type StaffOption={id:string;name:string;roleLabel?:string;shiftStart?:string|null;shiftEnd?:string|null;onSite?:boolean}
+type StaffOption={id:string;name:string;roleLabel?:string;fullRoomCleanLimit?:number;shiftStart?:string|null;shiftEnd?:string|null;onSite?:boolean}
 type PackageOption={id:string;name:string;price:number|null;available:boolean}
 type Access={
   name?:string|null
@@ -226,9 +226,34 @@ export default function RoomBoard(){
     setSaveState('saved')
   }
 
+  function isFullRoomClean(row:RoomRow){
+    const status=normalize(row.reservationStatus)
+    return status==='checkout'||status==='out/in'
+  }
+
+  function fullCleanCountFor(name:string){
+    const target=normalize(name)
+    return rowsRef.current.filter(candidate=>
+      isFullRoomClean(candidate) &&
+      splitAssigned(candidate.assignedTo).some(person=>normalize(person)===target)
+    ).length
+  }
+
   function toggleStaff(row:RoomRow,name:string){
     const current=splitAssigned(row.assignedTo)
-    const next=current.includes(name)?current.filter(x=>x!==name):[...current,name]
+    const checked=current.includes(name)
+
+    if(!checked&&isFullRoomClean(row)){
+      const option=[...staffOptions,...allStaffOptions].find(person=>normalize(person.name)===normalize(name))
+      const limit=Number(option?.fullRoomCleanLimit??2)
+      const currentCount=fullCleanCountFor(name)
+      if(currentCount>=limit){
+        setMessage(`${name} is limited to ${limit} full room clean${limit===1?'':'s'} per shift. Reassign a Checkout/Out-In room or increase their limit first.`)
+        return
+      }
+    }
+
+    const next=checked?current.filter(x=>x!==name):[...current,name]
     patch(row.roomId,{assignedTo:next.join(', ')})
   }
 
@@ -758,10 +783,22 @@ export default function RoomBoard(){
                   <div className="rb-chip-list">
                     {(showAllStaff?allStaffOptions:staffOptions).map(option=>{
                       const checked=staff.includes(option.name)
-                      const meta=!showAllStaff && option.onSite
-                        ? [option.roleLabel,option.shiftStart&&option.shiftEnd?`${option.shiftStart.slice(0,5)}–${option.shiftEnd.slice(0,5)}`:''].filter(Boolean).join(' · ')
-                        : ''
-                      return <button type="button" key={option.id} className={checked?'is-selected':''} onClick={()=>toggleStaff(row,option.name)} title={meta||undefined}>
+                      const fullCleanCount=fullCleanCountFor(option.name)
+                      const fullCleanLimit=Number(option.fullRoomCleanLimit??2)
+                      const atLimit=isFullRoomClean(row)&&!checked&&fullCleanCount>=fullCleanLimit
+                      const meta=[
+                        !showAllStaff&&option.onSite?option.roleLabel:'',
+                        !showAllStaff&&option.onSite&&option.shiftStart&&option.shiftEnd?`${option.shiftStart.slice(0,5)}–${option.shiftEnd.slice(0,5)}`:'',
+                        `Full cleans ${fullCleanCount}/${fullCleanLimit}`
+                      ].filter(Boolean).join(' · ')
+                      return <button
+                        type="button"
+                        key={option.id}
+                        className={`${checked?'is-selected':''} ${atLimit?'is-at-limit':''}`}
+                        onClick={()=>toggleStaff(row,option.name)}
+                        aria-disabled={atLimit}
+                        title={atLimit?`${option.name} is at their full clean limit (${fullCleanCount}/${fullCleanLimit})`:meta||undefined}
+                      >
                         {checked&&<Check size={12}/>} {option.name}{meta&&<small>{meta}</small>}
                       </button>
                     })}
