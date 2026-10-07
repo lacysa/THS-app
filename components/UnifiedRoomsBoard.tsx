@@ -17,6 +17,7 @@ import {
 type Access={
   name?:string|null
   preferredName?:string|null
+  email?:string|null
   roleName?:string|null
   isAdmin?:boolean
   permissions?:string[]
@@ -107,6 +108,17 @@ function shortTime(value?:string|null){
   const date=new Date(value)
   if(Number.isNaN(date.getTime()))return ''
   return new Intl.DateTimeFormat('en-US',{timeZone:'America/Detroit',hour:'numeric',minute:'2-digit'}).format(date)
+}
+function managerInitials(access:Access|null){
+  if(!access)return ''
+  const combined=normalize(`${access.name||''} ${access.preferredName||''} ${access.email||''}`)
+  if(combined.includes('sarah')||combined.includes('lacysa'))return 'SL'
+  if(combined.includes('brittany')||combined.includes('hollingshead'))return 'BH'
+  if(combined.includes('david')||combined.includes('heiser'))return 'DH'
+  const raw=String(access.name||access.preferredName||'').trim()
+  const parts=raw.split(/\s+/).filter(Boolean)
+  if(parts.length>=2)return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase()
+  return raw.slice(0,2).toUpperCase()
 }
 function isManager(access:Access|null){
   if(!access)return false
@@ -433,6 +445,21 @@ export default function UnifiedRoomsBoard(){
     patch(row.roomId,{serviceType:'OUT'})
   }
 
+  function initialOut(row:RoomRow){
+    if(!isManager(access))return
+    const initials=managerInitials(access)
+    if(!initials){
+      setMessage('Manager initials could not be determined from your profile.')
+      return
+    }
+    if(!String(row.serviceType||'').toUpperCase().startsWith('OUT')){
+      setMessage('Mark the room OUT before initialing it.')
+      return
+    }
+    patch(row.roomId,{serviceType:`OUT-${initials}`})
+    setMessage('')
+  }
+
   function togglePackage(row:RoomRow,packageId:string){
     if(!isManager(access))return
     const current=Array.isArray(row.packageIds)?row.packageIds:[]
@@ -563,6 +590,9 @@ export default function UnifiedRoomsBoard(){
                   <span>Service</span>
                   <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>None</button>
                   <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>setOut(row)}>OUT</button>
+                  <button type="button" className={/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?'active':''} disabled={!String(row.serviceType||'').toUpperCase().startsWith('OUT')} onClick={()=>initialOut(row)}>
+                    {/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?String(row.serviceType||'').toUpperCase():'Initial OUT'}
+                  </button>
                   <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
                 </div>
 

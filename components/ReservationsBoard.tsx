@@ -139,7 +139,11 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
                 ? (row.staying||row.primary)
                 : null
           const dietary=cleanDiet(stay?.dietary_restrictions)
-          const turnoverReady=/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())
+          const outMarked=/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())
+          const readyForNextArrival=
+            Boolean(row.fohChecked) ||
+            ['vacant (clean)','ready'].includes(String(row.nextShiftCondition||'').trim().toLowerCase()) ||
+            ['vacant (clean)','ready'].includes(String(row.roomCondition||'').trim().toLowerCase())
           const operationalState=row.checkIssueOpen
             ? 'Needs correction'
             : row.fohChecked
@@ -166,12 +170,14 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
               <div><span>IN</span><strong>{row.arriving?.guest_name||'—'}</strong></div>
             </div>}
 
-            {isCheckoutOnly ? <div className={`reservation-checkout-only ${turnoverReady?'is-ready':'is-waiting'}`}>
+            {isCheckoutOnly ? <div className={`reservation-checkout-only ${readyForNextArrival||outMarked?'is-ready':'is-waiting'}`}>
               <span>Checkout room</span>
-              <strong>{turnoverReady?'Ready for turnover':'Awaiting OUT + initials'}</strong>
-              <small>{turnoverReady
-                ? `Marked ${String(row.serviceType||'').toUpperCase()}`
-                : 'Housekeeping must mark the room OUT and initial it before turnover begins.'}</small>
+              <strong>{readyForNextArrival?'Ready for next arrival':outMarked?'Ready for turnover':'Awaiting OUT + initials'}</strong>
+              <small>{readyForNextArrival
+                ? 'Clean and final-checked. No additional turnover is needed unless the room condition changes.'
+                : outMarked
+                  ? `Marked ${String(row.serviceType||'').toUpperCase()} · ready for housekeeping turnover.`
+                  : 'Housekeeping must mark the room OUT and initial it before turnover begins.'}</small>
             </div> : stay && <div className="reservation-card-body">
               <div className="reservation-pair"><span>Guest</span><strong>{stay.guest_name||'—'}</strong></div>
               <div className="reservation-pair"><span>Stay</span><strong>{stay.arrival_date||'—'} → {stay.checkout_date||'—'}</strong></div>
