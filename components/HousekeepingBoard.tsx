@@ -1013,6 +1013,7 @@ export default function HousekeepingBoard() {
                 const hasStripHold = Boolean(String(row.stripHold||'').trim())
                 const stripStatus = String(row.stripStatus||'')
                 const hasStaff = selectedStaff.length>0
+                const orderActive = isFullRoomClean(row)
                 const hasOrder = Number.isFinite(row.cleanOrder as number) && Number(row.cleanOrder)>0
 
                 return (
@@ -1025,7 +1026,7 @@ export default function HousekeepingBoard() {
                       <div className="hsk-room-cell">
                         <BedDouble size={15} />
                         <strong>{row.roomName}</strong>
-                        {hasOrder && (
+                        {orderActive && hasOrder && (
                           <button
                             type="button"
                             className="hsk-order-sup"
@@ -1260,8 +1261,8 @@ export default function HousekeepingBoard() {
                       </div>}
                     </td>
 
-                    <td className={(!assignmentActive||hasOrder)?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
-                      {assignmentActive && !hasOrder && (
+                    <td className={(!orderActive||hasOrder)?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
+                      {orderActive && !hasOrder && (
                         <input
                           className="order-input"
                           type="number"
