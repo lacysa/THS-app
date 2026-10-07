@@ -315,10 +315,6 @@ export default function DailyDashboard({
     }
   ].filter(group=>group.rows.length>0)
 
-  const assignedStaff = Array.from(new Set(
-    housekeeping.flatMap(row=>splitStaff(row.assignedTo))
-  )).sort((a,b)=>a.localeCompare(b))
-
   const laundryNote = departmentNotes.find(n=>n.department==='laundry')?.note || ''
   const lobbyNote = departmentNotes.find(n=>n.department==='lobby')?.note || ''
 
@@ -603,29 +599,27 @@ export default function DailyDashboard({
           </section>
         )}
 
-        {showHousekeeping && (
-          <section className="daily-panel">
-            <div className="daily-panel-head">
-              <div><Users size={17}/><strong>Today&apos;s staff</strong></div>
-              <span>{todayStaff.length} on site</span>
-            </div>
-            <div className="daily-staff-list">
-              {todayStaff.length
-                ? todayStaff.map(person=>{
-                    const roomCount=housekeeping.filter(r=>splitStaff(r.assignedTo).includes(person.name)).length
-                    return <span className="daily-staff-person" style={staffStyle(person.name)} key={person.id}>
-                      <strong>{person.name}</strong>
-                      <small>
-                        {person.roleLabel || 'On site'}
-                        {person.shiftStart && person.shiftEnd ? ` · ${formatTime(person.shiftStart)}–${formatTime(person.shiftEnd)}` : ''}
-                        {roomCount ? ` · ${roomCount} room${roomCount===1?'':'s'}` : ''}
-                      </small>
-                    </span>
-                  })
-                : <div className="daily-empty">No on-site staff schedule entered for today.</div>}
-            </div>
-          </section>
-        )}
+        <section className="daily-panel">
+          <div className="daily-panel-head">
+            <div><Users size={17}/><strong>Today&apos;s staff</strong></div>
+            <span>{todayStaff.length} on site</span>
+          </div>
+          <div className="daily-staff-list">
+            {todayStaff.length
+              ? todayStaff.map(person=>{
+                  const roomCount=housekeeping.filter(r=>splitStaff(r.assignedTo).includes(person.name)).length
+                  return <span className="daily-staff-person" style={staffStyle(person.name)} key={person.id}>
+                    <strong>{person.name}</strong>
+                    <small>
+                      {person.roleLabel || 'On site'}
+                      {person.shiftStart && person.shiftEnd ? ` · ${formatTime(person.shiftStart)}–${formatTime(person.shiftEnd)}` : ''}
+                      {roomCount ? ` · ${roomCount} room${roomCount===1?'':'s'}` : ''}
+                    </small>
+                  </span>
+                })
+              : <div className="daily-empty">No on-site staff schedule entered for today.</div>}
+          </div>
+        </section>
 
         {showMaintenance && (
           <section className="daily-panel">
