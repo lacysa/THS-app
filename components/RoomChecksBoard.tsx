@@ -42,12 +42,12 @@ export default function RoomChecksBoard(){
 
   return <div className="room-checks-page module-pretty-page">
     <div className="module-toolbar">
-      <div><div className="module-kicker">Housekeeping Quality</div><h1>Room Checks</h1><p>Checkout and out/in rooms requiring final inspection.</p></div>
+      <div><div className="module-kicker">Housekeeping Quality</div><h1>Room Checks</h1><p>Daily inspection for every room except blocked / held rooms.</p></div>
       <div className="toolbar-actions"><label className="date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="ops-secondary-btn" onClick={()=>void load(true)}><RefreshCw size={15}/>Refresh</button></div>
     </div>
     <div className="room-check-summary"><span>{counts.rooms} rooms</span><span>{counts.passed} passed</span><span className={counts.issues?'warning':''}>{counts.issues} need correction</span></div>
     {message&&<div className="module-message">{message}</div>}
-    {loading?<div className="module-empty">Loading room checks…</div>:rooms.length===0?<div className="module-empty">No checkout or out/in rooms are on the board for this date.</div>:
+    {loading?<div className="module-empty">Loading room checks…</div>:rooms.length===0?<div className="module-empty">No rooms require inspection for this date.</div>:
       <div className="room-check-list">{rooms.map(room=>{
         const done=room.items.filter(i=>i.passed!==null).length
         const failed=room.items.filter(i=>i.passed===false).length
