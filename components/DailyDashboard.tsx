@@ -1,5 +1,6 @@
 import type React from 'react'
 import Link from 'next/link'
+import { derivedLiveCondition, roomNextAction, roomWorkflowLabel } from '@/lib/room-state'
 import {
   AlertTriangle,
   BedDouble,
@@ -41,6 +42,7 @@ type HousekeepingRow = {
   fohCheckInitials:string
   checkIssueOpen:boolean
   inspected:boolean
+  housekeeperAttested:boolean
   breakfastSkipped?:boolean
   packages:string[]
   notes:string
@@ -153,10 +155,11 @@ function staffStyle(name:string) {
 }
 
 function roomCheckLabel(row:HousekeepingRow) {
-  if (row.checkIssueOpen) return 'Needs correction'
-  if (row.fohCheckInitials) return `FOH ✓ ${row.fohCheckInitials}`
-  if (row.haCheckInitials) return `HA ✓ ${row.haCheckInitials} · FOH pending`
-  return 'Pending'
+  return roomWorkflowLabel({
+    reservationStatus:row.reservationStatus,serviceType:row.serviceType,stripHold:row.stripHold,
+    complete:row.complete,inspected:row.inspected,housekeeperAttested:row.housekeeperAttested,
+    checkIssueOpen:row.checkIssueOpen,haSignedBy:row.haCheckInitials||null,fohSignedBy:row.fohCheckInitials||null,roomCondition:row.roomCondition
+  })
 }
 
 function RoomSummary({row}:{row:HousekeepingRow}) {
@@ -173,9 +176,8 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
           {row.stripHold && <span className="daily-chip warning">{row.stripHold}</span>}
           {staff.map(name=><span className="daily-chip staff" style={staffStyle(name)} key={name}><b>HSK</b> {name}</span>)}
           {row.cleanOrder!=null && <span className="daily-chip order"><b>Order</b> {row.cleanOrder}</span>}
-          <span className={`daily-chip progress ${row.complete?'done':'open'}`}>{row.complete?'Complete':'In progress'}</span>
-          {row.roomCondition && <span className="daily-chip eos"><b>Condition</b> {row.roomCondition}</span>}
-          {row.nextShiftCondition && <span className="daily-chip eos"><b>EOS</b> {row.nextShiftCondition}</span>}
+          <span className={`daily-chip progress ${roomCheckLabel(row)==='Ready for guest'?'done':'open'}`}>{roomCheckLabel(row)}</span>
+          <span className="daily-chip eos"><b>Live</b> {derivedLiveCondition({reservationStatus:row.reservationStatus,serviceType:row.serviceType,stripHold:row.stripHold,complete:row.complete,inspected:row.inspected,housekeeperAttested:row.housekeeperAttested,checkIssueOpen:row.checkIssueOpen,haSignedBy:row.haCheckInitials||null,fohSignedBy:row.fohCheckInitials||null,roomCondition:row.roomCondition})}</span>
           {(row.haCheckInitials || row.fohCheckInitials || row.checkIssueOpen) && (
             <span className={`daily-chip ${row.checkIssueOpen?'danger':''}`}>{roomCheckLabel(row)}</span>
           )}
@@ -190,10 +192,9 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
         <div><span>Strip / Hold</span><strong>{row.stripHold || '—'}</strong></div>
         <div><span>Staff</span><strong>{row.assignedTo || 'Unassigned'}</strong></div>
         <div><span>Cleaning order</span><strong>{row.cleanOrder ?? '—'}</strong></div>
-        <div><span>Progress</span><strong>{row.complete ? 'Complete' : 'In progress'}</strong></div>
-        <div><span>Live condition</span><strong>{row.roomCondition || '—'}</strong></div>
-        <div><span>End of shift</span><strong>{row.nextShiftCondition || '—'}</strong></div>
-        <div><span>Room check</span><strong>{roomCheckLabel(row)}</strong></div>
+        <div><span>Workflow</span><strong>{roomCheckLabel(row)}</strong></div>
+        <div><span>Live condition</span><strong>{derivedLiveCondition({reservationStatus:row.reservationStatus,serviceType:row.serviceType,stripHold:row.stripHold,complete:row.complete,inspected:row.inspected,housekeeperAttested:row.housekeeperAttested,checkIssueOpen:row.checkIssueOpen,haSignedBy:row.haCheckInitials||null,fohSignedBy:row.fohCheckInitials||null,roomCondition:row.roomCondition})}</strong></div>
+        <div><span>Next action</span><strong>{roomNextAction({reservationStatus:row.reservationStatus,serviceType:row.serviceType,stripHold:row.stripHold,complete:row.complete,inspected:row.inspected,housekeeperAttested:row.housekeeperAttested,checkIssueOpen:row.checkIssueOpen,haSignedBy:row.haCheckInitials||null,fohSignedBy:row.fohCheckInitials||null,roomCondition:row.roomCondition})}</strong></div>
         <div className="daily-room-detail-wide"><span>Packages</span><strong>{row.packages.length ? row.packages.join(', ') : 'None'}</strong></div>
         <div className="daily-room-detail-wide"><span>Notes</span><strong>{row.notes || 'None'}</strong></div>
         <Link href={`/housekeeping#room-${encodeURIComponent(row.roomId)}`} className="daily-room-open-link">Open in Housekeeping →</Link>
@@ -243,7 +244,7 @@ export default function DailyDashboard({
   const hkComplete = housekeepingWorkload.filter(r=>r.complete && !r.checkIssueOpen)
 
   // Room checks:
-  // Stayovers/refreshes never require the independent room-check/HA/FOH flow.
+  // Stayovers/refreshes never require the independent room-check/final-verification flow.
   const roomCheckRooms = housekeeping.filter(row=>{
     const status=String(row.reservationStatus||'').trim().toLowerCase()
     const service=String(row.serviceType||'').trim().toUpperCase()
@@ -484,7 +485,7 @@ export default function DailyDashboard({
             {pendingChecks.length>0 && (
               <Link href="/room-checks" className="daily-attention-item tone-info">
                 <span>{pendingChecks.length}</span>
-                <div><strong>Completed rooms awaiting FOH check</strong><small>{pendingChecks.map(r=>r.roomName).join(', ')}</small></div>
+                <div><strong>Rooms ready for room check</strong><small>{pendingChecks.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
             {arrivalsNotReady.length>0 && (
@@ -527,10 +528,10 @@ export default function DailyDashboard({
                 <div>
                   <strong>{row.roomName}</strong>
                   <div className="daily-room-pills">
-                    <span className={`daily-chip ${arrivalProgressed(row)?'done':'warning'}`}>{row.roomCondition || 'Not ready'}</span>
+                    <span className={`daily-chip ${arrivalProgressed(row)?'done':'warning'}`}>{derivedLiveCondition({reservationStatus:row.reservationStatus,serviceType:row.serviceType,stripHold:row.stripHold,complete:row.complete,inspected:row.inspected,housekeeperAttested:row.housekeeperAttested,checkIssueOpen:row.checkIssueOpen,haSignedBy:row.haCheckInitials||null,fohSignedBy:row.fohCheckInitials||null,roomCondition:row.roomCondition}) || 'Not ready'}</span>
                     {splitStaff(row.assignedTo).map(name=><span className="daily-chip staff" style={staffStyle(name)} key={name}>{name}</span>)}
-                    {row.fohCheckInitials && <span className="daily-chip done">FOH ✓ {row.fohCheckInitials}</span>}
-                    {!row.fohCheckInitials && <span className="daily-chip warning">Room check pending</span>}
+                    {(row.fohCheckInitials||row.haCheckInitials) && <span className="daily-chip done">Final ✓ {row.fohCheckInitials||row.haCheckInitials}</span>}
+                    {!row.fohCheckInitials&&!row.haCheckInitials && <span className="daily-chip warning">{roomNextAction({reservationStatus:row.reservationStatus,serviceType:row.serviceType,stripHold:row.stripHold,complete:row.complete,inspected:row.inspected,housekeeperAttested:row.housekeeperAttested,checkIssueOpen:row.checkIssueOpen,haSignedBy:null,fohSignedBy:null,roomCondition:row.roomCondition})}</span>}
                     {row.packages.map(pkg=><span className="daily-chip package" key={pkg}>{pkg}</span>)}
                     {row.breakfastSkipped && <span className="daily-chip breakfast-skip">Breakfast skipped</span>}
                   </div>
