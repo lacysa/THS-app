@@ -51,7 +51,7 @@ function authorInitials(name:string) {
 async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: string) {
   const breakfastDate = nextDate(date)
 
-  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes, breakfastTagRes, todayStaffRes, tomorrowStaffRes, tomorrowHousekeepingRes] = await Promise.all([
+  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes, breakfastTagRes, todayStaffRes, tomorrowStaffRes, tomorrowHousekeepingRes, tomorrowReservationsRes] = await Promise.all([
     admin.from('rooms').select('id,name,sort_order,active').eq('active', true).order('sort_order'),
     admin.from('housekeeping_daily_rooms').select('*').eq('service_date', date),
     admin.from('breakfast_bookings').select('room_id,status,menu_submitted,time_slot').eq('service_date', breakfastDate),
@@ -61,10 +61,15 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', date).eq('breakfast_tag', true),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',date).eq('work_mode','onsite'),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',breakfastDate).eq('work_mode','onsite'),
-    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,service_type,strip_hold,check_issue_open').eq('service_date',breakfastDate)
+    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,service_type,strip_hold,check_issue_open').eq('service_date',breakfastDate),
+    admin.from('reservation_stays')
+      .select('room_id,rate_plan,occupancy,updated_at')
+      .eq('active',true)
+      .lte('arrival_date',breakfastDate)
+      .gt('checkout_date',breakfastDate)
   ])
 
-  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error || todayStaffRes.error || tomorrowStaffRes.error || tomorrowHousekeepingRes.error
+  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error || todayStaffRes.error || tomorrowStaffRes.error || tomorrowHousekeepingRes.error || tomorrowReservationsRes.error
   if (error) throw new Error(error.message)
 
   const rooms = roomsRes.data || []
@@ -153,6 +158,20 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     checkIssueOpen:Boolean(row.check_issue_open)
   }))
 
+  const dessertRoomsById = new Map<string,{roomId:string;roomName:string;ratePlan:string}>()
+  for (const row of (tomorrowReservationsRes.data || [])) {
+    const roomId=String((row as any).room_id || '')
+    const ratePlan=String((row as any).rate_plan || '').trim()
+    if (!roomId || !ratePlan.toLowerCase().includes('breakfast')) continue
+    dessertRoomsById.set(roomId,{
+      roomId,
+      roomName:roomById.get(roomId) || 'Room',
+      ratePlan
+    })
+  }
+  const tomorrowDessertRooms=[...dessertRoomsById.values()]
+    .sort((a,b)=>a.roomName.localeCompare(b.roomName))
+
   return {
     breakfastDate,
     housekeeping,
@@ -161,7 +180,8 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     roomNotes,
     todayStaff,
     tomorrowStaff,
-    tomorrowHousekeeping
+    tomorrowHousekeeping,
+    tomorrowDessertRooms
   }
 }
 
