@@ -114,7 +114,6 @@ function hasAnyCapability(access:StaffAccess, keys:string[]) {
 
 export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   if (!module || module.active === false || module.enabled === false) return false
-  if (module.published === false && !access.canPreviewUnpublished) return false
 
   const key = String(module.module_key || '')
 
@@ -125,6 +124,8 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   if (Object.prototype.hasOwnProperty.call(access.moduleOverrides,key)) {
     return access.moduleOverrides[key]
   }
+
+  if (module.published === false && !access.canPreviewUnpublished) return false
 
   if (key === 'laundry' || key === 'laundry_inventory') {
     return access.isAdmin || hasAnyCapability(access,[
