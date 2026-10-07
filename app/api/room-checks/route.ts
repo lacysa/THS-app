@@ -61,6 +61,13 @@ export async function GET(req:NextRequest){
     })
     .map((r:any)=>{
       const latest=latestQualityByRoom.get(String(r.room_id))
+      const status=String(r.reservation_status||'').trim().toLowerCase()
+      const service=String(r.service_type||'').trim().toUpperCase()
+      const activeHskService=
+        ['checkout','out/in'].includes(status) ||
+        service.startsWith('OUT') ||
+        service==='RF' ||
+        Boolean(r.check_issue_open)
       return {
         roomId:String(r.room_id),
         roomName:roomMap.get(String(r.room_id))?.name||'Room',
@@ -69,10 +76,7 @@ export async function GET(req:NextRequest){
         serviceType:r.service_type||'',
         assignedTo:r.assigned_to||'',
         complete:Boolean(r.complete),
-        readyForInspection:Boolean(r.ready_for_inspection) || (
-          !String(r.service_type||'').trim() &&
-          !['checkout','out/in'].includes(String(r.reservation_status||'').trim().toLowerCase())
-        ),
+        readyForInspection:Boolean(r.ready_for_inspection) || !activeHskService,
         issueOpen:Boolean(r.check_issue_open),
         issueNote:r.check_issue_note||'',
         inspected:Boolean(r.inspected),
@@ -121,7 +125,8 @@ export async function POST(req:NextRequest){
     const activeHskService=
       ['checkout','out/in'].includes(status) ||
       String(dailyRow.service_type||'').trim().toUpperCase().startsWith('OUT') ||
-      String(dailyRow.service_type||'').trim().toUpperCase()==='RF'
+      String(dailyRow.service_type||'').trim().toUpperCase()==='RF' ||
+      Boolean(dailyRow.check_issue_open)
 
     if(activeHskService && (!dailyRow.housekeeper_attested_by||!dailyRow.housekeeper_attested_at)){
       return NextResponse.json({error:'The housekeeper must submit their own room checklist before inspection.'},{status:400})
@@ -264,6 +269,12 @@ export async function POST(req:NextRequest){
       }).eq('service_date',date).eq('room_id',roomId).is('corrected_at',null)
       if(resolveErr) throw new Error(resolveErr.message)
 
+      const currentCondition=String(dailyRow.room_condition||'')
+      let passedCondition=currentCondition
+      if(status==='checkout' || status==='vacant') passedCondition='Vacant (Clean)'
+      else if(status==='out/in') passedCondition='Ready'
+      else if(status==='arrival' && currentCondition!=='Occupied') passedCondition='Ready'
+
       const {error:updateErr}=await admin.from('housekeeping_daily_rooms').update({
         check_issue_open:false,
         check_issue_note:null,
@@ -271,7 +282,7 @@ export async function POST(req:NextRequest){
         inspected_by:person.id,
         inspected_at:now,
         ready_for_inspection:false,
-        room_condition:'Vacant (Clean)',
+        room_condition:passedCondition,
         ha_signed_by:person.id,
         ha_signed_at:now,
         updated_at:now
