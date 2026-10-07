@@ -133,9 +133,13 @@ function canInspect(access:Access|null){
 }
 function isStayover(row:RoomRow){return normalize(row.reservationStatus)==='stayover'}
 function isRefresh(row:RoomRow){return isStayover(row)&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
-function requiresRoomCheck(row:RoomRow){return !isStayover(row)}
+function isBlocked(row:RoomRow){
+  return normalize(row.reservationStatus)==='blocked'||normalize(row.stripHold).includes('hold')
+}
+function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function requiresSelfCheck(row:RoomRow){return Boolean(row.requiresQualityCheck)&&requiresRoomCheck(row)}
 function workflowState(row:RoomRow,inspection?:InspectionRoom){
+  if(isBlocked(row))return 'blocked'
   if(row.checkIssueOpen||inspection?.issueOpen)return 'correction'
   if(isStayover(row)) return row.complete?'complete':'cleaning'
   if(requiresSelfCheck(row)&&!row.housekeeperAttested)return 'self'
@@ -295,6 +299,7 @@ export default function UnifiedRoomsBoard(){
   }
 
   async function toggleComplete(row:RoomRow){
+    if(isBlocked(row)){setMessage('Blocked / held rooms are not part of the cleaning workflow.');return}
     const next=!row.complete
     if(next&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy){setMessage('Complete the room self-check before marking this clean complete.');return}
     const nextRows=rowsRef.current.map(r=>r.roomId===row.roomId?{
@@ -604,24 +609,26 @@ export default function UnifiedRoomsBoard(){
                         </div>
                       </td>
                       <td>
-                        <select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}>
+                        {isBlocked(row)?<span className="rooms-table-muted">—</span>:<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}>
                           <option value="">Unassigned</option>
                           {staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}
-                        </select>
+                        </select>}
                       </td>
                       <td>
-                        <input className="rooms-table-order" type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
+                        {isBlocked(row)?<span className="rooms-table-muted">—</span>:<input className="rooms-table-order" type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>}
                       </td>
                       <td className="rooms-table-center">
-                        <button type="button" className={row.complete?'rooms-table-check complete':'rooms-table-check'} onClick={()=>void toggleComplete(row)} title={row.complete?'Mark incomplete':'Mark complete'}>
+                        {isBlocked(row)?<span className="rooms-table-muted">—</span>:<button type="button" className={row.complete?'rooms-table-check complete':'rooms-table-check'} onClick={()=>void toggleComplete(row)} title={row.complete?'Mark incomplete':'Mark complete'}>
                           {row.complete?'✓':'○'}
-                        </button>
+                        </button>}
                       </td>
                       <td>
-                        <button type="button" className={`rooms-table-workflow ${state}`} onClick={()=>openRoomCard(row)}>
-                          <span>{state==='correction'?'Correction':state==='self'?'Self-check':state==='inspection'?'Room check':state==='foh'?'FOH check':state==='complete'?'Complete':'Cleaning'}</span>
-                          <small>{row.checkIssueOpen?'Needs attention':row.fohSignedBy?'HA ✓ · FOH ✓':row.inspected?'Check ✓':row.housekeeperAttested?'Self ✓':'Open check'}</small>
-                        </button>
+                        {isBlocked(row)
+                          ? <div className="rooms-table-workflow blocked"><span>Blocked</span><small>No cleaning or room check</small></div>
+                          : <button type="button" className={`rooms-table-workflow ${state}`} onClick={()=>openRoomCard(row)}>
+                              <span>{state==='blocked'?'Blocked':state==='correction'?'Correction':state==='self'?'Self-check':state==='inspection'?'Room check':state==='foh'?'FOH check':state==='complete'?'Complete':'Cleaning'}</span>
+                              <small>{row.checkIssueOpen?'Needs attention':row.fohSignedBy?'HA ✓ · FOH ✓':row.inspected?'Check ✓':row.housekeeperAttested?'Self ✓':'Open check'}</small>
+                            </button>}
                       </td>
                       <td>
                         <select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>
@@ -672,13 +679,13 @@ export default function UnifiedRoomsBoard(){
               </div>
             </button>
 
-            <div className="rooms-progress" aria-label="Room workflow progress">
+            {!isBlocked(row)&&<div className="rooms-progress" aria-label="Room workflow progress">
               <span className={row.complete?'done':''}>Clean</span>
               {requiresRoomCheck(row)&&<span className={row.housekeeperAttested?'done':''}>Self</span>}
               {requiresRoomCheck(row)&&<span className={row.inspected?'done':''}>Check</span>}
               {requiresRoomCheck(row)&&<span className={row.haSignedBy?'done':''}>HA</span>}
               {requiresRoomCheck(row)&&<span className={row.fohSignedBy?'done':''}>FOH</span>}
-            </div>
+            </div>}
 
             {isOpen&&<div className="rooms-card-body">
               {row.checkIssueOpen&&<div className="rooms-correction-box"><AlertTriangle size={17}/><div><strong>Correction required</strong><span>{row.checkIssueNote||'A room check found an issue that must be corrected.'}</span>{row.checkIssueByName&&<small>Flagged by {row.checkIssueByName}</small>}</div></div>}
@@ -691,41 +698,46 @@ export default function UnifiedRoomsBoard(){
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
-              {isManager(access)&&<div className="rooms-manager-edit">
-                <div className="rooms-manager-grid">
-                  <label>Reservation status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
-                  <label>Live condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{conditionOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
-                  <label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
-                  <label>Cleaning order<input type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>
-                  <label>End of shift status<select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>{endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+              {isManager(access)&&<details className="rooms-manager-details">
+                <summary>Edit room details</summary>
+                <div className="rooms-manager-edit">
+                  <div className="rooms-manager-grid">
+                    <label>Reservation status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                    <label>Live condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{conditionOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                    {!isBlocked(row)&&<label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>}
+                    {!isBlocked(row)&&<label>Cleaning order<input type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>}
+                    <label>End of shift status<select value={row.nextShiftCondition||''} onChange={e=>patch(row.roomId,{nextShiftCondition:e.target.value})}>{endOfShiftOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
+                  </div>
+
+                  <div className="rooms-service-controls">
+                    <span>Service</span>
+                    <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>None</button>
+                    <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>setOut(row)}>OUT</button>
+                    <button type="button" className={/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?'active':''} disabled={!String(row.serviceType||'').toUpperCase().startsWith('OUT')} onClick={()=>initialOut(row)}>
+                      {/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?String(row.serviceType||'').toUpperCase():'Initial OUT'}
+                    </button>
+                    <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
+                  </div>
+
+                  <div className="rooms-package-editor">
+                    <span>Room packages</span>
+                    <div>{packageOptions.filter(option=>option.available||row.packageIds.includes(option.id)).map(option=>{
+                      const checked=row.packageIds.includes(option.id)
+                      return <button type="button" key={option.id} className={checked?'selected':''} onClick={()=>togglePackage(row,option.id)}>{checked?<Check size={14}/>:null}{option.name}</button>
+                    })}</div>
+                  </div>
+
+                  <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
                 </div>
+              </details>}
 
-                <div className="rooms-service-controls">
-                  <span>Service</span>
-                  <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>None</button>
-                  <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>setOut(row)}>OUT</button>
-                  <button type="button" className={/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?'active':''} disabled={!String(row.serviceType||'').toUpperCase().startsWith('OUT')} onClick={()=>initialOut(row)}>
-                    {/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||''))?String(row.serviceType||'').toUpperCase():'Initial OUT'}
-                  </button>
-                  <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
-                </div>
+              {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Room items</strong><span>{packageNames.join(', ')}</span></div>}
+              {viewMode!=='manager'&&<label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
 
-                <div className="rooms-package-editor">
-                  <span>Room packages</span>
-                  <div>{packageOptions.filter(option=>option.available||row.packageIds.includes(option.id)).map(option=>{
-                    const checked=row.packageIds.includes(option.id)
-                    return <button type="button" key={option.id} className={checked?'selected':''} onClick={()=>togglePackage(row,option.id)}>{checked?<Check size={14}/>:null}{option.name}</button>
-                  })}</div>
-                </div>
-              </div>}
-
-              {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Selected room items</strong><span>{packageNames.join(', ')}</span></div>}
-
-              <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
-
+              {isBlocked(row)&&<div className="rooms-blocked-note"><strong>Blocked / held</strong><span>No cleaning, self-check, room check, HA, or FOH action is required.</span></div>}
               {row.claimableRefresh&&<button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void claimRefresh(row)}><UserRoundCheck size={16}/>Claim refresh</button>}
 
-              {requiresSelfCheck(row)&&(row.housekeeperAttested||self?.submitted
+              {!isBlocked(row)&&requiresSelfCheck(row)&&(row.housekeeperAttested||self?.submitted
                 ? <section className="rooms-section">
                     <div className="rooms-success-line"><Check size={16}/><strong>Self-check</strong><span>Complete ✓</span></div>
                   </section>
@@ -748,10 +760,10 @@ export default function UnifiedRoomsBoard(){
                     </>}
                   </section>)}
 
-              <section className="rooms-section">
+              {!isBlocked(row)&&<section className="rooms-section">
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
                 <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isStayover(row)?'Stayover service complete ✓':'Ready for inspection ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
-              </section>
+              </section>}
 
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&((row.inspected||inspection.inspected)&&!inspection.issueOpen
                 ? <section className="rooms-section inspection-section">
