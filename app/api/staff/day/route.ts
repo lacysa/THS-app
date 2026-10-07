@@ -19,15 +19,21 @@ export async function GET(req:NextRequest) {
   const date = req.nextUrl.searchParams.get('date')
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({message:'Invalid date'},{status:400})
 
-  const { data:bookings,error:bookingError } = await supabase
+  const includeDeclined = req.nextUrl.searchParams.get('includeDeclined') === '1'
+
+  let bookingQuery = supabase
     .from('breakfast_bookings')
     .select(`
       id,service_date,last_name,time_slot,status,menu_submitted,latest_submission_id,guest_token,
       rooms(id,name,sort_order)
     `)
     .eq('service_date',date)
-    .eq('status','scheduled')
-    .order('time_slot')
+
+  bookingQuery = includeDeclined
+    ? bookingQuery.in('status',['scheduled','declined'])
+    : bookingQuery.eq('status','scheduled')
+
+  const { data:bookings,error:bookingError } = await bookingQuery.order('time_slot')
 
   if (bookingError) return NextResponse.json({message:bookingError.message},{status:500})
 
