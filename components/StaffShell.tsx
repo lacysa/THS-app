@@ -361,6 +361,7 @@ export default function StaffShell({
         .filter(
           m =>
             m.module_key !== 'breakfast_menu_manager' &&
+            m.module_key !== 'room_board' &&
             !m.module_key.endsWith('_inventory')
         )
         .sort(
