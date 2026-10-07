@@ -533,6 +533,46 @@ export async function POST(req: NextRequest) {
       if (error) throw new Error(error.message)
     }
 
+    // EOS Vacant (Dirty) must become tomorrow's cleaning workload immediately.
+    const dirtyRows = upserts.filter((row:any)=>String(row.room_condition||'').trim()==='Vacant (Dirty)')
+    if (dirtyRows.length) {
+      const tomorrow = nextDate(serviceDate)
+      const dirtyRoomIds = dirtyRows.map((row:any)=>String(row.room_id))
+      const { data: tomorrowRows, error: tomorrowError } = await admin
+        .from('housekeeping_daily_rooms')
+        .select('room_id,reservation_status,service_type')
+        .eq('service_date', tomorrow)
+        .in('room_id', dirtyRoomIds)
+      if (tomorrowError) throw new Error(tomorrowError.message)
+
+      const tomorrowByRoom = new Map((tomorrowRows || []).map((row:any)=>[String(row.room_id),row]))
+      const carryRows = dirtyRows.map((row:any)=>{
+        const existing = tomorrowByRoom.get(String(row.room_id)) || {}
+        const currentStatus = String((existing as any).reservation_status || '').trim()
+        const nextStatus = !currentStatus || currentStatus === 'Vacant' ? 'Dirty' : currentStatus
+        const existingService = String((existing as any).service_type || '').trim()
+        return {
+          service_date: tomorrow,
+          room_id: row.room_id,
+          reservation_status: nextStatus,
+          service_type: existingService.toUpperCase().startsWith('OUT') ? existingService : 'OUT',
+          complete: false,
+          ready_for_inspection: false,
+          inspected: false,
+          completed_at: null,
+          inspected_at: null,
+          assigned_to: '',
+          clean_order: null,
+          updated_at: now
+        }
+      })
+
+      const { error: carryError } = await admin
+        .from('housekeeping_daily_rooms')
+        .upsert(carryRows, { onConflict: 'service_date,room_id' })
+      if (carryError) throw new Error(carryError.message)
+    }
+
     // Package assignments are management-controlled. Housekeeper-only saves must
     // never clear or change package orders.
     if (!assignedOnlyView && roomIds.length) {
