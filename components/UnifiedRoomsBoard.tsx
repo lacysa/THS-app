@@ -607,23 +607,23 @@ export default function UnifiedRoomsBoard(){
                         </div>
                       </td>
                       <td>
-                        <select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}>
+                        <select value={assigned[0]||''} disabled={isBlocked(row)} onChange={e=>assignStaff(row,e.target.value)}>
                           <option value="">Unassigned</option>
                           {staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}
                         </select>
                       </td>
                       <td>
-                        <input className="rooms-table-order" type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
+                        <input className="rooms-table-order" type="number" min="1" inputMode="numeric" disabled={isBlocked(row)} value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
                       </td>
                       <td className="rooms-table-center">
-                        <button type="button" className={row.complete?'rooms-table-check complete':'rooms-table-check'} onClick={()=>void toggleComplete(row)} title={row.complete?'Mark incomplete':'Mark complete'}>
+                        <button type="button" disabled={isBlocked(row)} className={row.complete?'rooms-table-check complete':'rooms-table-check'} onClick={()=>void toggleComplete(row)} title={isBlocked(row)?'Blocked rooms are not cleaned':row.complete?'Mark incomplete':'Mark complete'}>
                           {row.complete?'✓':'○'}
                         </button>
                       </td>
                       <td>
                         <button type="button" className={`rooms-table-workflow ${state}`} onClick={()=>openRoomCard(row)}>
-                          <span>{state==='correction'?'Correction':state==='self'?'Self-check':state==='inspection'?'Room check':state==='foh'?'FOH check':state==='complete'?'Complete':'Cleaning'}</span>
-                          <small>{row.checkIssueOpen?'Needs attention':row.fohSignedBy?'HA ✓ · FOH ✓':row.inspected?'Check ✓':row.housekeeperAttested?'Self ✓':'Open check'}</small>
+                          <span>{state==='blocked'?'Blocked':state==='correction'?'Correction':state==='self'?'Self-check':state==='inspection'?'Room check':state==='foh'?'FOH check':state==='complete'?'Complete':'Cleaning'}</span>
+                          <small>{state==='blocked'?'No cleaning or room check':row.checkIssueOpen?'Needs attention':row.fohSignedBy?'HA ✓ · FOH ✓':row.inspected?'Check ✓':row.housekeeperAttested?'Self ✓':'Open check'}</small>
                         </button>
                       </td>
                       <td>
@@ -671,17 +671,17 @@ export default function UnifiedRoomsBoard(){
                 <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType?` · ${row.serviceType}`:''}</small></span>
               </div>
               <div className={`rooms-state-pill ${state}`}>
-                {state==='correction'?'Correction':state==='self'?'Self-check':state==='inspection'?'Room check':state==='foh'?'FOH check':state==='complete'?'Complete':'Cleaning'}
+                {state==='blocked'?'Blocked':state==='correction'?'Correction':state==='self'?'Self-check':state==='inspection'?'Room check':state==='foh'?'FOH check':state==='complete'?'Complete':'Cleaning'}
               </div>
             </button>
 
-            <div className="rooms-progress" aria-label="Room workflow progress">
+            {!isBlocked(row)&&<div className="rooms-progress" aria-label="Room workflow progress">
               <span className={row.complete?'done':''}>Clean</span>
               {requiresRoomCheck(row)&&<span className={row.housekeeperAttested?'done':''}>Self</span>}
               {requiresRoomCheck(row)&&<span className={row.inspected?'done':''}>Check</span>}
               {requiresRoomCheck(row)&&<span className={row.haSignedBy?'done':''}>HA</span>}
               {requiresRoomCheck(row)&&<span className={row.fohSignedBy?'done':''}>FOH</span>}
-            </div>
+            </div>}
 
             {isOpen&&<div className="rooms-card-body">
               {row.checkIssueOpen&&<div className="rooms-correction-box"><AlertTriangle size={17}/><div><strong>Correction required</strong><span>{row.checkIssueNote||'A room check found an issue that must be corrected.'}</span>{row.checkIssueByName&&<small>Flagged by {row.checkIssueByName}</small>}</div></div>}
@@ -730,6 +730,7 @@ export default function UnifiedRoomsBoard(){
               {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Room items</strong><span>{packageNames.join(', ')}</span></div>}
               {!isManager(access)&&<label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
 
+              {isBlocked(row)&&<div className="rooms-blocked-note"><strong>Blocked / held</strong><span>No cleaning, self-check, room check, HA, or FOH action is required.</span></div>}
               {row.claimableRefresh&&<button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void claimRefresh(row)}><UserRoundCheck size={16}/>Claim refresh</button>}
 
               {requiresSelfCheck(row)&&(row.housekeeperAttested||self?.submitted
@@ -755,10 +756,10 @@ export default function UnifiedRoomsBoard(){
                     </>}
                   </section>)}
 
-              <section className="rooms-section">
+              {!isBlocked(row)&&<section className="rooms-section">
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
                 <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isStayover(row)?'Stayover service complete ✓':'Ready for inspection ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
-              </section>
+              </section>}
 
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&((row.inspected||inspection.inspected)&&!inspection.issueOpen
                 ? <section className="rooms-section inspection-section">
