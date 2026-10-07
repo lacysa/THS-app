@@ -148,14 +148,14 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
     return access.roleName === 'Owner' && !access.isPreviewMode
   }
 
+  if (Object.prototype.hasOwnProperty.call(access.moduleOverrides,key)) {
+    return access.moduleOverrides[key]
+  }
+
   if (key === 'room_board') {
     return access.isAdmin || hasAnyCapability(access,[
       'foh_manager','manager','general_manager','operations_manager','owner'
     ])
-  }
-
-  if (Object.prototype.hasOwnProperty.call(access.moduleOverrides,key)) {
-    return access.moduleOverrides[key]
   }
 
   if (module.published === false && !access.canPreviewUnpublished) return false
