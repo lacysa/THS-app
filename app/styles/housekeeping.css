@@ -988,3 +988,11 @@ html[data-theme="dark"] .hsk-assigned-service-controls button.active{
   min-width:0;
   max-width:100%;
 }
+
+
+/* Daily staff picker scope */
+.hsk-staff-scope{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-bottom:1px solid var(--app-border,var(--ths-line))}
+.hsk-staff-scope strong{font-size:9px;color:var(--app-muted,var(--ths-muted))}
+.hsk-staff-scope button{border:0;background:transparent;color:var(--app-accent,#5877d8);font-size:9px;font-weight:800;cursor:pointer}
+.hsk-staff-options button>span:last-child{display:grid;text-align:left}
+.hsk-staff-options button small{display:block;margin-top:2px;font-size:8px;font-weight:500;color:var(--app-muted,var(--ths-muted))}
