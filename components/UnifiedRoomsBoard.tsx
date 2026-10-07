@@ -93,7 +93,7 @@ type SelfCheck={
 }
 
 type SaveState='idle'|'saving'|'saved'|'error'
-type Filter='all'|'cleaning'|'self'|'inspection'|'correction'|'complete'
+type Filter='active'|'all'|'cleaning'|'self'|'inspection'|'correction'|'complete'
 
 const reservationOptions=['','Checkout','Out/In','Stayover','Arrival','Vacant','Dirty','Blocked']
 
@@ -165,7 +165,7 @@ export default function UnifiedRoomsBoard(){
     const query=window.matchMedia('(max-width: 900px)')
     const sync=()=>{
       setIsCompact(query.matches)
-      if(query.matches)setManagerDisplay('cards')
+      if(query.matches){setManagerDisplay('cards');setFilter(current=>current==='all'?'active':current)}
       else{
         try{
           const saved=window.localStorage.getItem('ths-rooms-manager-view')
@@ -522,8 +522,9 @@ export default function UnifiedRoomsBoard(){
   const activeRows=useMemo(()=>rows.filter(row=>!isStayover(row)||isRefresh(row)),[rows])
   const inactiveStayovers=useMemo(()=>rows.filter(row=>isStayover(row)&&!isRefresh(row)),[rows])
   const filtered=useMemo(()=>activeRows.filter(row=>{
-    if(filter==='all')return true
     const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})
+    if(filter==='all')return true
+    if(filter==='active')return !['ready','blocked','occupied'].includes(state)
     if(filter==='cleaning')return state==='cleaning'
     if(filter==='self')return state==='self'
     if(filter==='inspection')return state==='inspection'||state==='final'
@@ -532,6 +533,7 @@ export default function UnifiedRoomsBoard(){
   }),[activeRows,filter,checkByRoom])
 
   const counts=useMemo(()=>({
+    active:activeRows.filter(r=>!['ready','blocked','occupied'].includes(roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen}))).length,
     all:activeRows.length,
     cleaning:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='cleaning').length,
     self:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='self').length,
@@ -571,7 +573,7 @@ export default function UnifiedRoomsBoard(){
 
     <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
       {([
-        ['all','All',counts.all],['cleaning','Cleaning',counts.cleaning],['self','Self-check',counts.self],
+        ['active','Needs action',counts.active],['all','All',counts.all],['cleaning','Cleaning',counts.cleaning],['self','Self-check',counts.self],
         ['inspection','Room check',counts.inspection],['correction','Correction',counts.correction],['complete','Ready for guest',counts.complete]
       ] as Array<[Filter,string,number]>).map(([key,label,count])=><button key={key} type="button" className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<span>{count}</span></button>)}
     </div>
@@ -682,11 +684,10 @@ export default function UnifiedRoomsBoard(){
               </div>
             </button>
 
-            {!isBlocked(row)&&<div className="rooms-progress" aria-label="Room workflow progress">
-              <span className={row.complete?'done':''}>Clean</span>
-              {requiresRoomCheck(row)&&<span className={row.housekeeperAttested?'done':''}>Self</span>}
-              {requiresRoomCheck(row)&&<span className={row.inspected?'done':''}>Check</span>}
-              {requiresRoomCheck(row)&&<span className={finalVerificationComplete(row)?'done':''}>Final</span>}
+            {!isBlocked(row)&&<div className="rooms-progress-summary" aria-label="Room workflow progress">
+              <span><strong>{(requiresRoomCheck(row)?[row.complete,row.housekeeperAttested,row.inspected,finalVerificationComplete(row)]:[row.complete]).filter(Boolean).length}</strong> of {requiresRoomCheck(row)?4:1} complete</span>
+              <span className="rooms-progress-dots" aria-hidden="true"><i className={row.complete?'done':''}/>{requiresRoomCheck(row)&&<i className={row.housekeeperAttested?'done':''}/>} {requiresRoomCheck(row)&&<i className={row.inspected?'done':''}/>} {requiresRoomCheck(row)&&<i className={finalVerificationComplete(row)?'done':''}/>}</span>
+              {!isOpen&&<strong className="rooms-next-action">{roomNextAction(effectiveRow)}</strong>}
             </div>}
 
             {isOpen&&<div className="rooms-card-body">
@@ -700,7 +701,7 @@ export default function UnifiedRoomsBoard(){
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
-              {isManager(access)&&<div className="rooms-manager-edit">
+              {isManager(access)&&<details className="rooms-details-drawer"><summary>Room details & manager controls</summary><div className="rooms-manager-edit">
                 <div className="rooms-manager-context">
                   <div><span>Reservation</span><strong>{row.reservationStatus||'Not set'}</strong></div>
                   <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
@@ -727,7 +728,7 @@ export default function UnifiedRoomsBoard(){
                     return <button type="button" key={option.id} className={checked?'selected':''} onClick={()=>togglePackage(row,option.id)}>{checked?<Check size={14}/>:null}{option.name}</button>
                   })}</div>
                 </div>
-              </div>}
+              </div></details>}
 
               {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Selected room items</strong><span>{packageNames.join(', ')}</span></div>}
 
@@ -736,10 +737,10 @@ export default function UnifiedRoomsBoard(){
               {row.claimableRefresh&&<button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void claimRefresh(row)}><UserRoundCheck size={16}/>Claim refresh</button>}
 
               {requiresSelfCheck(row)&&(row.housekeeperAttested||self?.submitted
-                ? <section className="rooms-section">
+                ? <section className="rooms-section self-check-section">
                     <div className="rooms-success-line"><Check size={16}/><strong>Self-check</strong><span>Complete ✓</span></div>
                   </section>
-                : <section className="rooms-section">
+                : <section className="rooms-section self-check-section">
                     <div className="rooms-section-heading"><ClipboardCheck size={17}/><div><strong>Housekeeper self-check</strong><small>Confirm each room area before completing the clean.</small></div></div>
                     {self?.loading?<div className="rooms-inline-loading">Loading checklist…</div>:self&&<>
                       <div className="rooms-zone-list">{zones.map(zone=>{
@@ -758,7 +759,7 @@ export default function UnifiedRoomsBoard(){
                     </>}
                   </section>)}
 
-              <section className="rooms-section">
+              <section className="rooms-section cleaning-section">
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
                 <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isStayover(row)?'Stayover service complete ✓':'Ready for room check ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
               </section>
@@ -776,7 +777,7 @@ export default function UnifiedRoomsBoard(){
                   </section>)}
 
               {viewMode==='manager'&&requiresRoomCheck(row)&&<section className="rooms-section rooms-signoffs">
-                <div className="rooms-section-heading"><UserRoundCheck size={17}/><div><strong>Final verification</strong><small>One final path. FOH can finish the room without leaving a separate HA requirement behind.</small></div></div>
+                <div className="rooms-section-heading"><UserRoundCheck size={17}/><div><strong>Final verification</strong><small>Final guest-ready check.</small></div></div>
                 {finalVerificationComplete(row)
                   ? <div className="rooms-success-line"><Check size={16}/><strong>Final check</strong><span>{row.fohSignedBy?`FOH · ${row.fohSignedName||'Signed'}`:`HA · ${row.haSignedName||'Signed'}`} ✓</span></div>
                   : <button type="button" className="ops-primary-btn rooms-primary-action" disabled={!row.complete||(!canFohSignoff&&!canHaSignoff)} onClick={()=>void signOff(row,canFohSignoff?'foh':'ha')}><UserRoundCheck size={16}/>Complete final check</button>}
