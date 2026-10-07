@@ -21,13 +21,18 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const serviceDate=validDate(params?.date)?params.date:ymdInHotelTz()
   const admin=createSupabaseAdmin()
 
-  const [roomsRes,linksRes]=await Promise.all([
+  const [roomsRes,linksRes,housekeepingRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
-    admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate)
+    admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate),
+    admin.from('housekeeping_daily_rooms').select('room_id,service_type').eq('service_date',serviceDate)
   ])
 
   const rooms=roomsRes.data||[]
   const links=linksRes.data||[]
+  const housekeeping=housekeepingRes.data||[]
+  const serviceTypeByRoom=new Map<string,string>(
+    housekeeping.map((row:any)=>[String(row.room_id||''),String(row.service_type||'')])
+  )
   const roomNameById=new Map<string,string>(rooms.map((room:any)=>[String(room.id),String(room.name)]))
   const sortById=new Map<string,number>(rooms.map((room:any)=>[String(room.id),Number(room.sort_order??9999)]))
   const ids=[...new Set(links.flatMap((row:any)=>[
@@ -49,7 +54,8 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
       primary:row.primary_reservation_id?stayById.get(String(row.primary_reservation_id))||null:null,
       arriving:row.arriving_reservation_id?stayById.get(String(row.arriving_reservation_id))||null:null,
       staying:row.stay_reservation_id?stayById.get(String(row.stay_reservation_id))||null:null,
-      departing:row.departing_reservation_id?stayById.get(String(row.departing_reservation_id))||null:null
+      departing:row.departing_reservation_id?stayById.get(String(row.departing_reservation_id))||null:null,
+      serviceType:serviceTypeByRoom.get(String(row.room_id||''))||''
     }))
     .filter((row:any)=>row.status!=='Vacant')
     .sort((a:any,b:any)=>(sortById.get(a.roomId)??9999)-(sortById.get(b.roomId)??9999))

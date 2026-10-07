@@ -25,6 +25,7 @@ type Row={
   arriving:Stay|null
   staying:Stay|null
   departing:Stay|null
+  serviceType?:string
 }
 
 function addDay(value:string,amount:number){
@@ -132,6 +133,7 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
                 ? (row.staying||row.primary)
                 : null
           const dietary=cleanDiet(stay?.dietary_restrictions)
+          const turnoverReady=/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())
           return <article className={'reservation-card '+statusClass(status)} key={row.roomId}>
             <div className="reservation-card-head">
               <div><strong>{row.roomName}</strong><span>{status}</span></div>
@@ -143,9 +145,12 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
               <div><span>IN</span><strong>{row.arriving?.guest_name||'—'}</strong></div>
             </div>}
 
-            {isCheckoutOnly ? <div className="reservation-checkout-only">
+            {isCheckoutOnly ? <div className={`reservation-checkout-only ${turnoverReady?'is-ready':'is-waiting'}`}>
               <span>Checkout room</span>
-              <strong>Ready for turnover workflow</strong>
+              <strong>{turnoverReady?'Ready for turnover':'Awaiting OUT + initials'}</strong>
+              <small>{turnoverReady
+                ? `Marked ${String(row.serviceType||'').toUpperCase()}`
+                : 'Housekeeping must mark the room OUT and initial it before turnover begins.'}</small>
             </div> : stay && <div className="reservation-card-body">
               <div className="reservation-pair"><span>Guest</span><strong>{stay.guest_name||'—'}</strong></div>
               <div className="reservation-pair"><span>Stay</span><strong>{stay.arrival_date||'—'} → {stay.checkout_date||'—'}</strong></div>

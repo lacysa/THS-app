@@ -174,3 +174,26 @@ html[data-theme="dark"] .reservation-checkout-only{
 html[data-theme="dark"] .reservation-checkout-only strong{
   color:#e0d5dc;
 }
+
+
+.reservation-checkout-only small{
+  color:#7c7180;
+  font-size:8px;
+  line-height:1.35;
+}
+.reservation-checkout-only.is-ready{
+  background:linear-gradient(180deg,#fbfffc,#f1f9f4);
+}
+.reservation-checkout-only.is-ready span,
+.reservation-checkout-only.is-ready strong{
+  color:var(--status-ready-text,#286348);
+}
+.reservation-checkout-only.is-waiting{
+  background:linear-gradient(180deg,#fff,#faf7fa);
+}
+.reservation-checkout-only.is-waiting strong{
+  color:var(--status-checkout-text,#7A4A63);
+}
+html[data-theme="dark"] .reservation-checkout-only small{
+  color:#b7aab3;
+}
