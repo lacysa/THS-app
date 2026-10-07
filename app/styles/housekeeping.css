@@ -996,3 +996,17 @@ html[data-theme="dark"] .hsk-assigned-service-controls button.active{
 .hsk-staff-scope button{border:0;background:transparent;color:var(--app-accent,#5877d8);font-size:9px;font-weight:800;cursor:pointer}
 .hsk-staff-options button>span:last-child{display:grid;text-align:left}
 .hsk-staff-options button small{display:block;margin-top:2px;font-size:8px;font-weight:500;color:var(--app-muted,var(--ths-muted))}
+
+
+/* Portal staff picker: escape table overflow and stay usable on bottom rows */
+.hsk-staff-popover-portal{
+  position:fixed!important;
+  z-index:10000!important;
+  top:auto;
+  left:auto;
+  max-height:min(330px,calc(100vh - 16px));
+  overflow:hidden;
+}
+.hsk-staff-popover-portal .hsk-staff-options{
+  max-height:230px;
+}
