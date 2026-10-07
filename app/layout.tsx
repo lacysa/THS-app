@@ -19,6 +19,7 @@ import './styles/surfaces.css'
 import './styles/staff-access.css'
 import './styles/module-polish.css'
 import './styles/housekeeping-mobile.css'
+import './styles/rooms.css'
 
 export const viewport: Viewport = {
   width: 'device-width',

@@ -284,41 +284,59 @@ export async function GET(req: NextRequest) {
       ? rows.filter((row:any)=>row.stripStatus==='needed')
       : []
 
-    const menuNeededRooms = visibleRows
-      .filter((row: any) => row.breakfast.status === 'needed')
-      .map((row: any) => row.roomName)
+    // Housekeeping-only users receive a deliberately narrow payload. Do not rely on
+    // the client to hide FOH/guest-facing operational context: it is not sent.
+    const responseRows = assignedOnlyView
+      ? visibleRows.map((row:any)=>({
+          ...row,
+          packageIds: [],
+          breakfastTag: false,
+          breakfast: { serviceDate: breakfastDate, status: 'none', timeSlot: null },
+          haSignedBy: null,
+          haSignedName: null,
+          haSignedAt: null,
+          fohSignedBy: null,
+          fohSignedName: null,
+          fohSignedAt: null
+        }))
+      : visibleRows
+
+    const menuNeededRooms = assignedOnlyView
+      ? []
+      : visibleRows.filter((row: any) => row.breakfast.status === 'needed').map((row: any) => row.roomName)
 
     const blockingRoom = assignedOnlyView
       ? visibleRows.find((row:any)=>row.checkIssueOpen)
       : null
 
     return NextResponse.json({
-      rows: visibleRows,
+      rows: responseRows,
       stripTasks,
       blockingRoomId: blockingRoom?.roomId || null,
       blockingRoomName: blockingRoom?.roomName || null,
       viewMode: assignedOnlyView ? 'assigned' : 'manager',
-      staffOptions,
-      onsiteStaffOptions,
-      allStaffOptions,
+      staffOptions: assignedOnlyView ? [] : staffOptions,
+      onsiteStaffOptions: assignedOnlyView ? [] : onsiteStaffOptions,
+      allStaffOptions: assignedOnlyView ? [] : allStaffOptions,
       staffing: {
         hasSchedule: (scheduleRows || []).length > 0,
         onSiteCount: onsiteStaffOptions.length
       },
-      packageOptions: (packageCatalog || []).map((pkg:any)=>({
+      packageOptions: assignedOnlyView ? [] : (packageCatalog || []).map((pkg:any)=>({
         id:String(pkg.id),
         name:String(pkg.name || ''),
         price:pkg.price == null ? null : Number(pkg.price),
         available:Boolean(pkg.available)
       })),
       signoffAccess: {
-        canHaSignoff: currentCaps.has('ha_signoff') || currentCaps.has('ha_signoff_override'),
-        canFohSignoff:
+        canHaSignoff: !assignedOnlyView && (currentCaps.has('ha_signoff') || currentCaps.has('ha_signoff_override')),
+        canFohSignoff: !assignedOnlyView && (
           access.isAdmin ||
           ['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>currentCaps.has(cap)) ||
           ['manager','owner'].some(label=>String(access.roleName||'').trim().toLowerCase().includes(label)) ||
           currentCaps.has('foh_signoff') ||
           currentCaps.has('foh_signoff_override')
+        )
       },
       breakfast: {
         serviceDate: breakfastDate,

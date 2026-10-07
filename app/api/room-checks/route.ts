@@ -58,7 +58,7 @@ export async function GET(req:NextRequest){
       const status=String(r.reservation_status||'').trim().toLowerCase()
       const stripHold=String(r.strip_hold||'').trim().toLowerCase()
       const service=String(r.service_type||'').trim().toUpperCase()
-      return status!=='blocked' && !stripHold.includes('hold') && service!=='RF'
+      return status!=='blocked' && !stripHold.includes('hold') && service!=='RF' && !(status==='stayover' && !r.check_issue_open)
     })
     .map((r:any)=>{
       const latest=latestQualityByRoom.get(String(r.room_id))
@@ -119,8 +119,8 @@ export async function POST(req:NextRequest){
     const status=String(dailyRow.reservation_status||'').trim().toLowerCase()
     const stripHold=String(dailyRow.strip_hold||'').trim().toLowerCase()
     const service=String(dailyRow.service_type||'').trim().toUpperCase()
-    if(status==='blocked' || stripHold.includes('hold') || service==='RF'){
-      return NextResponse.json({error:'Blocked, held, and refresh rooms do not require room inspection.'},{status:400})
+    if(status==='blocked' || stripHold.includes('hold') || service==='RF' || (status==='stayover' && !dailyRow.check_issue_open)){
+      return NextResponse.json({error:'Blocked, held, refresh, and ordinary stayover rooms do not require room inspection.'},{status:400})
     }
 
     const activeHskService=
