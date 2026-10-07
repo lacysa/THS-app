@@ -6,6 +6,7 @@ import {
   useRef,
   useState
 } from 'react'
+import { createPortal } from 'react-dom'
 
 import {
   RefreshCw,
@@ -186,6 +187,7 @@ export default function HousekeepingBoard() {
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [dirty, setDirty] = useState(false)
   const [openStaffRoomId, setOpenStaffRoomId] = useState<string | null>(null)
+  const [staffPopover, setStaffPopover] = useState<{left:number;top:number;width:number}|null>(null)
   const [staffSearch, setStaffSearch] = useState('')
   const [openPackageRoomId, setOpenPackageRoomId] = useState<string | null>(null)
   const [selfChecks,setSelfChecks] = useState<Record<string,SelfCheckState>>({})
@@ -203,6 +205,20 @@ export default function HousekeepingBoard() {
   useEffect(() => {
     dateRef.current = date
   }, [date])
+
+  useEffect(() => {
+    if (!openStaffRoomId) return
+    const close = () => {
+      setOpenStaffRoomId(null)
+      setStaffPopover(null)
+    }
+    window.addEventListener('resize', close)
+    window.addEventListener('scroll', close, true)
+    return () => {
+      window.removeEventListener('resize', close)
+      window.removeEventListener('scroll', close, true)
+    }
+  }, [openStaffRoomId])
 
   useEffect(() => {
     fetch('/api/me', { cache: 'no-store' })
@@ -984,9 +1000,24 @@ export default function HousekeepingBoard() {
                         <button
                           type="button"
                           className="hsk-staff-trigger"
-                          onClick={() => {
+                          onClick={e => {
                             const opening = openStaffRoomId !== row.roomId
-                            setOpenStaffRoomId(opening ? row.roomId : null)
+                            if (!opening) {
+                              setOpenStaffRoomId(null)
+                              setStaffPopover(null)
+                              return
+                            }
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            const popoverWidth = Math.max(250, rect.width)
+                            const estimatedHeight = 330
+                            const roomBelow = window.innerHeight - rect.bottom
+                            const opensUp = roomBelow < estimatedHeight && rect.top > estimatedHeight
+                            const left = Math.max(8, Math.min(rect.left, window.innerWidth - popoverWidth - 8))
+                            const top = opensUp
+                              ? Math.max(8, rect.top - estimatedHeight - 4)
+                              : Math.min(window.innerHeight - estimatedHeight - 8, rect.bottom + 4)
+                            setStaffPopover({ left, top, width: popoverWidth })
+                            setOpenStaffRoomId(row.roomId)
                             setStaffSearch('')
                           }}
                         >
@@ -994,8 +1025,12 @@ export default function HousekeepingBoard() {
                           <ChevronDown size={14} />
                         </button>
 
-                        {openStaffRoomId === row.roomId && (
-                          <div className="hsk-staff-popover">
+                        {openStaffRoomId === row.roomId && staffPopover && typeof document !== 'undefined' && createPortal(
+                          <div
+                            className="hsk-staff-popover hsk-staff-popover-portal"
+                            style={{ left: staffPopover.left, top: staffPopover.top, width: staffPopover.width }}
+                            onClick={e=>e.stopPropagation()}
+                          >
                             <div className="hsk-staff-search">
                               <Search size={14} />
                               <input
@@ -1035,7 +1070,8 @@ export default function HousekeepingBoard() {
                               })}
                               {!filteredStaff.length && <div className="hsk-no-staff">{showAllStaff ? 'No matching active staff.' : 'No on-site staff scheduled for this day.'}</div>}
                             </div>
-                          </div>
+                          </div>,
+                          document.body
                         )}
                       </div>
                     </td>
