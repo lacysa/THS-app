@@ -398,6 +398,16 @@ export default function RoomBoard(){
       </label>
 
       <div className="rb-view-actions">
+        <button
+          type="button"
+          className={`ops-secondary-btn rb-arrival-filter ${statusFilters.includes('Arrival')?'is-active':''}`}
+          onClick={()=>toggleFilter('Arrival',setStatusFilters)}
+          aria-pressed={statusFilters.includes('Arrival')}
+        >
+          Arrivals
+          <span>{rows.filter(row=>row.reservationStatus==='Arrival').length}</span>
+        </button>
+
         <div className="rb-filter-menu">
           <button
             type="button"
