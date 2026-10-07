@@ -640,7 +640,7 @@ export default function StaffShell({
                 Breakfast
               </div>
 
-              {breakfastNav.map(renderNavLink)}
+              {breakfastNav.map(item=>renderNavLink(item))}
             </div>
           )}
 
@@ -663,7 +663,7 @@ export default function StaffShell({
                 Tools
               </div>
 
-              {otherNav.map(renderNavLink)}
+              {otherNav.map(item=>renderNavLink(item))}
             </div>
           )}
 
