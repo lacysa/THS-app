@@ -18,6 +18,35 @@ async function currentPerson(admin:ReturnType<typeof createSupabaseAdmin>,userId
   return data
 }
 
+async function assignedHousekeeper(
+  admin:ReturnType<typeof createSupabaseAdmin>,
+  assignedTo:string,
+  fallbackPerson:{id:string;name:string}|null,
+  manager:boolean
+){
+  const assigned=assignedNames(assignedTo)
+  if(!assigned.length){
+    if(manager) return null
+    return fallbackPerson
+  }
+
+  const {data:members,error}=await admin
+    .from('staff_members')
+    .select('id,name,active')
+    .eq('active',true)
+  if(error) throw new Error(error.message)
+
+  const match=(members||[]).find((member:any)=>
+    assigned.includes(String(member.name||'').trim().toLowerCase())
+  )
+
+  if(match) return match
+  if(!manager && fallbackPerson && assigned.includes(String(fallbackPerson.name||'').trim().toLowerCase())){
+    return fallbackPerson
+  }
+  return null
+}
+
 async function latestSelfCheck(admin:ReturnType<typeof createSupabaseAdmin>,date:string,roomId:string,housekeeperId:string){
   const {data,error}=await admin
     .from('housekeeping_quality_checks')
@@ -45,10 +74,9 @@ export async function GET(req:NextRequest){
     const person=await currentPerson(admin,access.userId)
     if(!person) return NextResponse.json({error:'Your login is not linked to an active staff member.'},{status:403})
 
-    const [{data:daily,error:dailyError},{data:items,error:itemError},latest]=await Promise.all([
+    const [{data:daily,error:dailyError},{data:items,error:itemError}]=await Promise.all([
       admin.from('housekeeping_daily_rooms').select('assigned_to,check_issue_open,check_issue_at,complete').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
-      admin.from('room_check_items').select('id,zone,label,sort_order').eq('active',true).order('sort_order'),
-      latestSelfCheck(admin,date as string,roomId,person.id)
+      admin.from('room_check_items').select('id,zone,label,sort_order').eq('active',true).order('sort_order')
     ])
 
     if(dailyError) throw new Error(dailyError.message)
@@ -61,6 +89,13 @@ export async function GET(req:NextRequest){
       return NextResponse.json({error:'This room is not assigned to you.'},{status:403})
     }
 
+    const housekeeper=await assignedHousekeeper(admin,daily.assigned_to,person,manager)
+    if(!housekeeper){
+      return NextResponse.json({error:'Assign a housekeeper to this room before completing the self-check.'},{status:400})
+    }
+
+    const latest=await latestSelfCheck(admin,date as string,roomId,String(housekeeper.id))
+
     let validSubmission=false
     if(latest?.submitted_at){
       const issueAt=daily.check_issue_at ? new Date(daily.check_issue_at).getTime() : 0
@@ -72,7 +107,11 @@ export async function GET(req:NextRequest){
       submitted:Boolean(validSubmission),
       submittedAt:validSubmission?latest?.submitted_at:null,
       attemptNo:validSubmission?latest?.attempt_no:null,
-      correctionOpen:Boolean(daily.check_issue_open)
+      correctionOpen:Boolean(daily.check_issue_open),
+      housekeeperId:housekeeper.id,
+      housekeeperName:housekeeper.name,
+      enteredById:person.id,
+      enteredByName:person.name
     })
   }catch(error:any){
     return NextResponse.json({error:error?.message||'Could not load room checklist.'},{status:500})
@@ -110,6 +149,11 @@ export async function POST(req:NextRequest){
       return NextResponse.json({error:'This room is not assigned to you.'},{status:403})
     }
 
+    const housekeeper=await assignedHousekeeper(admin,daily.assigned_to,person,manager)
+    if(!housekeeper){
+      return NextResponse.json({error:'Assign a housekeeper to this room before completing the self-check.'},{status:400})
+    }
+
     const activeIds=(items||[]).map((item:any)=>String(item.id))
     if(!activeIds.length) return NextResponse.json({error:'No active room-check items are configured.'},{status:400})
     const checked=new Set(checkedIds)
@@ -126,7 +170,7 @@ export async function POST(req:NextRequest){
       stage:'self_check',
       attempt_no:attemptNo,
       actor_id:person.id,
-      housekeeper_id:person.id,
+      housekeeper_id:housekeeper.id,
       status:'pass',
       submitted_at:now
     }).select('id,attempt_no,submitted_at').single()
@@ -142,7 +186,7 @@ export async function POST(req:NextRequest){
     if(itemsInsertError) throw new Error(itemsInsertError.message)
 
     const {error:updateError}=await admin.from('housekeeping_daily_rooms').update({
-      housekeeper_attested_by:person.id,
+      housekeeper_attested_by:housekeeper.id,
       housekeeper_attested_at:now,
       updated_at:now
     }).eq('service_date',date).eq('room_id',roomId)
@@ -152,8 +196,10 @@ export async function POST(req:NextRequest){
       ok:true,
       submittedAt:now,
       attemptNo,
-      housekeeperId:person.id,
-      housekeeperName:person.name
+      housekeeperId:housekeeper.id,
+      housekeeperName:housekeeper.name,
+      enteredById:person.id,
+      enteredByName:person.name
     })
   }catch(error:any){
     return NextResponse.json({error:error?.message||'Could not submit room checklist.'},{status:500})
