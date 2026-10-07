@@ -21,6 +21,7 @@ type BreakfastRow = {
   status:string
   menuSubmitted:boolean
   taggedOnly?:boolean
+  breakfastSkipped?:boolean
   note?:string
 }
 
@@ -39,6 +40,7 @@ type HousekeepingRow = {
   fohCheckInitials:string
   checkIssueOpen:boolean
   inspected:boolean
+  breakfastSkipped?:boolean
   packages:string[]
   notes:string
 }
@@ -167,6 +169,7 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
             <span className={`daily-chip ${row.checkIssueOpen?'danger':''}`}>{roomCheckLabel(row)}</span>
           )}
           {row.packages.map(pkg=><span className="daily-chip package" key={pkg}>{pkg}</span>)}
+          {row.breakfastSkipped && <span className="daily-chip breakfast-skip">Breakfast skipped</span>}
           {row.notes && <span className="daily-chip note daily-note-chip" title={row.notes}><b>Note</b> {row.notes}</span>}
         </div>
       </summary>
@@ -205,10 +208,10 @@ export default function DailyDashboard({
   showReservationDaily,
   reservationDaily
 }:Props) {
-  const breakfastScheduled = breakfast.filter(r=>r.status==='scheduled')
+  const breakfastScheduled = breakfast.filter(r=>r.status==='scheduled' && !r.breakfastSkipped)
   const missingMenus = breakfastScheduled.filter(r=>!r.menuSubmitted)
   const receivedMenus = breakfastScheduled.filter(r=>r.menuSubmitted)
-  const declinedBreakfast = breakfast.filter(r=>r.status==='declined')
+  const skippedBreakfast = breakfast.filter(r=>r.breakfastSkipped || r.status==='declined')
 
   // Housekeeping workload:
   // - Checkout / Out-In always count
@@ -520,6 +523,7 @@ export default function DailyDashboard({
                     {row.fohCheckInitials && <span className="daily-chip done">FOH ✓ {row.fohCheckInitials}</span>}
                     {!row.fohCheckInitials && <span className="daily-chip warning">Room check pending</span>}
                     {row.packages.map(pkg=><span className="daily-chip package" key={pkg}>{pkg}</span>)}
+                    {row.breakfastSkipped && <span className="daily-chip breakfast-skip">Breakfast skipped</span>}
                   </div>
                 </div>
               </Link>
@@ -561,7 +565,6 @@ export default function DailyDashboard({
             <div className="daily-breakfast-summary">
               <span><b>{receivedMenus.length}</b> received</span>
               <span><b>{missingMenus.length}</b> missing</span>
-              <span><b>{declinedBreakfast.length}</b> declined</span>
             </div>
             <div className="daily-list">
               {missingMenus.length===0 && <div className="daily-empty">No breakfast menus currently missing.</div>}
@@ -574,6 +577,16 @@ export default function DailyDashboard({
                     {row.note && <small>{row.note}</small>}
                   </div>
                   <span className="daily-state warning">Missing</span>
+                </Link>
+              ))}
+              {skippedBreakfast.map(row=>(
+                <Link href={row.taggedOnly?'/front-desk':`/front-desk#booking-${encodeURIComponent(row.id)}`} className="daily-list-row daily-list-link" key={`skip-${row.id}`}>
+                  <div className="daily-row-time">—</div>
+                  <div className="daily-row-main">
+                    <strong>{row.roomName}</strong>
+                    <span>Breakfast skipped</span>
+                  </div>
+                  <span className="daily-state neutral">Skipped</span>
                 </Link>
               ))}
             </div>
