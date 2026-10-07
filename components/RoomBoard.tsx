@@ -568,7 +568,13 @@ export default function RoomBoard(){
             isStayover ? service==='RF'
             : requiresCorrectionOnly ? Boolean(row.checkIssueOpen)
             : true
-          return <article className={`rb-room-card ${statusClass(row.reservationStatus)} ${row.complete?'is-complete':''} ${collapsed?'is-collapsed':''}`} key={row.roomId}>
+          return <article
+            className={`rb-room-card ${statusClass(row.reservationStatus)} ${row.complete?'is-complete':'is-in-progress'} ${collapsed?'is-collapsed':''}`}
+            data-room-condition={row.roomCondition||''}
+            data-strip-hold={row.stripHold||''}
+            data-reservation-status={row.reservationStatus||''}
+            key={row.roomId}
+          >
             {collapsed ? (
               <div className="rb-collapsed-row">
                 <button
