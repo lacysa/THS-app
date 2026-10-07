@@ -133,9 +133,11 @@ function canInspect(access:Access|null){
 }
 function isStayover(row:RoomRow){return normalize(row.reservationStatus)==='stayover'}
 function isRefresh(row:RoomRow){return isStayover(row)&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
-function requiresRoomCheck(row:RoomRow){return !isStayover(row)}
+function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='blocked'||normalize(row.stripHold).includes('hold')}
+function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function requiresSelfCheck(row:RoomRow){return Boolean(row.requiresQualityCheck)&&requiresRoomCheck(row)}
 function workflowState(row:RoomRow,inspection?:InspectionRoom){
+  if(isBlocked(row))return 'blocked'
   if(row.checkIssueOpen||inspection?.issueOpen)return 'correction'
   if(isStayover(row)) return row.complete?'complete':'cleaning'
   if(requiresSelfCheck(row)&&!row.housekeeperAttested)return 'self'
@@ -295,6 +297,7 @@ export default function UnifiedRoomsBoard(){
   }
 
   async function toggleComplete(row:RoomRow){
+    if(isBlocked(row)){setMessage('Blocked / held rooms are not part of the cleaning workflow.');return}
     const next=!row.complete
     if(next&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy){setMessage('Complete the room self-check before marking this clean complete.');return}
     const nextRows=rowsRef.current.map(r=>r.roomId===row.roomId?{
