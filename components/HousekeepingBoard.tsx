@@ -107,7 +107,6 @@ type SelfCheckState = {
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const reservationOptions = ['', 'Checkout', 'Out/In', 'Stayover', 'Arrival', 'Vacant', 'Blocked']
-const stripOptions = ['', 'Hold']
 const conditionOptions = ['', 'Occupied', 'Cleaning', 'Ready for Inspection', 'Ready', 'Vacant', 'Vacant (Clean)', 'Vacant (Dirty)', 'Vacant (Blocked)', 'Out of Order']
 
 function todayDetroit() {
@@ -990,7 +989,6 @@ export default function HousekeepingBoard() {
                 <th className="hsk-sticky-room">Room</th>
                 <th>Status</th>
                 <th>Out / RF</th>
-                <th>Strip</th>
                 <th>Staff</th>
                 <th>Order</th>
                 <th>Complete</th>
@@ -1014,7 +1012,6 @@ export default function HousekeepingBoard() {
                 const hasService = Boolean(String(row.serviceType||'').trim())
                 const hasStripHold = Boolean(String(row.stripHold||'').trim())
                 const stripStatus = String(row.stripStatus||'')
-                const isFullClean = isFullRoomClean(row)
                 const hasStaff = selectedStaff.length>0
                 const hasOrder = Number.isFinite(row.cleanOrder as number) && Number(row.cleanOrder)>0
 
@@ -1092,12 +1089,22 @@ export default function HousekeepingBoard() {
                             <span>Stripped{row.strippedByName?` · ${row.strippedByName}`:''}{row.strippedAt?` ${formatShortTime(row.strippedAt)}`:''}</span><b aria-hidden="true">×</b>
                           </button>
                         )}
-                        {isFullClean && !stripStatus && (
+                        {assignmentActive && !hasStripHold && (
+                          <button
+                            type="button"
+                            className="hsk-add-hold-task"
+                            onClick={()=>patch(row.roomId,{stripHold:'Hold'})}
+                            title="Tag this room as Hold"
+                          >
+                            + Hold
+                          </button>
+                        )}
+                        {assignmentActive && !stripStatus && (
                           <button
                             type="button"
                             className="hsk-add-strip-task"
                             onClick={()=>void setStripTask(row,'request')}
-                            title="Add a shared pre-strip task"
+                            title="Add a shared strip task"
                           >
                             + Strip task
                           </button>
@@ -1163,12 +1170,6 @@ export default function HousekeepingBoard() {
                           </div>
                         )}
                       </div>}
-                    </td>
-
-                    <td className={(!assignmentActive||isFullClean||hasStripHold)?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
-                      {assignmentActive && !isFullClean && !hasStripHold && <select value={row.stripHold} onChange={e => patch(row.roomId, { stripHold: e.target.value })}>
-                        {stripOptions.map(value => <option key={value} value={value}>{value || 'Set hold'}</option>)}
-                      </select>}
                     </td>
 
                     <td className={`hsk-staff-cell hsk-setup-cell ${(!assignmentActive||hasStaff)?'is-collapsed':''}`}>
