@@ -50,9 +50,14 @@ export async function POST(req: NextRequest) {
     if (capError) throw new Error(capError.message)
     const caps = new Set((capRows || []).map((row: any) => String(row.capability_key)))
 
+    const managerSignoff =
+      access.isAdmin ||
+      ['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>caps.has(cap)) ||
+      ['manager','owner'].some(label=>String(access.roleName||'').trim().toLowerCase().includes(label))
+
     const allowed = kind === 'ha'
       ? caps.has('ha_signoff') || caps.has('ha_signoff_override')
-      : caps.has('foh_signoff') || caps.has('foh_signoff_override')
+      : managerSignoff || caps.has('foh_signoff') || caps.has('foh_signoff_override')
 
     if (!allowed) {
       return NextResponse.json({ error: `You do not have ${kind.toUpperCase()} sign-off permission.` }, { status: 403 })
