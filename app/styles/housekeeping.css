@@ -1491,3 +1491,34 @@ html[data-theme="dark"] .hsk-strip-pool-grid>button{
 html[data-theme="dark"] .hsk-strip-pool-grid>button:hover{
   background:#2d2c20;
 }
+
+
+/* Cleaning order as a room-name exponent */
+.hsk-order-sup{
+  position:relative;
+  top:-7px;
+  display:inline-grid;
+  place-items:center;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  margin-left:1px;
+  border:1px solid #b9c7d4;
+  border-radius:999px;
+  background:#eef4f8;
+  color:#45637c;
+  font-size:8px;
+  font-weight:950;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:0 2px 6px rgba(48,72,110,.08);
+}
+.hsk-order-sup:hover{
+  background:#e5eef4;
+  border-color:#9fb2c4;
+}
+html[data-theme="dark"] .hsk-order-sup{
+  background:#213240;
+  border-color:#4c6679;
+  color:#d6e7f2;
+}
