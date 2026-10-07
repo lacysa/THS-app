@@ -1099,3 +1099,49 @@ html[data-theme="dark"] .rb-initial-out{
   border-color:#55778d;
   color:#c5e0ee;
 }
+
+
+/* Keep HSK filters above room cards */
+.rb-view-controls{
+  position:relative;
+  z-index:500;
+  overflow:visible;
+}
+.rb-view-actions,
+.rb-filter-menu{
+  position:relative;
+  z-index:510;
+}
+.rb-filter-panel{
+  z-index:1000!important;
+}
+.rb-summary-strip{
+  position:relative;
+  z-index:2;
+}
+.rb-room-list{
+  position:relative;
+  z-index:1;
+}
+.rb-room-card{
+  z-index:1;
+}
+
+/* Notes stay visible in both expanded and collapsed scan views */
+.rb-note-badge{
+  max-width:min(420px,100%);
+  background:#edf3f8;
+  border:1px solid #c8d6e2;
+  color:#4f6679;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.rb-note-badge b{
+  margin-right:3px;
+}
+html[data-theme="dark"] .rb-note-badge{
+  background:#202d3a!important;
+  border-color:#3a5268!important;
+  color:#b7cadb!important;
+}
