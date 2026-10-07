@@ -185,8 +185,8 @@ export default function HousekeepingBoard() {
   const [selfChecks,setSelfChecks] = useState<Record<string,SelfCheckState>>({})
   const rowsRef = useRef<RoomRow[]>([])
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
-  const topScrollRef = useRef<HTMLDivElement | null>(null)
-  const syncingScrollRef = useRef(false)
+  const [tableScrollMax,setTableScrollMax] = useState(0)
+  const [tableScrollLeft,setTableScrollLeft] = useState(0)
   const dateRef = useRef(date)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -316,11 +316,7 @@ export default function HousekeepingBoard() {
   const managerInitials = getManagerInitials(access)
 
   function markOut(row: RoomRow) {
-    if (!managerInitials) {
-      setMessage('Manager initials could not be determined from your profile.')
-      return
-    }
-    patch(row.roomId, { serviceType: `OUT-${managerInitials}` })
+    patch(row.roomId, { serviceType: 'OUT' })
   }
 
   function markRefresh(row: RoomRow) {
@@ -601,6 +597,27 @@ export default function HousekeepingBoard() {
     return staffOptions.filter(option => option.name.toLowerCase().includes(q))
   }, [staffOptions, staffSearch])
 
+  useEffect(()=>{
+    if(viewMode!=='manager'||loading) return
+    const el=tableScrollRef.current
+    if(!el) return
+    const measure=()=>{
+      const max=Math.max(0,el.scrollWidth-el.clientWidth)
+      setTableScrollMax(max)
+      setTableScrollLeft(Math.min(el.scrollLeft,max))
+    }
+    measure()
+    const observer=new ResizeObserver(measure)
+    observer.observe(el)
+    const table=el.querySelector('table')
+    if(table) observer.observe(table)
+    window.addEventListener('resize',measure)
+    return ()=>{
+      observer.disconnect()
+      window.removeEventListener('resize',measure)
+    }
+  },[viewMode,loading,rows.length])
+
   if (viewMode === 'assigned') {
     return (
       <div className="ops-module hsk-module hsk-assigned-view">
@@ -655,6 +672,11 @@ export default function HousekeepingBoard() {
                       {[row.reservationStatus, row.serviceType, row.stripHold]
                         .filter(Boolean)
                         .join(' · ') || 'Assigned clean'}
+                    </div>
+                    <div className="hsk-assigned-service-controls">
+                      <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearOutRf(row)}>—</button>
+                      <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>markOut(row)}>OUT</button>
+                      <button type="button" className={String(row.serviceType||'').toUpperCase()==='RF'?'active':''} onClick={()=>markRefresh(row)}>RF</button>
                     </div>
                   </div>
 
@@ -849,29 +871,11 @@ export default function HousekeepingBoard() {
         <div className="module-empty">Loading rooms…</div>
       ) : (
         <>
-          <div
-            className="hsk-top-scrollbar"
-            ref={topScrollRef}
-            onScroll={e=>{
-              if(syncingScrollRef.current) return
-              syncingScrollRef.current=true
-              if(tableScrollRef.current) tableScrollRef.current.scrollLeft=e.currentTarget.scrollLeft
-              requestAnimationFrame(()=>{ syncingScrollRef.current=false })
-            }}
-            aria-label="Scroll housekeeping table horizontally"
-          >
-            <div className="hsk-top-scrollbar-inner"/>
-          </div>
-
+          <div className="hsk-table-card">
           <div
             className="hsk-table-wrapper"
             ref={tableScrollRef}
-            onScroll={e=>{
-              if(syncingScrollRef.current) return
-              syncingScrollRef.current=true
-              if(topScrollRef.current) topScrollRef.current.scrollLeft=e.currentTarget.scrollLeft
-              requestAnimationFrame(()=>{ syncingScrollRef.current=false })
-            }}
+            onScroll={e=>setTableScrollLeft(e.currentTarget.scrollLeft)}
           >
           <table className="hsk-table">
             <thead>
@@ -1133,6 +1137,25 @@ export default function HousekeepingBoard() {
               })}
             </tbody>
           </table>
+          </div>
+          <div className="hsk-scroll-control">
+            <span>Scroll table</span>
+            <input
+              type="range"
+              min="0"
+              max={Math.max(0,tableScrollMax)}
+              step="1"
+              value={Math.min(tableScrollLeft,tableScrollMax)}
+              disabled={tableScrollMax<=0}
+              onChange={e=>{
+                const value=Number(e.target.value)
+                setTableScrollLeft(value)
+                if(tableScrollRef.current) tableScrollRef.current.scrollLeft=value
+              }}
+              aria-label="Scroll housekeeping table horizontally"
+            />
+            <span>{tableScrollMax>0?'↔':'Fits'}</span>
+          </div>
           </div>
         </>
       )}

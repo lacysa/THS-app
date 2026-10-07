@@ -815,3 +815,176 @@ html[data-theme="dark"] .hsk-top-scrollbar::-webkit-scrollbar-thumb{
   background:#667789;
   border-color:#1c2630;
 }
+
+
+/* Unified Housekeeping workspace */
+.housekeeping-workspace{
+  display:grid;
+  gap:12px;
+  min-width:0;
+}
+.housekeeping-workspace-switch{
+  display:flex;
+  width:max-content;
+  max-width:100%;
+  gap:5px;
+  padding:5px;
+  border:1px solid #dfe5eb;
+  border-radius:14px;
+  background:rgba(255,255,255,.88);
+  box-shadow:0 8px 22px rgba(48,72,110,.06);
+}
+.housekeeping-workspace-switch button{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:38px;
+  padding:0 13px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#657587;
+  font-size:10px;
+  font-weight:850;
+  cursor:pointer;
+}
+.housekeeping-workspace-switch button.active{
+  background:#fff;
+  color:#1f2b38;
+  box-shadow:0 5px 14px rgba(48,72,110,.09);
+}
+.housekeeping-workspace-note{
+  color:#738193;
+  font-size:9px;
+  padding:0 4px;
+}
+
+/* Guaranteed in-card horizontal control, independent of OS scrollbar settings */
+.hsk-table-card{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #dfe5eb;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 10px 26px rgba(48,72,110,.075);
+}
+.hsk-table-card .hsk-table-wrapper{
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow-x:auto!important;
+  overflow-y:visible!important;
+}
+.hsk-scroll-control{
+  position:sticky;
+  bottom:0;
+  z-index:8;
+  display:grid;
+  grid-template-columns:auto minmax(120px,1fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:9px 12px;
+  border-top:1px solid #dfe5eb;
+  background:rgba(248,250,252,.97);
+  backdrop-filter:blur(10px);
+}
+.hsk-scroll-control>span{
+  color:#68788a;
+  font-size:8px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  white-space:nowrap;
+}
+.hsk-scroll-control input[type="range"]{
+  width:100%!important;
+  min-height:22px!important;
+  height:22px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  accent-color:#70869a;
+  cursor:ew-resize;
+}
+.hsk-scroll-control input[type="range"]:disabled{
+  opacity:.35;
+  cursor:default;
+}
+
+/* Housekeepers can mark OUT/RF, manager initials remain separate */
+.hsk-assigned-service-controls{
+  display:flex;
+  gap:5px;
+  margin-top:8px;
+}
+.hsk-assigned-service-controls button{
+  min-height:30px;
+  padding:0 10px;
+  border:1px solid #d8e0e7;
+  border-radius:9px;
+  background:#fff;
+  color:#667689;
+  font-size:9px;
+  font-weight:900;
+  cursor:pointer;
+}
+.hsk-assigned-service-controls button.active{
+  border-color:#9eb2c4;
+  background:#edf4f8;
+  color:#425f78;
+}
+
+@media(max-width:700px){
+  .housekeeping-workspace-switch{
+    width:100%;
+  }
+  .housekeeping-workspace-switch button{
+    flex:1 1 0;
+    justify-content:center;
+  }
+  .housekeeping-workspace-note{
+    display:none;
+  }
+  .hsk-scroll-control{
+    grid-template-columns:auto 1fr;
+  }
+  .hsk-scroll-control>span:last-child{
+    display:none;
+  }
+}
+
+html[data-theme="dark"] .housekeeping-workspace-switch,
+html[data-theme="dark"] .hsk-table-card{
+  background:#17212b;
+  border-color:#334250;
+}
+html[data-theme="dark"] .housekeeping-workspace-switch button.active{
+  background:#253342;
+  color:#f2f6fa;
+}
+html[data-theme="dark"] .hsk-scroll-control{
+  background:rgba(25,35,46,.97);
+  border-color:#334250;
+}
+html[data-theme="dark"] .hsk-assigned-service-controls button{
+  background:#18232e;
+  border-color:#334250;
+  color:#c5d0da;
+}
+html[data-theme="dark"] .hsk-assigned-service-controls button.active{
+  background:#203140;
+  border-color:#557187;
+  color:#dceaf4;
+}
+
+
+/* Keep both unified views constrained to the Housekeeping content column. */
+.housekeeping-workspace .rb-page,
+.housekeeping-workspace .hsk-module{
+  min-width:0;
+  max-width:100%;
+}

@@ -352,17 +352,29 @@ export default function RoomBoard(){
 
   const saveLabel=saveState==='saving'?'Saving…':saveState==='saved'?'Saved ✓':saveState==='error'?'Save failed':'All changes saved'
   const managerInitials=getManagerInitials(access)
+  const canInitialEnvelope=Boolean(
+    access?.isAdmin ||
+    ['owner','manager','general manager','operations manager'].includes(normalize(access?.roleName))
+  )
 
   function setService(row:RoomRow,value:string){
     if(value==='OUT'){
-      if(!managerInitials){
-        setMessage('Manager initials could not be determined from your profile.')
-        return
-      }
-      patch(row.roomId,{serviceType:`OUT-${managerInitials}`})
+      patch(row.roomId,{serviceType:'OUT'})
       return
     }
     patch(row.roomId,{serviceType:value})
+  }
+
+  function initialEnvelope(row:RoomRow){
+    if(!canInitialEnvelope||!managerInitials){
+      setMessage('Manager initials could not be determined from your profile.')
+      return
+    }
+    if(!String(row.serviceType||'').toUpperCase().startsWith('OUT')){
+      setMessage('Mark the room OUT before initialing the envelope.')
+      return
+    }
+    patch(row.roomId,{serviceType:`OUT-${managerInitials}`})
   }
 
   return <div className="rb-page">
@@ -668,10 +680,15 @@ export default function RoomBoard(){
                 <span>Service</span>
                 <select value={service} onChange={e=>setService(row,e.target.value)}>
                   <option value="">—</option>
-                  <option value="OUT">OUT{managerInitials?`-${managerInitials}`:''}</option>
-                  {service.startsWith('OUT-')&&service!==`OUT-${managerInitials}`&&<option value={service}>{service}</option>}
+                  <option value="OUT">OUT</option>
+                  {service.startsWith('OUT-')&&<option value={service}>{service}</option>}
                   <option value="RF">RF</option>
                 </select>
+                {service==='OUT'&&canInitialEnvelope&&(
+                  <button type="button" className="rb-initial-out" onClick={()=>initialEnvelope(row)}>
+                    Initial {managerInitials}
+                  </button>
+                )}
               </label>
 
               {showHousekeepingWorkflow&&<>

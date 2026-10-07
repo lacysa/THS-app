@@ -1077,3 +1077,25 @@ html[data-theme="dark"] .rb-progress{
       82px!important;
   }
 }
+
+
+.rb-initial-out{
+  width:100%;
+  min-height:30px;
+  margin-top:5px;
+  border:1px solid #a8c3d4;
+  border-radius:9px;
+  background:#edf6fb;
+  color:#365f78;
+  font-size:9px;
+  font-weight:900;
+  cursor:pointer;
+}
+.rb-initial-out:hover{
+  background:#e3f1f8;
+}
+html[data-theme="dark"] .rb-initial-out{
+  background:#1e3341;
+  border-color:#55778d;
+  color:#c5e0ee;
+}

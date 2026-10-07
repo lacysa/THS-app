@@ -365,11 +365,20 @@ export async function POST(req: NextRequest) {
           }
 
           const attestedNow = requiresQualityCheck ? validSelfCheck : Boolean(existing.housekeeper_attested_by)
+          const existingService = String(existing.service_type||'').trim().toUpperCase()
+          const requestedService = cleanText(row.serviceType).toUpperCase()
+          const safeHousekeeperService =
+            existingService.startsWith('OUT-')
+              ? existing.service_type
+              : ['','OUT','RF'].includes(requestedService)
+                ? requestedService
+                : existing.service_type || ''
+
           return {
             service_date: serviceDate,
             room_id: row.roomId,
             reservation_status: existing.reservation_status || '',
-            service_type: existing.service_type || '',
+            service_type: safeHousekeeperService,
             strip_hold: existing.strip_hold || '',
             assigned_to: existing.assigned_to || '',
             clean_order: existing.clean_order ?? null,
