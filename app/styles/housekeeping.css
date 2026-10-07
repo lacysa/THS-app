@@ -1522,3 +1522,112 @@ html[data-theme="dark"] .hsk-order-sup{
   border-color:#4c6679;
   color:#d6e7f2;
 }
+
+
+/* Tag-only Hold / Strip actions */
+.hsk-add-hold-task{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:2px 8px;
+  border:1px dashed #c7bde8;
+  border-radius:999px;
+  background:#f7f4fd;
+  color:#66558f;
+  font-size:8px;
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.hsk-add-hold-task:hover{
+  background:#eeeafb;
+}
+
+/* Table column indexes after removing the dedicated Strip column */
+.staff-page-content .hsk-table th:nth-child(2),
+.staff-page-content .hsk-table th:nth-child(3),
+.staff-page-content .hsk-table th:nth-child(4){
+  min-width:62px;
+}
+.staff-page-content .hsk-table td:nth-child(2):has(.hsk-status-select){
+  min-width:130px;
+}
+.staff-page-content .hsk-table td:nth-child(3):has(.hsk-out-controls){
+  min-width:128px;
+}
+.staff-page-content .hsk-table td:nth-child(4):has(.hsk-staff-picker){
+  min-width:180px;
+}
+
+/* Keep Housekeeping horizontal navigation physically inside the card */
+.housekeeping-workspace,
+.housekeeping-workspace .hsk-module,
+.housekeeping-workspace .hsk-table-card{
+  min-width:0!important;
+  max-width:100%!important;
+}
+.housekeeping-workspace .hsk-module{
+  overflow-x:hidden!important;
+}
+.housekeeping-workspace .hsk-table-card{
+  position:relative;
+  width:100%!important;
+  overflow:visible!important;
+}
+.housekeeping-workspace .hsk-table-wrapper{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow-x:auto!important;
+  overflow-y:visible!important;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x pan-y;
+}
+.housekeeping-workspace .hsk-table{
+  width:max-content!important;
+  min-width:100%!important;
+  max-width:none!important;
+}
+.housekeeping-workspace .hsk-scroll-control{
+  position:sticky!important;
+  bottom:8px!important;
+  z-index:30!important;
+  margin:0 8px 8px!important;
+  border:1px solid #d7e0e8!important;
+  border-radius:12px!important;
+  box-shadow:0 8px 24px rgba(45,64,86,.14)!important;
+  background:rgba(248,250,252,.97)!important;
+}
+
+/* On mobile, make the in-card scroll control easy to grab with a thumb. */
+@media(max-width:900px){
+  .housekeeping-workspace .hsk-table-card{
+    width:100%!important;
+    max-width:100%!important;
+  }
+  .housekeeping-workspace .hsk-scroll-control{
+    grid-template-columns:auto minmax(0,1fr)!important;
+    gap:8px!important;
+    min-height:44px;
+    margin:0 6px 6px!important;
+    padding:8px 10px!important;
+  }
+  .housekeeping-workspace .hsk-scroll-control>span:first-child{
+    font-size:8px;
+  }
+  .housekeeping-workspace .hsk-scroll-control>span:last-child{
+    display:none;
+  }
+  .housekeeping-workspace .hsk-scroll-control input[type="range"]{
+    min-height:28px!important;
+    height:28px!important;
+  }
+}
+
+html[data-theme="dark"] .hsk-add-hold-task{
+  background:#26223a;
+  border-color:#655b88;
+  color:#d8cff4;
+}
