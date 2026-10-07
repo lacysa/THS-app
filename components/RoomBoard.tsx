@@ -164,6 +164,13 @@ export default function RoomBoard(){
 
   useEffect(()=>{ void load() },[date])
 
+  useEffect(()=>{
+    const refresh=()=>void load()
+    window.addEventListener('housekeeping-clean-limits-updated',refresh)
+    return ()=>window.removeEventListener('housekeeping-clean-limits-updated',refresh)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
+
   async function saveRows(sourceRows=rowsRef.current,showMessage=false){
     setSaveState('saving')
     try{
