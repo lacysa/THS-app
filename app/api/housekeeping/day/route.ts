@@ -308,7 +308,12 @@ export async function GET(req: NextRequest) {
       })),
       signoffAccess: {
         canHaSignoff: currentCaps.has('ha_signoff') || currentCaps.has('ha_signoff_override'),
-        canFohSignoff: currentCaps.has('foh_signoff') || currentCaps.has('foh_signoff_override')
+        canFohSignoff:
+          access.isAdmin ||
+          ['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>currentCaps.has(cap)) ||
+          ['manager','owner'].some(label=>String(access.roleName||'').trim().toLowerCase().includes(label)) ||
+          currentCaps.has('foh_signoff') ||
+          currentCaps.has('foh_signoff_override')
       },
       breakfast: {
         serviceDate: breakfastDate,
