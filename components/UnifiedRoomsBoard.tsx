@@ -304,6 +304,49 @@ export default function UnifiedRoomsBoard(){
     })
     const d=await response.json().catch(()=>({}))
     if(!response.ok){setMessage(d.error||'Could not save inspection item.');await load();return}
+
+    if(d.complete&&d.allPassed){
+      const now=new Date().toISOString()
+
+      // Final pass: update only this room in place. This preserves scroll/card
+      // state and immediately collapses the completed checklist.
+      setInspectionRooms(current=>current.map(currentRoom=>
+        currentRoom.roomId===room.roomId
+          ? {...currentRoom,inspected:true,readyForInspection:false,issueOpen:false,issueNote:''}
+          : currentRoom
+      ))
+
+      setRows(current=>{
+        const next=current.map(currentRow=>{
+          if(currentRow.roomId!==room.roomId)return currentRow
+          const status=normalize(currentRow.reservationStatus)
+          let roomCondition=currentRow.roomCondition
+          if(['checkout','vacant','dirty'].includes(status))roomCondition='Vacant (Clean)'
+          else if(status==='out/in')roomCondition='Ready'
+          else if(status==='arrival'&&normalize(currentRow.roomCondition)!=='occupied')roomCondition='Ready'
+
+          return {
+            ...currentRow,
+            inspected:true,
+            inspectedAt:now,
+            readyForInspection:false,
+            checkIssueOpen:false,
+            checkIssueNote:'',
+            roomCondition,
+            haSignedBy:currentRow.haSignedBy||'signed',
+            haSignedName:currentRow.haSignedName||access?.preferredName||access?.name||'Signed',
+            haSignedAt:currentRow.haSignedAt||now
+          }
+        })
+        rowsRef.current=next
+        return next
+      })
+      setMessage('')
+      return
+    }
+
+    // A completed inspection with a failed item changes correction state in
+    // several backend records, so reconcile only that uncommon path.
     if(d.complete)await load()
   }
 
