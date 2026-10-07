@@ -41,6 +41,7 @@ export default function HousekeepingWorkspace(){
       return
     }
     setLimits(current=>current.map(item=>item.id===staffMemberId?{...item,fullRoomCleanLimit:limit}:item))
+    window.dispatchEvent(new CustomEvent('housekeeping-clean-limits-updated'))
     setLimitMessage('Saved.')
     window.setTimeout(()=>setLimitMessage(''),1200)
   }
@@ -112,7 +113,7 @@ export default function HousekeepingWorkspace(){
                   const value=Math.max(0,Math.min(10,Number(e.target.value)||0))
                   setLimits(current=>current.map(item=>item.id===person.id?{...item,fullRoomCleanLimit:value}:item))
                 }}
-                onBlur={()=>void saveLimit(person.id,person.fullRoomCleanLimit)}
+                onBlur={e=>void saveLimit(person.id,Math.max(0,Math.min(10,Number(e.currentTarget.value)||0)))}
               />
             </label>
           </div>)}
