@@ -1387,3 +1387,184 @@ html[data-theme="dark"] .staff-page-content .daily-hk-group>summary{
   background:linear-gradient(180deg,#202c39,#1a2530)!important;
   border-color:var(--module-border)!important;
 }
+
+
+/* Finish the hero treatment on modules whose markup uses a plain module toolbar */
+.staff-page-content .inventory-page>.module-toolbar,
+.staff-page-content .department-board>.module-toolbar,
+.staff-page-content .reservations-hero,
+.staff-page-content .daily-dashboard-hero{
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+  padding:22px!important;
+  border:1px solid var(--module-border)!important;
+  border-radius:var(--module-radius)!important;
+  background:var(--module-gradient)!important;
+  box-shadow:var(--module-shadow)!important;
+  isolation:isolate;
+}
+
+.staff-page-content .inventory-page>.module-toolbar::before,
+.staff-page-content .department-board>.module-toolbar::before,
+.staff-page-content .reservations-hero::before,
+.staff-page-content .daily-dashboard-hero::before{
+  content:"";
+  position:absolute;
+  width:180px;
+  height:180px;
+  right:-75px;
+  top:-95px;
+  border-radius:50%;
+  background:rgba(var(--module-accent-rgb),.08);
+  pointer-events:none;
+  z-index:-1;
+}
+
+.staff-page-content .inventory-page>.module-toolbar h1,
+.staff-page-content .department-board>.module-toolbar h1,
+.staff-page-content .reservations-hero h1,
+.staff-page-content .daily-dashboard-hero h1{
+  margin:4px 0 3px!important;
+  color:var(--pretty-text,#172033)!important;
+  font-size:34px!important;
+  font-weight:800!important;
+  line-height:1.02!important;
+  letter-spacing:-.035em!important;
+}
+
+.staff-page-content .inventory-page>.module-toolbar p,
+.staff-page-content .department-board>.module-toolbar p,
+.staff-page-content .reservations-hero p,
+.staff-page-content .daily-dashboard-hero p{
+  margin:0!important;
+  color:var(--pretty-muted,#6b7789)!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+
+/* Interior surfaces on the simpler modules */
+.staff-page-content .inventory-request-row,
+.staff-page-content .department-inventory-link,
+.staff-page-content .overview-guest-block,
+.staff-page-content .ticket,
+.staff-page-content .timeline>div{
+  border-radius:13px!important;
+}
+
+.staff-page-content .inventory-item{
+  border-left:4px solid rgba(var(--module-accent-rgb),.70)!important;
+}
+
+.staff-page-content .department-inventory-link{
+  border:1px solid var(--module-border)!important;
+  background:linear-gradient(145deg,#fff,#fbfdff)!important;
+  box-shadow:0 8px 22px rgba(48,72,110,.06)!important;
+}
+
+.staff-page-content .inventory-request-row{
+  padding:12px!important;
+  border:1px solid rgba(112,132,153,.13)!important;
+  background:#fff!important;
+  box-shadow:0 5px 16px rgba(48,72,110,.04)!important;
+}
+
+.staff-page-content .inventory-request-list{
+  display:grid!important;
+  gap:8px!important;
+}
+
+/* Make all summary/status strips feel like floating cards */
+.staff-page-content .overview-summary-grid,
+.staff-page-content .shift-snapshot-grid,
+.staff-page-content .daily-metric-grid{
+  gap:12px!important;
+}
+
+.staff-page-content .overview-metrics>div,
+.staff-page-content .shift-snapshot-grid>div{
+  min-height:78px;
+  padding:12px 14px!important;
+  display:grid;
+  align-content:center;
+}
+
+/* Mobile mirrors the uploaded Room Checks reference */
+@media(max-width:900px){
+  .staff-page-content .inventory-page>.module-toolbar,
+  .staff-page-content .department-board>.module-toolbar,
+  .staff-page-content .reservations-hero,
+  .staff-page-content .daily-dashboard-hero{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:18px!important;
+    padding:22px 18px!important;
+    border-radius:22px!important;
+  }
+
+  .staff-page-content .inventory-page>.module-toolbar h1,
+  .staff-page-content .department-board>.module-toolbar h1,
+  .staff-page-content .reservations-hero h1,
+  .staff-page-content .daily-dashboard-hero h1{
+    font-size:31px!important;
+  }
+
+  .staff-page-content .inventory-page>.module-toolbar>button,
+  .staff-page-content .department-board>.module-toolbar>label{
+    width:100%!important;
+  }
+
+  .staff-page-content .department-board>.module-toolbar>label{
+    padding:12px!important;
+    border:1px solid var(--module-border)!important;
+    border-radius:16px!important;
+    background:rgba(255,255,255,.82)!important;
+  }
+
+  .staff-page-content .reservations-date-controls{
+    display:grid!important;
+    grid-template-columns:44px 1fr 44px!important;
+    gap:8px!important;
+  }
+
+  .staff-page-content .reservations-date-controls label{
+    width:auto!important;
+  }
+
+  .staff-page-content .daily-dashboard-status{
+    width:max-content;
+  }
+}
+
+@media(max-width:620px){
+  .staff-page-content .inventory-page>.module-toolbar,
+  .staff-page-content .department-board>.module-toolbar,
+  .staff-page-content .reservations-hero,
+  .staff-page-content .daily-dashboard-hero{
+    padding:20px 16px!important;
+  }
+
+  .staff-page-content .inventory-page>.module-toolbar h1,
+  .staff-page-content .department-board>.module-toolbar h1,
+  .staff-page-content .reservations-hero h1,
+  .staff-page-content .daily-dashboard-hero h1{
+    font-size:30px!important;
+  }
+}
+
+html[data-theme="dark"] .staff-page-content .inventory-page>.module-toolbar,
+html[data-theme="dark"] .staff-page-content .department-board>.module-toolbar,
+html[data-theme="dark"] .staff-page-content .reservations-hero,
+html[data-theme="dark"] .staff-page-content .daily-dashboard-hero{
+  background:var(--module-gradient)!important;
+  border-color:var(--module-border)!important;
+}
+
+html[data-theme="dark"] .staff-page-content .inventory-request-row,
+html[data-theme="dark"] .staff-page-content .department-inventory-link{
+  background:linear-gradient(145deg,#18232e,#141c25)!important;
+  border-color:var(--module-border)!important;
+}
