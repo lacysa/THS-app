@@ -75,7 +75,8 @@ export default async function DashboardPage() {
     menuNotesRes,
     allStaffRes,
     packageCatalogRes,
-    roomPackagesRes
+    roomPackagesRes,
+    staffScheduleRes
   ] = await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('staff_members').select('id,name').eq('auth_user_id',access.userId).maybeSingle(),
@@ -125,7 +126,11 @@ export default async function DashboardPage() {
       : Promise.resolve({data:[],error:null}),
     moduleKeys.has('housekeeping')
       ? admin.from('housekeeping_room_packages').select('room_id,package_id').eq('service_date',today)
-      : Promise.resolve({data:[],error:null})
+      : Promise.resolve({data:[],error:null}),
+    admin.from('staff_daily_schedule')
+      .select('staff_member_id,shift_start,shift_end,role_label,work_mode')
+      .eq('schedule_date',today)
+      .eq('work_mode','onsite')
   ])
 
   const roomMap = new Map<string,string>((roomsRes.data || []).map((r:any)=>[String(r.id),r.name]))
@@ -142,6 +147,15 @@ export default async function DashboardPage() {
     packageNamesByRoom.set(roomId,current)
   }
   const currentStaffName = String((staffMemberRes.data as any)?.name || access.preferredName || access.name || '').trim()
+  const todayStaff = (staffScheduleRes.data || [])
+    .map((row:any)=>({
+      id:String(row.staff_member_id),
+      name:staffNameMap.get(String(row.staff_member_id)) || 'Staff',
+      roleLabel:String(row.role_label || ''),
+      shiftStart:String(row.shift_start || ''),
+      shiftEnd:String(row.shift_end || '')
+    }))
+    .sort((a:any,b:any)=>a.shiftStart.localeCompare(b.shiftStart) || a.name.localeCompare(b.name))
 
   let housekeeping = (housekeepingRes.data || []).map((row:any)=>({
     id:String(row.id),
@@ -299,6 +313,7 @@ export default async function DashboardPage() {
         departmentNotes={departmentNotes}
         showReservationDaily={moduleKeys.has('reservations')}
         reservationDaily={reservationDaily}
+        todayStaff={todayStaff}
       />
     </StaffShell>
   )
