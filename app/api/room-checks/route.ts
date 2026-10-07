@@ -137,8 +137,6 @@ export async function POST(req:NextRequest){
       .eq('room_id',roomId)
       .eq('stage','inspection')
     if(countErr) throw new Error(countErr.message)
-
-    const stage:firstStage = undefined as never
     const qualityStage:'inspection'|'recheck'=Number(firstInspectionCount||0)===0?'inspection':'recheck'
     const attemptNo=await nextAttempt(admin,date,roomId,qualityStage)
 
