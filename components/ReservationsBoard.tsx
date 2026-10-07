@@ -146,13 +146,15 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
             ['vacant (clean)','ready'].includes(String(row.roomCondition||'').trim().toLowerCase())
           const operationalState=row.checkIssueOpen
             ? 'Needs correction'
-            : row.fohChecked
-              ? 'FOH checked'
-              : row.inspected
-                ? 'Room check passed'
-                : row.complete
-                  ? (row.roomCondition||'Complete')
-                  : (row.roomCondition||'In progress')
+            : ['ready','vacant (clean)'].includes(String(row.roomCondition||'').trim().toLowerCase())
+              ? 'Ready'
+              : row.fohChecked
+                ? 'FOH checked'
+                : row.inspected
+                  ? 'Room check passed'
+                  : row.complete
+                    ? (row.roomCondition||'Complete')
+                    : (row.roomCondition||'Not ready')
           return <article className={'reservation-card '+statusClass(status)} key={row.roomId}>
             <div className="reservation-card-head">
               <div><strong>{row.roomName}</strong><span>{status}</span></div>
