@@ -1134,6 +1134,19 @@ export default function HousekeepingBoard() {
 
 
 
+      <div className="hsk-manager-mobile">
+        {loading ? (
+          <div className="module-empty">Loading rooms…</div>
+        ) : rows.length===0 ? (
+          <div className="module-empty">No rooms are available for this date.</div>
+        ) : (
+          <div className="hsk-mobile-room-list">
+            {rows.map(renderManagerMobileCard)}
+          </div>
+        )}
+      </div>
+
+      <div className="hsk-manager-desktop">
       {loading ? (
         <div className="module-empty">Loading rooms…</div>
       ) : (
@@ -1568,6 +1581,7 @@ export default function HousekeepingBoard() {
           </div>
         </>
       )}
+      </div>
     </div>
   )
 }
