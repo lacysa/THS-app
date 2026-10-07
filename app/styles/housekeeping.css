@@ -1010,3 +1010,202 @@ html[data-theme="dark"] .hsk-assigned-service-controls button.active{
 .hsk-staff-popover-portal .hsk-staff-options{
   max-height:230px;
 }
+
+
+/* Housekeeper full-room-clean capacity */
+.housekeeping-workspace-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.housekeeping-limit-button{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:40px;
+  padding:0 13px;
+  border:1px solid #dbe3ea;
+  border-radius:11px;
+  background:#fff;
+  color:#526578;
+  box-shadow:0 6px 16px rgba(48,72,110,.06);
+  font-size:10px;
+  font-weight:850;
+  cursor:pointer;
+}
+.housekeeping-limit-button:hover{
+  background:#f7fafc;
+}
+.housekeeping-limit-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:2200;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  background:rgba(18,25,33,.42);
+  backdrop-filter:blur(5px);
+}
+.housekeeping-limit-panel{
+  width:min(680px,100%);
+  max-height:min(82vh,760px);
+  overflow:hidden;
+  display:grid;
+  grid-template-rows:auto auto minmax(0,1fr);
+  border:1px solid #dce4eb;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 28px 70px rgba(29,43,63,.24);
+}
+.housekeeping-limit-panel>header{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  padding:20px 20px 16px;
+  border-bottom:1px solid #e6ebf0;
+  background:
+    radial-gradient(circle at 0 0,rgba(103,207,199,.16),transparent 34%),
+    radial-gradient(circle at 100% 0,rgba(141,119,230,.14),transparent 38%),
+    #fbfdff;
+}
+.housekeeping-limit-panel>header span{
+  display:block;
+  margin-bottom:4px;
+  color:#668097;
+  font-size:8px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+.housekeeping-limit-panel>header h2{
+  margin:0;
+  color:#1e2a36;
+  font-size:22px;
+  line-height:1.08;
+}
+.housekeeping-limit-panel>header p{
+  margin:6px 0 0;
+  color:#6f7d8c;
+  font-size:10px;
+  line-height:1.45;
+}
+.housekeeping-limit-panel>header>button{
+  display:grid;
+  place-items:center;
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  border:1px solid #dce4eb;
+  border-radius:10px;
+  background:#fff;
+  color:#596b7d;
+  cursor:pointer;
+}
+.housekeeping-limit-message{
+  padding:8px 20px;
+  border-bottom:1px solid #edf1f4;
+  background:#f8fbfd;
+  color:#536779;
+  font-size:9px;
+  font-weight:800;
+}
+.housekeeping-limit-list{
+  overflow:auto;
+  padding:8px 20px 18px;
+}
+.housekeeping-limit-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 150px;
+  gap:16px;
+  align-items:center;
+  min-height:64px;
+  padding:10px 0;
+  border-bottom:1px solid #edf1f4;
+}
+.housekeeping-limit-row:last-child{border-bottom:0}
+.housekeeping-limit-row>div{
+  display:grid;
+  gap:3px;
+}
+.housekeeping-limit-row strong{
+  color:#263442;
+  font-size:11px;
+}
+.housekeeping-limit-row small{
+  color:#7a8795;
+  font-size:8px;
+}
+.housekeeping-limit-row label{
+  display:grid;
+  gap:4px;
+  color:#748292;
+  font-size:8px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.housekeeping-limit-row input{
+  width:100%!important;
+  min-height:38px!important;
+  text-align:center;
+  font-weight:850;
+}
+.hsk-staff-options button.is-at-limit,
+.rb-chip-list button.is-at-limit{
+  border-color:#d6c4cc!important;
+  background:#f8f1f4!important;
+  color:#846271!important;
+  opacity:.72;
+}
+.hsk-staff-options button.is-at-limit small,
+.rb-chip-list button.is-at-limit small{
+  color:#927380!important;
+}
+@media(max-width:620px){
+  .housekeeping-workspace-top{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  .housekeeping-limit-button{
+    width:100%;
+    justify-content:center;
+  }
+  .housekeeping-limit-panel{
+    max-height:90vh;
+  }
+  .housekeeping-limit-row{
+    grid-template-columns:1fr 118px;
+  }
+}
+html[data-theme="dark"] .housekeeping-limit-button,
+html[data-theme="dark"] .housekeeping-limit-panel{
+  background:#17212b;
+  border-color:#334250;
+  color:#dce5ed;
+}
+html[data-theme="dark"] .housekeeping-limit-panel>header{
+  background:
+    radial-gradient(circle at 0 0,rgba(82,183,175,.10),transparent 34%),
+    radial-gradient(circle at 100% 0,rgba(123,101,205,.12),transparent 38%),
+    #19242f;
+  border-color:#334250;
+}
+html[data-theme="dark"] .housekeeping-limit-panel>header h2,
+html[data-theme="dark"] .housekeeping-limit-row strong{
+  color:#eef4f9;
+}
+html[data-theme="dark"] .housekeeping-limit-panel>header>button{
+  background:#202c38;
+  border-color:#3a4957;
+  color:#dce5ed;
+}
+html[data-theme="dark"] .housekeeping-limit-row,
+html[data-theme="dark"] .housekeeping-limit-message{
+  border-color:#2e3b48;
+}
+html[data-theme="dark"] .housekeeping-limit-message{
+  background:#1b2631;
+  color:#c2ccd6;
+}
