@@ -305,6 +305,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const access = await getStaffAccess()
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (access.isPreviewMode) return NextResponse.json({ error: 'Owner staff preview is read-only.' }, { status: 403 })
 
   const payload = await req.json().catch(() => null)
   const serviceDate = payload?.serviceDate
