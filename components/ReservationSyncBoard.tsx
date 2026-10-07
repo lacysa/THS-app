@@ -78,62 +78,211 @@ function parseNoteText(text:string){
   }
 }
 
+function allUsDates(value:string){
+  const matches=String(value||'').match(/\d{1,2}[\/-]\d{1,2}[\/-]20\d{2}/g)||[]
+  return matches.map(isoFromUsDate).filter(Boolean) as string[]
+}
+
+function normalizeRoomKey(value:string){
+  return String(value||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')
+}
+
+function findRoomSegments(roomText:string,roomNames:string[]){
+  const lower=String(roomText||'').toLowerCase()
+  const hits=roomNames
+    .map(name=>({name,index:lower.indexOf(name.toLowerCase())}))
+    .filter(hit=>hit.index>=0)
+    .sort((a,b)=>a.index-b.index)
+
+  return hits.map((hit,index)=>{
+    const next=hits[index+1]?.index ?? roomText.length
+    const segment=roomText.slice(hit.index,next).trim()
+    return {roomName:hit.name,segment}
+  })
+}
+
+function headerSchema(cells:string[]){
+  const lower=cells.map(value=>value.toLowerCase().replace(/\s+/g,' ').trim())
+  const room=lower.findIndex(value=>value.includes('room'))
+  const address=lower.findIndex(value=>value.includes('address'))
+  if(room<0||address<0) return null
+
+  const combined=lower.findIndex(value=>value.includes('arrival')&&value.includes('checkout'))
+  const arrival=lower.findIndex(value=>value.includes('arrival')&&!value.includes('checkout'))
+  const checkout=lower.findIndex(value=>value.includes('checkout')&&!value.includes('arrival'))
+  const stayover=lower.findIndex(value=>value.includes('stay-over')||value.includes('stayover'))
+  if(combined<0&&arrival<0&&checkout<0&&stayover<0) return null
+
+  return {
+    combined,
+    arrival,
+    checkout,
+    stayover,
+    address,
+    room,
+    occ:lower.findIndex(value=>value.includes('occ')),
+    product:lower.findIndex(value=>value.includes('product')),
+    checkin:lower.findIndex(value=>value.includes('checkin'))
+  }
+}
+
 function parsePmsTableHtml(html:string,roomNames:string[]){
   const doc=new DOMParser().parseFromString(html,'text/html')
   const tables=Array.from(doc.querySelectorAll('table'))
-  const table=tables.find(t=>{
-    const txt=String(t.textContent||'').toLowerCase()
-    return txt.includes('arrival')&&txt.includes('checkout')&&txt.includes('room')&&txt.includes('checkin')
-  })
-  if(!table) throw new Error('I could not find the Arrival Report table in the copied page.')
-  const trList=Array.from(table.querySelectorAll('tr'))
-  let headerIndex=-1
-  let headers:string[]=[]
-  for(let i=0;i<trList.length;i++){
-    const cells=Array.from(trList[i].querySelectorAll('th,td')).map(cell=>cellText(cell).toLowerCase())
-    if(cells.some(x=>x==='arrival'||x.startsWith('arrival'))&&cells.some(x=>x==='checkout'||x.startsWith('checkout'))&&cells.some(x=>x.includes('room'))){ headerIndex=i; headers=cells; break }
-  }
-  if(headerIndex<0) throw new Error('The copied table did not contain the expected Arrival Report columns.')
-  const indexOf=(tests:string[])=>headers.findIndex(h=>tests.some(test=>h.includes(test)))
-  const idx={arrival:indexOf(['arrival']),checkout:indexOf(['checkout']),address:indexOf(['address']),room:indexOf(['room']),occ:indexOf(['occ']),product:indexOf(['product']),checkin:indexOf(['checkin'])}
   const rows:any[]=[]
-  let current:any=null
-  for(let i=headerIndex+1;i<trList.length;i++){
-    const cells=Array.from(trList[i].querySelectorAll('td'))
-    if(!cells.length) continue
-    const values=cells.map(cell=>cellText(cell))
-    const rowText=values.join(' | ').trim()
-    if(!rowText) continue
-    const arrival=idx.arrival>=0?isoFromUsDate(values[idx.arrival]||''):null
-    const checkout=idx.checkout>=0?isoFromUsDate(values[idx.checkout]||''):null
-    if(arrival&&checkout&&idx.room>=0){
-      const addressText=values[idx.address]||''
-      const addressLines=addressText.split('\n').map(x=>x.trim()).filter(Boolean)
-      const guestName=addressLines[0]||''
-      const phoneLine=addressLines.find(line=>/^Phone\s*:/i.test(line))||addressLines.find(line=>/^Cell\s*:/i.test(line))||''
-      const digits=phoneLine.replace(/\D/g,'').slice(-10)
-      const roomText=values[idx.room]||''
-      const roomName=roomNames.find(name=>roomText.toLowerCase().includes(name.toLowerCase())) || roomText.split('\n').map(x=>x.trim()).find(Boolean) || null
-      const reservationNumber=roomText.match(/order\s*[:#]?\s*(\d{4,8})/i)?.[1]||null
-      const escapedRoom=roomName?roomName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'):''
-      const ratePlan=roomText.replace(escapedRoom?new RegExp(escapedRoom,'i'):/^$/,'').replace(/\(\s*order\s*[:#]?\s*\d{4,8}\s*\)/ig,'').replace(/\s+/g,' ').trim()||null
-      const occupancy=Number(String(values[idx.occ]||'').match(/\d+/)?.[0]||0)||null
-      const productsRaw=(values[idx.product]||'').trim()||null
-      const checkInTime=(values[idx.checkin]||'').replace(/\s+/g,' ').trim()||null
-      current={
-        reservationKey:reservationNumber?'order:'+reservationNumber:'direct:'+guestName+'|'+roomName+'|'+arrival+'|'+checkout,
-        reservationNumber,guestName,phone:null,doorCode:digits?digits.slice(-4):null,arrivalDate:arrival,checkoutDate:checkout,roomName,occupancy,ratePlan,checkInTime,productsRaw,
-        dietaryRestrictions:null,referralSource:null,reasonForVisit:null,guestComments:null,innkeeperNotes:null,sourcePage:0,rawText:rowText,confidence:100,
-        needsReview:!guestName||!roomName||!reservationNumber||!digits,
-        warnings:[...(!guestName?['Guest name missing']:[]),...(!roomName?['Room missing']:[]),...(!reservationNumber?['Reservation number missing']:[]),...(!digits?['Door code could not be derived']:[])]
+  let foundReportTable=false
+
+  for(const table of tables){
+    const trList=Array.from(table.querySelectorAll('tr'))
+    let schema:any=null
+    let currentRows:any[]=[]
+
+    for(const tr of trList){
+      const cells=Array.from(tr.querySelectorAll('th,td'))
+      if(!cells.length) continue
+      const values=cells.map(cell=>cellText(cell))
+      const rowText=values.join(' | ').trim()
+      if(!rowText) continue
+
+      const possibleHeader=headerSchema(values)
+      if(possibleHeader){
+        schema=possibleHeader
+        foundReportTable=true
+        currentRows=[]
+        continue
       }
-      rows.push(current)
+
+      if(!schema) continue
+      if(/total\s+(arrival|checkout|stay-?over)\s+guests/i.test(rowText)) continue
+
+      let arrival:string|null=null
+      let checkout:string|null=null
+
+      if(schema.combined>=0){
+        const dates=allUsDates(values[schema.combined]||'')
+        arrival=dates[0]||null
+        checkout=dates[1]||null
+      }else{
+        if(schema.arrival>=0) arrival=isoFromUsDate(values[schema.arrival]||'')
+        if(schema.checkout>=0) checkout=isoFromUsDate(values[schema.checkout]||'')
+      }
+
+      if((!arrival||!checkout) && schema.stayover>=0){
+        const allDates=values.flatMap(value=>allUsDates(value))
+        const unique=[...new Set(allDates)]
+        if(unique.length>=3){
+          arrival=unique[1]||arrival
+          checkout=unique[2]||checkout
+        }else if(unique.length>=2){
+          arrival=unique[0]||arrival
+          checkout=unique[1]||checkout
+        }
+      }
+
+      const roomText=schema.room>=0?(values[schema.room]||''):''
+      const roomSegments=findRoomSegments(roomText,roomNames)
+
+      if(arrival&&checkout&&roomSegments.length){
+        const addressText=values[schema.address]||''
+        const addressLines=addressText.split('\n').map(x=>x.trim()).filter(Boolean)
+        const guestName=addressLines[0]||''
+        const phoneLine=addressLines.find(line=>/^Phone\s*:/i.test(line))||addressLines.find(line=>/^Cell\s*:/i.test(line))||''
+        const digits=phoneLine.replace(/\D/g,'').slice(-10)
+        const reservationNumber=roomText.match(/order\s*[:#]?\s*(\d{4,8})/i)?.[1]||null
+        const occupancy=Number(String(values[schema.occ]||'').match(/\d+/)?.[0]||0)||null
+        const sharedProducts=(schema.product>=0?(values[schema.product]||'').trim():'')||null
+        const checkInTime=(schema.checkin>=0?(values[schema.checkin]||'').replace(/\s+/g,' ').trim():'')||null
+        const isMultiRoom=roomSegments.length>1
+
+        currentRows=roomSegments.map(({roomName,segment},segmentIndex)=>{
+          const escapedRoom=roomName.replace(/[.*+?^\${}()|[\]\\]/g,'\\$&')
+          const ratePlan=segment
+            .replace(new RegExp(escapedRoom,'i'),'')
+            .replace(/\(\s*order\s*[:#]?\s*\d{4,8}\s*\)/ig,'')
+            .replace(/\s+/g,' ')
+            .trim()||null
+
+          const warnings:string[]=[]
+          if(!guestName) warnings.push('Guest name missing')
+          if(!reservationNumber) warnings.push('Reservation number missing')
+          if(!digits) warnings.push('Door code could not be derived')
+          if(isMultiRoom) warnings.push('Multi-room reservation split into separate room stays')
+          if(isMultiRoom&&sharedProducts) warnings.push('Multi-room booking has shared products; confirm package assignment')
+
+          const productsRaw=isMultiRoom&&sharedProducts ? null : sharedProducts
+          const needsReview=!guestName||!roomName||!reservationNumber||!digits||(isMultiRoom&&Boolean(sharedProducts))
+          const keyBase=reservationNumber
+            ? 'order:'+reservationNumber
+            : 'direct:'+guestName+'|'+arrival+'|'+checkout
+
+          return {
+            reservationKey:keyBase+'|room:'+normalizeRoomKey(roomName),
+            reservationNumber,
+            guestName,
+            phone:null,
+            doorCode:digits?digits.slice(-4):null,
+            arrivalDate:arrival,
+            checkoutDate:checkout,
+            roomName,
+            occupancy:isMultiRoom?null:occupancy,
+            ratePlan,
+            checkInTime,
+            productsRaw,
+            dietaryRestrictions:null,
+            referralSource:null,
+            reasonForVisit:null,
+            guestComments:null,
+            innkeeperNotes:null,
+            sourcePage:0,
+            rawText:rowText,
+            confidence:100,
+            needsReview,
+            warnings,
+            sourceSection:schema.stayover>=0?'stayover':'reservation',
+            roomSegmentIndex:segmentIndex
+          }
+        })
+
+        rows.push(...currentRows)
+        continue
+      }
+
+      if(currentRows.length && /dietary restrictions|guest comment|innkeeper notes|reason for your visit|how did you hear/i.test(rowText)){
+        const notes=parseNoteText(rowText)
+        currentRows.forEach(current=>{
+          Object.assign(current,notes)
+          current.rawText += ' '+rowText
+        })
+      }
+    }
+  }
+
+  if(!foundReportTable) throw new Error('I could not find the Arrival Report table in the copied page.')
+  if(!rows.length) throw new Error('No reservation rows were found in the copied Arrival Report.')
+
+  const byKey=new Map<string,any>()
+  for(const row of rows){
+    const key=String(row.reservationKey||'')
+    const existing=byKey.get(key)
+    if(!existing){
+      byKey.set(key,row)
       continue
     }
-    if(current && /dietary restrictions|guest comment|innkeeper notes|reason for your visit|how did you hear/i.test(rowText)){ Object.assign(current,parseNoteText(rowText)); current.rawText += ' '+rowText }
+
+    const score=(value:any)=>
+      Number(Boolean(value.guestName))+
+      Number(Boolean(value.doorCode))+
+      Number(Boolean(value.ratePlan))+
+      Number(Boolean(value.checkInTime))+
+      Number(Boolean(value.productsRaw))+
+      Number(Boolean(value.dietaryRestrictions))+
+      Number(Boolean(value.guestComments))+
+      Number(Boolean(value.innkeeperNotes))
+
+    if(score(row)>score(existing)) byKey.set(key,{...existing,...row})
   }
-  if(!rows.length) throw new Error('No reservation rows were found in the copied Arrival Report.')
-  return rows
+
+  return [...byKey.values()]
 }
 
 export default function ReservationSyncBoard(){
