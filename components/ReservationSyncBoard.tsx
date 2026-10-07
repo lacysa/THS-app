@@ -29,6 +29,7 @@ type PreviewRow = {
   changedFields:Record<string,any>
   include:boolean
   rawText:string
+  sourceSection?:'stayover'|'reservation'
 }
 
 type Room = {id:string,name:string}
@@ -547,8 +548,12 @@ export default function ReservationSyncBoard(){
   }
 
   const stats=useMemo(()=>({
-    total:rows.length,newCount:rows.filter(r=>r.changeType==='new').length,updated:rows.filter(r=>r.changeType==='updated').length,
-    review:rows.filter(r=>r.needsReview).length,selected:rows.filter(r=>r.include).length
+    total:rows.length,
+    newCount:rows.filter(r=>r.changeType==='new').length,
+    updated:rows.filter(r=>r.changeType==='updated').length,
+    stayovers:rows.filter(r=>r.sourceSection==='stayover').length,
+    review:rows.filter(r=>r.needsReview).length,
+    selected:rows.filter(r=>r.include).length
   }),[rows])
 
   return <div className="rs-wrap">
@@ -580,8 +585,11 @@ export default function ReservationSyncBoard(){
 
     {rows.length>0 && <>
       <section className="rs-stats">
-        <div><span>Total found</span><strong>{stats.total}</strong></div><div><span>New</span><strong>{stats.newCount}</strong></div>
-        <div><span>Changed</span><strong>{stats.updated}</strong></div><div><span>Needs review</span><strong>{stats.review}</strong></div>
+        <div><span>Total found</span><strong>{stats.total}</strong></div>
+        <div><span>Stayovers found</span><strong>{stats.stayovers}</strong></div>
+        <div><span>New</span><strong>{stats.newCount}</strong></div>
+        <div><span>Changed</span><strong>{stats.updated}</strong></div>
+        <div><span>Needs review</span><strong>{stats.review}</strong></div>
       </section>
       {warnings.length>0 && <div className="rs-alert warning"><TriangleAlert size={17}/><div>{warnings.map(w=><div key={w}>{w}</div>)}</div></div>}
       <section className="rs-review-head">
@@ -593,7 +601,8 @@ export default function ReservationSyncBoard(){
           <div className="rs-row-top">
             <label className="rs-include"><input type="checkbox" checked={row.include} onChange={e=>patch(index,{include:e.target.checked})}/> Include</label>
             <span className={`rs-change ${row.changeType}`}>{row.changeType}</span>
-            <span className="rs-confidence">Page {row.sourcePage} · {Math.round(row.confidence)}% read confidence</span>
+            {row.sourceSection==='stayover' && <span className="rs-change unchanged">stayover</span>}
+            <span className="rs-confidence">{row.sourceSection==='stayover'?'PMS stay-over section':'PMS report'} · {Math.round(row.confidence)}% read confidence</span>
           </div>
           {row.warnings?.length>0 && <div className="rs-row-warning">{row.warnings.join(' · ')}</div>}
           <div className="rs-fields">
