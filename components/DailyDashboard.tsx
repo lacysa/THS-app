@@ -36,6 +36,7 @@ type HousekeepingRow = {
   complete:boolean
   stripHold:string
   roomCondition:string
+  nextShiftCondition:string
   haCheckInitials:string
   fohCheckInitials:string
   checkIssueOpen:boolean
@@ -173,7 +174,8 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
           {staff.map(name=><span className="daily-chip staff" style={staffStyle(name)} key={name}><b>HSK</b> {name}</span>)}
           {row.cleanOrder!=null && <span className="daily-chip order"><b>Order</b> {row.cleanOrder}</span>}
           <span className={`daily-chip progress ${row.complete?'done':'open'}`}>{row.complete?'Complete':'In progress'}</span>
-          {row.roomCondition && <span className="daily-chip eos"><b>EOS</b> {row.roomCondition}</span>}
+          {row.roomCondition && <span className="daily-chip eos"><b>Condition</b> {row.roomCondition}</span>}
+          {row.nextShiftCondition && <span className="daily-chip eos"><b>EOS</b> {row.nextShiftCondition}</span>}
           {(row.haCheckInitials || row.fohCheckInitials || row.checkIssueOpen) && (
             <span className={`daily-chip ${row.checkIssueOpen?'danger':''}`}>{roomCheckLabel(row)}</span>
           )}
@@ -189,7 +191,8 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
         <div><span>Staff</span><strong>{row.assignedTo || 'Unassigned'}</strong></div>
         <div><span>Cleaning order</span><strong>{row.cleanOrder ?? '—'}</strong></div>
         <div><span>Progress</span><strong>{row.complete ? 'Complete' : 'In progress'}</strong></div>
-        <div><span>End of shift</span><strong>{row.roomCondition || '—'}</strong></div>
+        <div><span>Live condition</span><strong>{row.roomCondition || '—'}</strong></div>
+        <div><span>End of shift</span><strong>{row.nextShiftCondition || '—'}</strong></div>
         <div><span>Room check</span><strong>{roomCheckLabel(row)}</strong></div>
         <div className="daily-room-detail-wide"><span>Packages</span><strong>{row.packages.length ? row.packages.join(', ') : 'None'}</strong></div>
         <div className="daily-room-detail-wide"><span>Notes</span><strong>{row.notes || 'None'}</strong></div>
@@ -240,12 +243,12 @@ export default function DailyDashboard({
   const hkComplete = housekeepingWorkload.filter(r=>r.complete && !r.checkIssueOpen)
 
   // Room checks:
-  // Every room is inspected daily except blocked / held rooms and requested RF refreshes.
+  // Stayovers/refreshes never require the independent room-check/HA/FOH flow.
   const roomCheckRooms = housekeeping.filter(row=>{
     const status=String(row.reservationStatus||'').trim().toLowerCase()
     const service=String(row.serviceType||'').trim().toUpperCase()
     const stripHold=String(row.stripHold||'').trim().toLowerCase()
-    return status!=='blocked' && !stripHold.includes('hold') && service!=='RF'
+    return status!=='blocked' && status!=='stayover' && !stripHold.includes('hold') && service!=='RF'
   })
   const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials) || r.inspected)
   const roomCheckCorrections = roomCheckRooms.filter(r=>r.checkIssueOpen)
@@ -267,8 +270,10 @@ export default function DailyDashboard({
     !row.checkIssueOpen
   )
   const arrivals = housekeeping.filter(row=>['Arrival','Out/In'].includes(row.reservationStatus))
-  const arrivalProgressed = (row:HousekeepingRow) =>
-    ['Ready','Occupied'].includes(String(row.roomCondition||''))
+  const arrivalProgressed = (row:HousekeepingRow) => {
+    const condition=String(row.roomCondition||'')
+    return ['Ready','Occupied','Vacant (Clean)'].includes(condition) || Boolean(row.fohCheckInitials)
+  }
   const arrivalsNotReady = arrivals.filter(row=>!arrivalProgressed(row))
   const arrivalsReady = arrivals.filter(arrivalProgressed)
   const packageRooms = arrivals.filter(row=>row.packages.length>0)
