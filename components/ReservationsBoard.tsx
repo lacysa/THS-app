@@ -50,19 +50,27 @@ function statusClass(value:string){
 export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string;rows:Row[]}){
   const router=useRouter()
   const [statusFilter,setStatusFilter]=useState<'All'|'Arrival'|'Stayover'|'Checkout'|'Out/In'>('All')
+
+  const displayStatus=(row:Row):'Arrival'|'Stayover'|'Checkout'|'Out/In'=>{
+    if(row.arriving&&row.departing) return 'Out/In'
+    if(row.arriving) return 'Arrival'
+    if(row.departing) return 'Checkout'
+    return 'Stayover'
+  }
+
   const counts={
-    arrivals:rows.filter(r=>Boolean(r.arriving)||r.status==='Arrival'||r.status==='Out/In').length,
-    stayovers:rows.filter(r=>r.status==='Stayover').length,
-    checkouts:rows.filter(r=>r.status==='Checkout').length,
-    outIn:rows.filter(r=>r.status==='Out/In').length
+    arrivals:rows.filter(r=>['Arrival','Out/In'].includes(displayStatus(r))).length,
+    stayovers:rows.filter(r=>displayStatus(r)==='Stayover').length,
+    checkouts:rows.filter(r=>displayStatus(r)==='Checkout').length,
+    outIn:rows.filter(r=>displayStatus(r)==='Out/In').length
   }
 
   const setDate=(value:string)=>router.push('/reservations?date='+encodeURIComponent(value))
   const filteredRows=statusFilter==='All'
     ? rows
     : statusFilter==='Arrival'
-      ? rows.filter(row=>Boolean(row.arriving)||row.status==='Arrival'||row.status==='Out/In')
-      : rows.filter(row=>row.status===statusFilter)
+      ? rows.filter(row=>['Arrival','Out/In'].includes(displayStatus(row)))
+      : rows.filter(row=>displayStatus(row)===statusFilter)
 
   return <div className="reservations-page">
     <section className="reservations-hero">
@@ -114,20 +122,31 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
       filteredRows.length===0 ? <section className="reservations-empty">No {statusFilter.toLowerCase()} rooms are synced for this date.</section> :
       <section className="reservations-grid">
         {filteredRows.map(row=>{
-          const stay=row.arriving||row.primary||row.departing
+          const status=displayStatus(row)
+          const isCheckoutOnly=status==='Checkout'
+          const stay=status==='Out/In'
+            ? (row.arriving||row.primary)
+            : status==='Arrival'
+              ? (row.arriving||row.primary)
+              : status==='Stayover'
+                ? (row.staying||row.primary)
+                : null
           const dietary=cleanDiet(stay?.dietary_restrictions)
-          return <article className={'reservation-card '+statusClass(row.status)} key={row.roomId}>
+          return <article className={'reservation-card '+statusClass(status)} key={row.roomId}>
             <div className="reservation-card-head">
-              <div><strong>{row.roomName}</strong><span>{row.status}</span></div>
-              {stay?.door_code && <div className="reservation-door"><DoorOpen size={15}/><b>{stay.door_code}</b></div>}
+              <div><strong>{row.roomName}</strong><span>{status}</span></div>
+              {!isCheckoutOnly && stay?.door_code && <div className="reservation-door"><DoorOpen size={15}/><b>{stay.door_code}</b></div>}
             </div>
 
-            {row.status==='Out/In' && <div className="reservation-outin">
+            {status==='Out/In' && <div className="reservation-outin">
               <div><span>OUT</span><strong>{row.departing?.guest_name||'—'}</strong></div>
               <div><span>IN</span><strong>{row.arriving?.guest_name||'—'}</strong></div>
             </div>}
 
-            {stay && <div className="reservation-card-body">
+            {isCheckoutOnly ? <div className="reservation-checkout-only">
+              <span>Checkout room</span>
+              <strong>Ready for turnover workflow</strong>
+            </div> : stay && <div className="reservation-card-body">
               <div className="reservation-pair"><span>Guest</span><strong>{stay.guest_name||'—'}</strong></div>
               <div className="reservation-pair"><span>Stay</span><strong>{stay.arrival_date||'—'} → {stay.checkout_date||'—'}</strong></div>
               <div className="reservation-pair"><span>Check-in</span><strong>{stay.check_in_time||'—'}</strong></div>
