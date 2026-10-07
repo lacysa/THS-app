@@ -1016,6 +1016,7 @@ export default function HousekeepingBoard() {
                 const stripStatus = String(row.stripStatus||'')
                 const isFullClean = isFullRoomClean(row)
                 const hasStaff = selectedStaff.length>0
+                const hasOrder = Number.isFinite(row.cleanOrder as number) && Number(row.cleanOrder)>0
 
                 return (
                   <tr
@@ -1027,6 +1028,17 @@ export default function HousekeepingBoard() {
                       <div className="hsk-room-cell">
                         <BedDouble size={15} />
                         <strong>{row.roomName}</strong>
+                        {hasOrder && (
+                          <button
+                            type="button"
+                            className="hsk-order-sup"
+                            onClick={()=>patch(row.roomId,{cleanOrder:null})}
+                            title="Clear cleaning order to change it"
+                            aria-label={`Cleaning order ${row.cleanOrder}. Click to clear.`}
+                          >
+                            {row.cleanOrder}
+                          </button>
+                        )}
                       </div>
 
                       <div className="hsk-room-setup-tags">
@@ -1247,16 +1259,19 @@ export default function HousekeepingBoard() {
                       </div>}
                     </td>
 
-                    <td>
-                      <input
-                        className="order-input"
-                        type="number"
-                        min="1"
-                        value={row.cleanOrder ?? ''}
-                        onChange={e => patch(row.roomId, {
-                          cleanOrder: e.target.value ? Number(e.target.value) : null
-                        })}
-                      />
+                    <td className={(!assignmentActive||hasOrder)?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
+                      {assignmentActive && !hasOrder && (
+                        <input
+                          className="order-input"
+                          type="number"
+                          min="1"
+                          value={row.cleanOrder ?? ''}
+                          placeholder="#"
+                          onChange={e => patch(row.roomId, {
+                            cleanOrder: e.target.value ? Number(e.target.value) : null
+                          })}
+                        />
+                      )}
                     </td>
 
                     <td className="check-cell">
