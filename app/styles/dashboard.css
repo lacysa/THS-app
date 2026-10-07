@@ -1571,3 +1571,22 @@ html[data-theme="dark"] .daily-reservations-summary-grid svg{
 .daily-note-chip b{
   flex:none;
 }
+
+
+/* Dashboard skipped breakfast tag */
+.daily-chip.breakfast-skip{
+  background:#eef1f4;
+  border-color:#cfd6dc;
+  color:#596671;
+}
+.daily-state.neutral{
+  background:#eef1f4;
+  border-color:#cfd6dc;
+  color:#596671;
+}
+html[data-theme="dark"] .daily-chip.breakfast-skip,
+html[data-theme="dark"] .daily-state.neutral{
+  background:#242c35!important;
+  border-color:#46515d!important;
+  color:#c7d0d8!important;
+}
