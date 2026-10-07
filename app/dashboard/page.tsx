@@ -96,7 +96,7 @@ export default async function DashboardPage() {
       moduleKeys.has('daily_overview') ||
       moduleKeys.has('breakfast_guest')
     )
-      ? admin.from('housekeeping_daily_rooms').select('room_id').eq('service_date',previousDate(breakfastDate)).eq('breakfast_tag',true)
+      ? admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped,breakfast_skipped_at').eq('service_date',previousDate(breakfastDate)).eq('breakfast_tag',true)
       : Promise.resolve({data:[],error:null}),
     moduleKeys.has('maintenance')
       ? admin.from('maintenance_work_orders').select('*').order('created_at',{ascending:false})
@@ -185,6 +185,7 @@ export default async function DashboardPage() {
     status:String(row.status || ''),
     menuSubmitted:Boolean(row.menu_submitted),
     taggedOnly:false,
+    breakfastSkipped:String(row.status || '')==='declined',
     note:menuNoteMap.get(String(row.id)) || ''
   }))
 
@@ -198,12 +199,25 @@ export default async function DashboardPage() {
       roomName:roomName(roomId,roomMap),
       lastName:'',
       timeSlot:'',
-      status:'scheduled',
+      status:(row as any).breakfast_skipped ? 'declined' : 'scheduled',
       menuSubmitted:false,
       taggedOnly:true,
+      breakfastSkipped:Boolean((row as any).breakfast_skipped),
       note:''
     })
   }
+
+  const skippedBreakfastRoomIds = new Set(
+    breakfast
+      .filter((row:any)=>row.breakfastSkipped || row.status==='declined')
+      .map((row:any)=>row.roomId)
+      .filter(Boolean)
+  )
+
+  housekeeping = housekeeping.map((row:any)=>({
+    ...row,
+    breakfastSkipped:skippedBreakfastRoomIds.has(row.roomId)
+  }))
 
   const maintenance = (maintenanceRes.data || []).map((row:any)=>({
     id:String(row.id),
