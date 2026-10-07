@@ -152,12 +152,6 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
     return access.moduleOverrides[key]
   }
 
-  if (key === 'room_board') {
-    return access.isAdmin || hasAnyCapability(access,[
-      'foh_manager','manager','general_manager','operations_manager','owner'
-    ])
-  }
-
   if (module.published === false && !access.canPreviewUnpublished) return false
 
   if (key === 'laundry' || key === 'laundry_inventory') {
