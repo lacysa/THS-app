@@ -63,7 +63,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',breakfastDate).eq('work_mode','onsite'),
     admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,service_type,strip_hold,check_issue_open').eq('service_date',breakfastDate),
     admin.from('reservation_stays')
-      .select('room_id,rate_plan,occupancy,updated_at')
+      .select('room_id,rate_plan,occupancy,innkeeper_notes,updated_at')
       .eq('active',true)
       .lte('arrival_date',breakfastDate)
       .gt('checkout_date',breakfastDate)
@@ -161,12 +161,24 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
   const dessertRoomsById = new Map<string,{roomId:string;roomName:string;ratePlan:string}>()
   for (const row of (tomorrowReservationsRes.data || [])) {
     const roomId=String((row as any).room_id || '')
+    const roomName=String(roomById.get(roomId) || 'Room')
     const ratePlan=String((row as any).rate_plan || '').trim()
-    if (!roomId || !ratePlan.toLowerCase().includes('breakfast')) continue
+    const notes=String((row as any).innkeeper_notes || '').trim()
+
+    const rateIncludesBreakfast=ratePlan.toLowerCase().includes('breakfast')
+    const markerIndex=notes.toLowerCase().indexOf('+breakfast')
+    const breakfastOverrideText=markerIndex>=0 ? notes.slice(markerIndex + '+breakfast'.length) : ''
+    const explicitRoomOverride=Boolean(
+      breakfastOverrideText &&
+      breakfastOverrideText.toLowerCase().includes(roomName.toLowerCase())
+    )
+
+    if (!roomId || (!rateIncludesBreakfast && !explicitRoomOverride)) continue
+
     dessertRoomsById.set(roomId,{
       roomId,
-      roomName:roomById.get(roomId) || 'Room',
-      ratePlan
+      roomName,
+      ratePlan: rateIncludesBreakfast ? ratePlan : `${ratePlan} · +Breakfast override`
     })
   }
   const tomorrowDessertRooms=[...dessertRoomsById.values()]
