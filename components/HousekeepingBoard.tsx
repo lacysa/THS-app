@@ -704,6 +704,167 @@ export default function HousekeepingBoard() {
     }
   },[viewMode,loading,rows.length])
 
+  function renderManagerMobileCard(row:RoomRow) {
+    const outRf=String(row.serviceType||'').toUpperCase()
+    const selectedStaff=splitAssigned(row.assignedTo)
+    const selectedPackageIds=Array.isArray(row.packageIds)?row.packageIds:[]
+    const assignmentActive=usesCleaningAssignment(row)
+    const orderActive=isFullRoomClean(row)
+    const hasOrder=Number.isFinite(row.cleanOrder as number)&&Number(row.cleanOrder)>0
+    const stripStatus=String(row.stripStatus||'')
+    const isOut=outRf.startsWith('OUT')
+    const isRefresh=outRf==='RF'
+    const envelopeInitialed=/^OUT-[A-Z]{2,4}$/.test(outRf)
+
+    const roomCheckState=row.haSignedBy?'passed':row.checkIssueOpen?'needs-fix':row.complete?'ready':'waiting'
+    const fohState=row.fohSignedBy?'signed':row.complete?'ready':'waiting'
+
+    return <article
+      key={row.roomId}
+      id={`mobile-room-${row.roomId}`}
+      className={`hsk-mobile-room-card ${reservationStatusClass(row.reservationStatus)} ${row.complete?'is-complete':''}`}
+    >
+      <div className="hsk-mobile-room-head">
+        <div className="hsk-mobile-room-title">
+          <BedDouble size={18}/>
+          <strong>{row.roomName}</strong>
+          {orderActive&&hasOrder&&<button type="button" className="hsk-order-sup" onClick={()=>patch(row.roomId,{cleanOrder:null})}>{row.cleanOrder}</button>}
+        </div>
+        <span className={row.complete?'hsk-mobile-state done':'hsk-mobile-state'}>{row.complete?'Complete ✓':'Open'}</span>
+      </div>
+
+      <div className="hsk-mobile-tags">
+        {row.reservationStatus&&<button type="button" className={`hsk-setup-tag ${reservationStatusClass(row.reservationStatus)}`} onClick={()=>patch(row.roomId,{reservationStatus:''})}><span>{row.reservationStatus}</span><b>×</b></button>}
+        {outRf&&<button type="button" className="hsk-setup-tag hsk-setup-service" onClick={()=>clearOutRf(row)}><span>{outRf}</span><b>×</b></button>}
+        {selectedStaff.map(name=><button key={name} type="button" className="hsk-setup-tag hsk-setup-staff" onClick={()=>toggleStaff(row,name)}><span>{name}</span><b>×</b></button>)}
+        {row.stripHold&&<button type="button" className="hsk-setup-tag hsk-setup-strip" onClick={()=>patch(row.roomId,{stripHold:''})}><span>{row.stripHold}</span><b>×</b></button>}
+        {stripStatus==='needed'&&<button type="button" className="hsk-setup-tag hsk-strip-needed-tag" onClick={()=>void setStripTask(row,'clear')}><span>Strip needed</span><b>×</b></button>}
+        {stripStatus==='stripped'&&<button type="button" className="hsk-setup-tag hsk-stripped-tag" onClick={()=>void setStripTask(row,'clear')}><span>Stripped{row.strippedByName?` · ${row.strippedByName}`:''}</span><b>×</b></button>}
+        {row.breakfastTag&&<span className="hsk-breakfast-badge hsk-breakfast-tag">Breakfast</span>}
+      </div>
+
+      {assignmentActive&&<div className="hsk-mobile-quick-actions">
+        {!outRf&&<div className="hsk-mobile-setup-block">
+          <span>OUT / RF</span>
+          <div className="hsk-out-buttons">
+            <button type="button" onClick={()=>clearOutRf(row)} className={!outRf?'is-active':''}>—</button>
+            <button type="button" onClick={()=>markOut(row)}>OUT</button>
+            <button type="button" onClick={()=>markRefresh(row)}>RF</button>
+          </div>
+        </div>}
+
+        {!selectedStaff.length&&<div className="hsk-mobile-setup-block">
+          <span>Staff</span>
+          <button type="button" className="hsk-mobile-select" onClick={()=>setOpenStaffRoomId(openStaffRoomId===row.roomId?null:row.roomId)}>
+            Select staff <ChevronDown size={14}/>
+          </button>
+          {openStaffRoomId===row.roomId&&<div className="hsk-mobile-staff-list">
+            {(showAllStaff?allStaffOptions:staffOptions).map(option=>{
+              const count=fullCleanCountFor(option.name)
+              const limit=Number(option.fullRoomCleanLimit??2)
+              const atLimit=isFullRoomClean(row)&&count>=limit
+              return <button key={option.id} type="button" className={atLimit?'is-at-limit':''} onClick={()=>toggleStaff(row,option.name)}>
+                <span>{option.name}</span><small>{isFullRoomClean(row)?`Full cleans ${count}/${limit}`:option.roleLabel||''}</small>
+              </button>
+            })}
+            <button type="button" className="hsk-mobile-staff-scope" onClick={()=>setShowAllStaff(v=>!v)}>{showAllStaff?'Show on-site staff':'Show all active staff'}</button>
+          </div>}
+        </div>}
+
+        {orderActive&&!hasOrder&&<label className="hsk-mobile-setup-block">
+          <span>Cleaning order</span>
+          <input className="order-input" type="number" min="1" placeholder="#" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/>
+        </label>}
+
+        {!row.stripHold&&<button type="button" className="hsk-mobile-minor-action hold" onClick={()=>patch(row.roomId,{stripHold:'Hold'})}>+ Hold</button>}
+        {!stripStatus&&<button type="button" className="hsk-mobile-minor-action strip" onClick={()=>void setStripTask(row,'request')}>+ Strip task</button>}
+      </div>}
+
+      {isOut&&!envelopeInitialed&&canInitialEnvelope&&<button type="button" className="hsk-mobile-initial" onClick={()=>initialEnvelope(row)}>Initial envelope · {managerInitials}</button>}
+
+      <section className="hsk-mobile-workflow">
+        <div className="hsk-mobile-workflow-step">
+          <div className="hsk-mobile-step-copy">
+            <span>1</span>
+            <div><strong>Room complete</strong><small>{row.complete?'Ready for inspection':'Finish cleaning, then mark complete'}</small></div>
+          </div>
+          <button
+            type="button"
+            className={row.complete?'hsk-mobile-action success':'hsk-mobile-action primary'}
+            onClick={()=>toggleComplete(row,!row.complete)}
+          >
+            <Check size={16}/>{row.complete?'Complete ✓':'Mark complete'}
+          </button>
+        </div>
+
+        <div className={`hsk-mobile-workflow-step ${roomCheckState}`}>
+          <div className="hsk-mobile-step-copy">
+            <span>2</span>
+            <div>
+              <strong>Room check</strong>
+              <small>{row.haSignedBy?`Passed by ${row.haSignedName} ${formatShortTime(row.haSignedAt)}`:row.checkIssueOpen?'Correction required':row.complete?'Ready for HA inspection':'Waiting for room completion'}</small>
+            </div>
+          </div>
+          {row.haSignedBy
+            ? <span className="hsk-mobile-pass">Passed ✓</span>
+            : canHaSignoff&&row.complete&&!row.checkIssueOpen
+              ? <button type="button" className="hsk-mobile-action success" onClick={()=>void signOff(row,'ha')}>Pass room check</button>
+              : <span className="hsk-mobile-waiting">{row.checkIssueOpen?'Needs fix':'Pending'}</span>}
+        </div>
+
+        {canHaSignoff&&row.complete&&!row.haSignedBy&&<div className="hsk-mobile-issue-box">
+          <input value={issueDrafts[row.roomId]||''} onChange={e=>setIssueDrafts(current=>({...current,[row.roomId]:e.target.value}))} placeholder="Problem found during inspection…"/>
+          <button type="button" onClick={()=>void flagCheckIssue(row)}>Needs fix</button>
+        </div>}
+        {canHaSignoff&&row.checkIssueOpen&&<button type="button" className="hsk-mobile-recheck" onClick={()=>void clearCheckIssue(row)}>Pass re-check</button>}
+
+        <div className={`hsk-mobile-workflow-step ${fohState}`}>
+          <div className="hsk-mobile-step-copy">
+            <span>3</span>
+            <div>
+              <strong>FOH check</strong>
+              <small>{row.fohSignedBy?`Signed by ${row.fohSignedName} ${formatShortTime(row.fohSignedAt)}`:row.complete?'Ready for FOH sign-off':'Waiting for room completion'}</small>
+            </div>
+          </div>
+          {row.fohSignedBy
+            ? <span className="hsk-mobile-pass">Signed ✓</span>
+            : canFohSignoff&&row.complete
+              ? <button type="button" className="hsk-mobile-action navy" onClick={()=>void signOff(row,'foh')}>FOH sign</button>
+              : <span className="hsk-mobile-waiting">Pending</span>}
+        </div>
+      </section>
+
+      <div className="hsk-mobile-secondary">
+        <label>
+          <span>End of shift</span>
+          <select value={row.roomCondition} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>
+            {conditionOptions.map(value=><option key={value} value={value}>{value||'—'}</option>)}
+          </select>
+        </label>
+
+        <div className="hsk-mobile-package-block">
+          <span>Room packages</span>
+          <button type="button" className="hsk-package-trigger" onClick={()=>setOpenPackageRoomId(openPackageRoomId===row.roomId?null:row.roomId)}>
+            <span>{packageLabel(selectedPackageIds)}</span><ChevronDown size={14}/>
+          </button>
+          {openPackageRoomId===row.roomId&&<div className="hsk-mobile-package-list">
+            {packageOptions.filter(option=>option.available||selectedPackageIds.includes(option.id)).map(option=>{
+              const checked=selectedPackageIds.includes(option.id)
+              return <button type="button" key={option.id} className={checked?'is-selected':''} onClick={()=>togglePackage(row,option.id)}>
+                <span className="hsk-package-check">{checked&&<Check size={13}/>}</span><span>{option.name}</span>
+              </button>
+            })}
+          </div>}
+        </div>
+
+        <label className="hsk-mobile-notes">
+          <span>Notes</span>
+          <textarea value={row.notes} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Add room notes…"/>
+        </label>
+      </div>
+    </article>
+  }
+
   if (viewMode === 'assigned') {
     return (
       <div className="ops-module hsk-module hsk-assigned-view">
@@ -973,6 +1134,19 @@ export default function HousekeepingBoard() {
 
 
 
+      <div className="hsk-manager-mobile">
+        {loading ? (
+          <div className="module-empty">Loading rooms…</div>
+        ) : rows.length===0 ? (
+          <div className="module-empty">No rooms are available for this date.</div>
+        ) : (
+          <div className="hsk-mobile-room-list">
+            {rows.map(renderManagerMobileCard)}
+          </div>
+        )}
+      </div>
+
+      <div className="hsk-manager-desktop">
       {loading ? (
         <div className="module-empty">Loading rooms…</div>
       ) : (
@@ -1407,6 +1581,7 @@ export default function HousekeepingBoard() {
           </div>
         </>
       )}
+      </div>
     </div>
   )
 }
