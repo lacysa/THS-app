@@ -316,7 +316,31 @@ export default function UnifiedRoomsBoard(){
     })
     const d=await response.json().catch(()=>({}))
     if(!response.ok){setMessage(d.error||'Could not save sign-off.');return}
-    await load()
+
+    // Keep the current card open and preserve scroll position. Sign-off should
+    // update only this room instead of reloading the entire Rooms workspace.
+    setRows(current=>{
+      const next=current.map(currentRow=>{
+        if(currentRow.roomId!==row.roomId)return currentRow
+        if(kind==='ha'){
+          return {
+            ...currentRow,
+            haSignedBy:d.signedBy||d.staffMemberId||currentRow.haSignedBy||'signed',
+            haSignedName:d.signedName||d.staffName||access?.preferredName||access?.name||'Signed',
+            haSignedAt:d.signedAt||new Date().toISOString()
+          }
+        }
+        return {
+          ...currentRow,
+          fohSignedBy:d.signedBy||d.staffMemberId||currentRow.fohSignedBy||'signed',
+          fohSignedName:d.signedName||d.staffName||access?.preferredName||access?.name||'Signed',
+          fohSignedAt:d.signedAt||new Date().toISOString()
+        }
+      })
+      rowsRef.current=next
+      return next
+    })
+    setMessage('')
   }
 
   function assignStaff(row:RoomRow,name:string){
