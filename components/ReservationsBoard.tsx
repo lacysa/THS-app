@@ -51,14 +51,18 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
   const router=useRouter()
   const [statusFilter,setStatusFilter]=useState<'All'|'Arrival'|'Stayover'|'Checkout'|'Out/In'>('All')
   const counts={
-    arrivals:rows.filter(r=>r.status==='Arrival').length,
+    arrivals:rows.filter(r=>r.status==='Arrival'||r.status==='Out/In').length,
     stayovers:rows.filter(r=>r.status==='Stayover').length,
     checkouts:rows.filter(r=>r.status==='Checkout').length,
     outIn:rows.filter(r=>r.status==='Out/In').length
   }
 
   const setDate=(value:string)=>router.push('/reservations?date='+encodeURIComponent(value))
-  const filteredRows=statusFilter==='All'?rows:rows.filter(row=>row.status===statusFilter)
+  const filteredRows=statusFilter==='All'
+    ? rows
+    : statusFilter==='Arrival'
+      ? rows.filter(row=>row.status==='Arrival'||row.status==='Out/In')
+      : rows.filter(row=>row.status===statusFilter)
 
   return <div className="reservations-page">
     <section className="reservations-hero">
