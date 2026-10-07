@@ -166,6 +166,7 @@ export default function UnifiedRoomsBoard(){
   const [canFohSignoff,setCanFohSignoff]=useState(false)
   const [refreshRoomId,setRefreshRoomId]=useState('')
   const [managerDisplay,setManagerDisplay]=useState<'cards'|'table'>('cards')
+  const [managerEditOpen,setManagerEditOpen]=useState<Record<string,boolean>>({})
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
   const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
@@ -694,9 +695,11 @@ export default function UnifiedRoomsBoard(){
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
-              {isManager(access)&&<details className="rooms-manager-details">
-                <summary>Edit room details</summary>
-                <div className="rooms-manager-edit">
+              {isManager(access)&&<div className="rooms-manager-details">
+                <button type="button" className="rooms-manager-details-toggle" onClick={()=>setManagerEditOpen(current=>({...current,[row.roomId]:!current[row.roomId]}))}>
+                  {managerEditOpen[row.roomId]?'Hide room details':'Edit room details'}
+                </button>
+                {managerEditOpen[row.roomId]&&<div className="rooms-manager-edit">
                   <div className="rooms-manager-grid">
                     <label>Reservation status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
                     <label>Live condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{conditionOptions.map(value=><option key={value||'blank'} value={value}>{value||'Not set'}</option>)}</select></label>
@@ -724,8 +727,8 @@ export default function UnifiedRoomsBoard(){
                   </div>
 
                   <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
-                </div>
-              </details>}
+                </div>}
+              </div>}
 
               {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Room items</strong><span>{packageNames.join(', ')}</span></div>}
               {!isManager(access)&&<label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
