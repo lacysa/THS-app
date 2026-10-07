@@ -1,6 +1,7 @@
 'use client'
 
 import { CalendarDays, ChevronLeft, ChevronRight, DoorOpen, Package, Users } from 'lucide-react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Stay={
@@ -48,14 +49,20 @@ function statusClass(value:string){
 
 export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string;rows:Row[]}){
   const router=useRouter()
+  const [statusFilter,setStatusFilter]=useState<'All'|'Arrival'|'Stayover'|'Checkout'|'Out/In'>('All')
   const counts={
-    arrivals:rows.filter(r=>r.status==='Arrival').length,
+    arrivals:rows.filter(r=>r.status==='Arrival'||r.status==='Out/In').length,
     stayovers:rows.filter(r=>r.status==='Stayover').length,
     checkouts:rows.filter(r=>r.status==='Checkout').length,
     outIn:rows.filter(r=>r.status==='Out/In').length
   }
 
   const setDate=(value:string)=>router.push('/reservations?date='+encodeURIComponent(value))
+  const filteredRows=statusFilter==='All'
+    ? rows
+    : statusFilter==='Arrival'
+      ? rows.filter(row=>row.status==='Arrival'||row.status==='Out/In')
+      : rows.filter(row=>row.status===statusFilter)
 
   return <div className="reservations-page">
     <section className="reservations-hero">
@@ -84,9 +91,29 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
       </div>
     </section>
 
+    {rows.length>0 && <section className="reservations-filter-bar" aria-label="Filter reservations by status">
+      {[
+        {key:'All',label:'All',count:rows.length},
+        {key:'Arrival',label:'Arrivals',count:counts.arrivals},
+        {key:'Stayover',label:'Stayovers',count:counts.stayovers},
+        {key:'Checkout',label:'Checkouts',count:counts.checkouts},
+        {key:'Out/In',label:'Out / In',count:counts.outIn}
+      ].map(option=><button
+        key={option.key}
+        type="button"
+        className={`reservations-filter-btn ${statusFilter===option.key?'active':''} ${statusClass(option.key)}`}
+        onClick={()=>setStatusFilter(option.key as typeof statusFilter)}
+        aria-pressed={statusFilter===option.key}
+      >
+        <span>{option.label}</span>
+        <strong>{option.count}</strong>
+      </button>)}
+    </section>}
+
     {rows.length===0 ? <section className="reservations-empty">No occupied or changing rooms are currently synced for this date.</section> :
+      filteredRows.length===0 ? <section className="reservations-empty">No {statusFilter.toLowerCase()} rooms are synced for this date.</section> :
       <section className="reservations-grid">
-        {rows.map(row=>{
+        {filteredRows.map(row=>{
           const stay=row.arriving||row.primary||row.departing
           const dietary=cleanDiet(stay?.dietary_restrictions)
           return <article className={'reservation-card '+statusClass(row.status)} key={row.roomId}>
