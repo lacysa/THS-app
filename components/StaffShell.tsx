@@ -269,14 +269,21 @@ export default function StaffShell({
   }
 
   useEffect(() => {
-    void loadNotifications()
-
-    const timer = window.setInterval(() => {
-      void loadNotifications()
-    }, 30000)
-
-    return () => {
+    let active=true
+    let running=false
+    const refresh=async()=>{
+      if(!active || document.visibilityState!=='visible' || running)return
+      running=true
+      try{await loadNotifications()}finally{running=false}
+    }
+    void refresh()
+    const timer=window.setInterval(()=>{void refresh()},60000)
+    const onVisible=()=>{if(document.visibilityState==='visible')void refresh()}
+    document.addEventListener('visibilitychange',onVisible)
+    return()=>{
+      active=false
       window.clearInterval(timer)
+      document.removeEventListener('visibilitychange',onVisible)
     }
   }, [])
 
