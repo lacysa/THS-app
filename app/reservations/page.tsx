@@ -77,7 +77,7 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
         serviceType:String(current.service_type||''),
         operationalStatus:String(current.reservation_status||row.reservation_status||''),
         stripHold:String(current.strip_hold||''),
-        roomCondition:inheritedReady?'Ready':currentCondition,
+        roomCondition:currentCondition||(inheritedReady?'Ready':''),
         nextShiftCondition:String(current.next_shift_condition||''),
         complete:Boolean(current.complete),
         inspected:Boolean(current.inspected),
