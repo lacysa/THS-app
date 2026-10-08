@@ -28,6 +28,8 @@ export default function DailyStaffSchedule(){
   const [loading,setLoading]=useState(true)
   const [savingId,setSavingId]=useState('')
   const [message,setMessage]=useState('')
+  const [expandedId,setExpandedId]=useState('')
+  const [staffFilter,setStaffFilter]=useState<'onsite'|'all'>('onsite')
 
   async function load(){
     setLoading(true)
@@ -72,6 +74,7 @@ export default function DailyStaffSchedule(){
   }
 
   const onSite=useMemo(()=>rows.filter(row=>row.workMode==='onsite'),[rows])
+  const shownRows=useMemo(()=>staffFilter==='onsite'?rows.filter(row=>row.workMode==='onsite'):rows,[rows,staffFilter])
 
   return <section className="daily-staff-editor">
     <header>
@@ -86,19 +89,22 @@ export default function DailyStaffSchedule(){
       </div>
     </header>
 
+    <div className="staffing-compact-toolbar"><span>Manage schedule</span><div role="group" aria-label="Filter staff"><button type="button" className={staffFilter==='onsite'?'active':''} onClick={()=>setStaffFilter('onsite')}>On site ({onSite.length})</button><button type="button" className={staffFilter==='all'?'active':''} onClick={()=>setStaffFilter('all')}>All staff ({rows.length})</button></div></div>
     {message&&<div className="daily-staff-editor-message">{message}</div>}
 
     {loading
       ? <div className="daily-staff-editor-empty">Loading staffing…</div>
       : <div className="daily-staff-editor-list">
-          {rows.map(row=>{
+          {shownRows.map(row=>{
             const hasTimes=row.workMode==='onsite'||row.workMode==='remote'
-            return <div className={`daily-staff-editor-row mode-${row.workMode}`} key={row.id}>
+            return <div className={`daily-staff-editor-row mode-${row.workMode} ${expandedId===row.id?'staffing-expanded':''}`} key={row.id}>
               <div className="daily-staff-editor-person">
                 <strong>{row.name}</strong>
                 <small>{row.jobTitle||'Staff'}</small>
               </div>
 
+              <button type="button" className="staffing-row-toggle" aria-expanded={expandedId===row.id} onClick={()=>setExpandedId(id=>id===row.id?'':row.id)}><span>{row.workMode==='onsite'?'On site':row.workMode.replace('_',' ')}</span><span>{expandedId===row.id?'Hide details':'Edit shift'} ▾</span></button>
+              <div className="staffing-row-fields">
               <label>
                 <span>Status</span>
                 <select value={row.workMode} onChange={e=>patch(row.id,{workMode:e.target.value as ScheduleRow['workMode']})}>
@@ -128,6 +134,7 @@ export default function DailyStaffSchedule(){
               <button type="button" className="daily-staff-editor-save" onClick={()=>void save(row)} disabled={savingId===row.id}>
                 <Save size={14}/>{savingId===row.id?'Saving…':'Save'}
               </button>
+              </div>
             </div>
           })}
         </div>}
