@@ -120,7 +120,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
         <div className="toolbar-left">
           <div className="field"><label>Service date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
         </div>
-        <div className="toolbar-right"><a className="btn secondary" href="/inventory/front-desk">Inventory</a><button className="btn secondary" onClick={load}>Refresh</button></div>
+        <div className="toolbar-right"><button className="btn secondary" onClick={load}>Refresh</button></div>
       </div>
 
       {error && <div className="notice error">{error}</div>}
