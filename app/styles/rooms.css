@@ -500,3 +500,27 @@
 @media(max-width:680px){.rooms-stayover-planner{padding:12px;border-radius:17px}.rooms-stayover-grid{grid-template-columns:1fr}.rooms-stayover-heading{flex-direction:column}.rooms-stayover-item select{max-width:160px}}
 
 .rooms-late-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;background:linear-gradient(120deg,#f4edff,#eaf3ff);border:1px solid #cbbde7;border-radius:12px;color:#5a477d;font-size:12px;font-weight:800;cursor:pointer}.rooms-late-toggle input{width:16px;height:16px;accent-color:#7661b4}.rooms-late-chip{width:max-content;max-width:100%;border-radius:8px;background:#e8dffd;color:#60478e;padding:3px 7px;font-size:10px;font-weight:800}
+
+
+/* iPad landscape + portrait: readable controls, no desktop-sheet shrinkage. */
+@media (min-width:701px) and (max-width:1199px){
+  .rooms-workspace{width:100%;min-width:0;max-width:none;padding-bottom:28px}
+  .rooms-toolbar{padding:18px 20px!important;gap:14px}
+  .rooms-toolbar .toolbar-actions{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+  .rooms-filter-strip{display:flex;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch;padding-bottom:10px;gap:7px}
+  .rooms-filter-strip button{flex:0 0 auto;min-height:43px;font-size:13px}
+  .rooms-room-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:11px}
+  .rooms-picker-item{min-height:108px;padding:15px 16px}
+  .rooms-picker-name{font-size:17px}
+  .rooms-picker-sub,.rooms-picker-state{font-size:12px}
+  .rooms-card-list{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+  .rooms-card{min-width:0}
+  .rooms-card-body{padding:18px;gap:16px}
+  .rooms-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rooms-inspection-actions button,.rooms-signoff-grid button{min-height:44px}
+  .rooms-manager-status-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rooms-manager-status-tools button{grid-column:1/-1;min-height:44px}
+  .rooms-table-shell{max-width:100%;min-width:0}
+  .rooms-table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .rooms-search-field input{min-height:46px;font-size:16px}
+}
