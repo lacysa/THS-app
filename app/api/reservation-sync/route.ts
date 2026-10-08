@@ -45,6 +45,15 @@ function breakfastIncluded(ratePlan:unknown){
   return /\\broom\\s*\\+\\s*breakfast\\b/.test(rate) || /\\bbreakfast\\s+included\\b/.test(rate)
 }
 
+function morningBreakfastIncluded(notes:unknown, morning:string) {
+  const text=String(notes||'')
+  // +B is an explicit innkeeper override for the entire reservation stay.
+  if(/(?:^|[\\s,;|])\\+B(?=$|[\\s,;|])/i.test(text))return true
+  // Date-specific à la carte breakfast applies only to the preceding room night.
+  const matches=[...text.matchAll(/(?:a la carte|à la carte)\\s+breakfast\\s+morning\\s*:\\s*(20\\d{2}-\\d{2}-\\d{2})/gi)]
+  return matches.some(match=>match[1]===morning)
+}
+
 function normal(value:unknown){
   return String(value||'').toLowerCase().replace(/^\s*\d+\s*x\s*/,'').replace(/[^a-z0-9]+/g,' ').trim()
 }
@@ -124,7 +133,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
           reservation_status:carryDirty && status==='Vacant' ? 'Dirty' : status,
           breakfast_tag: manualTags.has(date+'|'+room.id)
             ? manualTags.get(date+'|'+room.id)
-            : Boolean(arriving||staying) && breakfastIncluded((arriving||staying)?.rate_plan),
+            : Boolean(arriving||staying) && (breakfastIncluded((arriving||staying)?.rate_plan) || morningBreakfastIncluded((arriving||staying)?.innkeeper_notes,addDay(date))),
           ...(carryDirty ? {service_type:'OUT'} : {}),
           updated_at:new Date().toISOString()
         })
