@@ -62,7 +62,7 @@ export function roomWorkflowLabel(row:RoomLike){
   if(state==='refresh')return 'Refresh'
   if(state==='occupied')return isRefreshRoom(row)&&row.complete?'Refresh complete':'Occupied'
   if(state==='self')return 'Self-check'
-  if(state==='cleaning')return 'Cleaning'
+  if(state==='cleaning')return normalizeRoomValue(row.roomCondition)==='vacant (dirty)'?'Vacant (Dirty)':'Cleaning'
   if(state==='inspection')return 'Ready for room check'
   if(state==='final')return 'Final check'
   return 'Ready for guest'
@@ -87,7 +87,7 @@ export function derivedLiveCondition(row:RoomLike){
   if(state==='blocked')return 'Blocked'
   if(state==='correction')return 'Needs Correction'
   if(state==='refresh'||state==='occupied')return 'Occupied'
-  if(state==='self'||state==='cleaning')return 'Cleaning'
+  if(state==='self'||state==='cleaning')return normalizeRoomValue(row.roomCondition)==='vacant (dirty)'?'Vacant (Dirty)':'Cleaning'
   if(state==='inspection')return 'Ready for Room Check'
   if(state==='final')return 'Final Check'
   if(state==='ready'){
