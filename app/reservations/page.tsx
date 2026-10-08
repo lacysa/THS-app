@@ -32,7 +32,7 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const [roomsRes,linksRes,housekeepingRes,priorHousekeepingRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate),
-    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open').eq('service_date',serviceDate),
+    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag').eq('service_date',serviceDate),
     admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',priorDate)
   ])
 
@@ -77,6 +77,8 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
         serviceType:String(current.service_type||''),
         operationalStatus:String(current.reservation_status||row.reservation_status||''),
         stripHold:String(current.strip_hold||''),
+        roomNotes:String(current.notes||''),
+        breakfastTag:Boolean(current.breakfast_tag),
         lateArrival:Boolean(current.late_arrival),
         roomCondition:currentCondition||(inheritedReady?'Ready':''),
         nextShiftCondition:String(current.next_shift_condition||''),
