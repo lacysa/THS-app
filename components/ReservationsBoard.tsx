@@ -1,7 +1,7 @@
 'use client'
 
 import { CalendarDays, ChevronLeft, ChevronRight, DoorOpen, Package, Users } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { derivedLiveCondition, roomNextAction, roomWorkflowLabel } from '@/lib/room-state'
 
@@ -62,6 +62,8 @@ function statusClass(value:string){
 export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serviceDate:string;rows:Row[];canEdit?:boolean}){
   const router=useRouter()
   const [view,setView]=useState<'overview'|'edit'>('overview')
+  useEffect(()=>{if(!canEdit)return;try{if(window.sessionStorage.getItem('ths-reservations-view')==='edit')setView('edit')}catch{}},[canEdit])
+  function changeView(next:'overview'|'edit'){setView(next);try{window.sessionStorage.setItem('ths-reservations-view',next)}catch{}}
   const [edits,setEdits]=useState<Record<string,Partial<Row>>>({})
   const [saving,setSaving]=useState<Record<string,boolean>>({})
   const [feedback,setFeedback]=useState<Record<string,string>>({})
@@ -80,6 +82,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
       const response=await fetch('/api/housekeeping/day',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate,roomId:row.roomId,patch:apiPatch})})
       const result=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(result.error||'Could not save room')
+      if(result.row)setEdits(current=>({...current,[row.roomId]:{...current[row.roomId],operationalStatus:result.row.reservationStatus,stripHold:result.row.stripHold,roomCondition:result.row.roomCondition}}))
       setFeedback(current=>({...current,[row.roomId]:'Saved'}))
     }catch(error:any){
       setEdits(current=>{const copy={...current};delete copy[row.roomId];return copy})
@@ -110,7 +113,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
       : rows.filter(row=>displayStatus(row)===statusFilter)
 
   return <div className="reservations-page">
-    <div className="reservations-view-switch"><div><strong>Reservations workspace</strong><small>View synced stays or edit operational room status</small></div><div className="reservations-view-buttons"><button type="button" className={view==='overview'?'active':''} aria-pressed={view==='overview'} onClick={()=>setView('overview')}>Overview</button>{canEdit&&<button type="button" className={view==='edit'?'active':''} aria-pressed={view==='edit'} onClick={()=>setView('edit')}>Edit rooms</button>}</div></div>
+    <div className="reservations-view-switch"><div><strong>Reservations workspace</strong><small>View synced stays or edit operational room status</small></div><div className="reservations-view-buttons"><button type="button" className={view==='overview'?'active':''} aria-pressed={view==='overview'} onClick={()=>changeView('overview')}>Overview</button>{canEdit&&<button type="button" className={view==='edit'?'active':''} aria-pressed={view==='edit'} onClick={()=>changeView('edit')}>Edit rooms</button>}</div></div>
     <section className="reservations-hero">
       <div>
         <div className="reservations-kicker">Front office operations</div>
