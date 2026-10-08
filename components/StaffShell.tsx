@@ -1,5 +1,6 @@
-import { getStaffSession } from '@/lib/client/staff-session'
 'use client'
+
+import { getStaffSession } from '@/lib/client/staff-session'
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
