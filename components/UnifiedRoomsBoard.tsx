@@ -137,6 +137,7 @@ function isStayover(row:RoomRow){return normalize(row.reservationStatus)==='stay
 function isRefresh(row:RoomRow){return isStayover(row)&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
 function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='blocked'||normalize(row.stripHold).includes('hold')}
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
+function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
 export default function UnifiedRoomsBoard(){
   const [date,setDate]=useState(todayDetroit())
@@ -731,8 +732,9 @@ export default function UnifiedRoomsBoard(){
             </button>
 
             {!isBlocked(row)&&<div className="rooms-progress-summary" aria-label="Room workflow progress">
-              <span><strong>{(requiresRoomCheck(row)?[row.complete,row.housekeeperAttested,row.inspected,finalVerificationComplete(row)]:[row.complete]).filter(Boolean).length}</strong> of {requiresRoomCheck(row)?4:1} complete</span>
-              <span className="rooms-progress-dots" aria-hidden="true"><i className={row.complete?'done':''}/>{requiresRoomCheck(row)&&<i className={row.housekeeperAttested?'done':''}/>} {requiresRoomCheck(row)&&<i className={row.inspected?'done':''}/>} {requiresRoomCheck(row)&&<i className={finalVerificationComplete(row)?'done':''}/>}</span>
+              {isArrivalOnly(row)?
+                <><span><strong>{row.inspected?1:0}</strong> of 1 room check</span><span className="rooms-progress-dots" aria-hidden="true"><i className={row.inspected?'done':''}/></span></>
+                :<><span><strong>{(requiresRoomCheck(row)?[row.complete,row.housekeeperAttested,row.inspected,finalVerificationComplete(row)]:[row.complete]).filter(Boolean).length}</strong> of {requiresRoomCheck(row)?4:1} complete</span><span className="rooms-progress-dots" aria-hidden="true"><i className={row.complete?'done':''}/>{requiresRoomCheck(row)&&<i className={row.housekeeperAttested?'done':''}/>} {requiresRoomCheck(row)&&<i className={row.inspected?'done':''}/>} {requiresRoomCheck(row)&&<i className={finalVerificationComplete(row)?'done':''}/>}</span></>}
               {!isOpen&&<strong className="rooms-next-action">{roomNextAction(effectiveRow)}</strong>}
             </div>}
 
@@ -747,7 +749,7 @@ export default function UnifiedRoomsBoard(){
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
-              {isManager(access)&&<details className="rooms-details-drawer"><summary>Room details & manager controls</summary><div className="rooms-manager-edit">
+              {isManager(access)&&<details className="rooms-details-drawer"><summary>Manage room · status, staff, breakfast, packages & blocking</summary><div className="rooms-manager-edit">
                 <div className="rooms-manager-context">
                   <div><span>Reservation</span><strong>{row.reservationStatus||'Not set'}</strong></div>
                   <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
@@ -807,7 +809,7 @@ export default function UnifiedRoomsBoard(){
                     </>}
                   </section>)}
 
-              {(!isStayover(row)||isRefresh(row))&&<section className="rooms-section cleaning-section">
+              {(!isStayover(row)||isRefresh(row))&&!isArrivalOnly(row)&&<section className="rooms-section cleaning-section">
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
                 <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isStayover(row)?'Stayover service complete ✓':'Ready for room check ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
               </section>}
@@ -817,14 +819,14 @@ export default function UnifiedRoomsBoard(){
                     <div className="rooms-success-line"><Check size={16}/><strong>Room check</strong><span>Pass ✓</span></div>
                   </section>
                 : <section className="rooms-section inspection-section">
-                    <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Independent room check</strong><small>{inspection.readyForInspection?`${checkedCount}/${inspection.items.length} standards checked`:'Waiting for housekeeping'}</small></div></div>
+                    <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Independent room check</strong><small>{(inspection.readyForInspection||isArrivalOnly(row))?`${checkedCount}/${inspection.items.length} standards checked`:'Waiting for housekeeping'}</small></div></div>
                     {inspection.issueOpen&&<div className="rooms-info-callout issue"><strong>Needs correction</strong><span>{inspection.issueNote}</span></div>}
-                    {!inspection.readyForInspection?<div className="rooms-waiting">Housekeeping must finish the room and self-check before inspection.</div>:
+                    {!inspection.readyForInspection&&!isArrivalOnly(row)?<div className="rooms-waiting">Housekeeping must finish the room and self-check before inspection.</div>:
                       <div className="rooms-inspection-list">{[...new Set(inspection.items.map(i=>i.zone))].map(zone=><div className="rooms-inspection-zone" key={zone}><h4>{zone}</h4>{inspection.items.filter(i=>i.zone===zone).map(item=><div className={`rooms-inspection-item ${item.passed===true?'pass':item.passed===false?'fail':''}`} key={item.id}><div><strong>{item.label}</strong>{item.passed===false&&<input value={item.note} onChange={e=>updateInspectionNote(row.roomId,item.id,e.target.value)} onBlur={()=>void setInspectionResult(inspection,item,false)} placeholder="What needs correction?"/>}</div><div className="rooms-inspection-actions"><button type="button" className={item.passed===true?'active pass':''} onClick={()=>void setInspectionResult(inspection,item,true)}><Check size={16}/>Pass</button><button type="button" className={item.passed===false?'active fail':''} onClick={()=>void setInspectionResult(inspection,item,false)}><X size={16}/>Fix</button></div></div>)}</div>)}</div>}
                     {failedCount>0&&<div className="rooms-warning-line"><AlertTriangle size={16}/>{failedCount} item{failedCount===1?'':'s'} marked for correction.</div>}
                   </section>)}
 
-              {viewMode==='manager'&&requiresRoomCheck(row)&&<section className="rooms-section rooms-signoffs">
+              {viewMode==='manager'&&requiresRoomCheck(row)&&!isArrivalOnly(row)&&<section className="rooms-section rooms-signoffs">
                 <div className="rooms-section-heading"><UserRoundCheck size={17}/><div><strong>Final verification</strong><small>Final guest-ready check.</small></div></div>
                 {finalVerificationComplete(row)
                   ? <div className="rooms-success-line"><Check size={16}/><strong>Final check</strong><span>{row.fohSignedBy?`FOH · ${row.fohSignedName||'Signed'}`:`HA · ${row.haSignedName||'Signed'}`} ✓</span></div>
