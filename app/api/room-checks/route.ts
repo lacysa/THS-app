@@ -101,6 +101,68 @@ export async function GET(req:NextRequest){
 export async function POST(req:NextRequest){
   const ctx=await context(); if('error' in ctx)return ctx.error
   const body=await req.json().catch(()=>null)
+
+  if(body?.decision==='pass'||body?.decision==='fail'){
+    const date=String(body.date||''),roomId=String(body.roomId||''),note=String(body.note||'').trim()
+    const failed=body.decision==='fail'
+    if(!validDate(date)||!roomId)return NextResponse.json({error:'Invalid inspection request.'},{status:400})
+    if(failed&&!note)return NextResponse.json({error:'A correction note is required for a failed inspection.'},{status:400})
+    const admin=createSupabaseAdmin()
+    try{
+      const [{data:person,error:personError},{data:room,error:roomError}]=await Promise.all([
+        admin.from('staff_members').select('id,name').eq('auth_user_id',ctx.access.userId).eq('active',true).maybeSingle(),
+        admin.from('housekeeping_daily_rooms').select('*').eq('service_date',date).eq('room_id',roomId).maybeSingle()
+      ])
+      if(personError||roomError)throw new Error(personError?.message||roomError?.message)
+      if(!person)return NextResponse.json({error:'Active staff profile required.'},{status:403})
+      if(!room)return NextResponse.json({error:'Room not on the daily board.'},{status:404})
+      const status=String(room.reservation_status||'').trim().toLowerCase()
+      const service=String(room.service_type||'').trim().toUpperCase()
+      if(status==='blocked'||status==='stayover'||String(room.strip_hold||'').toLowerCase().includes('hold')||service==='RF')return NextResponse.json({error:'Room is not eligible for inspection.'},{status:400})
+      const needsClean=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(room.check_issue_open)
+      if(needsClean&&(!room.complete||!room.ready_for_inspection))return NextResponse.json({error:'Housekeeper must submit the room before inspection.'},{status:409})
+      const now=new Date().toISOString()
+      const stage:'inspection'|'recheck'=room.check_issue_open?'recheck':'inspection'
+      const attempt_no=await nextAttempt(admin,date,roomId,stage)
+      const {data:quality,error:qualityError}=await admin.from('housekeeping_quality_checks').insert({
+        service_date:date,room_id:roomId,stage,attempt_no,actor_id:person.id,
+        housekeeper_id:room.housekeeper_attested_by||null,status:failed?'fail':'pass',submitted_at:now
+      }).select('id').single()
+      if(qualityError)throw new Error(qualityError.message)
+      const passedCondition=['checkout','vacant','dirty'].includes(status)?'Vacant (Clean)':status==='arrival'&&room.room_condition==='Occupied'?'Occupied':'Ready'
+      const patch=failed?{
+        complete:false,ready_for_inspection:false,inspected:false,completed_at:null,inspected_at:null,
+        room_condition:'Cleaning',check_issue_open:true,check_issue_note:note,
+        check_issue_by:person.id,check_issue_at:now,ha_signed_by:null,ha_signed_at:null,
+        foh_signed_by:null,foh_signed_at:null,updated_at:now
+      }:{
+        check_issue_open:false,check_issue_note:null,inspected:true,inspected_by:person.id,
+        inspected_at:now,ready_for_inspection:false,room_condition:passedCondition,
+        ha_signed_by:person.id,ha_signed_at:now,updated_at:now
+      }
+      const {error:updateError}=await admin.from('housekeeping_daily_rooms').update(patch).eq('service_date',date).eq('room_id',roomId)
+      if(updateError)throw new Error(updateError.message)
+      if(failed){
+        const assigned=names(String(room.assigned_to||''))
+        if(assigned.length){
+          const {data:members}=await admin.from('staff_members').select('name,auth_user_id').eq('active',true)
+          const recipients=(members||[]).filter((m:any)=>assigned.includes(String(m.name||'').trim().toLowerCase())&&m.auth_user_id)
+          if(recipients.length){
+            const {error:notifyError}=await admin.from('notifications').insert(recipients.map((m:any)=>({
+              recipient_user_id:m.auth_user_id,notification_type:'housekeeping_correction',
+              title:'Room correction required',message:person.name+' found: '+note,
+              room_id:roomId,service_date:date,created_by:ctx.access.userId
+            })))
+            if(notifyError)console.error('Correction notification failed:',notifyError.message)
+          }
+        }
+      }else{
+        await admin.from('housekeeping_quality_discrepancies').update({corrected_at:now,resolved_recheck_id:quality.id})
+          .eq('service_date',date).eq('room_id',roomId).is('corrected_at',null)
+      }
+      return NextResponse.json({ok:true,decision:failed?'fail':'pass',issue:failed?note:'',checkedAt:now})
+    }catch(error:any){return NextResponse.json({error:error?.message||'Could not save inspection.'},{status:500})}
+  }
   const date=String(body?.date||''),roomId=String(body?.roomId||''),itemId=String(body?.itemId||'')
   const passed=body?.passed===true?true:body?.passed===false?false:null
   const note=String(body?.note||'').trim()
