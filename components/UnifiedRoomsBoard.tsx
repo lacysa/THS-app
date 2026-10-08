@@ -154,6 +154,7 @@ export default function UnifiedRoomsBoard(){
   const [message,setMessage]=useState('')
   const [saveState,setSaveState]=useState<SaveState>('idle')
   const [inspectionNotes,setInspectionNotes]=useState<Record<string,string>>({})
+  const [correctionFixNotes,setCorrectionFixNotes]=useState<Record<string,string>>({})
   const [inspectionSaving,setInspectionSaving]=useState<Record<string,boolean>>({})
   const [inspectionErrors,setInspectionErrors]=useState<Record<string,string>>({})
   const [canHaSignoff,setCanHaSignoff]=useState(false)
@@ -374,11 +375,12 @@ export default function UnifiedRoomsBoard(){
     if(inspectionSaving[row.roomId])return
     setInspectionSaving(current=>({...current,[row.roomId]:true}))
     try{
-      const response=await fetch('/api/room-checks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:row.roomId,decision:'fixed',note:inspectionNotes[row.roomId]||''})})
+      const response=await fetch('/api/room-checks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:row.roomId,decision:'fixed',note:correctionFixNotes[row.roomId]||''})})
       const result=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(result.error||'Could not record correction.')
       setRows(current=>current.map(item=>item.roomId===row.roomId?{...item,complete:true,readyForInspection:true,roomCondition:'Ready for Room Check'}:item))
       setInspectionRooms(current=>current.map(item=>item.roomId===row.roomId?{...item,complete:true,readyForInspection:true}:item))
+      setCorrectionFixNotes(current=>({...current,[row.roomId]:''}))
       setMessage(row.roomName+' corrected by '+(result.actor||'staff')+'. Ready for reinspection.')
     }catch(error:any){setInspectionErrors(current=>({...current,[row.roomId]:error?.message||'Could not save correction.'}))}
     finally{setInspectionSaving(current=>({...current,[row.roomId]:false}))}
@@ -859,7 +861,7 @@ export default function UnifiedRoomsBoard(){
                 {inspectionErrors[row.roomId]&&<div role="alert" className="rooms-warning-line"><AlertTriangle size={16}/>{inspectionErrors[row.roomId]}</div>}
                 {inspection.issueOpen&&!inspection.readyForInspection&&<div className="rooms-inspection-decision">
                   <div className="rooms-info-callout issue"><strong>Correction requested</strong><span>{inspection.issueNote||row.checkIssueNote||'See room notes.'}</span></div>
-                  <label className="rooms-notes">Fix notes (optional)<textarea value={inspectionNotes[row.roomId]||''} onChange={e=>setInspectionNotes(current=>({...current,[row.roomId]:e.target.value}))} placeholder="What was fixed?"/></label>
+                  <label className="rooms-notes">Work performed (separate from original issue)<textarea value={correctionFixNotes[row.roomId]||''} onChange={e=>setCorrectionFixNotes(current=>({...current,[row.roomId]:e.target.value}))} placeholder="Describe what was corrected…"/></label>
                   <button type="button" className="ops-primary-btn rooms-primary-action" disabled={Boolean(inspectionSaving[row.roomId])} onClick={()=>void markCorrectionFixed(row)}><Check size={16}/>Mark corrected · Send for reinspection</button>
                 </div>}
                 {(row.inspected||inspection.inspected)&&!inspection.issueOpen
