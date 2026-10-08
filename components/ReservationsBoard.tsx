@@ -36,6 +36,7 @@ type Row={
   housekeeperAttested?:boolean
   checkIssueOpen?:boolean
   operationalStatus?:string
+  lateArrival?:boolean
   stripHold?:string
 }
 
@@ -96,11 +97,12 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
     if('operationalStatus' in patch)apiPatch.reservationStatus=patch.operationalStatus
     if('roomCondition' in patch)apiPatch.roomCondition=patch.roomCondition
     if('stripHold' in patch)apiPatch.stripHold=patch.stripHold
+    if('lateArrival' in patch)apiPatch.lateArrival=patch.lateArrival
     try{
       const response=await fetch('/api/housekeeping/day',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate,roomId:row.roomId,patch:apiPatch})})
       const result=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(result.error||'Could not save room')
-      if(result.row)setEdits(current=>({...current,[row.roomId]:{...current[row.roomId],operationalStatus:result.row.reservationStatus,stripHold:result.row.stripHold,roomCondition:result.row.roomCondition}}))
+      if(result.row)setEdits(current=>({...current,[row.roomId]:{...current[row.roomId],operationalStatus:result.row.reservationStatus,lateArrival:result.row.lateArrival,stripHold:result.row.stripHold,roomCondition:result.row.roomCondition}}))
       setLiveRooms(current=>({...current,[row.roomId]:{...current[row.roomId],...(result.row?{operationalStatus:result.row.reservationStatus,stripHold:result.row.stripHold,roomCondition:result.row.roomCondition}:patch)}}))
       setEdits(current=>{const next={...current};delete next[row.roomId];return next})
       setFeedback(current=>({...current,[row.roomId]:'Saved'}))
@@ -160,7 +162,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
       </div>
     </section>}
 
-    {view==='edit'&&canEdit&&<section className="reservations-edit-panel"><div className="reservations-edit-intro"><strong>Daily room overrides</strong><span>Change today’s operational room status or maintenance hold. Guest bookings and synced reservation records remain unchanged.</span></div><div className="reservations-edit-grid">{shown.map(row=><div className="reservations-edit-item" key={row.roomId}><div className="reservations-edit-room"><strong>{row.roomName}</strong><small>{row.status} · synced reservation</small></div><label>Operational status<select disabled={saving[row.roomId]} value={row.operationalStatus||row.status} onChange={e=>void editRoom(row,{operationalStatus:e.target.value})}>{['Arrival','Out/In','Checkout','Stayover','Vacant','Dirty','Blocked'].map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Room condition<select disabled={saving[row.roomId]} value={row.roomCondition||''} onChange={e=>void editRoom(row,{roomCondition:e.target.value,stripHold:e.target.value==='Blocked'?'Hold':''})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(s=><option key={s} value={s}>{s||'Not set'}</option>)}</select></label><button className="reservations-edit-block" disabled={saving[row.roomId]} type="button" onClick={()=>void editRoom(row,{stripHold:row.stripHold?'':'Hold'})}>{row.stripHold?'Release hold':'Maintenance hold'}</button><small role="status">{saving[row.roomId]?'Saving…':feedback[row.roomId]||''}</small></div>)}</div>{shown.length===0&&<p>No synced rooms for this date.</p>}</section>}
+    {view==='edit'&&canEdit&&<section className="reservations-edit-panel"><div className="reservations-edit-intro"><strong>Daily room overrides</strong><span>Change today’s operational room status or maintenance hold. Guest bookings and synced reservation records remain unchanged.</span></div><div className="reservations-edit-grid">{shown.map(row=><div className="reservations-edit-item" key={row.roomId}><div className="reservations-edit-room"><strong>{row.roomName}</strong><small>{row.status} · synced reservation</small></div><label>Operational status<select disabled={saving[row.roomId]} value={row.operationalStatus||row.status} onChange={e=>void editRoom(row,{operationalStatus:e.target.value})}>{['Arrival','Out/In','Checkout','Stayover','Vacant','Dirty','Blocked'].map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Room condition<select disabled={saving[row.roomId]} value={row.roomCondition||''} onChange={e=>void editRoom(row,{roomCondition:e.target.value,stripHold:e.target.value==='Blocked'?'Hold':''})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(s=><option key={s} value={s}>{s||'Not set'}</option>)}</select></label><label className="reservations-late-toggle"><input type="checkbox" checked={Boolean(row.lateArrival)} disabled={saving[row.roomId]} onChange={e=>void editRoom(row,{lateArrival:e.target.checked})}/> Late arrival</label><button className="reservations-edit-block" disabled={saving[row.roomId]} type="button" onClick={()=>void editRoom(row,{stripHold:row.stripHold?'':'Hold'})}>{row.stripHold?'Release hold':'Maintenance hold'}</button><small role="status">{saving[row.roomId]?'Saving…':feedback[row.roomId]||''}</small></div>)}</div>{shown.length===0&&<p>No synced rooms for this date.</p>}</section>}
 
     {view==='overview'&&shown.length>0 && <section className="reservations-filter-bar" aria-label="Filter reservations by status">
       {[
@@ -212,7 +214,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
           const readyForNextArrival=roomWorkflowLabel(roomState)==='Ready for guest' || ['ready for guest','vacant (clean)'].includes(operationalState.toLowerCase())
           return <article className={'reservation-card '+statusClass(status)} key={row.roomId}>
             <div className="reservation-card-head">
-              <div><strong>{row.roomName}</strong><span>{status}</span></div>
+              <div><strong>{row.roomName}</strong><span>{status}</span>{row.lateArrival&&<span className="reservations-late-badge">Late arrival</span>}</div>
               {!isCheckoutOnly && stay?.door_code && <div className="reservation-door"><DoorOpen size={15}/><b>{stay.door_code}</b></div>}
             </div>
 
