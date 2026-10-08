@@ -242,7 +242,7 @@ export async function POST(req:NextRequest){
       const roomIdByName=new Map<string,string>(rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
       const reservations=incoming.map((row:any)=>({
         ...row,
-        phone:null,
+        phone:String(row.phone||'').replace(/\D/g,'').slice(-10)||null,
         reservationKey:String(row.reservationKey||''),
         reservationNumber:row.reservationNumber?String(row.reservationNumber):null,
         guestName:String(row.guestName||'').trim(),
@@ -346,7 +346,6 @@ export async function POST(req:NextRequest){
 
         return {
           ...row,
-          phone:null,
           changeType:!old?'new':Object.keys(changedFields).length?'updated':'unchanged',
           changedFields,
           include:!row.needsReview
