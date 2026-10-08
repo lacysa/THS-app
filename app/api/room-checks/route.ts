@@ -102,6 +102,24 @@ export async function POST(req:NextRequest){
   const ctx=await context(); if('error' in ctx)return ctx.error
   const body=await req.json().catch(()=>null)
 
+  if(body?.decision==='fixed'){
+    const date=String(body.date||''),roomId=String(body.roomId||''),note=String(body.note||'').trim()
+    if(!validDate(date)||!roomId)return NextResponse.json({error:'Invalid correction update.'},{status:400})
+    const admin=createSupabaseAdmin()
+    const [{data:person,error:personError},{data:room,error:roomError}]=await Promise.all([
+      admin.from('staff_members').select('id,name').eq('auth_user_id',ctx.access.userId).eq('active',true).maybeSingle(),
+      admin.from('housekeeping_daily_rooms').select('check_issue_open,check_issue_note').eq('service_date',date).eq('room_id',roomId).maybeSingle()
+    ])
+    if(personError||roomError)return NextResponse.json({error:personError?.message||roomError?.message},{status:500})
+    if(!person)return NextResponse.json({error:'Active staff account required.'},{status:403})
+    if(!room?.check_issue_open)return NextResponse.json({error:'No open correction for this room.'},{status:409})
+    const now=new Date().toISOString()
+    const {error:eventError}=await admin.from('housekeeping_correction_events').insert({service_date:date,room_id:roomId,actor_id:person.id,event_type:'fixed',note:note||'Correction completed',created_at:now})
+    if(eventError)return NextResponse.json({error:eventError.message},{status:500})
+    const {error:updateError}=await admin.from('housekeeping_daily_rooms').update({complete:true,ready_for_inspection:true,room_condition:'Ready for Room Check',updated_at:now}).eq('service_date',date).eq('room_id',roomId)
+    if(updateError)return NextResponse.json({error:updateError.message},{status:500})
+    return NextResponse.json({ok:true,decision:'fixed',checkedAt:now,actor:person.name})
+  }
   if(body?.decision==='pass'||body?.decision==='fail'){
     const date=String(body.date||''),roomId=String(body.roomId||''),note=String(body.note||'').trim()
     const failed=body.decision==='fail'
@@ -120,7 +138,8 @@ export async function POST(req:NextRequest){
       const service=String(room.service_type||'').trim().toUpperCase()
       if(status==='blocked'||status==='stayover'||String(room.strip_hold||'').toLowerCase().includes('hold')||service==='RF')return NextResponse.json({error:'Room is not eligible for inspection.'},{status:400})
       const needsClean=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(room.check_issue_open)
-      if(needsClean&&(!room.complete||!room.ready_for_inspection))return NextResponse.json({error:'Housekeeper must submit the room before inspection.'},{status:409})
+      // Authorized inspectors may inspect even before housekeeping has app access.
+      // An open correction can be reinspected only once marked fixed.
       const now=new Date().toISOString()
       const stage:'inspection'|'recheck'=room.check_issue_open?'recheck':'inspection'
       const attempt_no=await nextAttempt(admin,date,roomId,stage)
@@ -143,6 +162,8 @@ export async function POST(req:NextRequest){
       const {error:updateError}=await admin.from('housekeeping_daily_rooms').update(patch).eq('service_date',date).eq('room_id',roomId)
       if(updateError)throw new Error(updateError.message)
       if(failed){
+        const {error:historyError}=await admin.from('housekeeping_correction_events').insert({service_date:date,room_id:roomId,actor_id:person.id,event_type:'found',note,created_at:now})
+        if(historyError)console.error('Correction history error:',historyError.message)
         const assigned=names(String(room.assigned_to||''))
         if(assigned.length){
           const {data:members}=await admin.from('staff_members').select('name,auth_user_id').eq('active',true)
