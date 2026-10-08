@@ -300,7 +300,7 @@ export default async function DashboardPage() {
         staff={todayStaff} tomorrowStaff={tomorrowStaff}
         showHousekeeping={moduleKeys.has('housekeeping')}
         showMaintenance={moduleKeys.has('maintenance')}
-        showStaff={moduleKeys.has('staff') || access.isAdmin}
+        showStaff={isManager}
         handoffNotes={departmentNotes}
       />}
       <DailyDashboard
