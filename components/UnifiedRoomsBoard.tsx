@@ -577,6 +577,18 @@ export default function UnifiedRoomsBoard(){
       </div>
     </div>
 
+    {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<section className="rooms-stayover-planner">
+      <div className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Visible for planning. Assigning coverage alone does not request a refresh or add a cleaning task.</span></div><span>{inactiveStayovers.length} stayovers</span></div>
+      <div className="rooms-stayover-grid">
+        {inactiveStayovers.map(row=><div className="rooms-stayover-item" key={row.roomId}>
+          <div><strong>{row.roomName}</strong><small>Occupied · no refresh requested</small></div>
+          <label>Assigned coverage<select value={splitAssigned(row.assignedTo)[0]||''} onChange={e=>assignStaff(row,e.target.value)}>
+            <option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}
+          </select></label>
+          <button type="button" onClick={()=>setRefresh(row)}>Request RF</button>
+        </div>)}
+      </div>
+    </section>}
     {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<div className="rooms-refresh-adder">
       <div><strong>Add refresh</strong><span>Stayovers stay out of the room workflow until you mark one RF.</span></div>
       <div className="rooms-refresh-adder-actions">
