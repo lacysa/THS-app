@@ -45,11 +45,6 @@ const icons:Record<string,any> = {
   laundry:Package,
   lobby:Building2,
   housekeeping_guide:BookOpen,
-  front_desk_inventory:Package,
-  kitchen_inventory:Package,
-  housekeeping_inventory:Package,
-  laundry_inventory:Package,
-  lobby_inventory:Package
 }
 
 const hrefFallback:Record<string,string> = {
@@ -67,11 +62,6 @@ const hrefFallback:Record<string,string> = {
   laundry:'/laundry',
   lobby:'/lobby',
   housekeeping_guide:'/housekeeping/resources',
-  front_desk_inventory:'/inventory/front-desk',
-  kitchen_inventory:'/inventory/kitchen',
-  housekeeping_inventory:'/inventory/housekeeping',
-  laundry_inventory:'/inventory/laundry',
-  lobby_inventory:'/inventory/lobby'
 }
 
 export default function DashboardGrid({modules=[]}:{modules?:ModuleRow[]}) {
