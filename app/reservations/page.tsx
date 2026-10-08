@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
-import ReservationsBoard from '@/components/ReservationsBoard'
+import RoomOperationsWorkspace from '@/components/RoomOperationsWorkspace'
 import LiveDataRefresh from '@/components/LiveDataRefresh'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { canUseModule } from '@/lib/access'
@@ -91,5 +91,8 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
     .filter((row:any)=>row.status!=='Vacant')
     .sort((a:any,b:any)=>(sortById.get(a.roomId)??9999)-(sortById.get(b.roomId)??9999))
 
-  return <StaffShell title="Reservations"><LiveDataRefresh intervalMs={10000}/><ReservationsBoard serviceDate={serviceDate} rows={rows} canEdit={!gate.access.isPreviewMode && Boolean(gate.access.isAdmin || gate.access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap)))}/></StaffShell>
+  const canEdit=!gate.access.isPreviewMode && Boolean(gate.access.isAdmin || gate.access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap)))
+  const roomGate=await canUseModule('housekeeping')
+  const canManageRooms=canEdit && Boolean(roomGate.allowed)
+  return <StaffShell title="Room Operations"><LiveDataRefresh intervalMs={10000}/><RoomOperationsWorkspace serviceDate={serviceDate} rows={rows} canEdit={canEdit} canManageRooms={canManageRooms}/></StaffShell>
 }
