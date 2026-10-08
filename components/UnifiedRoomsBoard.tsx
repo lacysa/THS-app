@@ -681,7 +681,7 @@ export default function UnifiedRoomsBoard(){
       <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
       <div className="rooms-room-picker" role="group" aria-label="Select room">
         {searchedRows.map(row=>{const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen});return <button type="button" key={row.roomId} aria-pressed={selectedRow?.roomId===row.roomId} className={`rooms-picker-item ${state} ${selectedRow?.roomId===row.roomId?'chosen':''}`} onClick={()=>focusRoom(row)}>
-          <span className="rooms-picker-name">{row.roomName}</span>{row.lateArrival&&<span className="rooms-late-chip">Late arrival</span>}<span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span>{row.breakfastTag&&<span className="rooms-breakfast-chip">Breakfast</span>}<span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':isRefresh(row)?(row.complete?'Refresh complete':'Refresh requested'):state==='occupied'?'Occupied · no service':'Clean'}</span>
+          <span className="rooms-picker-name">{row.roomName}</span>{row.lateArrival&&<span className="rooms-late-chip">Late arrival</span>}<span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span>{row.breakfastTag&&<span className="rooms-breakfast-chip">Breakfast</span>}<span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':isRefresh(row)?(row.complete?'Refresh complete':'Refresh requested'):state==='occupied'?'Occupied · no service':'Clean'}</span>{row.notes?.trim()&&<span className="rooms-picker-note" title={row.notes}>Notes: {row.notes}</span>}
         </button>})}
       </div>
       <div className="rooms-focus-heading rooms-focus-detail-title"><strong>Room details</strong><span>Changes save without leaving this page</span></div>
@@ -794,6 +794,7 @@ export default function UnifiedRoomsBoard(){
               </div>
             </button>
 
+            {row.notes?.trim()&&<div className="rooms-card-note" title={row.notes}><strong>Room notes:</strong> {row.notes}</div>}
             {!isBlocked(row)&&<div className="rooms-progress-summary" aria-label="Room workflow progress">
               {requiresRoomCheck(row)
                 ? <><span><strong>{row.inspected?'Inspection passed':row.checkIssueOpen?'Correction required':row.complete||isArrivalOnly(row)?'Awaiting inspection':'Awaiting submission'}</strong></span></>
