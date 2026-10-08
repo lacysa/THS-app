@@ -498,3 +498,5 @@
 .rooms-stayover-item select{max-width:150px;min-width:130px;min-height:35px;border:1px solid #cbdce4;border-radius:9px;background:#fff;color:#243a50;padding:6px;font-size:12px}
 .rooms-stayover-item button{border:1px solid #9bc3bd;border-radius:10px;background:linear-gradient(110deg,#d5f5ec,#e6ddff);color:#285665;font-size:11px;font-weight:800;padding:11px 12px;cursor:pointer}
 @media(max-width:680px){.rooms-stayover-planner{padding:12px;border-radius:17px}.rooms-stayover-grid{grid-template-columns:1fr}.rooms-stayover-heading{flex-direction:column}.rooms-stayover-item select{max-width:160px}}
+
+.rooms-late-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;background:linear-gradient(120deg,#f4edff,#eaf3ff);border:1px solid #cbbde7;border-radius:12px;color:#5a477d;font-size:12px;font-weight:800;cursor:pointer}.rooms-late-toggle input{width:16px;height:16px;accent-color:#7661b4}.rooms-late-chip{width:max-content;max-width:100%;border-radius:8px;background:#e8dffd;color:#60478e;padding:3px 7px;font-size:10px;font-weight:800}
