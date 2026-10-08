@@ -96,7 +96,7 @@ type SelfCheck={
 }
 
 type SaveState='idle'|'saving'|'saved'|'error'
-type Filter='active'|'all'|'cleaning'|'self'|'inspection'|'correction'|'complete'
+type Filter='active'|'all'|'stayovers'|'cleaning'|'self'|'inspection'|'correction'|'complete'
 
 const reservationOptions=['','Checkout','Out/In','Stayover','Arrival','Vacant','Dirty','Blocked']
 
@@ -540,7 +540,9 @@ export default function UnifiedRoomsBoard(){
   const checkByRoom=useMemo(()=>new Map(inspectionRooms.map(r=>[r.roomId,r])),[inspectionRooms])
   const activeRows=useMemo(()=>rows.filter(row=>!isStayover(row)||isRefresh(row)),[rows])
   const inactiveStayovers=useMemo(()=>rows.filter(row=>isStayover(row)&&!isRefresh(row)),[rows])
-  const filtered=useMemo(()=>activeRows.filter(row=>{
+  const filtered=useMemo(()=>rows.filter(row=>{
+    if(filter==='stayovers')return isStayover(row)
+    if(isStayover(row)&&!isRefresh(row))return filter==='all'
     const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})
     if(filter==='all')return true
     if(filter==='active')return !['ready','blocked','occupied'].includes(state)
@@ -549,7 +551,7 @@ export default function UnifiedRoomsBoard(){
     if(filter==='inspection')return state==='inspection'||state==='final'
     if(filter==='correction')return state==='correction'
     return state==='ready'
-  }),[activeRows,filter,checkByRoom])
+  }),[rows,filter,checkByRoom])
 
   const searchedRows=useMemo(()=>filtered.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[filtered,roomSearch])
   const selectedRow=searchedRows.find(row=>row.roomId===selectedRoomId)||searchedRows[0]
@@ -557,13 +559,14 @@ export default function UnifiedRoomsBoard(){
   function focusRoom(row:RoomRow){setSelectedRoomId(row.roomId);setExpanded(current=>({...current,[row.roomId]:true}));if(requiresSelfCheck(row)&&!row.housekeeperAttested&&!selfChecks[row.roomId])void loadSelfCheck(row)}
   const counts=useMemo(()=>({
     active:activeRows.filter(r=>!['ready','blocked','occupied'].includes(roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen}))).length,
-    all:activeRows.length,
+    all:rows.length,
+    stayovers:inactiveStayovers.length,
     cleaning:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='cleaning').length,
     self:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='self').length,
     inspection:activeRows.filter(r=>['inspection','final'].includes(roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen}))).length,
     correction:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='correction').length,
     complete:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='ready').length
-  }),[activeRows,checkByRoom])
+  }),[activeRows,inactiveStayovers,rows,checkByRoom])
 
   return <div className="rooms-workspace module-pretty-page">
     <div className="module-toolbar rooms-toolbar">
@@ -603,7 +606,7 @@ export default function UnifiedRoomsBoard(){
 
     <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
       {([
-        ['active','Needs action',counts.active],['all','All',counts.all],['cleaning','Cleaning',counts.cleaning],['self','Self-check',counts.self],
+        ['active','Needs action',counts.active],['all','All rooms',counts.all],['stayovers','Stayovers',counts.stayovers],['cleaning','Cleaning',counts.cleaning],['self','Self-check',counts.self],
         ['inspection','Room check',counts.inspection],['correction','Correction',counts.correction],['complete','Ready for guest',counts.complete]
       ] as Array<[Filter,string,number]>).map(([key,label,count])=><button key={key} type="button" className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<span>{count}</span></button>)}
     </div>
@@ -614,7 +617,7 @@ export default function UnifiedRoomsBoard(){
       <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
       <div className="rooms-room-picker" role="group" aria-label="Select room">
         {searchedRows.map(row=>{const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen});return <button type="button" key={row.roomId} aria-pressed={selectedRow?.roomId===row.roomId} className={`rooms-picker-item ${state} ${selectedRow?.roomId===row.roomId?'chosen':''}`} onClick={()=>focusRoom(row)}>
-          <span className="rooms-picker-name">{row.roomName}</span>{row.lateArrival&&<span className="rooms-late-chip">Late arrival</span>}<span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span>{row.breakfastTag&&<span className="rooms-breakfast-chip">Breakfast</span>}<span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':state==='occupied'?'Occupied':'Clean'}</span>
+          <span className="rooms-picker-name">{row.roomName}</span>{row.lateArrival&&<span className="rooms-late-chip">Late arrival</span>}<span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span>{row.breakfastTag&&<span className="rooms-breakfast-chip">Breakfast</span>}<span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':state==='occupied'||(isStayover(row)&&!isRefresh(row))?'Occupied · no service':'Clean'}</span>
         </button>})}
       </div>
       <div className="rooms-focus-heading rooms-focus-detail-title"><strong>Room details</strong><span>Changes save without leaving this page</span></div>
@@ -677,7 +680,7 @@ export default function UnifiedRoomsBoard(){
                       </td>
                       <td>
                         <button type="button" className={`rooms-table-workflow ${state}`} onClick={()=>openRoomCard(row)}>
-                          <span>{roomNextAction({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span>
+                          <span>{isStayover(row)&&!isRefresh(row)?'No refresh requested':roomNextAction({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span>
                           <small>{roomWorkflowLabel({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</small>
                         </button>
                       </td>
@@ -804,10 +807,10 @@ export default function UnifiedRoomsBoard(){
                     </>}
                   </section>)}
 
-              <section className="rooms-section cleaning-section">
+              {(!isStayover(row)||isRefresh(row))&&<section className="rooms-section cleaning-section">
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
                 <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)} disabled={!row.complete&&requiresSelfCheck(row)&&!row.housekeeperAttestedBy}><Check size={16}/>{row.complete?(isStayover(row)?'Stayover service complete ✓':'Ready for room check ✓'):(row.checkIssueOpen?'Correction complete · send for re-check':'Mark clean complete')}</button>
-              </section>
+              </section>}
 
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&((row.inspected||inspection.inspected)&&!inspection.issueOpen
                 ? <section className="rooms-section inspection-section">
