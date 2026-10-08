@@ -357,6 +357,20 @@ export default function UnifiedRoomsBoard(){
   }
 
 
+  async function markCorrectionFixed(row:RoomRow){
+    if(inspectionSaving[row.roomId])return
+    setInspectionSaving(current=>({...current,[row.roomId]:true}))
+    try{
+      const response=await fetch('/api/room-checks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:row.roomId,decision:'fixed',note:inspectionNotes[row.roomId]||''})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not record correction.')
+      setRows(current=>current.map(item=>item.roomId===row.roomId?{...item,complete:true,readyForInspection:true,roomCondition:'Ready for Room Check'}:item))
+      setInspectionRooms(current=>current.map(item=>item.roomId===row.roomId?{...item,complete:true,readyForInspection:true}:item))
+      setMessage(row.roomName+' corrected by '+(result.actor||'staff')+'. Ready for reinspection.')
+    }catch(error:any){setInspectionErrors(current=>({...current,[row.roomId]:error?.message||'Could not save correction.'}))}
+    finally{setInspectionSaving(current=>({...current,[row.roomId]:false}))}
+  }
+
   async function submitInspectionDecision(row:RoomRow,decision:'pass'|'fail'){
     if(inspectionSaving[row.roomId])return
     const note=(inspectionNotes[row.roomId]||'').trim()
@@ -828,6 +842,11 @@ export default function UnifiedRoomsBoard(){
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&<section className="rooms-section inspection-section">
                 <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Inspection</strong><small>One decision per room, no checklist.</small></div></div>
                 {inspectionErrors[row.roomId]&&<div role="alert" className="rooms-warning-line"><AlertTriangle size={16}/>{inspectionErrors[row.roomId]}</div>}
+                {inspection.issueOpen&&!inspection.readyForInspection&&<div className="rooms-inspection-decision">
+                  <div className="rooms-info-callout issue"><strong>Correction requested</strong><span>{inspection.issueNote||row.checkIssueNote||'See room notes.'}</span></div>
+                  <label className="rooms-notes">Fix notes (optional)<textarea value={inspectionNotes[row.roomId]||''} onChange={e=>setInspectionNotes(current=>({...current,[row.roomId]:e.target.value}))} placeholder="What was fixed?"/></label>
+                  <button type="button" className="ops-primary-btn rooms-primary-action" disabled={Boolean(inspectionSaving[row.roomId])} onClick={()=>void markCorrectionFixed(row)}><Check size={16}/>Mark corrected · Send for reinspection</button>
+                </div>}
                 {(row.inspected||inspection.inspected)&&!inspection.issueOpen
                   ? <div className="rooms-success-line"><Check size={16}/><strong>Inspection passed</strong><span>Guest ready ✓</span></div>
                   : (inspection.readyForInspection||isArrivalOnly(row))
