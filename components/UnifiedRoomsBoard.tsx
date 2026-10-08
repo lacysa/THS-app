@@ -139,8 +139,8 @@ function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='block
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
-export default function UnifiedRoomsBoard(){
-  const [date,setDate]=useState(todayDetroit())
+export default function UnifiedRoomsBoard({initialDate}:{initialDate?:string}={}){
+  const [date,setDate]=useState(initialDate||todayDetroit())
   const [access,setAccess]=useState<Access|null>(null)
   const [rows,setRows]=useState<RoomRow[]>([])
   const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
