@@ -611,7 +611,7 @@ export default function UnifiedRoomsBoard(){
       ] as Array<[Filter,string,number]>).map(([key,label,count])=><button key={key} type="button" className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<span>{count}</span></button>)}
     </div>
 
-    <div className="rooms-workflow-overview"><div><strong>{counts.complete}<span> / {counts.all}</span></strong><small>Rooms complete</small></div><div><strong>{counts.correction}</strong><small>Needs correction</small></div><div><strong>{counts.inspection}</strong><small>Awaiting checks</small></div></div>
+    <div className="rooms-workflow-overview"><div><strong>{counts.complete}<span> / {activeRows.length}</span></strong><small>Rooms complete</small></div><div><strong>{counts.correction}</strong><small>Needs correction</small></div><div><strong>{counts.inspection}</strong><small>Awaiting checks</small></div></div>
     <label className="rooms-search-field"><span>Find a room or team member</span><input type="search" value={roomSearch} onChange={e=>setRoomSearch(e.target.value)} placeholder="Search rooms, staff, status…" /></label>
     {managerDisplay==='focus'&&!loading&&searchedRows.length>0&&<div className="rooms-focus-layout">
       <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
