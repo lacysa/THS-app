@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect,useRef,useState } from 'react'
 
 function todayDetroit(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
@@ -20,13 +19,12 @@ export default function DepartmentBoard({department,label}:{department:'laundry'
 
   return <div className="department-board">
     <div className="module-toolbar">
-      <div><div className="module-kicker">{label}</div><h1>{label} Daily</h1><p>Daily handoff notes and department inventory needs.</p></div>
+      <div><div className="module-kicker">{label}</div><h1>{label} Daily</h1><p>Daily handoff notes for your department.</p></div>
       <label className="date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
     </div>
     <section className="card department-note-card">
       <div className="department-note-head"><h2>Shift notes</h2><span className={`save-chip ${state}`}>{state==='saving'?'Saving…':state==='saved'?'Saved ✓':state==='error'?'Save failed':'Autosaves'}</span></div>
       <textarea value={note} onChange={e=>change(e.target.value)} placeholder={department==='laundry'?'Laundry status, linen shortages, machine issues, carryover…':'Lobby setup, guest-facing issues, restock needs, handoff…'}/>
     </section>
-    <Link className="service-pill department-inventory-link" href={`/inventory/${department}`}><span className="service-pill-label">{label} Inventory</span></Link>
   </div>
 }
