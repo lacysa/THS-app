@@ -484,8 +484,10 @@ export async function PATCH(req: NextRequest) {
       dbPatch.inspected=false
       dbPatch.completed_at=complete?(existing.completed_at||now):null
       dbPatch.inspected_at=null
-      dbPatch.room_condition=isRefresh?'Occupied':complete?'Ready for Room Check':'Cleaning'
+      dbPatch.room_condition=isRefresh?'Occupied':complete?'Ready for Room Check':cleanText(requested.roomCondition)==='Vacant (Dirty)'?'Vacant (Dirty)':'Cleaning'
       if(!complete){
+        dbPatch.housekeeper_attested_by=null; dbPatch.housekeeper_attested_at=null
+        dbPatch.check_issue_open=false; dbPatch.check_issue_note=''
         dbPatch.ha_signed_by=null; dbPatch.ha_signed_at=null
         dbPatch.foh_signed_by=null; dbPatch.foh_signed_at=null
       }
