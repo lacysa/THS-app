@@ -297,7 +297,7 @@ export default async function DashboardPage() {
       <LiveDataRefresh intervalMs={10000}/>
       {isManager ? <DashboardViewSwitcher
         today={<DailyDashboard
-        commandMode={isManager}
+        commandMode={false}
         displayName={displayName}
         todayLabel={prettyDate(today)}
         breakfastDate={breakfastDate}
@@ -329,7 +329,7 @@ export default async function DashboardPage() {
         handoffNotes={departmentNotes}
       />}
       /> : <DailyDashboard
-        commandMode={isManager}
+        commandMode={false}
         displayName={displayName}
         todayLabel={prettyDate(today)}
         breakfastDate={breakfastDate}
