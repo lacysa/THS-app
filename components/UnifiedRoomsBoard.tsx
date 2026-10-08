@@ -607,7 +607,7 @@ export default function UnifiedRoomsBoard(){
       <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
       <div className="rooms-room-picker" role="group" aria-label="Select room">
         {searchedRows.map(row=>{const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen});return <button type="button" key={row.roomId} aria-pressed={selectedRow?.roomId===row.roomId} className={`rooms-picker-item ${state} ${selectedRow?.roomId===row.roomId?'chosen':''}`} onClick={()=>focusRoom(row)}>
-          <span className="rooms-picker-name">{row.roomName}</span><span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span><span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':state==='occupied'?'Occupied':'Clean'}</span>
+          <span className="rooms-picker-name">{row.roomName}</span><span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span>{row.breakfastTag&&<span className="rooms-breakfast-chip">Breakfast</span>}<span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':state==='occupied'?'Occupied':'Clean'}</span>
         </button>})}
       </div>
       <div className="rooms-focus-heading rooms-focus-detail-title"><strong>Room details</strong><span>Changes save without leaving this page</span></div>
@@ -625,6 +625,7 @@ export default function UnifiedRoomsBoard(){
                     <th className="rooms-table-sticky">Room</th>
                     <th>Stay</th>
                     <th>Service</th>
+                    <th>Breakfast tag</th>
                     <th>Staff</th>
                     <th>Order</th>
                     <th>Next action</th>
@@ -657,6 +658,7 @@ export default function UnifiedRoomsBoard(){
                           <button type="button" className={isRefresh(row)?'active':''} onClick={()=>setRefresh(row)}>RF</button>
                         </div>
                       </td>
+                      <td><label className="rooms-breakfast-toggle"><input type="checkbox" checked={Boolean(row.breakfastTag)} onChange={e=>patch(row.roomId,{breakfastTag:e.target.checked})} aria-label={`Breakfast tag for ${row.roomName}`}/><span>{row.breakfastTag?'Tagged':'Not tagged'}</span></label></td>
                       <td>
                         <select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}>
                           <option value="">Unassigned</option>
@@ -746,6 +748,7 @@ export default function UnifiedRoomsBoard(){
                   <label>Cleaning order<input type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>
                 </div>
 
+                <label className="rooms-breakfast-toggle rooms-breakfast-focus"><input type="checkbox" checked={Boolean(row.breakfastTag)} onChange={e=>patch(row.roomId,{breakfastTag:e.target.checked})}/><span>Breakfast tag</span><small>{row.breakfastTag?'Tagged for breakfast follow-up':'Not tagged'}</small></label>
                 <div className="rooms-service-controls">
                   <span>Service</span>
                   <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>None</button>
