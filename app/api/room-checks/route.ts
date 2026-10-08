@@ -136,7 +136,7 @@ export async function POST(req:NextRequest){
         check_issue_by:person.id,check_issue_at:now,ha_signed_by:null,ha_signed_at:null,
         foh_signed_by:null,foh_signed_at:null,updated_at:now
       }:{
-        check_issue_open:false,check_issue_note:null,inspected:true,inspected_by:person.id,
+        check_issue_open:false,check_issue_note:null,inspected:true,inspected_by:ctx.access.userId,
         inspected_at:now,ready_for_inspection:false,room_condition:passedCondition,
         ha_signed_by:person.id,ha_signed_at:now,updated_at:now
       }
@@ -342,7 +342,7 @@ export async function POST(req:NextRequest){
         check_issue_open:false,
         check_issue_note:null,
         inspected:true,
-        inspected_by:person.id,
+        inspected_by:ctx.access.userId,
         inspected_at:now,
         ready_for_inspection:false,
         room_condition:passedCondition,
