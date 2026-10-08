@@ -1640,3 +1640,7 @@ html[data-theme="dark"] .daily-state.neutral{
 .ops-command-events>a{display:flex;align-items:center;gap:12px;text-decoration:none;padding:10px 11px;border-radius:13px;background:rgba(255,255,255,.72);border:1px solid rgba(125,154,177,.15);color:#324a60}
 .ops-command-events time{font-size:11px;font-weight:800;color:#4c7485;width:59px;flex:0 0 59px;font-variant-numeric:tabular-nums}
 .ops-command-events>a>div{display:grid;gap:3px;min-width:0;flex:1}.ops-command-events strong{font-size:12px}.ops-command-events small{font-size:11px;color:#7b8999}
+
+
+.ops-command-copy{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;margin:0 10px 7px 0;padding:9px 12px;border-radius:11px;border:1px solid rgba(99,148,173,.26);background:linear-gradient(105deg,rgba(83,209,197,.21),rgba(127,113,238,.13));color:#38576b;font-size:11px;font-weight:800;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease}
+.ops-command-copy:hover{transform:translateY(-1px);box-shadow:0 5px 15px rgba(48,88,111,.12)}
