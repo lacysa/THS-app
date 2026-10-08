@@ -220,7 +220,7 @@ function parsePmsTableHtml(html:string,roomNames:string[]){
             reservationKey:keyBase+'|room:'+normalizeRoomKey(roomName),
             reservationNumber,
             guestName,
-            phone:null,
+            phone:digits.length===10?digits:null,
             doorCode:digits?digits.slice(-4):null,
             arrivalDate:arrival,
             checkoutDate:checkout,
