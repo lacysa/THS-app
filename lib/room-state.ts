@@ -31,8 +31,8 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   if(isBlockedRoom(row))return 'blocked'
   if(row.checkIssueOpen&&!row.readyForInspection)return 'correction'
   // Physical occupancy outranks any earlier readiness/inspection result.
+  if(isRefreshRoom(row))return row.complete?'occupied':'refresh'
   if(normalizeRoomValue(row.roomCondition)==='occupied')return 'occupied'
-  if(isRefreshRoom(row))return row.complete?'ready':'refresh'
   if(isStayoverRoom(row))return 'occupied'
 
   // Arrival/vacant rooms can legitimately begin the day already guest-ready
@@ -60,7 +60,7 @@ export function roomWorkflowLabel(row:RoomLike){
   if(state==='blocked')return 'Blocked'
   if(state==='correction')return 'Needs correction'
   if(state==='refresh')return 'Refresh'
-  if(state==='occupied')return 'Occupied'
+  if(state==='occupied')return isRefreshRoom(row)&&row.complete?'Refresh complete':'Occupied'
   if(state==='self')return 'Self-check'
   if(state==='cleaning')return 'Cleaning'
   if(state==='inspection')return 'Ready for room check'
@@ -73,7 +73,7 @@ export function roomNextAction(row:RoomLike){
   if(state==='blocked')return 'No action required'
   if(state==='correction')return 'Correct flagged items'
   if(state==='refresh')return 'Complete refresh'
-  if(state==='occupied')return 'No service requested'
+  if(state==='occupied')return isRefreshRoom(row)&&row.complete?'Refresh completed':'No service requested'
   if(state==='self')return 'Complete self-check'
   if(state==='cleaning')return 'Finish room clean'
   if(state==='inspection')return 'Perform room check'
