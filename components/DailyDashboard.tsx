@@ -92,6 +92,7 @@ type TodayStaffRow = {
 }
 
 type Props = {
+  commandMode?:boolean
   displayName:string
   todayLabel:string
   breakfastDate:string
@@ -189,6 +190,7 @@ function RoomSummary({row}:{row:HousekeepingRow}) {
 }
 
 export default function DailyDashboard({
+  commandMode=false,
   displayName,
   todayLabel,
   breakfastDate,
@@ -340,7 +342,7 @@ export default function DailyDashboard({
 
   return (
     <div className="daily-dashboard">
-      <div className="daily-dashboard-hero">
+      {!commandMode && <div className="daily-dashboard-hero">
         <div>
           <div className="ops-kicker">The Hotel Saugatuck</div>
           <h1>Good day, {displayName}</h1>
@@ -350,10 +352,9 @@ export default function DailyDashboard({
           <span className="daily-live-dot" />
           Live operations
         </div>
-      </div>
+      </div>}
 
-
-      <div className="daily-visual-overview">
+      {!commandMode && <div className="daily-visual-overview">
         <section className="daily-snapshot-card">
           <div className="daily-snapshot-head">
             <div>
@@ -404,7 +405,9 @@ export default function DailyDashboard({
             ))}
           </div>
         )}
-      </div>
+      </div>}
+
+      {commandMode && <div className="ops-command-secondary-heading"><div><span>DAILY DETAILS</span><h2>Hotel overview</h2></div><p>Room-by-room status, breakfast, staffing and maintenance</p></div>}
 
       {showReservationDaily && reservationDaily.some(item=>item.status!=='Vacant') && (() => {
         const active=reservationDaily.filter(item=>item.status!=='Vacant')
@@ -430,7 +433,7 @@ export default function DailyDashboard({
         </Link>
       })()}
 
-      <section className={`daily-panel daily-attention-panel ${attentionCount===0?'all-clear':''}`}>
+      {!commandMode && <section className={`daily-panel daily-attention-panel ${attentionCount===0?'all-clear':''}`}>
         <div className="daily-panel-head">
           <div>{attentionCount===0?<CheckCircle2 size={17}/>:<AlertTriangle size={17}/>}<strong>Needs attention</strong></div>
           <span>{attentionCount===0?'All clear':`${attentionCount} item${attentionCount===1?'':'s'}`}</span>
@@ -489,7 +492,7 @@ export default function DailyDashboard({
             )}
           </div>
         )}
-      </section>
+      </section>}
 
       {showHousekeeping && arrivals.length>0 && (
         <section className="daily-panel">
