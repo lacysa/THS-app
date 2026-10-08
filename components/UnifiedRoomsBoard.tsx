@@ -370,7 +370,7 @@ export default function UnifiedRoomsBoard(){
         const next=current.map(item=>item.roomId===row.roomId?{
           ...item,complete:passed?item.complete:false,readyForInspection:false,inspected:passed,
           checkIssueOpen:!passed,checkIssueNote:passed?'':note,
-          roomCondition:passed?(normalize(item.reservationStatus)==='checkout'?'Vacant (Clean)':'Ready'):'Cleaning',
+          roomCondition:passed?(['checkout','vacant','dirty'].includes(normalize(item.reservationStatus))?'Vacant (Clean)':normalize(item.roomCondition)==='occupied'?'Occupied':'Ready'):'Cleaning',
           haSignedBy:passed?'signed':null,haSignedAt:passed?result.checkedAt:null,
           fohSignedBy:passed?item.fohSignedBy:null
         }:item)
@@ -827,7 +827,7 @@ export default function UnifiedRoomsBoard(){
                 <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Inspection</strong><small>One decision per room, no checklist.</small></div></div>
                 {(row.inspected||inspection.inspected)&&!inspection.issueOpen
                   ? <div className="rooms-success-line"><Check size={16}/><strong>Inspection passed</strong><span>Guest ready ✓</span></div>
-                  : (inspection.readyForInspection||isArrivalOnly(row))&&!inspection.issueOpen
+                  : (inspection.readyForInspection||isArrivalOnly(row))
                     ? <div className="rooms-inspection-decision">
                         <button type="button" className="ops-primary-btn rooms-primary-action" disabled={Boolean(inspectionSaving[row.roomId])} onClick={()=>void submitInspectionDecision(row,'pass')}><Check size={16}/>Pass inspection</button>
                         <label className="rooms-notes">Correction notes (required if failed)<textarea value={inspectionNotes[row.roomId]||''} onChange={e=>setInspectionNotes(current=>({...current,[row.roomId]:e.target.value}))} placeholder="Describe what needs correcting…"/></label>
