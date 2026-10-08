@@ -21,7 +21,7 @@ export async function PATCH(req:NextRequest){
  if(!Object.keys(patch).length)return NextResponse.json({error:'Nothing to update'},{status:400})
  if(patch.arrival_date||patch.checkout_date)return NextResponse.json({error:'Date changes require reservation-calendar relinking and are not supported by this quick editor yet.'},{status:400})
  const admin=createSupabaseAdmin()
- const {data,error}=await admin.from('reservation_stays').update({...patch,updated_at:new Date().toISOString()}).eq('id',body.id).select('id,'+fields.join(',')).maybeSingle()
+ const {data,error}=await admin.from('reservation_stays').update({...patch,updated_at:new Date().toISOString()}).eq('id',body.id).select('*').maybeSingle()
  if(error)return NextResponse.json({error:error.message},{status:500})
  if(!data)return NextResponse.json({error:'Reservation not found'},{status:404})
  // A manual edit must survive the next imported PMS report.
