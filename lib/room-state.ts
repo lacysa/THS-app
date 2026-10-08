@@ -38,6 +38,11 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   const condition=normalizeRoomValue(row.roomCondition)
   const service=String(row.serviceType||'').trim().toUpperCase()
   if(['arrival','vacant'].includes(reservation)&&['ready','ready for guest','vacant (clean)'].includes(condition)&&!service.startsWith('OUT'))return 'ready'
+  // Arrival-only rooms need a room check, never an assumed full clean.
+  if(reservation==='arrival'&&!service.startsWith('OUT')){
+    if(['vacant (dirty)','dirty','cleaning'].includes(condition))return 'cleaning'
+    return row.inspected||row.fohSignedBy||row.haSignedBy?'ready':'inspection'
+  }
 
   if(requiresHousekeeperSelfCheck(row)&&!row.housekeeperAttestedBy&&!row.housekeeperAttested)return 'self'
   if(!row.complete)return 'cleaning'
