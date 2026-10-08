@@ -589,16 +589,10 @@ export default function UnifiedRoomsBoard(){
         </div>)}
       </div>
     </section>}
-    {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<div className="rooms-refresh-adder">
-      <div><strong>Add refresh</strong><span>Stayovers stay out of the room workflow until you mark one RF.</span></div>
-      <div className="rooms-refresh-adder-actions">
-        <select value={refreshRoomId} onChange={e=>setRefreshRoomId(e.target.value)}>
-          <option value="">Choose stayover…</option>
-          {inactiveStayovers.map(row=><option key={row.roomId} value={row.roomId}>{row.roomName}</option>)}
-        </select>
-        <button type="button" className="ops-primary-btn" disabled={!refreshRoomId} onClick={promoteSelectedRefresh}>Mark RF</button>
-      </div>
-    </div>}
+    {viewMode==='assigned'&&inactiveStayovers.length>0&&<section className="rooms-stayover-planner">
+      <div className="rooms-stayover-heading"><div><strong>Stayover coverage</strong><span>These rooms are assigned to you for awareness. No refresh is due unless RF is requested.</span></div><span>{inactiveStayovers.length} assigned</span></div>
+      <div className="rooms-stayover-grid">{inactiveStayovers.map(row=><div className="rooms-stayover-item" key={row.roomId}><div><strong>{row.roomName}</strong><small>No service requested</small></div></div>)}</div>
+    </section>}
 
     {<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
       <button type="button" className={managerDisplay==='focus'?'active':''} onClick={()=>chooseManagerDisplay('focus')}>Focus</button>
