@@ -183,11 +183,13 @@ export default function UnifiedRoomsBoard(){
   async function load(){
     setLoading(true);setMessage('');setSaveState('idle');setSelfChecks({})
     try{
-      const me=await getStaffSession()
+      const [me,dayResponse]=await Promise.all([
+        getStaffSession(),
+        fetch(`/api/housekeeping/day?date=${encodeURIComponent(date)}`,{cache:'no-store'})
+      ])
       const nextAccess=me.access||null
       setAccess(nextAccess)
 
-      const dayResponse=await fetch(`/api/housekeeping/day?date=${encodeURIComponent(date)}`,{cache:'no-store'})
       const day=await dayResponse.json().catch(()=>({}))
       if(!dayResponse.ok)throw new Error(day.error||'Could not load rooms.')
       const nextRows=(day.rows||[]) as RoomRow[]
