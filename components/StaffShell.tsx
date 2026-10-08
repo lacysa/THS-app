@@ -1,3 +1,4 @@
+import { getStaffSession } from '@/lib/client/staff-session'
 'use client'
 
 import Link from 'next/link'
@@ -227,8 +228,7 @@ export default function StaffShell({
       }
     } catch {}
 
-    fetch('/api/me')
-      .then(r => (r.ok ? r.json() : null))
+    getStaffSession()
       .then(d => {
         if (!d) return
 
