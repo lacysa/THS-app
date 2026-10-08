@@ -318,8 +318,7 @@ export default async function DashboardPage() {
         showReservationDaily={moduleKeys.has('reservations')}
         reservationDaily={reservationDaily}
         todayStaff={todayStaff}
-      />
-}
+      />}
         operations={<ManagerCommandCenter
         today={today} tomorrow={tomorrow} rooms={housekeeping}
         tomorrowRooms={tomorrowRooms} maintenance={maintenance}
@@ -328,7 +327,7 @@ export default async function DashboardPage() {
         showMaintenance={moduleKeys.has('maintenance')}
         showStaff={isManager}
         handoffNotes={departmentNotes}
-      />}}
+      />}
       /> : <DailyDashboard
         commandMode={isManager}
         displayName={displayName}
@@ -351,8 +350,7 @@ export default async function DashboardPage() {
         showReservationDaily={moduleKeys.has('reservations')}
         reservationDaily={reservationDaily}
         todayStaff={todayStaff}
-      />
-}
+      />}
     </StaffShell>
   )
 }
