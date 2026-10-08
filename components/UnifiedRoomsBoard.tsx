@@ -347,6 +347,22 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
     if(!ok)patch(row.roomId,row,false)
   }
 
+  async function markRoomDirty(row:RoomRow){
+    if(!isManager(access)||isBlocked(row))return
+    const update:Partial<RoomRow>={
+      roomCondition:'Vacant (Dirty)',complete:false,readyForInspection:false,inspected:false,
+      inspectedAt:null,completedAt:null,
+      housekeeperAttested:false,housekeeperAttestedBy:null,housekeeperAttestedAt:null,
+      haSignedBy:null,haSignedName:null,haSignedAt:null,
+      fohSignedBy:null,fohSignedName:null,fohSignedAt:null
+    }
+    const ok=await saveRoomPatch(row.roomId,update)
+    if(ok){
+      patch(row.roomId,update,false)
+      setMessage(row.roomName+' marked dirty. Cleaning and inspections must be completed again.')
+    }
+  }
+
   async function completeRefresh(row:RoomRow){
     if(!isRefresh(row)||row.complete||refreshRoomId)return
     setRefreshRoomId(row.roomId)
@@ -795,6 +811,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
               </div>
             </button>
 
+            {isManager(access)&&!isBlocked(row)&&!isStayover(row)&&<div className="rooms-dirty-action"><button type="button" className="ops-secondary-btn" disabled={normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected} onClick={()=>void markRoomDirty(row)}><AlertTriangle size={15}/>{normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected?'Marked dirty':'Mark dirty · reopen clean'}</button></div>}
             {row.notes?.trim()&&<div className="rooms-card-note" title={row.notes}><strong>Room notes:</strong> {row.notes}</div>}
             {!isBlocked(row)&&<div className="rooms-progress-summary" aria-label="Room workflow progress">
               {requiresRoomCheck(row)
