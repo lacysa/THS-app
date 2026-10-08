@@ -524,3 +524,8 @@
   .rooms-table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .rooms-search-field input{min-height:46px;font-size:16px}
 }
+
+/* Notes stay visible in all room overview modes without opening a room. */
+.rooms-picker-note{display:block;grid-column:1/-1;min-width:0;margin-top:5px;padding:7px 9px;border-radius:9px;background:rgba(255,255,255,.8);border:1px solid rgba(103,140,154,.2);font-size:11px;font-weight:650;color:#41586b;line-height:1.35;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.rooms-card-note{padding:10px 16px;background:rgba(237,248,251,.9);border-top:1px solid rgba(103,140,154,.16);color:#37566a;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.rooms-card-note strong{color:#273f51}
