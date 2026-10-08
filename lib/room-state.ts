@@ -30,6 +30,8 @@ export function finalVerificationComplete(row:RoomLike){return Boolean(row.fohSi
 export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   if(isBlockedRoom(row))return 'blocked'
   if(row.checkIssueOpen&&!row.readyForInspection)return 'correction'
+  // Physical occupancy outranks any earlier readiness/inspection result.
+  if(normalizeRoomValue(row.roomCondition)==='occupied')return 'occupied'
   if(isRefreshRoom(row))return row.complete?'ready':'refresh'
   if(isStayoverRoom(row))return 'occupied'
 
