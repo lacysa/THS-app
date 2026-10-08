@@ -75,6 +75,13 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   if(blockedResult.error) throw new Error(blockedResult.error.message)
   const blocked=new Set((blockedResult.data||[]).map((row:any)=>String(row.service_date)+'|'+String(row.room_id)))
 
+  const manualTagResult=await admin.from('housekeeping_daily_rooms')
+    .select('service_date,room_id,breakfast_tag_override')
+    .gte('service_date',start).lte('service_date',end)
+    .not('breakfast_tag_override','is',null)
+  if(manualTagResult.error)throw new Error(manualTagResult.error.message)
+  const manualTags=new Map((manualTagResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),Boolean(row.breakfast_tag_override)]))
+
   const dirtyResult=await admin.from('housekeeping_daily_rooms')
     .select('service_date,room_id,room_condition')
     .gte('service_date',previousDay(start))
@@ -115,7 +122,9 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
           service_date:date,
           room_id:room.id,
           reservation_status:carryDirty && status==='Vacant' ? 'Dirty' : status,
-          breakfast_tag: Boolean(arriving||staying) && breakfastIncluded((arriving||staying)?.rate_plan),
+          breakfast_tag: manualTags.has(date+'|'+room.id)
+            ? manualTags.get(date+'|'+room.id)
+            : Boolean(arriving||staying) && breakfastIncluded((arriving||staying)?.rate_plan),
           ...(carryDirty ? {service_type:'OUT'} : {}),
           updated_at:new Date().toISOString()
         })
