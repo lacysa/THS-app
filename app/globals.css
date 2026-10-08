@@ -1679,3 +1679,16 @@ html[data-theme="dark"] .maint-filter-row button.active{
 @media print{
   .module-pretty-hero{box-shadow:none!important;background:#fff!important;border-color:#ddd!important}
 }
+
+
+/* Compact top-of-page section switchers for mobile and desktop */
+.ths-switcher-page{display:grid;gap:18px;min-width:0}
+.ths-view-switcher{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:16px 20px;border-radius:22px;border:1px solid rgba(115,148,179,.25);background:radial-gradient(circle at 100% 0%,rgba(148,124,243,.24),transparent 55%),linear-gradient(120deg,rgba(223,250,249,.92),rgba(246,240,255,.94));box-shadow:0 12px 30px rgba(45,63,94,.07),inset 0 1px rgba(255,255,255,.9)}
+.ths-view-switcher>div:first-child{display:grid;gap:4px;min-width:0}
+.ths-view-switcher strong{font-size:16px;font-weight:850;color:#21384b}
+.ths-view-switcher small{font-size:11px;color:#607789}
+.ths-view-buttons{display:flex;gap:5px;padding:5px;border-radius:15px;background:rgba(255,255,255,.69);border:1px solid rgba(123,145,173,.24);flex-shrink:0}
+.ths-view-buttons button{min-height:43px;border:0;border-radius:11px;background:transparent;color:#486176;font-weight:800;font-size:13px;padding:10px 17px;cursor:pointer;transition:background .16s,box-shadow .16s,color .16s}
+.ths-view-buttons button.active{color:#173c53;background:linear-gradient(115deg,#c9f4ee,#dad6ff);box-shadow:0 3px 12px rgba(65,89,143,.14)}
+.ths-view-content{min-width:0}
+@media(max-width:650px){.ths-view-switcher{flex-direction:column;align-items:stretch;border-radius:19px;padding:13px 14px;gap:10px}.ths-view-switcher>div:first-child{gap:2px}.ths-view-buttons{width:100%}.ths-view-buttons button{flex:1;padding:11px 8px;min-width:0}.ths-switcher-page{gap:12px}}
