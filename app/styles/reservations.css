@@ -226,3 +226,17 @@ html[data-theme="dark"] .reservation-checkout-only small{
 @media(max-width:700px){
   .reservation-live-room-state small{margin-left:0;width:100%}
 }
+
+
+/* Top-level Reservations view selector and compact operational editor */
+.reservations-view-switch{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:15px 20px;border:1px solid rgba(117,153,181,.26);border-radius:22px;background:radial-gradient(circle at 100% 0%,rgba(157,126,246,.23),transparent 60%),linear-gradient(115deg,rgba(220,249,245,.93),rgba(245,240,255,.94));box-shadow:0 11px 30px rgba(31,57,82,.07),inset 0 1px #fff;margin-bottom:15px}
+.reservations-view-switch>div:first-child{display:grid;gap:3px}.reservations-view-switch strong{color:#234154;font-size:15px;font-weight:850}.reservations-view-switch small{color:#718399;font-size:11px}
+.reservations-view-buttons{display:flex;gap:5px;padding:5px;background:rgba(255,255,255,.7);border:1px solid rgba(127,155,178,.2);border-radius:14px}
+.reservations-view-buttons button{border:0;background:transparent;color:#4c6879;min-height:39px;border-radius:10px;padding:9px 16px;font-weight:800;cursor:pointer}
+.reservations-view-buttons button.active{background:linear-gradient(110deg,#b9ede5,#d8d3fe);box-shadow:0 3px 12px rgba(63,82,123,.14);color:#25445c}
+.reservations-edit-panel{display:grid;gap:14px}.reservations-edit-intro{display:grid;gap:6px;padding:16px 19px;background:linear-gradient(120deg,rgba(217,248,244,.65),rgba(236,228,253,.65));border-radius:17px;border:1px solid rgba(121,158,173,.22)}
+.reservations-edit-intro strong{font-size:17px;color:#263e55}.reservations-edit-intro span{font-size:12px;color:#667e91}
+.reservations-edit-grid{display:grid;gap:9px}.reservations-edit-item{display:grid;grid-template-columns:minmax(145px,1fr) 150px 200px auto minmax(60px,auto);align-items:center;gap:12px;padding:13px 16px;border:1px solid rgba(117,150,183,.23);border-radius:16px;background:linear-gradient(110deg,rgba(250,254,255,.96),rgba(248,245,255,.92));box-shadow:0 6px 21px rgba(42,65,88,.045)}
+.reservations-edit-room{display:grid;gap:4px}.reservations-edit-room strong{font-size:14px}.reservations-edit-room small{font-size:11px;color:#718699}.reservations-edit-item label{display:grid;gap:5px;color:#51687a;font-size:11px;font-weight:800}.reservations-edit-item select{width:100%;min-width:0;padding:10px;border:1px solid #cbd8e1;border-radius:10px;background:white;color:#263b4d;font-size:12px}.reservations-edit-block{border:1px solid #d8b5a0;border-radius:11px;background:#fff1e7;color:#88543a;font-size:12px;font-weight:800;padding:11px 12px;cursor:pointer}.reservations-edit-item>small{font-size:11px;color:#537d76}
+@media(max-width:850px){.reservations-edit-item{grid-template-columns:repeat(2,minmax(0,1fr))}.reservations-edit-room{grid-column:1/-1}.reservations-edit-block{width:100%}}
+@media(max-width:600px){.reservations-view-switch{flex-direction:column;align-items:stretch;padding:13px 15px;border-radius:18px}.reservations-view-buttons button{flex:1}.reservations-edit-item{gap:9px;padding:13px}.reservations-edit-item select{font-size:13px}}
