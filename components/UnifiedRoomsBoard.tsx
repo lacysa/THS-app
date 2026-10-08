@@ -139,7 +139,7 @@ function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='block
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
-export default function UnifiedRoomsBoard({initialDate}:{initialDate?:string}={}){
+export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDate?:string;initialRoomId?:string}={}){
   const [date,setDate]=useState(initialDate||todayDetroit())
   const [access,setAccess]=useState<Access|null>(null)
   const [rows,setRows]=useState<RoomRow[]>([])
@@ -161,7 +161,7 @@ export default function UnifiedRoomsBoard({initialDate}:{initialDate?:string}={}
   const [canFohSignoff,setCanFohSignoff]=useState(false)
   const [refreshRoomId,setRefreshRoomId]=useState('')
   const [managerDisplay,setManagerDisplay]=useState<'focus'|'cards'|'table'>('focus')
-  const [selectedRoomId,setSelectedRoomId]=useState('')
+  const [selectedRoomId,setSelectedRoomId]=useState(initialRoomId||'')
   const [roomSearch,setRoomSearch]=useState('')
   const rowsRef=useRef<RoomRow[]>([])
   const dateRef=useRef(date)
