@@ -1,7 +1,7 @@
 /* THE HOTEL SAUGATUCK — MOBILE / TABLET SHELL
    Applies only when the browser viewport is 900px or narrower. */
 
-@media (max-width:1199px){
+@media (max-width:1199px), (max-width:1600px) and (pointer:coarse) and (hover:none){
   :root{--ths-sidebar-width:0px;--ths-header-height:64px;}
 
   .staff-ops-app{
@@ -61,7 +61,7 @@
 
   .staff-ops-topbar{
     position:sticky!important;top:0!important;z-index:50!important;
-    min-height:64px!important;padding:9px 10px!important;gap:10px!important;
+    min-height:64px!important;padding:max(10px, env(safe-area-inset-top)) 14px 10px!important;gap:10px!important;
   }
 
   .staff-global-search{display:none!important;}
