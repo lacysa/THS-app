@@ -853,9 +853,13 @@ export default function UnifiedRoomsBoard(){
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
                 {isRefresh(row)
                   ? <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} disabled={row.complete||Boolean(refreshRoomId===row.roomId)} onClick={()=>void completeRefresh(row)}><Check size={16}/>{refreshRoomId===row.roomId?'Saving refresh…':row.complete?'Refresh complete ✓':'Complete refresh'}</button>
-                  : <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)}><Check size={16}/>{row.complete?'Ready for room check ✓':(row.checkIssueOpen?'Resubmit corrected room':'Submit room for inspection')}</button>}
+                  : <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)}><Check size={16}/>{row.complete?'Ready for room check ✓':(row.checkIssueOpen?'Resubmit corrected room':isManager(access)?'Mark room complete · Send for inspection':'Submit room for inspection')}</button>}
               </section>}
 
+              {isManager(access)&&isArrivalOnly(row)&&!isBlocked(row)&&!row.complete&&!row.inspected&&['vacant (dirty)','dirty','cleaning'].includes(normalize(row.roomCondition))&&<section className="rooms-section cleaning-section">
+                <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Manager completion</strong><small>For rooms finished using paper task lists.</small></div></div>
+                <button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void toggleComplete(row)}><Check size={16}/>Mark room complete · Send for inspection</button>
+              </section>}
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&<section className="rooms-section inspection-section">
                 <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Inspection</strong><small>One decision per room, no checklist.</small></div></div>
                 {inspectionErrors[row.roomId]&&<div role="alert" className="rooms-warning-line"><AlertTriangle size={16}/>{inspectionErrors[row.roomId]}</div>}
