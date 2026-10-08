@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { cookies } from 'next/headers'
@@ -92,7 +93,7 @@ async function loadAccessForUser(userId:string):Promise<StaffAccess|null> {
   }
 }
 
-export async function getStaffAccess():Promise<StaffAccess|null> {
+export const getStaffAccess = cache(async function getStaffAccess():Promise<StaffAccess|null> {
   const supabase=await createSupabaseServerClient()
   const {data:{user}}=await supabase.auth.getUser()
   if(!user) return null
@@ -119,7 +120,7 @@ export async function getStaffAccess():Promise<StaffAccess|null> {
     isPreviewMode:false,
     previewOwnerUserId:null
   }
-}
+})
 
 const MODULE_PERMISSION:Record<string,string|undefined> = {
   dashboard:'dashboard.view',
