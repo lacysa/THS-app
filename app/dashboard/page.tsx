@@ -91,7 +91,7 @@ export default async function DashboardPage() {
       ? admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped,breakfast_skipped_at').eq('service_date',previousDate(breakfastDate)).eq('breakfast_tag',true)
       : Promise.resolve({data:[],error:null}),
     moduleKeys.has('maintenance')
-      ? admin.from('maintenance_work_orders').select('*').order('created_at',{ascending:false})
+      ? admin.from('maintenance_work_orders').select('id,room_id,area,title,priority,status').neq('status','complete').order('created_at',{ascending:false})
       : Promise.resolve({data:[],error:null}),
     (moduleKeys.has('laundry') || moduleKeys.has('lobby'))
       ? admin.from('department_daily_notes').select('department,note').eq('service_date',today).in('department',['laundry','lobby'])
