@@ -1,3 +1,4 @@
+import { getStaffSession } from '@/lib/client/staff-session'
 'use client'
 
 import { useEffect,useMemo,useRef,useState } from 'react'
@@ -182,9 +183,7 @@ export default function UnifiedRoomsBoard(){
   async function load(){
     setLoading(true);setMessage('');setSaveState('idle');setSelfChecks({})
     try{
-      const meResponse=await fetch('/api/me',{cache:'no-store'})
-      const me=await meResponse.json().catch(()=>({}))
-      if(!meResponse.ok)throw new Error(me.error||'Could not load your access.')
+      const me=await getStaffSession()
       const nextAccess=me.access||null
       setAccess(nextAccess)
 
