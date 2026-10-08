@@ -348,6 +348,9 @@ export default function StaffShell({
     setUnreadCount(0)
   }
 
+  const managementWorkspace=Boolean(access?.isAdmin || access?.capabilities?.some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap)))
+  const hasReservations=modules.some(module=>module.module_key==='reservations'&&module.active!==false&&module.enabled!==false)
+
   const nav = useMemo(
     () =>
       modules
@@ -361,13 +364,14 @@ export default function StaffShell({
           m =>
             m.module_key !== 'breakfast_menu_manager' &&
             m.module_key !== 'room_board' &&
+            !(managementWorkspace && hasReservations && m.module_key==='housekeeping') &&
             !m.module_key.endsWith('_inventory')
         )
         .sort(
           (a, b) =>
             (a.sort_order || 0) - (b.sort_order || 0)
         ),
-    [modules, access]
+    [modules, access, managementWorkspace, hasReservations]
   )
 
   const dashboardItem = nav.find(
@@ -504,7 +508,7 @@ export default function StaffShell({
         </span>
 
         <span className="sidebar-link-label">
-          {item.label || item.title}
+          {managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
         </span>
 
         {preview && (
