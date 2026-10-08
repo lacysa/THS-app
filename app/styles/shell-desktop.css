@@ -1,7 +1,7 @@
 /* THE HOTEL SAUGATUCK — DESKTOP SHELL
    Applies only when the browser viewport is 901px or wider. */
 
-@media (min-width:1200px){
+@media (min-width:1601px), (min-width:1200px) and (pointer:fine) {
   .staff-ops-app{display:block!important;}
 
   .staff-ops-sidebar{
