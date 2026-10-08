@@ -160,6 +160,7 @@ export default function UnifiedRoomsBoard(){
   const dateRef=useRef(date)
   const saveTimers=useRef<Record<string,ReturnType<typeof setTimeout>>>({})
   const pendingPatches=useRef<Record<string,Partial<RoomRow>>>({})
+  const saveQueues=useRef<Record<string,Promise<boolean>>>({})
   const [isCompact,setIsCompact]=useState(false)
 
   useEffect(()=>{rowsRef.current=rows},[rows])
@@ -223,7 +224,16 @@ export default function UnifiedRoomsBoard(){
       if(!response.ok)throw new Error(d.error||'Could not save room.')
       if(d.row){
         setRows(current=>{
-          const next=current.map(row=>row.roomId===roomId?{...row,...d.row}:row)
+          const next=current.map(row=>{
+            if(row.roomId!==roomId)return row
+            // Do not replace values the user has edited since this request began.
+            const serverRow=d.row as Partial<RoomRow>
+            const safeFields=Object.fromEntries(Object.entries(serverRow).filter(([key])=>
+              !(key in (pendingPatches.current[roomId]||{})) &&
+              (!(key in update) || row[key as keyof RoomRow]===update[key as keyof RoomRow])
+            ))
+            return {...row,...safeFields}
+          })
           rowsRef.current=next
           return next
         })
@@ -249,7 +259,10 @@ export default function UnifiedRoomsBoard(){
       saveTimers.current[roomId]=setTimeout(()=>{
         const pending=pendingPatches.current[roomId]||{}
         delete pendingPatches.current[roomId]
-        void saveRoomPatch(roomId,pending)
+        const previous=saveQueues.current[roomId]||Promise.resolve(true)
+        const queued=previous.catch(()=>false).then(()=>saveRoomPatch(roomId,pending))
+        saveQueues.current[roomId]=queued
+        void queued.finally(()=>{if(saveQueues.current[roomId]===queued)delete saveQueues.current[roomId]})
       },450)
     }
   }
