@@ -646,7 +646,7 @@ export default function UnifiedRoomsBoard(){
                           <small>{row.reservationStatus||'No status'}</small>
                         </button>
                       </td>
-                      <td><span className="rooms-table-static">{row.reservationStatus||'—'}</span></td>
+                      <td><select aria-label="Stay status" className="rooms-table-status-select" value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(status=><option key={status} value={status}>{status||'—'}</option>)}</select><button type="button" className="rooms-table-hold" onClick={()=>patch(row.roomId,{stripHold:isBlocked(row)?'':'Hold'})}>{isBlocked(row)?'Release hold':'Block'}</button></td>
                       <td>
                         <div className="rooms-table-service">
                           <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearService(row)}>—</button>
@@ -672,7 +672,7 @@ export default function UnifiedRoomsBoard(){
                           <small>{roomWorkflowLabel({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</small>
                         </button>
                       </td>
-                      <td><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
+                      <td><select aria-label="Room condition" className="rooms-table-status-select" value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
                       <td>
                         <details className="rooms-table-packages">
                           <summary>{selectedPackages.length?selectedPackages.join(', '):'Select packages'}</summary>
@@ -740,7 +740,8 @@ export default function UnifiedRoomsBoard(){
                   <div><span>Reservation</span><strong>{row.reservationStatus||'Not set'}</strong></div>
                   <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
                 </div>
-                <div className="rooms-manager-grid">
+                <div className="rooms-manager-status-tools"><label>Stay status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(status=><option key={status} value={status}>{status||'—'}</option>)}</select></label><label>Room condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select></label><button type="button" className={isBlocked(row)?'rooms-unblock-action':'rooms-block-action'} onClick={()=>patch(row.roomId,{stripHold:isBlocked(row)?'':'Hold'})}>{isBlocked(row)?'Release maintenance hold':'Block for maintenance'}</button></div>
+<div className="rooms-manager-grid">
                   <label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
                   <label>Cleaning order<input type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>
                 </div>
