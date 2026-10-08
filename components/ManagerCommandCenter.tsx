@@ -63,7 +63,7 @@ export default function ManagerCommandCenter({today,tomorrow,rooms,tomorrowRooms
         <div className="ops-command-card-heading"><div><span>TEAM COVERAGE</span><h3><Users size={19}/> Staff workload</h3></div><small>{staff.length} scheduled</small></div>
         {!showStaff||!workload.length?<p className="ops-command-helper">No scheduled on-site staff available in today's data.</p>:<div className="ops-command-team">{workload.map(s=><div className="ops-command-person" key={s.id}><div><strong>{s.name}</strong><small>{s.roleLabel||'On site'}</small></div><span>{s.count} room{s.count===1?'':'s'}</span></div>)}</div>}
         <p className="ops-command-helper">Assigned service rooms only; review before adjusting workload.</p>
-        <Link className="ops-command-actionlink" href="/staff">Review staff <ArrowUpRight size={16}/></Link>
+        <Link className="ops-command-actionlink" href="/housekeeping">Review assignments <ArrowUpRight size={16}/></Link>
       </section>
       <section className="ops-command-card ops-command-timeline">
         <div className="ops-command-card-heading"><div><span>ACTIVITY TRAIL</span><h3><Clock3 size={19}/> Recent room activity</h3></div><small>{events.length} recent events</small></div>
