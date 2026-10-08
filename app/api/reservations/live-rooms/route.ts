@@ -10,11 +10,11 @@ export async function GET(req:NextRequest){
  const date=req.nextUrl.searchParams.get('date')
  if(!date||!/^20\d{2}-\d{2}-\d{2}$/.test(date))return NextResponse.json({error:'Invalid date'},{status:400})
  const result=await createSupabaseAdmin().from('housekeeping_daily_rooms')
-  .select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open')
+  .select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag')
   .eq('service_date',date)
  if(result.error)return NextResponse.json({error:'Could not refresh live room status'},{status:500})
  return NextResponse.json({rooms:(result.data||[]).map((r:any)=>({
-  roomId:String(r.room_id),operationalStatus:String(r.reservation_status||''),
+  roomId:String(r.room_id),roomNotes:String(r.notes||''),breakfastTag:Boolean(r.breakfast_tag),operationalStatus:String(r.reservation_status||''),
   stripHold:String(r.strip_hold||''),lateArrival:Boolean(r.late_arrival),serviceType:String(r.service_type||''),
   roomCondition:String(r.room_condition||''),complete:Boolean(r.complete),
   inspected:Boolean(r.inspected),housekeeperAttested:Boolean(r.housekeeper_attested_by),
