@@ -38,6 +38,13 @@ function eachDate(start:string,end:string){
   return out
 }
 
+// Rate-plan-based breakfast tagging is operational metadata for the night of the stay.
+// The menu system itself remains unchanged.
+function breakfastIncluded(ratePlan:unknown){
+  const rate=String(ratePlan||'').toLowerCase().replace(/\\s+/g,' ').trim()
+  return /\\broom\\s*\\+\\s*breakfast\\b/.test(rate) || /\\bbreakfast\\s+included\\b/.test(rate)
+}
+
 function normal(value:unknown){
   return String(value||'').toLowerCase().replace(/^\s*\d+\s*x\s*/,'').replace(/[^a-z0-9]+/g,' ').trim()
 }
@@ -108,6 +115,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
           service_date:date,
           room_id:room.id,
           reservation_status:carryDirty && status==='Vacant' ? 'Dirty' : status,
+          breakfast_tag: Boolean(arriving||staying) && breakfastIncluded((arriving||staying)?.rate_plan),
           ...(carryDirty ? {service_type:'OUT'} : {}),
           updated_at:new Date().toISOString()
         })
