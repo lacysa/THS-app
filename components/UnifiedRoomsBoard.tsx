@@ -155,6 +155,7 @@ export default function UnifiedRoomsBoard(){
   const [saveState,setSaveState]=useState<SaveState>('idle')
   const [inspectionNotes,setInspectionNotes]=useState<Record<string,string>>({})
   const [inspectionSaving,setInspectionSaving]=useState<Record<string,boolean>>({})
+  const [inspectionErrors,setInspectionErrors]=useState<Record<string,string>>({})
   const [canHaSignoff,setCanHaSignoff]=useState(false)
   const [canFohSignoff,setCanFohSignoff]=useState(false)
   const [refreshRoomId,setRefreshRoomId]=useState('')
@@ -360,6 +361,7 @@ export default function UnifiedRoomsBoard(){
     if(inspectionSaving[row.roomId])return
     const note=(inspectionNotes[row.roomId]||'').trim()
     if(decision==='fail'&&!note){setMessage('Please enter correction notes before failing a room.');return}
+    setInspectionErrors(current=>({...current,[row.roomId]:''}))
     setInspectionSaving(current=>({...current,[row.roomId]:true}))
     try{
       const response=await fetch('/api/room-checks',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:row.roomId,decision,note})})
@@ -382,7 +384,7 @@ export default function UnifiedRoomsBoard(){
       }:item))
       if(passed)setInspectionNotes(current=>({...current,[row.roomId]:''}))
       setMessage(passed?`${row.roomName} inspection passed.`:`${row.roomName} returned to the assigned housekeeper for correction.`)
-    }catch(error:any){setMessage(error?.message||'Could not save inspection.')}
+    }catch(error:any){const detail=error?.message||'Could not save inspection.';setMessage(detail);setInspectionErrors(current=>({...current,[row.roomId]:detail}))}
     finally{setInspectionSaving(current=>({...current,[row.roomId]:false}))}
   }
 
@@ -825,6 +827,7 @@ export default function UnifiedRoomsBoard(){
 
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&<section className="rooms-section inspection-section">
                 <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Inspection</strong><small>One decision per room, no checklist.</small></div></div>
+                {inspectionErrors[row.roomId]&&<div role="alert" className="rooms-warning-line"><AlertTriangle size={16}/>{inspectionErrors[row.roomId]}</div>}
                 {(row.inspected||inspection.inspected)&&!inspection.issueOpen
                   ? <div className="rooms-success-line"><Check size={16}/><strong>Inspection passed</strong><span>Guest ready ✓</span></div>
                   : (inspection.readyForInspection||isArrivalOnly(row))
