@@ -100,11 +100,12 @@ export default function StaffAccessBoard(){
       <div>
         <span>OWNER CONTROLS</span>
         <h1>Staff access</h1>
-        <p>See exactly what each current staff member can view and add individual overrides without changing their underlying role.</p>
+        <p>Choose an employee to review or edit their module permissions.</p>
       </div>
       <UsersRound size={30}/>
     </section>
 
+    <div className="staff-access-mobile-picker"><label>Choose employee<select value={selected?.userId||''} onChange={e=>setSelectedId(e.target.value)}>{filtered.map(person=><option key={person.userId} value={person.userId}>{person.name} · {person.jobTitle||person.roleName||'Staff'}</option>)}</select></label></div>
     <div className="staff-access-layout">
       <aside className="staff-access-list">
         <div className="staff-access-search">
