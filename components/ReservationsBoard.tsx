@@ -64,7 +64,7 @@ function statusClass(value:string){
   return 'reservation-status-'+String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')
 }
 
-export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:controlledView,onViewChange,hideViewSwitch=false}:{serviceDate:string;rows:Row[];canEdit?:boolean;view?:'overview'|'edit';onViewChange?:(view:'overview'|'edit')=>void;hideViewSwitch?:boolean}){
+export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:controlledView,onViewChange,hideViewSwitch=false,showRoomActions=false,onManageRoom}:{serviceDate:string;rows:Row[];canEdit?:boolean;view?:'overview'|'edit';onViewChange?:(view:'overview'|'edit')=>void;hideViewSwitch?:boolean;showRoomActions?:boolean;onManageRoom?:(roomId:string)=>void}){
   const router=useRouter()
   const [internalView,setView]=useState<'overview'|'edit'>('overview')
   const view=controlledView??internalView
@@ -250,6 +250,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
               {!isCheckoutOnly && stay?.door_code && <div className="reservation-door"><DoorOpen size={15}/><b>{stay.door_code}</b></div>}
             </div>
 
+            {showRoomActions&&onManageRoom&&<button className="ths-card-manage-btn" type="button" onClick={()=>onManageRoom(row.roomId)}>Manage room · Service, inspection & tags</button>}
             <div className="reservation-live-room-state">
               <span>Room status</span>
               <strong>{operationalState}</strong>
