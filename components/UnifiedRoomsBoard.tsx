@@ -345,6 +345,19 @@ export default function UnifiedRoomsBoard(){
     if(!ok)patch(row.roomId,row,false)
   }
 
+  async function completeRefresh(row:RoomRow){
+    if(!isRefresh(row)||row.complete||refreshRoomId)return
+    setRefreshRoomId(row.roomId)
+    const update:Partial<RoomRow>={complete:true,readyForInspection:false,roomCondition:'Occupied'}
+    try{
+      const saved=await saveRoomPatch(row.roomId,update)
+      if(saved){
+        patch(row.roomId,update,false)
+        setMessage(row.roomName+' refresh completed.')
+      }
+    }finally{setRefreshRoomId('')}
+  }
+
   async function claimRefresh(row:RoomRow){
     const response=await fetch('/api/housekeeping/claim-refresh',{
       method:'POST',headers:{'content-type':'application/json'},
@@ -836,7 +849,9 @@ export default function UnifiedRoomsBoard(){
 
               {(!isStayover(row)||isRefresh(row))&&!isArrivalOnly(row)&&<section className="rooms-section cleaning-section">
                 <div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Cleaning</strong><small>{isStayover(row)?'Stayovers and refreshes do not require a room inspection.':'Full clean must be complete before inspection.'}</small></div></div>
-                <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)}><Check size={16}/>{row.complete?(isStayover(row)?'Stayover service complete ✓':'Ready for room check ✓'):(row.checkIssueOpen?'Resubmit corrected room':'Submit room for inspection')}</button>
+                {isRefresh(row)
+                  ? <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} disabled={row.complete||Boolean(refreshRoomId===row.roomId)} onClick={()=>void completeRefresh(row)}><Check size={16}/>{refreshRoomId===row.roomId?'Saving refresh…':row.complete?'Refresh complete ✓':'Complete refresh'}</button>
+                  : <button type="button" className={row.complete?'ops-secondary-btn rooms-primary-action':'ops-primary-btn rooms-primary-action'} onClick={()=>void toggleComplete(row)}><Check size={16}/>{row.complete?'Ready for room check ✓':(row.checkIssueOpen?'Resubmit corrected room':'Submit room for inspection')}</button>}
               </section>}
 
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&<section className="rooms-section inspection-section">
