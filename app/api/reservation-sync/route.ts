@@ -41,16 +41,16 @@ function eachDate(start:string,end:string){
 // Rate-plan-based breakfast tagging is operational metadata for the night of the stay.
 // The menu system itself remains unchanged.
 function breakfastIncluded(ratePlan:unknown){
-  const rate=String(ratePlan||'').toLowerCase().replace(/\\s+/g,' ').trim()
-  return /\\broom\\s*\\+\\s*breakfast\\b/.test(rate) || /\\bbreakfast\\s+included\\b/.test(rate)
+  const rate=String(ratePlan||'').toLowerCase().replace(/\s+/g,' ').trim()
+  return /\broom\s*\+\s*breakfast\b/.test(rate) || /\bbreakfast\s+included\b/.test(rate)
 }
 
-function morningBreakfastIncluded(notes:unknown, morning:string) {
+function morningBreakfastIncluded(notes:unknown, morning:string){
   const text=String(notes||'')
-  // +B is an explicit innkeeper override for the entire reservation stay.
-  if(/(?:^|[\\s,;|])\\+B(?=$|[\\s,;|])/i.test(text))return true
-  // Date-specific à la carte breakfast applies only to the preceding room night.
-  const matches=[...text.matchAll(/(?:a la carte|à la carte)\\s+breakfast\\s+morning\\s*:\\s*(20\\d{2}-\\d{2}-\\d{2})/gi)]
+  // +B and +Breakfast both mean breakfast for the entire stay.
+  if(/(?:^|[\s,;|])\+(?:B|Breakfast)\b/i.test(text))return true
+  // Specific à la carte breakfast mornings apply only to the previous room night.
+  const matches=[...text.matchAll(/(?:a la carte|à la carte)\s+breakfast\s+morning\s*:\s*(20\d{2}-\d{2}-\d{2})/gi)]
   return matches.some(match=>match[1]===morning)
 }
 
