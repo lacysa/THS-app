@@ -262,3 +262,7 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-operations-tab-buttons button.active{background:#203544;color:white;box-shadow:0 3px 11px rgba(30,55,70,.15)}
 .ths-unified-operations>.rooms-workspace{max-width:none}
 @media(max-width:700px){.ths-operations-tabs{padding:14px}.ths-operations-tab-buttons{width:100%;display:grid;grid-template-columns:1fr 1fr}.ths-operations-tab-buttons button{padding:10px 6px;font-size:12px}}
+
+/* Single integrated view selector */
+.ths-operations-tab-buttons{align-items:center}
+@media(max-width:700px){.ths-operations-tab-buttons{grid-template-columns:repeat(3,minmax(0,1fr))}.ths-operations-tab-buttons button{font-size:11px;line-height:1.3}}
