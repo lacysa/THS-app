@@ -480,3 +480,21 @@
 .rooms-breakfast-focus{width:fit-content;flex-wrap:wrap;margin:9px 0}
 .rooms-breakfast-focus small{font-size:11px;font-weight:500;color:#60778c}
 .rooms-breakfast-chip{font-size:10px;font-weight:750;color:#375d69;background:rgba(197,242,231,.89);border-radius:7px;padding:3px 6px}
+
+
+/* Stayovers are visible coverage assignments, never implied cleaning tasks. */
+.rooms-stayover-planner{border:1px solid rgba(119,158,176,.25);border-radius:21px;padding:16px;margin:13px 0;background:radial-gradient(circle at 100% 0%,rgba(147,132,240,.15),transparent 58%),linear-gradient(118deg,rgba(224,250,244,.83),rgba(247,243,255,.92));box-shadow:0 10px 27px rgba(44,67,95,.06)}
+.rooms-stayover-heading{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.rooms-stayover-heading>div{display:grid;gap:4px}
+.rooms-stayover-heading strong{font-size:15px;color:#233d4f}
+.rooms-stayover-heading span{font-size:11px;color:#647c8c}
+.rooms-stayover-heading>span{white-space:nowrap;font-weight:800;padding:6px 9px;background:rgba(255,255,255,.76);border-radius:11px}
+.rooms-stayover-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px}
+.rooms-stayover-item{display:flex;flex-wrap:wrap;align-items:center;gap:11px;justify-content:space-between;min-width:0;padding:12px;border-radius:14px;border:1px solid rgba(118,157,179,.2);background:rgba(255,255,255,.82)}
+.rooms-stayover-item>div{display:grid;gap:3px;min-width:105px;flex:1}
+.rooms-stayover-item strong{font-size:13px;color:#22384a}
+.rooms-stayover-item small{font-size:10px;color:#708494}
+.rooms-stayover-item label{display:grid;gap:4px;font-size:10px;font-weight:800;color:#587184}
+.rooms-stayover-item select{max-width:150px;min-width:130px;min-height:35px;border:1px solid #cbdce4;border-radius:9px;background:#fff;color:#243a50;padding:6px;font-size:12px}
+.rooms-stayover-item button{border:1px solid #9bc3bd;border-radius:10px;background:linear-gradient(110deg,#d5f5ec,#e6ddff);color:#285665;font-size:11px;font-weight:800;padding:11px 12px;cursor:pointer}
+@media(max-width:680px){.rooms-stayover-planner{padding:12px;border-radius:17px}.rooms-stayover-grid{grid-template-columns:1fr}.rooms-stayover-heading{flex-direction:column}.rooms-stayover-item select{max-width:160px}}
