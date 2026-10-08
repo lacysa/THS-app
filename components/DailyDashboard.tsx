@@ -268,7 +268,7 @@ export default function DailyDashboard({
   const arrivalPercent = pct(arrivalsReady.length,arrivals.length)
 
   const attentionCount =
-    missingMenus.length +
+    (showBreakfast ? missingMenus.length : 0) +
     blockedRooms.length +
     unassignedService.length +
     roomCheckCorrections.length +
@@ -360,7 +360,7 @@ export default function DailyDashboard({
               <span>Today at a glance</span>
               <strong>Operations progress</strong>
             </div>
-            <small>Live from today’s room and breakfast data</small>
+            <small>{showBreakfast ? 'Live from today’s room and breakfast data' : 'Live from today’s room operations'}</small>
           </div>
 
           <div className="daily-progress-stack">
@@ -376,11 +376,11 @@ export default function DailyDashboard({
               <small>{roomCheckPercent}% passed</small>
             </div>
 
-            <div className="daily-progress-row">
+            {showBreakfast && <div className="daily-progress-row">
               <div><span>Breakfast menus</span><b>{receivedMenus.length}/{breakfastScheduled.length}</b></div>
               <div className="daily-progress-track"><i style={{width:`${breakfastPercent}%`}}/></div>
               <small>{missingMenus.length} missing</small>
-            </div>
+            </div>}
 
             <div className="daily-progress-row">
               <div><span>Arrivals ready</span><b>{arrivalsReady.length}/{arrivals.length}</b></div>
@@ -439,7 +439,7 @@ export default function DailyDashboard({
           <div className="daily-attention-clear">No operational issues currently need attention.</div>
         ) : (
           <div className="daily-attention-groups">
-            {missingMenus.length>0 && (
+            {showBreakfast && missingMenus.length>0 && (
               <Link href="/front-desk" className="daily-attention-item tone-warning">
                 <span>{missingMenus.length}</span>
                 <div><strong>Missing breakfast menus</strong><small>{missingMenus.map(r=>r.roomName).join(', ')}</small></div>
