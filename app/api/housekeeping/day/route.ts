@@ -441,7 +441,13 @@ export async function PATCH(req: NextRequest) {
     if (manager && Object.prototype.hasOwnProperty.call(requested,'cleanOrder')) dbPatch.clean_order=Number.isFinite(Number(requested.cleanOrder))&&requested.cleanOrder!==null&&requested.cleanOrder!==''?Number(requested.cleanOrder):null
     if (manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')) dbPatch.service_type=cleanText(requested.serviceType)
     if (manager && Object.prototype.hasOwnProperty.call(requested,'stripHold')) dbPatch.strip_hold=cleanText(requested.stripHold)
-    if (manager && Object.prototype.hasOwnProperty.call(requested,'breakfastTag')) dbPatch.breakfast_tag=requested.breakfastTag===true
+    if (manager && Object.prototype.hasOwnProperty.call(requested,'breakfastTag')) {
+      dbPatch.breakfast_tag=requested.breakfastTag===true
+      dbPatch.breakfast_tag_override=requested.breakfastTag===true
+    }
+    if (manager && requested.resetBreakfastTag===true) {
+      dbPatch.breakfast_tag_override=null
+    }
     if (Object.prototype.hasOwnProperty.call(requested,'notes')) dbPatch.notes=cleanText(requested.notes)
     if(manager && (Object.prototype.hasOwnProperty.call(requested,'reservationStatus') || Object.prototype.hasOwnProperty.call(requested,'stripHold'))) {
       const nextStatus=String(requested.reservationStatus ?? existing.reservation_status ?? '')
