@@ -1,5 +1,6 @@
-import { getStaffSession } from '@/lib/client/staff-session'
 'use client'
+
+import { getStaffSession } from '@/lib/client/staff-session'
 
 import { useEffect,useMemo,useRef,useState } from 'react'
 import { derivedLiveCondition, finalVerificationComplete, requiresHousekeeperSelfCheck, roomNextAction, roomWorkflowLabel, roomWorkflowState } from '@/lib/room-state'
