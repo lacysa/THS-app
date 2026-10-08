@@ -102,6 +102,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
       if(!response.ok)throw new Error(result.error||'Could not save room')
       if(result.row)setEdits(current=>({...current,[row.roomId]:{...current[row.roomId],operationalStatus:result.row.reservationStatus,stripHold:result.row.stripHold,roomCondition:result.row.roomCondition}}))
       setLiveRooms(current=>({...current,[row.roomId]:{...current[row.roomId],...(result.row?{operationalStatus:result.row.reservationStatus,stripHold:result.row.stripHold,roomCondition:result.row.roomCondition}:patch)}}))
+      setEdits(current=>{const next={...current};delete next[row.roomId];return next})
       setFeedback(current=>({...current,[row.roomId]:'Saved'}))
     }catch(error:any){
       setEdits(current=>{const copy={...current};delete copy[row.roomId];return copy})
