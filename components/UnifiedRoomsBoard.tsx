@@ -245,6 +245,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
           return next
         })
       }
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh',{detail:{roomId,date:dateRef.current}}))
       setSaveState('saved')
       window.setTimeout(()=>setSaveState(current=>current==='saved'?'idle':current),1600)
       return true
