@@ -576,7 +576,7 @@ export default function ReservationSyncBoard(){
       <p>On the Arrival Report page, press <strong>Cmd+A</strong> then <strong>Cmd+C</strong>. Come back here and click the button below. The app reads the actual table cells instead of trying to interpret a PDF image.</p>
       <div className="rs-upload-actions">
         <button className="rs-btn" disabled={busy} onClick={pasteFromPms}>{busy?<RefreshCw className="spin" size={17}/>:<ClipboardPaste size={17}/>} Paste copied PMS report</button>
-        <span className="rs-private-note">Only reservation fields needed for operations are sent. Full phone numbers are discarded after the 4-digit door code is derived.</span>
+        <span className="rs-private-note">Phone numbers entered during review are stored with the reservation for operational use. Access is restricted to authorized staff.</span>
       </div>
       {progress && <div className="rs-progress"><div><span style={{width:`${pct}%`}}/></div><small>{progress}</small></div>}
       {error && <div className="rs-alert error"><TriangleAlert size={17}/>{error}</div>}
@@ -610,13 +610,15 @@ export default function ReservationSyncBoard(){
             <label>Room<select value={row.roomName||''} onChange={e=>patch(index,{roomName:e.target.value||null})}><option value="">Choose room</option>{rooms.map(room=><option key={room.id}>{room.name}</option>)}</select></label>
             <label>Arrival<input type="date" value={row.arrivalDate||''} onChange={e=>patch(index,{arrivalDate:e.target.value||null})}/></label>
             <label>Checkout<input type="date" value={row.checkoutDate||''} onChange={e=>patch(index,{checkoutDate:e.target.value||null})}/></label>
-            <label>Door code<input value={row.doorCode||''} readOnly/></label>
+            <label>Phone number<input type="tel" inputMode="tel" autoComplete="off" placeholder="Enter guest phone" value={row.phone||''} onChange={e=>{const digits=e.target.value.replace(/\D/g,'').slice(-10);patch(index,{phone:digits||null,doorCode:digits.length===10?digits.slice(-4):row.doorCode})}}/></label>
+            <label>Door code<input value={row.doorCode||''} onChange={e=>patch(index,{doorCode:e.target.value.replace(/\D/g,'').slice(-4)})}/></label>
             <label>Occupancy<input type="number" min="1" max="8" value={row.occupancy||''} onChange={e=>patch(index,{occupancy:e.target.value?Number(e.target.value):null})}/></label>
             <label>Check-in<input value={row.checkInTime||''} onChange={e=>patch(index,{checkInTime:e.target.value})}/></label>
             <label className="wide">Rate / booking product<input value={row.ratePlan||''} onChange={e=>patch(index,{ratePlan:e.target.value})}/></label>
             <label className="wide">Packages / products<input value={row.productsRaw||''} onChange={e=>patch(index,{productsRaw:e.target.value})}/></label>
             <label className="wide">Dietary restrictions<input value={row.dietaryRestrictions||''} onChange={e=>patch(index,{dietaryRestrictions:e.target.value})}/></label>
-            <label className="wide">Innkeeper notes<textarea value={row.innkeeperNotes||''} onChange={e=>patch(index,{innkeeperNotes:e.target.value})}/></label>
+            <label className="wide">Innkeeper notes<textarea value={row.innkeeperNotes||''} onChange={e=>patch(index,{innkeeperNotes:e.target.value})}/><small>+B means breakfast for the stay. One-day à la carte breakfast must include its morning date.</small></label>
+            <div className="wide rs-breakfast-edit"><button type="button" onClick={()=>patch(index,{innkeeperNotes:[row.innkeeperNotes?.trim(),'+B'].filter(Boolean).join(' ')})}>+B · Breakfast for stay</button><label>À la carte breakfast morning<input type="date" min={row.arrivalDate||undefined} max={row.checkoutDate||undefined} onChange={e=>{if(!e.target.value)return;patch(index,{innkeeperNotes:[row.innkeeperNotes?.trim(),`À la carte breakfast morning: ${e.target.value}`].filter(Boolean).join(' | ')})}}/></label></div>
             <label className="wide">Guest comments<textarea value={row.guestComments||''} onChange={e=>patch(index,{guestComments:e.target.value})}/></label>
           </div>
         </article>)}
