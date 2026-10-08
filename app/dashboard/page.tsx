@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
 import DailyDashboard from '@/components/DailyDashboard'
 import ManagerCommandCenter from '@/components/ManagerCommandCenter'
+import DashboardViewSwitcher from '@/components/DashboardViewSwitcher'
 import LiveDataRefresh from '@/components/LiveDataRefresh'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
@@ -294,16 +295,8 @@ export default async function DashboardPage() {
   return (
     <StaffShell title="Dashboard">
       <LiveDataRefresh intervalMs={10000}/>
-      {isManager && <ManagerCommandCenter
-        today={today} tomorrow={tomorrow} rooms={housekeeping}
-        tomorrowRooms={tomorrowRooms} maintenance={maintenance}
-        staff={todayStaff} tomorrowStaff={tomorrowStaff}
-        showHousekeeping={moduleKeys.has('housekeeping')}
-        showMaintenance={moduleKeys.has('maintenance')}
-        showStaff={isManager}
-        handoffNotes={departmentNotes}
-      />}
-      <DailyDashboard
+      {isManager ? <DashboardViewSwitcher
+        today={<DailyDashboard
         commandMode={isManager}
         displayName={displayName}
         todayLabel={prettyDate(today)}
@@ -326,6 +319,40 @@ export default async function DashboardPage() {
         reservationDaily={reservationDaily}
         todayStaff={todayStaff}
       />
+}
+        operations={<ManagerCommandCenter
+        today={today} tomorrow={tomorrow} rooms={housekeeping}
+        tomorrowRooms={tomorrowRooms} maintenance={maintenance}
+        staff={todayStaff} tomorrowStaff={tomorrowStaff}
+        showHousekeeping={moduleKeys.has('housekeeping')}
+        showMaintenance={moduleKeys.has('maintenance')}
+        showStaff={isManager}
+        handoffNotes={departmentNotes}
+      />}}
+      /> : <DailyDashboard
+        commandMode={isManager}
+        displayName={displayName}
+        todayLabel={prettyDate(today)}
+        breakfastDate={breakfastDate}
+        showBreakfast={
+          moduleKeys.has('front_desk') ||
+          moduleKeys.has('kitchen') ||
+          moduleKeys.has('daily_overview') ||
+          moduleKeys.has('breakfast_guest')
+        }
+        showHousekeeping={moduleKeys.has('housekeeping')}
+        showMaintenance={moduleKeys.has('maintenance')}
+        showLaundry={moduleKeys.has('laundry')}
+        showLobby={moduleKeys.has('lobby')}
+        breakfast={breakfast}
+        housekeeping={housekeeping}
+        maintenance={maintenance}
+        departmentNotes={departmentNotes}
+        showReservationDaily={moduleKeys.has('reservations')}
+        reservationDaily={reservationDaily}
+        todayStaff={todayStaff}
+      />
+}
     </StaffShell>
   )
 }
