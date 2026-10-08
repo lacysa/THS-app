@@ -479,12 +479,6 @@ export async function PATCH(req: NextRequest) {
       const service=String((requested.serviceType ?? existing.service_type)||'').trim().toUpperCase()
       const isRefresh=status==='stayover'&&service==='RF'
       const requiresQuality=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(existing.check_issue_open)
-      const attestedAt=existing.housekeeper_attested_at?new Date(existing.housekeeper_attested_at).getTime():0
-      const issueAt=existing.check_issue_at?new Date(existing.check_issue_at).getTime():0
-      const validSelfCheck=Boolean(existing.housekeeper_attested_by&&attestedAt>issueAt)
-      if(complete&&requiresQuality&&!validSelfCheck){
-        return NextResponse.json({error:'Complete and submit the room self-check before marking the clean complete.'},{status:400})
-      }
       dbPatch.complete=complete
       dbPatch.ready_for_inspection=!isRefresh&&complete
       dbPatch.inspected=false
