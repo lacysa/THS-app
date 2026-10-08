@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
 import DailyDashboard from '@/components/DailyDashboard'
+import ManagerCommandCenter from '@/components/ManagerCommandCenter'
 import LiveDataRefresh from '@/components/LiveDataRefresh'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
@@ -51,6 +52,9 @@ export default async function DashboardPage() {
 
   const today = ymdInHotelTz()
   const breakfastDate = bohDefaultServiceDate()
+  const tomorrowDate = new Date(today+'T12:00:00Z')
+  tomorrowDate.setUTCDate(tomorrowDate.getUTCDate()+1)
+  const tomorrow = tomorrowDate.toISOString().slice(0,10)
   const isManager = access.isAdmin || access.capabilities.some(cap=>managerCaps.has(cap))
 
   const [
@@ -262,12 +266,40 @@ export default async function DashboardPage() {
     }
   }
 
+  const [tomorrowRoomsRes,tomorrowScheduleRes]=isManager ? await Promise.all([
+    moduleKeys.has('housekeeping') ? admin.from('housekeeping_daily_rooms')
+      .select('room_id,reservation_status,service_type,room_condition,strip_hold,assigned_to')
+      .eq('service_date',tomorrow) : Promise.resolve({data:[],error:null}),
+    admin.from('staff_daily_schedule')
+      .select('staff_member_id,shift_start,shift_end,role_label')
+      .eq('schedule_date',tomorrow).eq('work_mode','onsite')
+  ]) : [{data:[],error:null},{data:[],error:null}]
+  const tomorrowRooms=(tomorrowRoomsRes.data||[]).map((r:any)=>({
+    roomId:String(r.room_id||''),roomName:roomName(r.room_id,roomMap),
+    reservationStatus:String(r.reservation_status||''),serviceType:String(r.service_type||''),
+    roomCondition:String(r.room_condition||''),stripHold:String(r.strip_hold||''),
+    assignedTo:String(r.assigned_to||'')
+  }))
+  const tomorrowStaff=(tomorrowScheduleRes.data||[]).map((r:any)=>({
+    id:String(r.staff_member_id),name:staffNameMap.get(String(r.staff_member_id))||'Staff',
+    roleLabel:String(r.role_label||''),shiftStart:String(r.shift_start||''),shiftEnd:String(r.shift_end||'')
+  }))
   const displayName = access.preferredName || access.name || 'Staff'
 
   return (
     <StaffShell title="Dashboard">
       <LiveDataRefresh intervalMs={10000}/>
+      {isManager && <ManagerCommandCenter
+        today={today} tomorrow={tomorrow} rooms={housekeeping}
+        tomorrowRooms={tomorrowRooms} maintenance={maintenance}
+        staff={todayStaff} tomorrowStaff={tomorrowStaff}
+        showHousekeeping={moduleKeys.has('housekeeping')}
+        showMaintenance={moduleKeys.has('maintenance')}
+        showStaff={moduleKeys.has('staff') || access.isAdmin}
+        handoffNotes={departmentNotes}
+      />}
       <DailyDashboard
+        commandMode={isManager}
         displayName={displayName}
         todayLabel={prettyDate(today)}
         breakfastDate={breakfastDate}
