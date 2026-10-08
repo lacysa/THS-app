@@ -35,6 +35,8 @@ type Row={
   haChecked?:boolean
   housekeeperAttested?:boolean
   checkIssueOpen?:boolean
+  operationalStatus?:string
+  stripHold?:string
 }
 
 function addDay(value:string,amount:number){
@@ -57,8 +59,33 @@ function statusClass(value:string){
   return 'reservation-status-'+String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')
 }
 
-export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string;rows:Row[]}){
+export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serviceDate:string;rows:Row[];canEdit?:boolean}){
   const router=useRouter()
+  const [view,setView]=useState<'overview'|'edit'>('overview')
+  const [edits,setEdits]=useState<Record<string,Partial<Row>>>({})
+  const [saving,setSaving]=useState<Record<string,boolean>>({})
+  const [feedback,setFeedback]=useState<Record<string,string>>({})
+  const shown=rows.map(row=>({...row,...(edits[row.roomId]||{})}))
+  async function editRoom(row:Row,patch:Partial<Row>){
+    if(!canEdit || saving[row.roomId])return
+    const next={...edits[row.roomId],...patch}
+    setEdits(current=>({...current,[row.roomId]:next}))
+    setSaving(current=>({...current,[row.roomId]:true}))
+    setFeedback(current=>({...current,[row.roomId]:''}))
+    const apiPatch:any={}
+    if('operationalStatus' in patch)apiPatch.reservationStatus=patch.operationalStatus
+    if('roomCondition' in patch)apiPatch.roomCondition=patch.roomCondition
+    if('stripHold' in patch)apiPatch.stripHold=patch.stripHold
+    try{
+      const response=await fetch('/api/housekeeping/day',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate,roomId:row.roomId,patch:apiPatch})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not save room')
+      setFeedback(current=>({...current,[row.roomId]:'Saved'}))
+    }catch(error:any){
+      setEdits(current=>{const copy={...current};delete copy[row.roomId];return copy})
+      setFeedback(current=>({...current,[row.roomId]:error?.message||'Save failed'}))
+    }finally{setSaving(current=>({...current,[row.roomId]:false}))}
+  }
   const [statusFilter,setStatusFilter]=useState<'All'|'Arrival'|'Stayover'|'Checkout'|'Out/In'>('All')
 
   const displayStatus=(row:Row):'Arrival'|'Stayover'|'Checkout'|'Out/In'=>{
@@ -83,6 +110,7 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
       : rows.filter(row=>displayStatus(row)===statusFilter)
 
   return <div className="reservations-page">
+    <div className="reservations-view-switch"><div><strong>Reservations workspace</strong><small>View synced stays or edit operational room status</small></div><div className="reservations-view-buttons"><button type="button" className={view==='overview'?'active':''} aria-pressed={view==='overview'} onClick={()=>setView('overview')}>Overview</button>{canEdit&&<button type="button" className={view==='edit'?'active':''} aria-pressed={view==='edit'} onClick={()=>setView('edit')}>Edit rooms</button>}</div></div>
     <section className="reservations-hero">
       <div>
         <div className="reservations-kicker">Front office operations</div>
@@ -96,7 +124,7 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
       </div>
     </section>
 
-    <section className="reservations-snapshot">
+    {view==='overview'&&<section className="reservations-snapshot">
       <div className="reservations-snapshot-head">
         <div><span>Daily reservation snapshot</span><strong>{rows.length} occupied / changing rooms</strong></div>
         <small>Live from the latest Reservation Sync import</small>
@@ -107,9 +135,11 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
         <div><span>Checkouts</span><strong>{counts.checkouts}</strong></div>
         <div><span>Out / In</span><strong>{counts.outIn}</strong></div>
       </div>
-    </section>
+    </section>}
 
-    {rows.length>0 && <section className="reservations-filter-bar" aria-label="Filter reservations by status">
+    {view==='edit'&&canEdit&&<section className="reservations-edit-panel"><div className="reservations-edit-intro"><strong>Daily room overrides</strong><span>Change today’s operational room status or maintenance hold. Guest bookings and synced reservation records remain unchanged.</span></div><div className="reservations-edit-grid">{shown.map(row=><div className="reservations-edit-item" key={row.roomId}><div className="reservations-edit-room"><strong>{row.roomName}</strong><small>{row.status} · synced reservation</small></div><label>Operational status<select disabled={saving[row.roomId]} value={row.operationalStatus||row.status} onChange={e=>void editRoom(row,{operationalStatus:e.target.value})}>{['Arrival','Out/In','Checkout','Stayover','Vacant','Dirty','Blocked'].map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Room condition<select disabled={saving[row.roomId]} value={row.roomCondition||''} onChange={e=>void editRoom(row,{roomCondition:e.target.value,stripHold:e.target.value==='Blocked'?'Hold':''})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(s=><option key={s} value={s}>{s||'Not set'}</option>)}</select></label><button className="reservations-edit-block" disabled={saving[row.roomId]} type="button" onClick={()=>void editRoom(row,{stripHold:row.stripHold?'':'Hold'})}>{row.stripHold?'Release hold':'Maintenance hold'}</button><small role="status">{saving[row.roomId]?'Saving…':feedback[row.roomId]||''}</small></div>)}</div>{shown.length===0&&<p>No synced rooms for this date.</p>}</section>}
+
+    {view==='overview'&&rows.length>0 && <section className="reservations-filter-bar" aria-label="Filter reservations by status">
       {[
         {key:'All',label:'All',count:rows.length},
         {key:'Arrival',label:'Arrivals',count:counts.arrivals},
@@ -128,7 +158,7 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
       </button>)}
     </section>}
 
-    {rows.length===0 ? <section className="reservations-empty">No occupied or changing rooms are currently synced for this date.</section> :
+    {view==='overview' && (rows.length===0 ? <section className="reservations-empty">No occupied or changing rooms are currently synced for this date.</section> :
       filteredRows.length===0 ? <section className="reservations-empty">No {statusFilter.toLowerCase()} rooms are synced for this date.</section> :
       <section className="reservations-grid">
         {filteredRows.map(row=>{
@@ -193,6 +223,6 @@ export default function ReservationsBoard({serviceDate,rows}:{serviceDate:string
           </article>
         })}
       </section>
-    }
+    )}
   </div>
 }
