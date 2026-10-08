@@ -56,15 +56,6 @@ type MaintenanceRow = {
   status:string
 }
 
-type InventoryRow = {
-  id:string
-  department:string
-  itemName:string
-  quantity:string
-  note:string
-  status:string
-}
-
 type DepartmentNote = {
   department:string
   note:string
@@ -107,13 +98,11 @@ type Props = {
   showBreakfast:boolean
   showHousekeeping:boolean
   showMaintenance:boolean
-  showInventory:boolean
   showLaundry:boolean
   showLobby:boolean
   breakfast:BreakfastRow[]
   housekeeping:HousekeepingRow[]
   maintenance:MaintenanceRow[]
-  inventory:InventoryRow[]
   departmentNotes:DepartmentNote[]
   showReservationDaily:boolean
   reservationDaily:ReservationDailyRow[]
@@ -130,10 +119,6 @@ function formatTime(value:string) {
 
 function titleCase(value:string) {
   return value.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())
-}
-
-function inventoryHref(department:string) {
-  return `/inventory/${department.replace(/_/g,'-')}`
 }
 
 function statusClass(value:string) {
@@ -210,13 +195,11 @@ export default function DailyDashboard({
   showBreakfast,
   showHousekeeping,
   showMaintenance,
-  showInventory,
   showLaundry,
   showLobby,
   breakfast,
   housekeeping,
   maintenance,
-  inventory,
   departmentNotes,
   showReservationDaily,
   reservationDaily,
@@ -256,7 +239,6 @@ export default function DailyDashboard({
 
   const maintenanceOpen = maintenance.filter(r=>r.status!=='complete')
   const urgentMaintenance = maintenanceOpen.filter(r=>r.priority==='urgent')
-  const openInventory = inventory.filter(r=>!['received','cancelled'].includes(r.status))
 
   const blockedRooms = housekeeping.filter(r=>r.reservationStatus==='Blocked' || r.stripHold==='Hold')
   const unassignedService = housekeeping.filter(row=>
@@ -293,8 +275,7 @@ export default function DailyDashboard({
     pendingChecks.length +
     arrivalsNotReady.length +
     packageRooms.length +
-    urgentMaintenance.length +
-    openInventory.length
+    urgentMaintenance.length
 
   const blockedIds = new Set(blockedRooms.map(r=>r.id))
   const arrivalIds = new Set(arrivals.map(r=>r.id))
@@ -506,12 +487,6 @@ export default function DailyDashboard({
                 <div><strong>Urgent maintenance</strong><small>{urgentMaintenance.map(r=>r.location).join(', ')}</small></div>
               </Link>
             )}
-            {openInventory.length>0 && (
-              <Link href={openInventory[0]?inventoryHref(openInventory[0].department):'/dashboard'} className="daily-attention-item tone-info">
-                <span>{openInventory.length}</span>
-                <div><strong>Open inventory requests</strong><small>{openInventory.map(r=>r.itemName).slice(0,5).join(', ')}</small></div>
-              </Link>
-            )}
           </div>
         )}
       </section>
@@ -643,27 +618,6 @@ export default function DailyDashboard({
           </section>
         )}
 
-        {showInventory && (
-          <section className="daily-panel">
-            <div className="daily-panel-head">
-              <div><Package size={17}/><strong>Inventory / ordering</strong></div>
-              <span>{openInventory.length} open</span>
-            </div>
-            <div className="daily-list">
-              {openInventory.length===0 && <div className="daily-empty">No outstanding inventory requests.</div>}
-              {openInventory.slice(0,12).map(row=>(
-                <Link href={inventoryHref(row.department)} className="daily-list-row daily-list-link" key={row.id}>
-                  <div className="daily-row-main">
-                    <strong>{row.itemName}</strong>
-                    <span>{titleCase(row.department)}{row.quantity?` · ${row.quantity}`:''}</span>
-                    {row.note && <small>{row.note}</small>}
-                  </div>
-                  <span className="daily-state">{titleCase(row.status)}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
         {(showLaundry || showLobby) && (
           <section className="daily-panel">
