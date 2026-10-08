@@ -266,3 +266,11 @@ html[data-theme="dark"] .reservation-checkout-only small{
 /* Single integrated view selector */
 .ths-operations-tab-buttons{align-items:center}
 @media(max-width:700px){.ths-operations-tab-buttons{grid-template-columns:repeat(3,minmax(0,1fr))}.ths-operations-tab-buttons button{font-size:11px;line-height:1.3}}
+
+/* Shared reservation-style card overview and focused room workflow. */
+.ths-room-overview-tools{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin:0 0 14px;padding:13px 17px;border:1px solid #cde0e7;background:rgba(255,255,255,.84);border-radius:15px;color:#456072;font-size:13px}
+.ths-room-overview-tools button,.ths-back-to-cards,.ths-card-manage-btn{border:1px solid #b5d0d9;border-radius:11px;padding:10px 14px;background:#f4fbfc;color:#284d60;font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+.ths-room-overview-tools button:hover,.ths-back-to-cards:hover,.ths-card-manage-btn:hover{background:#e3f5f4}
+.ths-operational-room-detail>.ths-back-to-cards{margin:0 0 14px}
+.ths-card-manage-btn{display:block;width:calc(100% - 24px);margin:12px;text-align:center;background:#eaf7f7}
+@media(max-width:700px){.ths-room-overview-tools{padding:12px}.ths-room-overview-tools button{width:100%}}
