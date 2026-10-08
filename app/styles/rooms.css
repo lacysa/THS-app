@@ -456,3 +456,19 @@
 .rooms-view-toggle{display:flex;gap:6px;flex-wrap:wrap}
 .rooms-view-toggle button{min-height:38px}
 @media(max-width:700px){.rooms-workflow-overview{gap:6px;margin:10px 0}.rooms-workflow-overview>div{padding:12px 9px;border-radius:14px}.rooms-workflow-overview strong{font-size:24px}.rooms-workflow-overview small{font-size:10px}.rooms-room-picker{display:flex;overflow-x:auto;scroll-snap-type:x proximity;gap:9px;padding:3px 3px 11px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}.rooms-picker-item{flex:0 0 155px;min-height:96px;scroll-snap-align:start}.rooms-focus-heading span{font-size:11px;text-align:right}}
+
+
+/* High-contrast sticky room identity and quick manager override controls */
+.rooms-table-sticky{background:#fff!important;isolation:isolate;z-index:3;box-shadow:3px 0 8px rgba(30,47,67,.06)}
+.rooms-table tbody tr:nth-child(even) .rooms-table-sticky{background:#f6f9fc!important}
+.rooms-table-room{display:flex;flex-direction:column;gap:4px;min-width:155px;width:100%;padding:11px 13px!important;background:#fff!important;border:1px solid #dde5ed!important;border-radius:12px!important;color:#182c40!important;text-align:left;opacity:1!important}
+.rooms-table tbody tr:nth-child(even) .rooms-table-room{background:#f7f9fc!important}
+.rooms-table-room strong{color:#142b3c!important;font-weight:850!important;font-size:14px!important;line-height:1.3}
+.rooms-table-room small{color:#506477!important;font-size:11px!important;opacity:1!important}
+.rooms-manager-status-tools{display:grid;grid-template-columns:1fr 1fr auto;gap:11px;align-items:end;margin:13px 0}
+.rooms-manager-status-tools label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:750;color:#486075}
+.rooms-manager-status-tools select,.rooms-table-status-select{max-width:100%;min-width:130px;padding:10px;border-radius:10px;border:1px solid #cbd8e1;background:rgba(255,255,255,.94);color:#213648;font:inherit;font-size:12px}
+.rooms-manager-status-tools button,.rooms-table-hold{border:1px solid #c99a7c;border-radius:10px;background:linear-gradient(130deg,#fff1e8,#ffe6db);color:#804c35;padding:11px 13px;cursor:pointer;font-size:12px;font-weight:800}
+.rooms-manager-status-tools .rooms-unblock-action{background:linear-gradient(130deg,#e2f7ef,#e8f0ff);border-color:#7daea5;color:#315c58}
+.rooms-table-hold{display:block;margin-top:7px;padding:7px 10px;white-space:nowrap}
+@media(max-width:750px){.rooms-manager-status-tools{grid-template-columns:1fr}.rooms-manager-status-tools select{width:100%}.rooms-table-room{min-width:145px}}
