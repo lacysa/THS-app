@@ -177,7 +177,8 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
           const dietary=cleanDiet(stay?.dietary_restrictions)
           const outMarked=/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())
           const roomState={
-            reservationStatus:status,
+            reservationStatus:row.operationalStatus||status,
+            stripHold:row.stripHold,
             serviceType:row.serviceType,
             complete:row.complete,
             inspected:row.inspected,
