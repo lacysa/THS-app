@@ -3,6 +3,7 @@ export type RoomLike={
   serviceType?:string|null
   stripHold?:string|null
   complete?:boolean|null
+  readyForInspection?:boolean|null
   inspected?:boolean|null
   checkIssueOpen?:boolean|null
   housekeeperAttested?:boolean|null
@@ -28,7 +29,7 @@ export function finalVerificationComplete(row:RoomLike){return Boolean(row.fohSi
 
 export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   if(isBlockedRoom(row))return 'blocked'
-  if(row.checkIssueOpen)return 'correction'
+  if(row.checkIssueOpen&&!row.readyForInspection)return 'correction'
   if(isRefreshRoom(row))return row.complete?'ready':'refresh'
   if(isStayoverRoom(row))return 'occupied'
 
@@ -44,13 +45,11 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
     return row.inspected||row.fohSignedBy||row.haSignedBy?'ready':'inspection'
   }
 
-  if(requiresHousekeeperSelfCheck(row)&&!row.housekeeperAttestedBy&&!row.housekeeperAttested)return 'self'
   if(!row.complete)return 'cleaning'
   // A FOH final check is an authorized manager bypass: it completes the final
   // verification path without leaving a phantom HA/inspection requirement.
   if(row.fohSignedBy)return 'ready'
   if(!row.inspected)return 'inspection'
-  if(!row.haSignedBy)return 'final'
   return 'ready'
 }
 
