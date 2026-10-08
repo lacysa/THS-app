@@ -1644,3 +1644,10 @@ html[data-theme="dark"] .daily-state.neutral{
 
 .ops-command-copy{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;margin:0 10px 7px 0;padding:9px 12px;border-radius:11px;border:1px solid rgba(99,148,173,.26);background:linear-gradient(105deg,rgba(83,209,197,.21),rgba(127,113,238,.13));color:#38576b;font-size:11px;font-weight:800;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease}
 .ops-command-copy:hover{transform:translateY(-1px);box-shadow:0 5px 15px rgba(48,88,111,.12)}
+
+
+/* Avoid the tall blank column caused by the original spanning command card. */
+.ops-command-attention{grid-row:auto}
+.ops-command-columns{align-items:stretch}
+.ops-command-card{height:100%}
+@media(max-width:1050px){.ops-command-card{height:auto}}
