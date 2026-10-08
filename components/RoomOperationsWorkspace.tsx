@@ -13,7 +13,7 @@ export default function RoomOperationsWorkspace({serviceDate,rows,canEdit,canMan
       <div><strong>Room Operations</strong><small>One workspace for room readiness, guest stays and management controls.</small></div>
       <div className="ths-operations-tab-buttons" role="group" aria-label="Choose workspace">
         <button type="button" aria-pressed={tab==='rooms'} className={tab==='rooms'?'active':''} onClick={()=>setTab('rooms')}>Rooms & housekeeping</button>
-        <button type="button" aria-pressed={tab==='overview'||tab==='edit'} className={tab==='reservations'?'active':''} onClick={()=>setTab('overview')}>Reservation overview</button>
+        <button type="button" aria-pressed={tab==='overview'} className={tab==='overview'?'active':''} onClick={()=>setTab('overview')}>Reservation overview</button>
         {canEdit&&<button type="button" aria-pressed={tab==='edit'} className={tab==='edit'?'active':''} onClick={()=>setTab('edit')}>Edit reservations</button>}
       </div>
     </nav>}
