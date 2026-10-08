@@ -32,16 +32,6 @@ function roomName(value:any, roomMap:Map<string,string>) {
   return roomMap.get(String(value || '')) || 'Room'
 }
 
-function accessibleInventoryDepartments(moduleKeys:Set<string>) {
-  const departments:string[] = []
-  if (moduleKeys.has('front_desk_inventory')) departments.push('front_desk')
-  if (moduleKeys.has('kitchen_inventory')) departments.push('kitchen')
-  if (moduleKeys.has('housekeeping_inventory')) departments.push('housekeeping')
-  if (moduleKeys.has('laundry_inventory')) departments.push('laundry')
-  if (moduleKeys.has('lobby_inventory')) departments.push('lobby')
-  return departments
-}
-
 export default async function DashboardPage() {
   const access = await getStaffAccess()
   if (!access) redirect('/login')
@@ -61,7 +51,6 @@ export default async function DashboardPage() {
 
   const today = ymdInHotelTz()
   const breakfastDate = bohDefaultServiceDate()
-  const inventoryDepartments = accessibleInventoryDepartments(moduleKeys)
   const isManager = access.isAdmin || access.capabilities.some(cap=>managerCaps.has(cap))
 
   const [
@@ -71,7 +60,6 @@ export default async function DashboardPage() {
     breakfastRes,
     breakfastTagRes,
     maintenanceRes,
-    inventoryRes,
     notesRes,
     menuNotesRes,
     allStaffRes,
@@ -104,9 +92,6 @@ export default async function DashboardPage() {
       : Promise.resolve({data:[],error:null}),
     moduleKeys.has('maintenance')
       ? admin.from('maintenance_work_orders').select('*').order('created_at',{ascending:false})
-      : Promise.resolve({data:[],error:null}),
-    inventoryDepartments.length
-      ? admin.from('inventory_requests').select('*').in('department',inventoryDepartments).order('requested_at',{ascending:false})
       : Promise.resolve({data:[],error:null}),
     (moduleKeys.has('laundry') || moduleKeys.has('lobby'))
       ? admin.from('department_daily_notes').select('department,note').eq('service_date',today).in('department',['laundry','lobby'])
@@ -244,15 +229,6 @@ export default async function DashboardPage() {
     status:String(row.status || 'open')
   }))
 
-  const inventory = (inventoryRes.data || []).map((row:any)=>({
-    id:String(row.id),
-    department:String(row.department || ''),
-    itemName:String(row.item_name || ''),
-    quantity:String(row.requested_qty || ''),
-    note:String(row.note || ''),
-    status:String(row.status || 'requested')
-  }))
-
   const departmentNotes = (notesRes.data || []).map((row:any)=>({
     department:String(row.department || ''),
     note:String(row.note || '')
@@ -305,13 +281,11 @@ export default async function DashboardPage() {
         }
         showHousekeeping={moduleKeys.has('housekeeping')}
         showMaintenance={moduleKeys.has('maintenance')}
-        showInventory={inventoryDepartments.length > 0}
         showLaundry={moduleKeys.has('laundry')}
         showLobby={moduleKeys.has('lobby')}
         breakfast={breakfast}
         housekeeping={housekeeping}
         maintenance={maintenance}
-        inventory={inventory}
         departmentNotes={departmentNotes}
         showReservationDaily={moduleKeys.has('reservations')}
         reservationDaily={reservationDaily}
