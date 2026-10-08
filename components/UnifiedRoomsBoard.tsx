@@ -168,7 +168,7 @@ export default function UnifiedRoomsBoard(){
   useEffect(()=>{rowsRef.current=rows},[rows])
   useEffect(()=>{dateRef.current=date},[date])
   useEffect(()=>{
-    const query=window.matchMedia('(max-width: 1199px)')
+    const query=window.matchMedia('(max-width: 1199px), (max-width: 1600px) and (pointer: coarse) and (hover: none)')
     const sync=()=>{
       setIsCompact(query.matches)
       if(query.matches){setManagerDisplay('focus');setFilter(current=>current==='all'?'active':current)}
