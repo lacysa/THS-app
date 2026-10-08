@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 import { derivedLiveCondition, roomNextAction, roomWorkflowLabel } from '@/lib/room-state'
 
 type Stay={
+  id?:string
+  guest_phone?:string|null
+  rate_plan?:string|null
+  occupancy?:number|null
   guest_name?:string|null
   door_code?:string|null
   arrival_date?:string|null
@@ -84,6 +88,26 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
     void refresh()
     return()=>{mounted=false;window.removeEventListener('ths:live-data-refresh',refresh)}
   },[serviceDate])
+  const [reservationEdits,setReservationEdits]=useState<Record<string,Partial<Stay>>>({})
+  const [reservationSaving,setReservationSaving]=useState<Record<string,boolean>>({})
+  const [reservationFeedback,setReservationFeedback]=useState<Record<string,string>>({})
+  const [reservationPanel,setReservationPanel]=useState<string>('')
+  function stayField(stay:Stay,field:keyof Stay){return String(reservationEdits[stay.id||'']?.[field]??stay[field]??'')}
+  async function saveStay(stay:Stay){
+    if(!stay.id||reservationSaving[stay.id])return
+    const patch=reservationEdits[stay.id]||{}
+    setReservationSaving(p=>({...p,[stay.id!]:true}))
+    setReservationFeedback(p=>({...p,[stay.id!]:''}))
+    try{
+      const response=await fetch('/api/reservations/stay',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({id:stay.id,patch})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Save failed')
+      Object.assign(stay,result.stay)
+      setReservationEdits(p=>{const n={...p};delete n[stay.id!];return n})
+      setReservationFeedback(p=>({...p,[stay.id!]:'Saved ✓'}))
+    }catch(error:any){setReservationFeedback(p=>({...p,[stay.id!]:error?.message||'Save failed'}))}
+    finally{setReservationSaving(p=>({...p,[stay.id!]:false}))}
+  }
   const [saving,setSaving]=useState<Record<string,boolean>>({})
   const [feedback,setFeedback]=useState<Record<string,string>>({})
   const shown=rows.map(row=>({...row,...(liveRooms[row.roomId]||{}),...(edits[row.roomId]||{})}))
@@ -148,6 +172,13 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
         <button onClick={()=>setDate(addDay(serviceDate,1))} aria-label="Next day"><ChevronRight size={18}/></button>
       </div>
     </section>
+
+    {view==='edit'&&canEdit&&<section className="reservations-edit-panel"><div className="reservations-edit-intro"><strong>Edit guest reservations</strong><span>Choose a reservation to update its guest details and innkeeper notes. Changes save without refreshing this page.</span></div><div className="reservations-edit-grid">{shown.flatMap(row=>[row.arriving,row.staying,row.departing,row.primary].filter((stay):stay is Stay=>Boolean(stay?.id)).filter((stay,index,all)=>all.findIndex(v=>v.id===stay.id)===index).map(stay=><div className="reservations-edit-item" key={row.roomId+stay.id}><div className="reservations-edit-room"><strong>{row.roomName} · {stay.guest_name||'Guest'}</strong><small>{stay.arrival_date} to {stay.checkout_date}</small></div><button type="button" className="reservations-edit-block" onClick={()=>setReservationPanel(reservationPanel===stay.id?'':stay.id||'')}>{reservationPanel===stay.id?'Close editor':'Edit reservation'}</button>{reservationPanel===stay.id&&<div className="ths-reservation-guest-editor">
+      {([['guest_name','Guest name'],['guest_phone','Phone number'],['door_code','Door code'],['rate_plan','Rate plan'],['check_in_time','Check-in time'],['products_raw','Packages / products'],['dietary_restrictions','Dietary restrictions'],['reason_for_visit','Reason for visit'],['guest_comments','Guest comments'],['innkeeper_notes','Innkeeper notes']] as Array<[keyof Stay,string]>).map(([field,label])=><label key={field}>{label}{['guest_comments','innkeeper_notes','products_raw'].includes(field)?<textarea value={stayField(stay,field)} onChange={e=>setReservationEdits(p=>({...p,[stay.id!]:{...p[stay.id!],[field]:e.target.value}}))}/>:<input value={stayField(stay,field)} onChange={e=>setReservationEdits(p=>({...p,[stay.id!]:{...p[stay.id!],[field]:e.target.value}}))}/>}</label>)}
+      <button type="button" className="reservations-edit-block" disabled={reservationSaving[stay.id!]||!Object.keys(reservationEdits[stay.id!]||{}).length} onClick={()=>void saveStay(stay)}>{reservationSaving[stay.id!]?'Saving…':'Save reservation'}</button>
+      <small role="status">{reservationFeedback[stay.id!]||''}</small>
+      <small>Room assignment and stay dates remain tied to Reservation Sync and are not changed by this editor.</small>
+    </div>}</div>))}</div></section>}
 
     {view==='overview'&&<section className="reservations-snapshot">
       <div className="reservations-snapshot-head">
