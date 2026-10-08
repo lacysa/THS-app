@@ -161,7 +161,12 @@ export default async function DashboardPage() {
     inspected:Boolean(row.inspected),
     housekeeperAttested:Boolean(row.housekeeper_attested_by),
     packages:packageNamesByRoom.get(String(row.room_id || '')) || [],
-    notes:String(row.notes || '')
+    notes:String(row.notes || ''),
+    completedAt:String(row.completed_at || ''),
+    inspectedAt:String(row.inspected_at || ''),
+    fohSignedAt:String(row.foh_signed_at || ''),
+    haSignedAt:String(row.ha_signed_at || ''),
+    housekeeperAttestedAt:String(row.housekeeper_attested_at || '')
   })).sort((a:any,b:any)=>
     (roomSortMap.get(a.roomId) ?? 9999) - (roomSortMap.get(b.roomId) ?? 9999)
   )
