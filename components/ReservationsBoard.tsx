@@ -42,6 +42,8 @@ type Row={
   operationalStatus?:string
   lateArrival?:boolean
   stripHold?:string
+  roomNotes?:string
+  breakfastTag?:boolean
 }
 
 function addDay(value:string,amount:number){
@@ -251,6 +253,8 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
             </div>
 
             {showRoomActions&&onManageRoom&&<button className="ths-card-manage-btn" type="button" onClick={()=>onManageRoom(row.roomId)}>Manage room · Service, inspection & tags</button>}
+            {row.breakfastTag&&<span className="ths-reservation-breakfast-chip">Breakfast included</span>}
+            {row.roomNotes?.trim()&&<div className="ths-reservation-room-notes"><strong>Room notes</strong><span>{row.roomNotes}</span></div>}
             <div className="reservation-live-room-state">
               <span>Room status</span>
               <strong>{operationalState}</strong>
