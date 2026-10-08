@@ -32,7 +32,7 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const [roomsRes,linksRes,housekeepingRes,priorHousekeepingRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate),
-    admin.from('housekeeping_daily_rooms').select('room_id,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open').eq('service_date',serviceDate),
+    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open').eq('service_date',serviceDate),
     admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',priorDate)
   ])
 
@@ -75,6 +75,8 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
         staying:row.stay_reservation_id?stayById.get(String(row.stay_reservation_id))||null:null,
         departing:row.departing_reservation_id?stayById.get(String(row.departing_reservation_id))||null:null,
         serviceType:String(current.service_type||''),
+        operationalStatus:String(current.reservation_status||row.reservation_status||''),
+        stripHold:String(current.strip_hold||''),
         roomCondition:inheritedReady?'Ready':currentCondition,
         nextShiftCondition:String(current.next_shift_condition||''),
         complete:Boolean(current.complete),
@@ -88,5 +90,5 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
     .filter((row:any)=>row.status!=='Vacant')
     .sort((a:any,b:any)=>(sortById.get(a.roomId)??9999)-(sortById.get(b.roomId)??9999))
 
-  return <StaffShell title="Reservations"><LiveDataRefresh intervalMs={10000}/><ReservationsBoard serviceDate={serviceDate} rows={rows}/></StaffShell>
+  return <StaffShell title="Reservations"><LiveDataRefresh intervalMs={10000}/><ReservationsBoard serviceDate={serviceDate} rows={rows} canEdit={!gate.access.isPreviewMode && Boolean(gate.access.isAdmin || gate.access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap)))}/></StaffShell>
 }
