@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import CopyHandoffButton from '@/components/CopyHandoffButton'
 import { AlertTriangle, ArrowUpRight, BedDouble, CalendarClock, ClipboardCheck, ClipboardList, Clock3, ShieldCheck, Sparkles, Users, Wrench } from 'lucide-react'
 
 type Room={roomId:string;roomName:string;reservationStatus:string;serviceType:string;assignedTo:string;complete:boolean;stripHold:string;roomCondition:string;inspected:boolean;fohCheckInitials:string;haCheckInitials:string;checkIssueOpen:boolean;notes:string;completedAt?:string;inspectedAt?:string;fohSignedAt?:string;haSignedAt?:string;housekeeperAttestedAt?:string}
@@ -34,6 +35,7 @@ export default function ManagerCommandCenter({today,tomorrow,rooms,tomorrowRooms
     {name:'Room checks pending',rows:waitingChecks,href:'/room-checks',tone:'info',hint:'Complete inspection'},
     {name:'Urgent maintenance',rows:urgent,href:'/maintenance',tone:'danger',hint:'Review open work orders'}
   ].filter(g=>g.rows.length)
+  const handoffText=['THS shift handoff · '+today,...handoff.map(item=>'• '+item.label),'Tomorrow: '+tomorrowStaff.length+' scheduled on site; '+tomorrowBlocked.length+' blocked/held rooms'].join('\n')
   const workload=staff.map(s=>({...s,count:service.filter(r=>assigned(r.assignedTo).some(n=>n.toLowerCase()===s.name.toLowerCase())).length}))
   return <section className="ops-command" aria-label="Operations command center">
     <div className="ops-command-hero">
@@ -70,7 +72,7 @@ export default function ManagerCommandCenter({today,tomorrow,rooms,tomorrowRooms
       <section className="ops-command-card ops-command-handoff">
         <div className="ops-command-card-heading"><div><span>NOTHING LOST BETWEEN SHIFTS</span><h3><ClipboardList size={19}/> Shift handoff</h3></div><small>{handoff.length} open items</small></div>
         {!handoff.length?<div className="ops-command-clear compact"><ClipboardCheck size={24}/><strong>No open handoff items</strong><span>Current room issues, urgent repairs and department notes are clear.</span></div>:<div className="ops-command-handoff-items">{handoff.slice(0,6).map((item,i)=><Link key={i} href={item.href}><Clock3 size={15}/><span>{item.label}</span><ArrowUpRight size={15}/></Link>)}</div>}
-        <div className="ops-command-handoff-foot">Tomorrow: {tomorrowStaff.length} scheduled on site · {tomorrowBlocked.length} blocked/held rooms</div>
+        <div className="ops-command-handoff-foot"><CopyHandoffButton content={handoffText}/> Tomorrow: {tomorrowStaff.length} scheduled on site · {tomorrowBlocked.length} blocked/held rooms</div>
       </section>
     </div>
   </section>
