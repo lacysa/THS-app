@@ -274,3 +274,8 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-operational-room-detail>.ths-back-to-cards{margin:0 0 14px}
 .ths-card-manage-btn{display:block;width:calc(100% - 24px);margin:12px;text-align:center;background:#eaf7f7}
 @media(max-width:700px){.ths-room-overview-tools{padding:12px}.ths-room-overview-tools button{width:100%}}
+
+/* Room operations data visible across all reservation-style cards. */
+.ths-reservation-breakfast-chip{display:inline-flex;align-items:center;max-width:calc(100% - 24px);margin:9px 12px 0;padding:5px 9px;border-radius:9px;background:#d4f3ed;color:#24695f;font-size:11px;font-weight:750}
+.ths-reservation-room-notes{display:grid;gap:5px;margin:10px 12px;padding:11px 12px;border-radius:11px;border:1px solid #cee0e7;background:#f6fbfd;color:#2a485a;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.ths-reservation-room-notes strong{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#5c7785}
