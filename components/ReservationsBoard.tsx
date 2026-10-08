@@ -64,11 +64,12 @@ function statusClass(value:string){
   return 'reservation-status-'+String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')
 }
 
-export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serviceDate:string;rows:Row[];canEdit?:boolean}){
+export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:controlledView,onViewChange,hideViewSwitch=false}:{serviceDate:string;rows:Row[];canEdit?:boolean;view?:'overview'|'edit';onViewChange?:(view:'overview'|'edit')=>void;hideViewSwitch?:boolean}){
   const router=useRouter()
-  const [view,setView]=useState<'overview'|'edit'>('overview')
+  const [internalView,setView]=useState<'overview'|'edit'>('overview')
+  const view=controlledView??internalView
   useEffect(()=>{if(!canEdit)return;try{if(window.sessionStorage.getItem('ths-reservations-view')==='edit')setView('edit')}catch{}},[canEdit])
-  function changeView(next:'overview'|'edit'){setView(next);try{window.sessionStorage.setItem('ths-reservations-view',next)}catch{}}
+  function changeView(next:'overview'|'edit'){onViewChange?.(next);setView(next);try{window.sessionStorage.setItem('ths-reservations-view',next)}catch{}}
   const [edits,setEdits]=useState<Record<string,Partial<Row>>>({})
   const [liveRooms,setLiveRooms]=useState<Record<string,Partial<Row>>>({})
   const refreshing=useRef(false)
@@ -159,7 +160,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false}:{serv
       : shown.filter(row=>displayStatus(row)===statusFilter)
 
   return <div className="reservations-page">
-    <div className="reservations-view-switch"><div><strong>Reservations workspace</strong><small>View synced stays or edit operational room status</small></div><div className="reservations-view-buttons"><button type="button" className={view==='overview'?'active':''} aria-pressed={view==='overview'} onClick={()=>changeView('overview')}>Overview</button>{canEdit&&<button type="button" className={view==='edit'?'active':''} aria-pressed={view==='edit'} onClick={()=>changeView('edit')}>Edit rooms</button>}</div></div>
+    {!hideViewSwitch&&<div className="reservations-view-switch"><div><strong>Reservations workspace</strong><small>View synced stays or edit operational room status</small></div><div className="reservations-view-buttons"><button type="button" className={view==='overview'?'active':''} aria-pressed={view==='overview'} onClick={()=>changeView('overview')}>Overview</button>{canEdit&&<button type="button" className={view==='edit'?'active':''} aria-pressed={view==='edit'} onClick={()=>changeView('edit')}>Edit reservations</button>}</div></div>}
     <section className="reservations-hero">
       <div>
         <div className="reservations-kicker">Front office operations</div>
