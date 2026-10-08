@@ -431,6 +431,26 @@ export async function POST(req:NextRequest){
         updated_at:now
       }))
 
+      // Preserve manual staff changes across recurring PMS imports.
+      const incomingKeys=payloads.map((p:any)=>p.reservation_key).filter(Boolean)
+      if(incomingKeys.length){
+        const {data:prior,error:priorError}=await admin.from('reservation_stays').select('id,reservation_key').in('reservation_key',incomingKeys)
+        if(priorError)throw new Error(priorError.message)
+        const priorByKey=new Map((prior||[]).map((p:any)=>[p.reservation_key,p.id]))
+        const ids=(prior||[]).map((p:any)=>p.id)
+        if(ids.length){
+          const {data:overrides,error:overrideError}=await admin.from('reservation_staff_overrides').select('reservation_id,fields').in('reservation_id',ids)
+          if(overrideError)throw new Error(overrideError.message)
+          const map=new Map((overrides||[]).map((v:any)=>[String(v.reservation_id),v.fields||{}]))
+          for(const p of payloads){
+            const saved=map.get(String(priorByKey.get(p.reservation_key)))
+            if(saved&&typeof saved==='object')for(const field of Object.keys(saved)){
+              if(Object.prototype.hasOwnProperty.call(p,field))(p as any)[field]=saved[field]
+            }
+          }
+        }
+      }
+
       const saveResult=await admin.from('reservation_stays').upsert(payloads,{onConflict:'reservation_key'}).select('*')
       if(saveResult.error) throw new Error(saveResult.error.message)
       const saved=saveResult.data||[]
