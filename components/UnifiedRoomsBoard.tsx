@@ -176,7 +176,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
     const query=window.matchMedia('(max-width: 1199px), (max-width: 1600px) and (pointer: coarse) and (hover: none)')
     const sync=()=>{
       setIsCompact(query.matches)
-      if(query.matches){setManagerDisplay('focus');setFilter(current=>current==='all'?'active':current)}
+      if(query.matches){setManagerDisplay('focus');if(!initialRoomId)setFilter(current=>current==='all'?'active':current)}
       else{
         try{
           const saved=window.localStorage.getItem('ths-rooms-manager-view')
@@ -619,7 +619,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
   }),[rows,filter,checkByRoom])
 
   const searchedRows=useMemo(()=>filtered.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[filtered,roomSearch])
-  const selectedRow=searchedRows.find(row=>row.roomId===selectedRoomId)||searchedRows[0]
+  const selectedRow=(initialRoomId?rows.find(row=>row.roomId===selectedRoomId):undefined)||searchedRows.find(row=>row.roomId===selectedRoomId)||searchedRows[0]
   const displayRows=managerDisplay==='focus'?(selectedRow?[selectedRow]:[]):searchedRows
   function focusRoom(row:RoomRow){setSelectedRoomId(row.roomId);setExpanded(current=>({...current,[row.roomId]:true}));}
   const counts=useMemo(()=>({
