@@ -328,7 +328,7 @@
 }
 
 /* Keep card view operationally lean. Package editing remains available in Table view. */
-.rooms-card .rooms-package-editor{display:none}
+.rooms-card .rooms-package-editor{display:grid}
 
 /* Blocked / held rooms are awareness-only, not housekeeping work. */
 .rooms-state-pill.blocked{background:#eef0f2;color:#58616b}
