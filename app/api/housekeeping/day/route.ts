@@ -20,6 +20,7 @@ type SaveRow = {
   nextShiftCondition?: string
   notes?: string
   housekeeperAttested?: boolean
+  lateArrival?: boolean
   breakfastTag?: boolean
   packageIds?: string[]
 }
@@ -237,6 +238,7 @@ export async function GET(req: NextRequest) {
         nextShiftCondition: savedRow.next_shift_condition || '',
         notes: savedRow.notes || '',
         breakfastTag: Boolean(savedRow.breakfast_tag),
+        lateArrival: Boolean(savedRow.late_arrival),
         packageIds: packageIdsByRoom.get(String(room.id)) || [],
         haSignedBy: savedRow.ha_signed_by || null,
         haSignedName: savedRow.ha_signed_by
@@ -441,6 +443,7 @@ export async function PATCH(req: NextRequest) {
     if (manager && Object.prototype.hasOwnProperty.call(requested,'cleanOrder')) dbPatch.clean_order=Number.isFinite(Number(requested.cleanOrder))&&requested.cleanOrder!==null&&requested.cleanOrder!==''?Number(requested.cleanOrder):null
     if (manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')) dbPatch.service_type=cleanText(requested.serviceType)
     if (manager && Object.prototype.hasOwnProperty.call(requested,'stripHold')) dbPatch.strip_hold=cleanText(requested.stripHold)
+    if (manager && Object.prototype.hasOwnProperty.call(requested,'lateArrival')) dbPatch.late_arrival=requested.lateArrival===true
     if (manager && Object.prototype.hasOwnProperty.call(requested,'breakfastTag')) {
       dbPatch.breakfast_tag=requested.breakfastTag===true
       dbPatch.breakfast_tag_override=requested.breakfastTag===true
@@ -557,6 +560,7 @@ export async function PATCH(req: NextRequest) {
         reservationStatus:fresh.reservation_status||'',
         stripHold:fresh.strip_hold||'',
         breakfastTag:Boolean(fresh.breakfast_tag),
+        lateArrival:Boolean(fresh.late_arrival),
         complete:Boolean(fresh.complete),
         readyForInspection:Boolean(fresh.ready_for_inspection),
         inspected:Boolean(fresh.inspected),
@@ -777,6 +781,7 @@ export async function POST(req: NextRequest) {
           next_shift_condition: cleanText(row.nextShiftCondition),
           notes: cleanText(row.notes),
           breakfast_tag: Boolean(row.breakfastTag),
+          late_arrival: Boolean(row.lateArrival),
           ha_signed_by: complete ? existing.ha_signed_by || null : null,
           ha_signed_at: complete ? existing.ha_signed_at || null : null,
           foh_signed_by: complete ? existing.foh_signed_by || null : null,
