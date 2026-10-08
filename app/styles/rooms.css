@@ -472,3 +472,11 @@
 .rooms-manager-status-tools .rooms-unblock-action{background:linear-gradient(130deg,#e2f7ef,#e8f0ff);border-color:#7daea5;color:#315c58}
 .rooms-table-hold{display:block;margin-top:7px;padding:7px 10px;white-space:nowrap}
 @media(max-width:750px){.rooms-manager-status-tools{grid-template-columns:1fr}.rooms-manager-status-tools select{width:100%}.rooms-table-room{min-width:145px}}
+
+
+/* Breakfast tagging is a lightweight Rooms-side housekeeping flag. */
+.rooms-breakfast-toggle{display:inline-flex;align-items:center;gap:9px;white-space:nowrap;padding:9px 11px;border:1px solid rgba(113,155,160,.27);border-radius:12px;background:linear-gradient(120deg,rgba(220,250,245,.9),rgba(238,231,255,.76));color:#2b4c60;font-size:12px;font-weight:750;cursor:pointer}
+.rooms-breakfast-toggle input{width:17px;height:17px;accent-color:#368e83;margin:0;flex-shrink:0}
+.rooms-breakfast-focus{width:fit-content;flex-wrap:wrap;margin:9px 0}
+.rooms-breakfast-focus small{font-size:11px;font-weight:500;color:#60778c}
+.rooms-breakfast-chip{font-size:10px;font-weight:750;color:#375d69;background:rgba(197,242,231,.89);border-radius:7px;padding:3px 6px}
