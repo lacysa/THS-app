@@ -425,12 +425,42 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'reservationStatus')) {
+      const nextStatus=cleanText(requested.reservationStatus)
+      if(!['Checkout','Out/In','Stayover','Arrival','Vacant','Dirty','Blocked'].includes(nextStatus))
+        return NextResponse.json({error:'Choose a valid reservation status.'},{status:400})
+    }
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'roomCondition')) {
+      const condition=cleanText(requested.roomCondition)
+      if(!['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].includes(condition))
+        return NextResponse.json({error:'Choose a valid room condition.'},{status:400})
+    }
     const dbPatch:any={updated_at:now}
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'reservationStatus')) dbPatch.reservation_status=cleanText(requested.reservationStatus)
     if (manager && Object.prototype.hasOwnProperty.call(requested,'assignedTo')) dbPatch.assigned_to=cleanText(requested.assignedTo)
     if (manager && Object.prototype.hasOwnProperty.call(requested,'cleanOrder')) dbPatch.clean_order=Number.isFinite(Number(requested.cleanOrder))&&requested.cleanOrder!==null&&requested.cleanOrder!==''?Number(requested.cleanOrder):null
     if (manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')) dbPatch.service_type=cleanText(requested.serviceType)
     if (manager && Object.prototype.hasOwnProperty.call(requested,'stripHold')) dbPatch.strip_hold=cleanText(requested.stripHold)
     if (Object.prototype.hasOwnProperty.call(requested,'notes')) dbPatch.notes=cleanText(requested.notes)
+    if(manager && (Object.prototype.hasOwnProperty.call(requested,'reservationStatus') || Object.prototype.hasOwnProperty.call(requested,'stripHold'))) {
+      const nextStatus=String(requested.reservationStatus ?? existing.reservation_status ?? '')
+      const nextHold=String(requested.stripHold ?? existing.strip_hold ?? '')
+      const blocked=nextStatus.toLowerCase()==='blocked'||nextHold.toLowerCase().includes('hold')
+      if(blocked){
+        dbPatch.room_condition='Blocked'
+        dbPatch.complete=false
+        dbPatch.ready_for_inspection=false
+        dbPatch.inspected=false
+        dbPatch.assigned_to=''
+        dbPatch.clean_order=null
+      }else if(String(existing.reservation_status).toLowerCase()==='blocked'||String(existing.strip_hold||'').toLowerCase().includes('hold')){
+        dbPatch.room_condition='Vacant (Dirty)'
+        dbPatch.complete=false
+        dbPatch.ready_for_inspection=false
+        dbPatch.inspected=false
+      }
+    }
+
 
     const completeRequested = Object.prototype.hasOwnProperty.call(requested,'complete')
     if (completeRequested) {
@@ -517,6 +547,8 @@ export async function PATCH(req: NextRequest) {
         assignedTo:fresh.assigned_to||'',
         cleanOrder:fresh.clean_order??null,
         serviceType:fresh.service_type||'',
+        reservationStatus:fresh.reservation_status||'',
+        stripHold:fresh.strip_hold||'',
         complete:Boolean(fresh.complete),
         readyForInspection:Boolean(fresh.ready_for_inspection),
         inspected:Boolean(fresh.inspected),
