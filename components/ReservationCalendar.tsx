@@ -82,12 +82,12 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
         return <div className="ths-calendar-row" key={room.id} style={{display:'contents'}}>
           <div className="ths-calendar-room">{room.name}</div>
           <div className="ths-calendar-band">
-            {data.days.map(day=>{
+            {data.days.map((day,dayIndex)=>{
               const c=cells.get(day+'|'+room.id)
               const blocked=holds.has(day+'|'+room.id)||Boolean(c?.blocked)
               const note=notes.get(day+'|'+room.id)
               const coveredByStay=[...stays.values()].some(stay=>day>=stay.arrival&&day<stay.departure)
-              return <div key={day} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')}>
+              return <div key={day} data-service-date={day} style={{gridColumn:dayIndex+1,gridRow:1}} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')}>
                 <button type="button" className={'ths-calendar-empty-slot'+(note&&!coveredByStay?' has-note':'')} title={note?.text||room.name+' · '+pretty(day)} aria-label={'Open '+room.name+' on '+pretty(day)+(note&&!coveredByStay?': '+note.text:'')} onClick={()=>setActiveRoom({roomId:room.id,date:day})}>
                   {note&&!coveredByStay&&<span className="ths-calendar-note-text">{note.text}</span>}
                 </button>
