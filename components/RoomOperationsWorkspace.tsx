@@ -88,7 +88,7 @@ export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:
       <span className="ths-ops-room-info">
        <span className="ths-ops-room-name">{row.roomName}<span className="ths-ops-activity">{type}</span></span>
        <span className="ths-ops-guest">{guest?.guest_name||'No active reservation'}</span>
-       <span className="ths-ops-tags">{row.breakfastTag&&<span>Breakfast</span>}{row.lateArrival&&<span>Late arrival</span>}{row.checkIssueOpen&&<span className="alert">Inspection issue</span>}{row.roomNotes&&<span>Room note</span>}{String(row.serviceType||'').toUpperCase()==='RF'&&<span>Refresh</span>}</span>
+       <span className="ths-ops-tags">{row.breakfastTag&&<span>Breakfast</span>}{row.lateArrival&&<span>Late arrival</span>}{row.checkIssueOpen&&<span className="alert">Inspection issue</span>}{row.roomNotes&&<span>Room note</span>}{String(row.serviceType||'').toUpperCase()==='RF'&&<span>Refresh</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span>OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span>Tips collected · {String(row.serviceType||'').trim().toUpperCase().split('-')[1]}</span>}</span>
       </span>
       <span className="ths-ops-row-end"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18}/></span>
      </button>
