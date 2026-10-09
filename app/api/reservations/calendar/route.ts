@@ -16,7 +16,7 @@ export async function GET(req:NextRequest){
   const [roomsRes,linksRes,housekeepingRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('service_date,room_id,reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').gte('service_date',start).lte('service_date',end),
-    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,late_arrival').gte('service_date',start).lte('service_date',end)
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,late_arrival,notes').gte('service_date',start).lte('service_date',end)
   ])
   if(roomsRes.error||linksRes.error||housekeepingRes.error)return NextResponse.json({error:'Could not load calendar'},{status:500})
   const links=linksRes.data||[]
@@ -35,6 +35,7 @@ export async function GET(req:NextRequest){
       const h:any=conditions.get(String(l.service_date)+'|'+String(l.room_id))||{}
       return {reservationId:String(stayId||''),date:String(l.service_date),roomId:String(l.room_id),status:String(l.reservation_status||h.reservation_status||'Vacant'),guest:String(stay.guest_name||''),arrival:String(stay.arrival_date||''),departure:String(stay.checkout_date||''),blocked:String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked',condition:String(h.room_condition||''),lateArrival:Boolean(h.late_arrival)}
     }),
+    notes:(housekeepingRes.data||[]).filter((h:any)=>String(h.notes||'').trim()).map((h:any)=>({date:String(h.service_date),roomId:String(h.room_id),text:String(h.notes).trim()})),
     holds:(housekeepingRes.data||[]).filter((h:any)=>String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked').map((h:any)=>({date:String(h.service_date),roomId:String(h.room_id)}))
   },{headers:{'cache-control':'private, no-store'}})
 }
