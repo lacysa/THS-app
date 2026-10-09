@@ -604,11 +604,12 @@ export default function DailyDashboard({
         </details>
 
         {showMaintenance && (
-          <section className="daily-panel">
-            <Link href="/maintenance" className="daily-panel-head daily-panel-link">
+          <details open className="daily-collapsible-panel daily-panel">
+            <summary className="daily-panel-head">
               <div><Wrench size={17}/><strong>Maintenance</strong></div>
               <span>{maintenanceOpen.length} open</span>
-            </Link>
+            </summary>
+            <Link href="/maintenance" className="daily-collapse-open-link">View maintenance →</Link>
             <div className="daily-list">
               {maintenanceOpen.length===0 && <div className="daily-empty">No open maintenance items.</div>}
               {maintenanceOpen.slice(0,10).map(row=>(
@@ -618,7 +619,7 @@ export default function DailyDashboard({
                 </Link>
               ))}
             </div>
-          </section>
+          </details>
         )}
 
 
