@@ -160,7 +160,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
   const [canHaSignoff,setCanHaSignoff]=useState(false)
   const [canFohSignoff,setCanFohSignoff]=useState(false)
   const [refreshRoomId,setRefreshRoomId]=useState('')
-  const [managerDisplay,setManagerDisplay]=useState<'focus'|'cards'|'table'>('focus')
+  const [managerDisplay,setManagerDisplay]=useState<'focus'|'cards'|'table'>('cards')
   const [selectedRoomId,setSelectedRoomId]=useState(initialRoomId||'')
   const [roomSearch,setRoomSearch]=useState('')
   const rowsRef=useRef<RoomRow[]>([])
@@ -176,7 +176,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
     const query=window.matchMedia('(max-width: 1199px), (max-width: 1600px) and (pointer: coarse) and (hover: none)')
     const sync=()=>{
       setIsCompact(query.matches)
-      if(query.matches){setManagerDisplay('focus');if(!initialRoomId)setFilter(current=>current==='all'?'active':current)}
+      if(query.matches){setManagerDisplay('cards');if(initialRoomId)setExpanded(current=>({...current,[initialRoomId]:true}));else setFilter(current=>current==='all'?'active':current)}
       else{
         try{
           const saved=window.localStorage.getItem('ths-rooms-manager-view')
@@ -610,7 +610,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
   }
 
   function openRoomCard(row:RoomRow){
-    chooseManagerDisplay('focus')
+    chooseManagerDisplay(isCompact?'cards':'focus')
     setSelectedRoomId(row.roomId)
     setExpanded(current=>({...current,[row.roomId]:true}))
     window.requestAnimationFrame(()=>{
@@ -636,7 +636,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
 
   const searchedRows=useMemo(()=>filtered.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[filtered,roomSearch])
   const selectedRow=(initialRoomId?rows.find(row=>row.roomId===selectedRoomId):undefined)||searchedRows.find(row=>row.roomId===selectedRoomId)||searchedRows[0]
-  const displayRows=managerDisplay==='focus'?(selectedRow?[selectedRow]:[]):searchedRows
+  const displayRows=(managerDisplay==='focus'||Boolean(initialRoomId))?(selectedRow?[selectedRow]:[]):searchedRows
   function focusRoom(row:RoomRow){setSelectedRoomId(row.roomId);setExpanded(current=>({...current,[row.roomId]:true}));}
   const counts=useMemo(()=>({
     active:activeRows.filter(r=>!['ready','blocked','occupied'].includes(roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen}))).length,
@@ -789,7 +789,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
           const inspection=checkByRoom.get(row.roomId)
           const effectiveRow={...row,checkIssueOpen:row.checkIssueOpen||inspection?.issueOpen}
           const state=roomWorkflowState(effectiveRow)
-          const isOpen=managerDisplay==='focus'||Boolean(expanded[row.roomId])
+          const isOpen=managerDisplay==='focus'||(Boolean(initialRoomId)&&row.roomId===initialRoomId)||Boolean(expanded[row.roomId])
           const self=selfChecks[row.roomId]
           const zones=[...new Set((self?.items||[]).map(i=>i.zone))]
           const assigned=splitAssigned(row.assignedTo)
