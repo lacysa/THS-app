@@ -23,9 +23,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [issueNote,setIssueNote]=useState('')
  const [guestEdits,setGuestEdits]=useState({guest_comments:'',innkeeper_notes:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
+ useEffect(()=>{setView('room');setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
   const controller=new AbortController()
-  setLoading(true);setError('');setMessage('');setData(null);setView('room')
+  setLoading(true);setError('');setData(null)
   fetch('/api/ops/room?roomId='+encodeURIComponent(roomId)+'&date='+encodeURIComponent(date)+(reservationId?'&reservationId='+encodeURIComponent(reservationId):''),{cache:'no-store',signal:controller.signal})
    .then(async response=>{const value=await response.json();if(!response.ok)throw new Error(value.error||'Could not load room');return value as Data})
    .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setGuestEdits({guest_comments:value.stay?.guest_comments||'',innkeeper_notes:value.stay?.innkeeper_notes||''})}})
