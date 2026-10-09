@@ -529,3 +529,15 @@
 .rooms-picker-note{display:block;grid-column:1/-1;min-width:0;margin-top:5px;padding:7px 9px;border-radius:9px;background:rgba(255,255,255,.8);border:1px solid rgba(103,140,154,.2);font-size:11px;font-weight:650;color:#41586b;line-height:1.35;white-space:normal;overflow-wrap:anywhere;text-align:left}
 .rooms-card-note{padding:10px 16px;background:rgba(237,248,251,.9);border-top:1px solid rgba(103,140,154,.16);color:#37566a;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
 .rooms-card-note strong{color:#273f51}
+
+
+/* Collapsible stayover coverage: quiet by default, accessible on demand */
+.rooms-stayover-collapsible{padding:0;overflow:hidden}
+.rooms-stayover-collapsible>summary{list-style:none;cursor:pointer;padding:14px 16px;margin:0;align-items:center}
+.rooms-stayover-collapsible>summary::-webkit-details-marker{display:none}
+.rooms-stayover-collapsible>summary:focus-visible{outline:3px solid #65aaa1;outline-offset:-3px;border-radius:18px}
+.rooms-stayover-collapsible>summary>span{display:inline-flex;align-items:center;gap:7px}
+.rooms-stayover-collapsible>summary svg{transition:transform .18s ease}
+.rooms-stayover-collapsible[open]>summary svg{transform:rotate(180deg)}
+.rooms-stayover-collapsible>.rooms-stayover-grid{padding:0 16px 16px}
+@media(max-width:680px){.rooms-stayover-collapsible>summary{padding:12px;flex-direction:row;align-items:center}.rooms-stayover-collapsible>summary>span{white-space:normal;flex-shrink:0}.rooms-stayover-collapsible>.rooms-stayover-grid{padding:0 12px 12px}}
