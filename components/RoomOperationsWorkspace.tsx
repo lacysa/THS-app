@@ -95,6 +95,6 @@ export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:
     })}
     {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters. Clear search or select another category.</div>}
    </div>
-   {selected&&<OpsRoomHub roomId={selected.roomId} date={serviceDate} reservationId={selected.reservationId} onClose={()=>setSelected(null)} onUpdate={()=>window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))}/>}
+   {selected&&<OpsRoomHub roomId={selected.roomId} date={serviceDate} reservationId={selected.reservationId} onClose={()=>setSelected(null)}/>}
   </div>
 }
