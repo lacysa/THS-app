@@ -771,3 +771,15 @@ html[data-theme="dark"] .reservation-checkout-only small{
  .ops-hub-choices{max-height:34dvh}
  .ops-hub-package-options{max-height:32dvh}
 }
+
+
+/* OUT and tip envelope collection: distinct manager actions and visible states */
+.ops-hub-action-card.ops-hub-complete-card{
+ border-color:#acd5c5;
+ background:linear-gradient(120deg,#f0fbf6,#f8fcfb);
+}
+.ops-hub-action-card.ops-hub-complete-card .ops-hub-action-value svg{color:#438568}
+.ops-hub-action-card.ops-hub-complete-card:hover{
+ border-color:#8ac3b1;
+ background:linear-gradient(120deg,#e4f8ed,#f2faf7);
+}
