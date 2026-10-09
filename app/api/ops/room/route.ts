@@ -34,6 +34,23 @@ export async function GET(req:NextRequest){
   if(result.error)return NextResponse.json({error:'Unable to load guest stay'},{status:500})
   stay=result.data
  }
+ // Historical responsibility is informational only; never convert it into today's assignment.
+ // Load one prior assignment only for an unassigned, non-occupied room.
+ let lastAssigned:{name:string;date:string}|null=null
+ const needsHistory=Boolean(daily)&&!String(daily?.assigned_to||'').trim()&&String(daily?.room_condition||'').trim().toLowerCase()!=='occupied'
+ if(needsHistory){
+  const previous=await admin.from('housekeeping_daily_rooms')
+   .select('assigned_to,service_date')
+   .eq('room_id',roomId)
+   .lt('service_date',date)
+   .not('assigned_to','is',null)
+   .neq('assigned_to','')
+   .order('service_date',{ascending:false})
+   .limit(1)
+   .maybeSingle()
+  if(previous.error)return NextResponse.json({error:'Unable to load last housekeeper assignment'},{status:500})
+  if(previous.data?.assigned_to)lastAssigned={name:String(previous.data.assigned_to).trim(),date:String(previous.data.service_date)}
+ }
  const caps=gate.access.capabilities||[]
  const canManage=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
  const canInspect=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c)))
@@ -44,7 +61,7 @@ export async function GET(req:NextRequest){
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,
+  permissions:{canManage,canInspect},staffNames,lastAssigned,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
