@@ -1,11 +1,12 @@
 'use client'
 import {useCallback,useEffect,useRef,useState} from 'react'
 import {AlertTriangle,Check,ChevronDown,ClipboardCheck,Pencil,Save,X} from 'lucide-react'
+import OpsActivityLog from '@/components/OpsActivityLog'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null}
 type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null}
-type View='room'|'guest'
+type View='room'|'guest'|'log'
 type Editor='condition'|'activity'|'housekeeper'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
 const activities=['Arrival','Stayover','Checkout','Out/In','Vacant','Dirty','Blocked']
@@ -114,7 +115,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
     {error&&<p className="ops-hub-error" role="alert">{error}</p>}
     {message&&!loading&&<p className="ops-hub-success" role="status"><Check size={16}/>{message}</p>}
     {data&&<>
-     <nav className="ops-hub-tabs" aria-label="Room hub views"><button type="button" className={view==='room'?'active':''} onClick={()=>setView('room')}>Room & checks</button><button type="button" className={view==='guest'?'active':''} onClick={()=>setView('guest')} disabled={!data.stay}>Guest {data.stay?'& notes':''}</button></nav>
+     <nav className="ops-hub-tabs" aria-label="Room hub views"><button type="button" className={view==='room'?'active':''} onClick={()=>setView('room')}>Room & checks</button><button type="button" className={view==='guest'?'active':''} onClick={()=>setView('guest')} disabled={!data.stay}>Guest & notes</button><button type="button" className={view==='log'?'active':''} onClick={()=>setView('log')}>Activity</button></nav>
+     {view==='log'&&<OpsActivityLog serviceDate={date} roomId={roomId} compact/>}
      {view==='room'&&<>
       <div className="ops-hub-kpis">
        <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy} aria-expanded={activeEditor==='condition'} onClick={()=>setActiveEditor(current=>current==='condition'?null:'condition')}>
