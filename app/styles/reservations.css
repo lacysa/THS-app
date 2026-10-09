@@ -448,3 +448,39 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-calendar-reservation-content p{font-size:12px;line-height:1.5;color:#657d89;margin:0}
 .ths-calendar-open-room{display:flex;align-items:center;justify-content:space-between;width:100%;border:1px solid #b9d6d5;border-radius:13px;background:linear-gradient(110deg,#e0f8f2,#ece8ff);padding:14px;color:#284c60;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
 @media(max-width:700px){.ths-calendar-reservation-backdrop{align-items:flex-end}.ths-calendar-reservation-sheet{width:100%;max-height:85dvh;border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom)}.ths-calendar-reservation-head{padding:17px 19px}.ths-calendar-reservation-content{padding:17px}}
+
+
+/* iOS Safari can independently inflate text in grid-spanning reservation buttons.
+   Disable automatic text inflation within the tape chart and use one fixed type scale. */
+.ths-calendar-scroll,
+.ths-calendar-grid,
+.ths-calendar-band,
+.ths-calendar-stay,
+.ths-calendar-stay strong,
+.ths-calendar-stay small,
+.ths-calendar-room,
+.ths-calendar-day,
+.ths-calendar-corner{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+.ths-calendar-stay{
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:12px!important;
+  font-weight:400;
+  line-height:1.25!important;
+}
+.ths-calendar-stay>strong{
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:12px!important;
+  font-weight:750!important;
+  line-height:15px!important;
+  letter-spacing:0!important;
+}
+.ths-calendar-stay>small{
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:10px!important;
+  font-weight:500!important;
+  line-height:13px!important;
+  letter-spacing:0!important;
+}
