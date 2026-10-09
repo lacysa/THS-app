@@ -811,9 +811,9 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
               </div>
             </button>
 
-            {isManager(access)&&!isBlocked(row)&&!isStayover(row)&&<div className="rooms-dirty-action"><button type="button" className="ops-secondary-btn" disabled={normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected} onClick={()=>void markRoomDirty(row)}><AlertTriangle size={15}/>{normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected?'Marked dirty':'Mark dirty · reopen clean'}</button></div>}
-            {row.notes?.trim()&&<div className="rooms-card-note" title={row.notes}><strong>Room notes:</strong> {row.notes}</div>}
-            {!isBlocked(row)&&<div className="rooms-progress-summary" aria-label="Room workflow progress">
+            {!isOpen&&isManager(access)&&!isBlocked(row)&&!isStayover(row)&&<div className="rooms-dirty-action"><button type="button" className="ops-secondary-btn" disabled={normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected} onClick={()=>void markRoomDirty(row)}><AlertTriangle size={15}/>{normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected?'Marked dirty':'Mark dirty · reopen clean'}</button></div>}
+            {!isOpen&&row.notes?.trim()&&<div className="rooms-card-note" title={row.notes}><strong>Room notes:</strong> {row.notes}</div>}
+            {!isOpen&&!isBlocked(row)&&<div className="rooms-progress-summary" aria-label="Room workflow progress">
               {requiresRoomCheck(row)
                 ? <><span><strong>{row.inspected?'Inspection passed':row.checkIssueOpen?'Correction required':row.complete||isArrivalOnly(row)?'Awaiting inspection':'Awaiting submission'}</strong></span></>
                 : <span><strong>{row.complete?'Service complete':'No service due'}</strong></span>}
@@ -823,6 +823,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
             {isOpen&&<div className="rooms-card-body">
               {row.checkIssueOpen&&<div className="rooms-correction-box"><AlertTriangle size={17}/><div><strong>Correction required</strong><span>{row.checkIssueNote||'A room check found an issue that must be corrected.'}</span>{row.checkIssueByName&&<small>Flagged by {row.checkIssueByName}</small>}</div></div>}
 
+              <div className="rooms-action-heading"><strong>Room controls</strong><span>Make changes without opening another page</span></div>
               <div className="rooms-meta-grid">
                 <div><span>Assigned</span><strong>{assigned.length?assigned.join(', '):'Unassigned'}</strong></div>
                 <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
@@ -831,7 +832,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
                 {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
               </div>
 
-              {isManager(access)&&<details className="rooms-details-drawer"><summary>Manage room · status, staff, breakfast, packages & blocking</summary><div className="rooms-manager-edit">
+              {isManager(access)&&<details open={Boolean(initialRoomId)} className="rooms-details-drawer rooms-primary-controls"><summary>Room status, assignments & services</summary><div className="rooms-manager-edit">
                 <div className="rooms-manager-context">
                   <div><span>Reservation</span><strong>{row.reservationStatus||'Not set'}</strong></div>
                   <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
