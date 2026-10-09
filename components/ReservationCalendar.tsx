@@ -1,5 +1,5 @@
 'use client'
-import {useEffect,useMemo,useState} from 'react'
+import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
 import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw} from 'lucide-react'
 import OpsRoomHub from '@/components/OpsRoomHub'
 
@@ -10,6 +10,10 @@ function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'sho
 function occupied(c:Cell){return Boolean(c.guest&&c.arrival&&c.departure&&c.date>=c.arrival&&c.date<c.departure)}
 export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
   const [start,setStart]=useState(()=>shift(serviceDate,-2))
+  const [focusedDate,setFocusedDate]=useState(serviceDate)
+  const [scrollMode,setScrollMode]=useState<'focus'|'beginning'>('focus')
+  const [scrollRequest,setScrollRequest]=useState(0)
+  const scrollRef=useRef<HTMLDivElement|null>(null)
   const [data,setData]=useState<Data|null>(null)
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
@@ -25,6 +29,27 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
       .finally(()=>{if(active)setLoading(false)})
     return()=>{active=false}
   },[start,reload])
+  function focusOnDay(day:string){
+    setFocusedDate(day)
+    setStart(shift(day,-2))
+    setScrollMode('focus')
+    setScrollRequest(n=>n+1)
+  }
+  function viewHistory(){
+    setFocusedDate(serviceDate)
+    setStart(shift(serviceDate,-6))
+    setScrollMode('beginning')
+    setScrollRequest(n=>n+1)
+  }
+  useLayoutEffect(()=>{
+    // Only reposition when opening the calendar or explicitly changing its date window.
+    // A background data refresh or room save must not move a manually scrolled view.
+    if(!data||data.start!==start||!scrollRef.current)return
+    const scroller=scrollRef.current
+    const roomHeader=scroller.querySelector<HTMLElement>('.ths-calendar-corner')
+    const target=Array.from(scroller.querySelectorAll<HTMLElement>('.ths-calendar-day')).find(el=>el.dataset.date===focusedDate)
+    scroller.scrollLeft=scrollMode==='beginning'?0:Math.max(0,(target?.offsetLeft||0)-(roomHeader?.offsetWidth||0))
+  },[data?.start,start,focusedDate,scrollMode,scrollRequest])
   const cells=useMemo(()=>new Map((data?.cells||[]).map(c=>[c.date+'|'+c.roomId,c])),[data])
   const notes=useMemo(()=>new Map((data?.notes||[]).map(n=>[n.date+'|'+n.roomId,n])),[data])
   const holds=useMemo(()=>new Set((data?.holds||[]).map(h=>h.date+'|'+h.roomId)),[data])
@@ -32,19 +57,19 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
     <div className="ths-calendar-toolbar">
       <div><strong>Ops</strong><small>7-day window · 2 previous days by default</small></div>
       <div className="ths-calendar-controls">
-        <button type="button" title="Previous week" aria-label="Previous week" onClick={()=>setStart(shift(start,-7))}><ChevronLeft size={18}/></button>
-        <button type="button" onClick={()=>setStart(shift(serviceDate,-2))}>Today</button>
-        <button type="button" title="Next week" aria-label="Next week" onClick={()=>setStart(shift(start,7))}><ChevronRight size={18}/></button>
+        <button type="button" title="Previous week" aria-label="Previous week" onClick={()=>focusOnDay(shift(focusedDate,-7))}><ChevronLeft size={18}/></button>
+        <button type="button" onClick={()=>focusOnDay(serviceDate)}>Today</button>
+        <button type="button" title="Next week" aria-label="Next week" onClick={()=>focusOnDay(shift(focusedDate,7))}><ChevronRight size={18}/></button>
         <button type="button" aria-label="Refresh calendar" onClick={()=>setReload(n=>n+1)}><RefreshCw size={16}/></button>
       </div>
     </div>
-    <div className="ths-calendar-date"><CalendarDays size={17}/><input aria-label="First date" type="date" value={start} onChange={e=>{if(e.target.value)setStart(e.target.value)}}/><div className="ths-calendar-shortcuts"><button type="button" aria-pressed={start===shift(serviceDate,-2)} onClick={()=>setStart(shift(serviceDate,-2))}>Daily ops</button><button type="button" aria-pressed={start===shift(serviceDate,-6)} onClick={()=>setStart(shift(serviceDate,-6))}>Past 7 days</button></div></div>
+    <div className="ths-calendar-date"><CalendarDays size={17}/><input aria-label="Focus date" type="date" value={focusedDate} onChange={e=>{if(e.target.value)focusOnDay(e.target.value)}}/><div className="ths-calendar-shortcuts"><button type="button" aria-pressed={start===shift(serviceDate,-2)} onClick={()=>focusOnDay(serviceDate)}>Daily ops</button><button type="button" aria-pressed={start===shift(serviceDate,-6)} onClick={viewHistory}>Past 7 days</button></div></div>
     <p className="ths-calendar-help">Daily ops shows the previous 2 days, today, and the next 4. Past 7 days shows the last 6 days plus today. Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.</p>
     {error&&<div role="alert" className="ths-ops-empty">{error}</div>}
     {loading&&!data&&<div className="ths-ops-empty">Loading calendar…</div>}
-    {data&&<div className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
+    {data&&<div ref={scrollRef} className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
       <div className="ths-calendar-corner">Room</div>
-      {data.days.map(day=><div className={day===serviceDate?'ths-calendar-day today':'ths-calendar-day'} key={day}>{pretty(day)}</div>)}
+      {data.days.map(day=><div data-date={day} className={day===serviceDate?'ths-calendar-day today':'ths-calendar-day'} key={day}>{pretty(day)}</div>)}
       {data.rooms.map(room=>{
         const matching=data.cells.filter(c=>c.roomId===room.id)
         const stays=new Map<string,Cell>()
