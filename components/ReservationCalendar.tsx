@@ -65,7 +65,7 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
             </button>)}
           </div>
         </div>
-      }})}
+      })}
     </div></div>}
     {selected&&<div className="ths-calendar-selection">
       <div><strong>{data?.rooms.find(r=>r.id===selected.roomId)?.name}</strong><span>{pretty(selected.date)}</span></div>
