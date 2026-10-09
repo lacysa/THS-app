@@ -430,3 +430,21 @@ html[data-theme="dark"] .reservation-checkout-only small{
 }
 .ths-calendar-band{z-index:auto}
 .ths-calendar-stay{z-index:1}
+
+
+/* Reservation tap opens details in-place, without a follow-up selection card */
+.ths-calendar-reservation-backdrop{position:fixed;inset:0;z-index:1100;display:flex;justify-content:flex-end;align-items:stretch;background:rgba(17,36,51,.44)}
+.ths-calendar-reservation-sheet{width:min(100%,460px);display:flex;flex-direction:column;max-height:100dvh;overflow:auto;background:#f9fcfd;box-shadow:-10px 0 40px rgba(19,40,54,.2)}
+.ths-calendar-reservation-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:22px;background:linear-gradient(115deg,#dbf7f0,#f0ecff);border-bottom:1px solid #cfe2e5}
+.ths-calendar-reservation-head>div{display:grid;gap:5px;min-width:0}
+.ths-calendar-reservation-head span{font-size:11px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:#5d7b89}
+.ths-calendar-reservation-head strong{font-size:21px;font-weight:800;color:#263e52;overflow-wrap:anywhere}
+.ths-calendar-reservation-head button{display:grid;place-items:center;width:42px;height:42px;border:1px solid #ccdae3;border-radius:12px;background:rgba(255,255,255,.75);color:#294e60;cursor:pointer}
+.ths-calendar-reservation-content{padding:20px;display:grid;gap:18px}
+.ths-calendar-reservation-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ths-calendar-reservation-meta>div{min-width:0;display:grid;gap:5px;padding:13px;border:1px solid #e0e8ee;border-radius:13px;background:#fff}
+.ths-calendar-reservation-meta span{font-size:11px;color:#70818d;font-weight:650}
+.ths-calendar-reservation-meta strong{font-size:13px;color:#233e50;overflow-wrap:anywhere}
+.ths-calendar-reservation-content p{font-size:12px;line-height:1.5;color:#657d89;margin:0}
+.ths-calendar-open-room{display:flex;align-items:center;justify-content:space-between;width:100%;border:1px solid #b9d6d5;border-radius:13px;background:linear-gradient(110deg,#e0f8f2,#ece8ff);padding:14px;color:#284c60;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+@media(max-width:700px){.ths-calendar-reservation-backdrop{align-items:flex-end}.ths-calendar-reservation-sheet{width:100%;max-height:85dvh;border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom)}.ths-calendar-reservation-head{padding:17px 19px}.ths-calendar-reservation-content{padding:17px}}
