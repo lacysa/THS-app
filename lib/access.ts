@@ -167,7 +167,7 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
     ])
   }
 
-  if (key === 'reservations') {
+  if (key === 'ops' || key === 'reservations') {
     return access.isAdmin || hasAnyCapability(access,[
       'foh_manager','manager','general_manager','operations_manager','owner'
     ])
