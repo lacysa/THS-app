@@ -501,3 +501,11 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-calendar-stay>small{font-size:10px!important;line-height:13px!important;font-weight:500!important}
 .ths-calendar-note{justify-content:center}
 .ths-calendar-note>.ths-calendar-note-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:anywhere;max-width:100%;font-family:Arial,Helvetica,sans-serif!important;font-size:11px!important;line-height:14px!important;font-weight:650!important;color:#385779}
+
+
+/* Historical operations lookback: existing seven-day request, no extra payload */
+.ths-calendar-date{flex-wrap:wrap}
+.ths-calendar-shortcuts{display:inline-flex;gap:5px;flex-wrap:wrap;margin-left:auto}
+.ths-calendar-shortcuts button{min-height:36px;padding:7px 11px;border:1px solid #c9dade;border-radius:10px;background:rgba(255,255,255,.8);font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:750;color:#395a6c;cursor:pointer}
+.ths-calendar-shortcuts button[aria-pressed=true]{background:linear-gradient(110deg,#d7f5ee,#e9e5ff);border-color:#a4cbc7;color:#245852}
+@media(max-width:700px){.ths-calendar-shortcuts{width:100%;margin-left:0}.ths-calendar-shortcuts button{flex:1}}
