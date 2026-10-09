@@ -116,15 +116,31 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(decision==='fail'&&!issueNote.trim()){setError('Describe the housekeeping issue before failing the inspection.');return}
   await run('/api/room-checks',{date,roomId,decision,note:issueNote.trim()},decision==='pass'?'Inspection passed':decision==='fixed'?'Correction marked ready for reinspection':'Issue reported to housekeeping')
  }
- async function saveGuest(){
-  if(!data?.stay||!canManage)return
-  const patch:Record<string,string>={}
-  for(const key of ['guest_comments','innkeeper_notes'] as const){
-   if(guestEdits[key]!==String(data.stay[key]||''))patch[key]=guestEdits[key]
+ async function saveGuestField(field:EditableGuestField,value:string){
+  if(!data?.stay||!canManage)return false
+  if(field==='occupancy'){
+   const count=Number(value)
+   if(!Number.isInteger(count)||count<1||count>20){setError('Guest count must be between 1 and 20.');return false}
   }
-  if(!Object.keys(patch).length)return
-  await run('/api/reservations/stay',{id:data.stay.id,patch},'Guest notes saved')
+  return await run('/api/reservations/stay',{id:data.stay.id,patch:{[field]:field==='occupancy'?Number(value):value}},'Guest information saved')
  }
+ async function toggleTag(kind:'lateArrival'|'stripHold'|'breakfastTag'){
+  if(!daily||!canManage)return
+  const isBlocked=blocked
+  const patch=kind==='lateArrival'?{lateArrival:!daily.late_arrival}:
+   kind==='stripHold'?{stripHold:isBlocked?'':'Hold'}:
+   {breakfastTag:!daily.breakfast_tag}
+  await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Room tag updated')
+ }
+ async function setService(code:string){
+  if(!daily||!canManage)return
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:code}},'Service updated'))setActiveEditor(null)
+ }
+ async function savePackages(){
+  if(!daily||!canManage)return
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{packageIds:manualPackageDraft}},'Room packages saved'))setActiveEditor(null)
+ }
+
  return <div className="ops-hub-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
   <section className="ops-hub-sheet" role="dialog" aria-modal="true" aria-label="Room operations hub">
    <header className="ops-hub-head">
