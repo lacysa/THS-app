@@ -63,7 +63,7 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
               const note=notes.get(day+'|'+room.id)
               const coveredByStay=[...stays.values()].some(stay=>day>=stay.arrival&&day<stay.departure)
               return <div key={day} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')} title={room.name+' · '+pretty(day)+(blocked?' · Blocked':'')}>
-                {note&&!coveredByStay&&<button type="button" className="ths-calendar-note" title={note.text} aria-label={'Room note for '+room.name+' on '+pretty(day)+': '+note.text} onClick={()=>setSelectedNote(note)}><span>Note</span><small>{note.text}</small></button>}
+                {note&&!coveredByStay&&<button type="button" className="ths-calendar-note" title={note.text} aria-label={'Room note for '+room.name+' on '+pretty(day)+': '+note.text} onClick={()=>setSelectedNote(note)}><span className="ths-calendar-note-text">{note.text}</span></button>}
               </div>
             })}
             {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={()=>setSelected(bar)}>
