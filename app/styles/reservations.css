@@ -517,3 +517,51 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-calendar-stay-text{display:flex;flex-direction:column;justify-content:center;gap:3px;width:142px;max-width:100%;min-width:0;flex:0 0 auto;font-family:Arial,Helvetica,sans-serif!important;font-size:12px!important;line-height:1.25!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
 .ths-calendar-stay-text>strong{display:block;width:100%;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:inherit!important;font-size:12px!important;line-height:16px!important;font-weight:750!important}
 .ths-calendar-stay-text>small{display:block;width:100%;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:inherit!important;font-size:10px!important;line-height:13px!important;font-weight:500!important}
+
+
+/* Ops: the entire daily room grid is actionable, even without a reservation. */
+.ths-calendar-day-bg{position:relative}
+.ths-calendar-empty-slot{position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-start;min-width:0;min-height:0;max-width:100%;padding:5px;border:0;background:transparent;color:#42627c;cursor:pointer;text-align:left;font:inherit}
+.ths-calendar-empty-slot.has-note{inset:5px 4px;border:1px solid #c9d8ee;border-radius:9px;background:linear-gradient(115deg,#eaf2ff,#f3f0ff);padding:6px 9px}
+.ths-calendar-empty-slot>.ths-calendar-note-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:anywhere;font:650 11px/14px Arial,Helvetica,sans-serif!important;text-size-adjust:none;-webkit-text-size-adjust:none}
+.ths-calendar-empty-slot:focus-visible{outline:2px solid #5974d4;outline-offset:-2px;border-radius:8px}
+.ths-calendar-empty-slot:not(.has-note):hover{background:rgba(105,183,188,.11)}
+/* Shared Ops room hub; status and next action precede reservation reference fields. */
+.ops-hub-backdrop{position:fixed;inset:0;z-index:1200;display:flex;justify-content:flex-end;background:rgba(17,33,48,.48)}
+.ops-hub-sheet{width:min(100%,630px);max-height:100dvh;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#f7fafc;box-shadow:-14px 0 45px rgba(23,45,57,.2);font-family:Arial,Helvetica,sans-serif;text-size-adjust:none;-webkit-text-size-adjust:none}
+.ops-hub-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:19px 21px;background:linear-gradient(110deg,#e0f7f1,#f0ebff);border-bottom:1px solid #d2e3e7;flex-shrink:0}
+.ops-hub-head>div{display:grid;gap:4px;min-width:0}.ops-hub-head small{font:750 11px/14px Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5b7785}
+.ops-hub-head h2{margin:0;font:800 23px/1.16 Arial,Helvetica,sans-serif;color:#1f3b4e;letter-spacing:-.02em}
+.ops-hub-head span{font:500 13px/1.35 Arial,Helvetica,sans-serif;color:#5f7486;overflow-wrap:anywhere}
+.ops-hub-head button{flex-shrink:0;display:grid;place-items:center;width:40px;height:40px;border:1px solid #d0dce4;border-radius:12px;background:#fff9;color:#2e4e60;cursor:pointer}
+.ops-hub-content{overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0;display:grid;align-content:start;gap:15px;padding:19px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+.ops-hub-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:4px;border:1px solid #d9e5e9;border-radius:14px;background:#edf3f7}
+.ops-hub-tabs button{min-height:42px;border:0;border-radius:10px;background:transparent;font:750 13px/1.2 Arial,Helvetica,sans-serif;color:#586d7c;cursor:pointer}
+.ops-hub-tabs button.active{background:#fff;color:#224758;box-shadow:0 2px 8px #24435312}
+.ops-hub-tabs button:disabled{opacity:.4;cursor:default}
+.ops-hub-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ops-hub-field{min-width:0;display:grid;gap:5px;align-content:start;padding:13px;border:1px solid #e1e9ec;border-radius:13px;background:rgba(255,255,255,.86)}
+.ops-hub-field>span{font:700 10px/1.2 Arial,Helvetica,sans-serif;color:#728593;text-transform:uppercase;letter-spacing:.04em}
+.ops-hub-field strong{font:750 13px/1.3 Arial,Helvetica,sans-serif;color:#233f51;overflow-wrap:anywhere}
+.ops-hub-field a{color:#285c82}
+.ops-hub-section{display:grid;align-content:start;gap:10px;padding:15px;border:1px solid #dce6ec;border-radius:16px;background:#fff}
+.ops-hub-section h3{display:flex;align-items:center;gap:8px;margin:0;font:800 15px/1.3 Arial,Helvetica,sans-serif;color:#294658}
+.ops-hub-section textarea,.ops-hub-section select{width:100%;min-width:0;border:1px solid #cad9e2;border-radius:11px;background:#fbfdff;color:#233d4e;font:500 14px/1.5 Arial,Helvetica,sans-serif;padding:10px 11px}
+.ops-hub-section select{min-height:43px;cursor:pointer}
+.ops-hub-section textarea:focus,.ops-hub-section select:focus{outline:2px solid #86c6c0;outline-offset:0}
+.ops-hub-label{display:grid;gap:6px;font:700 12px/1.3 Arial,Helvetica,sans-serif;color:#486477}
+.ops-hub-muted{margin:0;font:500 12px/1.5 Arial,Helvetica,sans-serif;color:#6c8191}
+.ops-hub-note{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:500 13px/1.5 Arial,Helvetica,sans-serif;color:#385465}
+.ops-hub-issue{display:flex;align-items:flex-start;gap:10px;padding:14px;border:1px solid #eccdb7;border-radius:14px;background:#fff7ec;color:#9d6643}
+.ops-hub-issue>div{min-width:0}.ops-hub-issue strong{font-size:13px}.ops-hub-issue p{margin:5px 0 0;font-size:13px;line-height:1.45;color:#7e5540;white-space:pre-wrap;overflow-wrap:anywhere}
+.ops-hub-good{display:flex;align-items:center;gap:7px;padding:10px;border-radius:10px;background:#e3f4ec;color:#35725a;margin:0;font-weight:750;font-size:12px}
+.ops-hub-inspection-actions{display:grid;gap:11px}
+.ops-hub-primary,.ops-hub-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:43px;padding:11px 14px;border-radius:11px;font:750 13px/1.2 Arial,Helvetica,sans-serif;cursor:pointer}
+.ops-hub-primary{border:1px solid #285767;background:#25475d;color:#fff}
+.ops-hub-secondary{border:1px solid #cbdde4;background:#f6fafc;color:#38576b}
+.ops-hub-primary:disabled,.ops-hub-secondary:disabled{opacity:.46;cursor:not-allowed}
+.ops-hub-guest{gap:12px}
+.ops-hub-error,.ops-hub-success{margin:0;padding:11px 13px;border-radius:11px;font:700 12px/1.4 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
+.ops-hub-error{border:1px solid #e9bcb9;background:#fceeea;color:#963c3a}
+.ops-hub-success{display:flex;align-items:center;gap:8px;border:1px solid #c5e7da;background:#e5f7f0;color:#2c755c}
+@media(max-width:700px){.ops-hub-backdrop{align-items:flex-end}.ops-hub-sheet{width:100%;height:92dvh;max-height:92dvh;border-radius:20px 20px 0 0}.ops-hub-head{padding:16px 16px}.ops-hub-head h2{font-size:20px}.ops-hub-content{padding:13px;gap:12px}.ops-hub-section{padding:13px}}
