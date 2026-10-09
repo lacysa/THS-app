@@ -1,8 +1,35 @@
 import {NextRequest,NextResponse} from 'next/server'
-import {getStaffAccess} from '@/lib/access'
+import {getStaffAccess,canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 export const dynamic='force-dynamic'
 const fields=['guest_name','guest_phone','door_code','arrival_date','checkout_date','occupancy','rate_plan','check_in_time','products_raw','dietary_restrictions','reason_for_visit','guest_comments','innkeeper_notes'] as const
+
+export async function GET(req:NextRequest){
+ const [opsGate,reservationGate]=await Promise.all([canUseModule('ops'),canUseModule('reservations')])
+ const access=opsGate.access||reservationGate.access
+ if(!access)return NextResponse.json({error:'Unauthorized'},{status:401})
+ if(!opsGate.allowed&&!reservationGate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
+ const id=req.nextUrl.searchParams.get('id')||''
+ const date=req.nextUrl.searchParams.get('date')||''
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+   return NextResponse.json({error:'Invalid reservation ID'},{status:400})
+ const admin=createSupabaseAdmin()
+ const {data:stay,error}=await admin.from('reservation_stays')
+  .select('id,reservation_number,reservation_key,guest_name,guest_phone,arrival_date,checkout_date,room_id,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes,needs_review,active')
+  .eq('id',id).maybeSingle()
+ if(error)return NextResponse.json({error:'Could not load reservation'},{status:500})
+ if(!stay)return NextResponse.json({error:'Reservation not found'},{status:404})
+ const roomPromise=admin.from('rooms').select('name').eq('id',stay.room_id).maybeSingle()
+ const requestedDate=/^20\d{2}-\d{2}-\d{2}$/.test(date)?date:String(stay.arrival_date||'')
+ const dailyPromise=/^20\d{2}-\d{2}-\d{2}$/.test(requestedDate)
+ ?admin.from('housekeeping_daily_rooms').select('notes,breakfast_tag,late_arrival,room_condition,reservation_status,service_type,strip_hold').eq('service_date',requestedDate).eq('room_id',stay.room_id).maybeSingle()
+ :Promise.resolve({data:null,error:null})
+ const [roomResult,dayResult]=await Promise.all([roomPromise,dailyPromise])
+ if(roomResult.error||dayResult.error)return NextResponse.json({error:'Could not load reservation operations details'},{status:500})
+ const mayEdit=!access.isPreviewMode&&(access.isAdmin||(access.capabilities||[]).some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
+ return NextResponse.json({stay,roomName:String(roomResult.data?.name||'Room'),day:dayResult.data||null,serviceDate:requestedDate,canEdit:mayEdit},{headers:{'cache-control':'private, no-store'}})
+}
+
 export async function PATCH(req:NextRequest){
  const access=await getStaffAccess()
  if(!access)return NextResponse.json({error:'Unauthorized'},{status:401})
