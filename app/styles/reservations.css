@@ -279,3 +279,46 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-reservation-breakfast-chip{display:inline-flex;align-items:center;max-width:calc(100% - 24px);margin:9px 12px 0;padding:5px 9px;border-radius:9px;background:#d4f3ed;color:#24695f;font-size:11px;font-weight:750}
 .ths-reservation-room-notes{display:grid;gap:5px;margin:10px 12px;padding:11px 12px;border-radius:11px;border:1px solid #cee0e7;background:#f6fbfd;color:#2a485a;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
 .ths-reservation-room-notes strong{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#5c7785}
+
+
+/* Streamlined Room Operations: compact, task-first mobile workspace */
+.ths-operations-simplified{max-width:1180px;margin:0 auto;padding-bottom:32px}
+.ths-ops-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:5px;margin:0 0 14px;border:1px solid #dbe5eb;border-radius:16px;background:linear-gradient(110deg,#e4faf6,#f5f4ff)}
+.ths-ops-nav button{min-height:46px;border:0;border-radius:12px;background:transparent;font:inherit;font-size:14px;font-weight:750;color:#39546a;cursor:pointer}
+.ths-ops-nav button.active{background:#203544;color:#fff;box-shadow:0 3px 10px #20354422}
+.ths-ops-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:17px}
+.ths-ops-stats button{display:grid;gap:2px;place-items:center;padding:12px 4px;border:1px solid #e0e8ec;border-radius:15px;background:#ffffffd9;color:#244357;cursor:pointer}
+.ths-ops-stats button[aria-pressed=true]{outline:2px solid #6aaea5;background:#e8f6f3}
+.ths-ops-stats strong{font-size:23px;line-height:1.2}
+.ths-ops-stats span{font-size:11px;font-weight:700;text-align:center}
+.ths-ops-list-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}
+.ths-ops-list-heading>strong{font-size:18px;color:#233d50}
+.ths-ops-list-heading>strong span{color:#708391;font-size:12px;font-weight:600}
+.ths-ops-list-heading button{display:inline-flex;align-items:center;gap:5px;border:1px solid #d3e2e7;background:#fff;border-radius:10px;padding:9px;color:#31556a;font-size:12px;font-weight:700;cursor:pointer}
+.ths-ops-list-heading button.active{background:#d7eee8}
+.ths-ops-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d1e0e5;border-radius:12px;padding:0 12px;margin-bottom:11px;color:#597280}
+.ths-ops-search input{flex:1;min-width:0;min-height:44px;border:0;outline:0;background:transparent;font:inherit;color:#1d3645}
+.ths-ops-search button{border:0;background:none;color:inherit;cursor:pointer}
+.ths-ops-room-list{display:grid;gap:8px}
+.ths-ops-room-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:13px 14px;border:1px solid #dbe5e9;border-left:4px solid #9bcac0;border-radius:15px;background:#ffffffed;box-shadow:0 3px 10px #1a405010;cursor:pointer;color:#223746;font:inherit}
+.ths-ops-room-row:hover{background:#f1fbfa}
+.ths-ops-room-info{display:grid;gap:5px;min-width:0;flex:1}
+.ths-ops-room-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px;font-weight:800}
+.ths-ops-activity{padding:3px 7px;border-radius:999px;background:#edf4f7;color:#496779;font-size:10px;font-weight:750}
+.ths-ops-guest{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#657987;font-size:12px}
+.ths-ops-tags{display:flex;flex-wrap:wrap;gap:4px}
+.ths-ops-tags>span{background:#dff2ed;border-radius:7px;padding:3px 6px;color:#316555;font-size:10px;font-weight:750}
+.ths-ops-tags>span.alert{background:#fae5df;color:#943e36}
+.ths-ops-row-end{display:flex;gap:6px;align-items:center;flex-shrink:0;color:#70838f}
+.ths-ops-condition{display:inline-block;max-width:130px;overflow-wrap:break-word;text-align:center;padding:6px 9px;border-radius:999px;background:#edf1f5;color:#50616e;font-size:11px;font-weight:750}
+.ths-ops-condition.ready{background:#e1f2e8;color:#30654b}
+.ths-ops-condition.occupied{background:#e7effa;color:#376187}
+.ths-ops-condition.warning{background:#fae8e4;color:#95443c}
+.ths-ops-empty{padding:25px;text-align:center;border:1px dashed #ccdce3;border-radius:14px;color:#637884}
+.ths-ops-work-area{min-width:0}
+.ths-ops-panel-backdrop{position:fixed;inset:0;z-index:1000;background:#142c3970;display:flex;justify-content:flex-end}
+.ths-ops-detail-panel{width:min(100%,840px);height:100%;min-height:0;background:#f7fafb;display:flex;flex-direction:column;box-shadow:-12px 0 36px #132c3940}
+.ths-ops-panel-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px;padding-top:max(12px,env(safe-area-inset-top));border-bottom:1px solid #d6e2e7;background:linear-gradient(110deg,#e4faf6,#f4efff)}
+.ths-ops-panel-header button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:#27485a;font:inherit;font-weight:750;cursor:pointer;padding:10px}
+.ths-ops-panel-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:15px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+@media(max-width:700px){.ths-ops-nav{margin-bottom:10px}.ths-ops-stats{gap:5px}.ths-ops-stats button{padding:10px 2px}.ths-ops-stats strong{font-size:20px}.ths-ops-stats span{font-size:10px}.ths-ops-room-row{padding:12px 10px}.ths-ops-condition{max-width:90px;font-size:10px}.ths-ops-panel-backdrop{align-items:flex-end}.ths-ops-detail-panel{height:94dvh;border-radius:20px 20px 0 0}.ths-ops-panel-body{padding:10px}}
