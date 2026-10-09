@@ -8,7 +8,7 @@ function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCD
 function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
 function occupied(c:Cell){return Boolean(c.guest&&c.arrival&&c.departure&&c.date>=c.arrival&&c.date<c.departure)}
 export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDate:string;onOpenRoom?:(id:string)=>void}){
-  const [start,setStart]=useState(serviceDate)
+  const [start,setStart]=useState(()=>shift(serviceDate,-2))
   const [data,setData]=useState<Data|null>(null)
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
@@ -30,16 +30,16 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
   const holds=useMemo(()=>new Set((data?.holds||[]).map(h=>h.date+'|'+h.roomId)),[data])
   return <div className="ths-calendar">
     <div className="ths-calendar-toolbar">
-      <div><strong>Ops</strong><small>Room calendar · 7-day view</small></div>
+      <div><strong>Ops</strong><small>7-day window · 2 previous days by default</small></div>
       <div className="ths-calendar-controls">
         <button type="button" title="Previous week" aria-label="Previous week" onClick={()=>setStart(shift(start,-7))}><ChevronLeft size={18}/></button>
-        <button type="button" onClick={()=>setStart(serviceDate)}>Today</button>
+        <button type="button" onClick={()=>setStart(shift(serviceDate,-2))}>Today</button>
         <button type="button" title="Next week" aria-label="Next week" onClick={()=>setStart(shift(start,7))}><ChevronRight size={18}/></button>
         <button type="button" aria-label="Refresh calendar" onClick={()=>setReload(n=>n+1)}><RefreshCw size={16}/></button>
       </div>
     </div>
-    <div className="ths-calendar-date"><CalendarDays size={17}/><input aria-label="First date" type="date" value={start} onChange={e=>{if(e.target.value)setStart(e.target.value)}}/></div>
-    <p className="ths-calendar-help">Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.</p>
+    <div className="ths-calendar-date"><CalendarDays size={17}/><input aria-label="First date" type="date" value={start} onChange={e=>{if(e.target.value)setStart(e.target.value)}}/><div className="ths-calendar-shortcuts"><button type="button" aria-pressed={start===shift(serviceDate,-2)} onClick={()=>setStart(shift(serviceDate,-2))}>Daily ops</button><button type="button" aria-pressed={start===shift(serviceDate,-6)} onClick={()=>setStart(shift(serviceDate,-6))}>Past 7 days</button></div></div>
+    <p className="ths-calendar-help">Daily ops shows the previous 2 days, today, and the next 4. Past 7 days shows the last 6 days plus today. Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.</p>
     {error&&<div role="alert" className="ths-ops-empty">{error}</div>}
     {loading&&<div className="ths-ops-empty">Loading calendar…</div>}
     {data&&!loading&&<div className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
