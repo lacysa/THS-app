@@ -97,9 +97,16 @@ export async function GET(req:NextRequest){
  const staffResult=canManage?await admin.from('staff_members').select('name,auth_user_id').eq('active',true).order('name'):null
  if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
  const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
- const ownName=String((staffResult?.data||[]).find((m:any)=>String(m.auth_user_id)===gate.access.userId)?.name||'').trim()
- const initials=ownName.split(/\s+/).filter(Boolean).map((word:string)=>word[0]).join('').toUpperCase()
- const managerInitials=initials.slice(0,4)
+ // Keep the legacy OUT-XX envelope initial format used by Housekeeping.
+ // Match the existing staff initials mapping so the same manager shows consistently.
+ const managerText=[gate.access.name,gate.access.preferredName,gate.access.email].filter(Boolean).join(' ').toLowerCase()
+ const ownName=String((staffResult?.data||[]).find((m:any)=>String(m.auth_user_id)===gate.access.userId)?.name||gate.access.name||'').trim()
+ const nameParts=ownName.split(/\s+/).filter(Boolean)
+ const managerInitials=!canManage?'':managerText.includes('sarah')||managerText.includes('lacysa')?'SL':
+   managerText.includes('brittany')||managerText.includes('hollingshead')?'BH':
+   managerText.includes('david')||managerText.includes('heiser')?'DH':
+   nameParts.length>=2?(nameParts[0][0]+nameParts[nameParts.length-1][0]).toUpperCase():
+   ownName.replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase()
  const [catalogResult,packageResult]=await Promise.all([
   admin.from('room_package_catalog').select('id,name,available').order('name'),
   admin.from('housekeeping_room_packages').select('package_id,source').eq('service_date',date).eq('room_id',roomId)
