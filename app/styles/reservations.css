@@ -741,3 +741,33 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ops-hub-quick-editor .ops-hub-primary{width:100%}
 .ops-hub-guest .ops-hub-kpis{margin:0}
 @media(max-width:700px){.ops-hub-guest-grid{gap:8px}.ops-hub-guest-card-trigger{padding:11px;min-height:76px}.ops-hub-guest-card.wide{grid-column:span 2}.ops-hub-package-options{grid-template-columns:1fr}.ops-hub-tag-row button{flex:1 1 auto}}
+
+
+/* Open the selected room control immediately, independent of scroll position. */
+.ops-hub-sheet{position:relative}
+.ops-hub-quick-editor{
+ position:absolute;
+ z-index:30;
+ left:auto;
+ right:17px;
+ bottom:max(17px,env(safe-area-inset-bottom));
+ width:min(420px,calc(100% - 34px));
+ max-height:min(56dvh,480px);
+ overflow-y:auto;
+ overscroll-behavior:contain;
+ border-color:#9ecdc8;
+ box-shadow:0 15px 40px rgba(20,47,64,.25);
+}
+@media(max-width:700px){
+ .ops-hub-quick-editor{
+  left:11px;
+  right:11px;
+  bottom:max(12px,env(safe-area-inset-bottom));
+  width:auto;
+  max-height:58dvh;
+  padding:14px;
+  border-radius:17px;
+ }
+ .ops-hub-choices{max-height:34dvh}
+ .ops-hub-package-options{max-height:32dvh}
+}
