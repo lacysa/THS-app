@@ -93,7 +93,16 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
                 </button>
               </div>
             })}
-            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={()=>setActiveRoom({roomId:room.id,date:data.days.includes(serviceDate)&&serviceDate>=bar.arrival&&serviceDate<bar.departure?serviceDate:bar.date,reservationId:bar.reservationId})}>
+            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={event=>{
+              // A multi-night bar is one visual element: derive the operational date
+              // from the precise day column tapped, not today's or the first stay day.
+              const band=event.currentTarget.parentElement
+              const rect=band?.getBoundingClientRect()
+              const clickedIndex=event.detail>0&&rect?.width
+                ? Math.min(bar.last,Math.max(bar.first,Math.floor((event.clientX-rect.left)/(rect.width/data.days.length))))
+                : Math.max(bar.first,data.days.findIndex(day=>day===serviceDate&&day>=bar.arrival&&day<bar.departure))
+              setActiveRoom({roomId:room.id,date:data.days[clickedIndex]||bar.date,reservationId:bar.reservationId})
+            }}>
               <span className="ths-calendar-stay-text"><strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}</small></span>
             </button>)}
           </div>
