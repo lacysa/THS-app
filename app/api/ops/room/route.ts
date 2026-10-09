@@ -94,9 +94,12 @@ export async function GET(req:NextRequest){
  const caps=gate.access.capabilities||[]
  const canManage=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
  const canInspect=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c)))
- const staffResult=canManage?await admin.from('staff_members').select('name').eq('active',true).order('name'):null
+ const staffResult=canManage?await admin.from('staff_members').select('name,auth_user_id').eq('active',true).order('name'):null
  if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
  const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
+ const ownName=String((staffResult?.data||[]).find((m:any)=>String(m.auth_user_id)===gate.access.userId)?.name||'Manager')
+ const initials=ownName.trim().split(/\\s+/).filter(Boolean).map((word:string)=>word[0]).join('').toUpperCase()
+ const managerInitials=(initials||'MG').slice(0,4)
  const [catalogResult,packageResult]=await Promise.all([
   admin.from('room_package_catalog').select('id,name,available').order('name'),
   admin.from('housekeeping_room_packages').select('package_id,source').eq('service_date',date).eq('room_id',roomId)
@@ -109,7 +112,7 @@ export async function GET(req:NextRequest){
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,
+  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
