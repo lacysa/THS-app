@@ -168,8 +168,10 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   }
 
   if (key === 'ops' || key === 'reservations') {
+    // Hospitality Assistants may view guest/room information, but edits remain
+    // protected by manager checks in every mutation endpoint.
     return access.isAdmin || hasAnyCapability(access,[
-      'foh_manager','manager','general_manager','operations_manager','owner'
+      'hospitality_assistant','foh_manager','manager','general_manager','operations_manager','owner'
     ])
   }
 
