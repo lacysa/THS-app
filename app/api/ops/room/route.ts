@@ -97,9 +97,9 @@ export async function GET(req:NextRequest){
  const staffResult=canManage?await admin.from('staff_members').select('name,auth_user_id').eq('active',true).order('name'):null
  if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
  const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
- const ownName=String((staffResult?.data||[]).find((m:any)=>String(m.auth_user_id)===gate.access.userId)?.name||'Manager')
- const initials=ownName.trim().split(/\\s+/).filter(Boolean).map((word:string)=>word[0]).join('').toUpperCase()
- const managerInitials=(initials||'MG').slice(0,4)
+ const ownName=String((staffResult?.data||[]).find((m:any)=>String(m.auth_user_id)===gate.access.userId)?.name||'').trim()
+ const initials=ownName.split(/\s+/).filter(Boolean).map((word:string)=>word[0]).join('').toUpperCase()
+ const managerInitials=initials.slice(0,4)
  const [catalogResult,packageResult]=await Promise.all([
   admin.from('room_package_catalog').select('id,name,available').order('name'),
   admin.from('housekeeping_room_packages').select('package_id,source').eq('service_date',date).eq('room_id',roomId)
