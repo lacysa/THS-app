@@ -1,11 +1,12 @@
 'use client'
-import {useCallback,useEffect,useState} from 'react'
-import {AlertTriangle,Check,ChevronRight,ClipboardCheck,Save,X} from 'lucide-react'
+import {useCallback,useEffect,useRef,useState} from 'react'
+import {AlertTriangle,Check,ChevronDown,ClipboardCheck,Pencil,Save,X} from 'lucide-react'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null}
-type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean}
+type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[]}
 type View='room'|'guest'
+type Editor='condition'|'activity'|'housekeeper'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
 const activities=['Arrival','Stayover','Checkout','Out/In','Vacant','Dirty','Blocked']
 function present(value:unknown){return String(value??'').trim()||'Not recorded'}
@@ -19,14 +20,17 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [busy,setBusy]=useState(false)
  const [reload,setReload]=useState(0)
  const [view,setView]=useState<View>('room')
+ const [activeEditor,setActiveEditor]=useState<Editor>(null)
+ const inspectionRef=useRef<HTMLElement|null>(null)
  const [roomNotes,setRoomNotes]=useState('')
  const [issueNote,setIssueNote]=useState('')
  const [guestEdits,setGuestEdits]=useState({guest_comments:'',innkeeper_notes:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
- useEffect(()=>{setView('room');setMessage('')},[roomId,date,reservationId])
+ useEffect(()=>{setView('room');setActiveEditor(null);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
   const controller=new AbortController()
-  setLoading(true);setError('');setData(null)
+  if(!data)setLoading(true)
+  setError('')
   fetch('/api/ops/room?roomId='+encodeURIComponent(roomId)+'&date='+encodeURIComponent(date)+(reservationId?'&reservationId='+encodeURIComponent(reservationId):''),{cache:'no-store',signal:controller.signal})
    .then(async response=>{const value=await response.json();if(!response.ok)throw new Error(value.error||'Could not load room');return value as Data})
    .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setGuestEdits({guest_comments:value.stay?.guest_comments||'',innkeeper_notes:value.stay?.innkeeper_notes||''})}})
@@ -40,7 +44,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   return()=>document.removeEventListener('keydown',key)
  },[onClose])
  async function run(url:string,payload:unknown,success:string){
-  if(busy)return
+  if(busy)return false
   setBusy(true);setMessage('');setError('')
   try{
    const response=await fetch(url,{method:url.includes('/room-checks')?'POST':'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
@@ -51,7 +55,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
    window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
    onUpdate?.()
    refresh()
-  }catch(e:any){setError(String(e.message||'Could not save changes'))}
+   return true
+  }catch(e:any){setError(String(e.message||'Could not save changes'));return false}
   finally{setBusy(false)}
  }
  const daily=data?.daily
@@ -64,14 +69,18 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(condition==='Blocked')patch.stripHold='Hold'
   else if(blocked)patch.stripHold=''
   if(condition==='Vacant (Dirty)'||condition==='Cleaning')patch.complete=false
-  await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Room condition updated')
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Room condition updated'))setActiveEditor(null)
  }
  async function changeActivity(status:string){
   if(!daily||!canManage)return
   const patch:Record<string,unknown>={reservationStatus:status}
   if(status==='Blocked')patch.stripHold='Hold'
   else if(blocked)patch.stripHold=''
-  await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Operational activity updated')
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Operational activity updated'))setActiveEditor(null)
+ }
+ async function assignHousekeeper(name:string){
+  if(!daily||!canManage)return
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{assignedTo:name}},name?'Housekeeper assigned':'Assignment cleared'))setActiveEditor(null)
  }
  async function inspect(decision:'pass'|'fail'|'fixed'){
   if(decision==='fail'&&!issueNote.trim()){setError('Describe the housekeeping issue before failing the inspection.');return}
@@ -96,28 +105,36 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
     {loading&&<p className="ops-hub-muted">Loading room details…</p>}
     {error&&<p className="ops-hub-error" role="alert">{error}</p>}
     {message&&!loading&&<p className="ops-hub-success" role="status"><Check size={16}/>{message}</p>}
-    {data&&!loading&&<>
+    {data&&<>
      <nav className="ops-hub-tabs" aria-label="Room hub views"><button type="button" className={view==='room'?'active':''} onClick={()=>setView('room')}>Room & checks</button><button type="button" className={view==='guest'?'active':''} onClick={()=>setView('guest')} disabled={!data.stay}>Guest {data.stay?'& notes':''}</button></nav>
      {view==='room'&&<>
       <div className="ops-hub-kpis">
-       <Field label="Condition">{present(daily?.room_condition)}</Field>
-       <Field label="Housekeeper">{present(daily?.assigned_to)}</Field>
-       <Field label="Activity">{present(daily?.reservation_status)}</Field>
-       <Field label="Inspection">{daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</Field>
+       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy} aria-expanded={activeEditor==='condition'} onClick={()=>setActiveEditor(current=>current==='condition'?null:'condition')}>
+        <span>Condition</span><span className="ops-hub-action-value"><strong>{present(daily?.room_condition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+       </button>
+       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} disabled={!canManage||!daily||busy} aria-expanded={activeEditor==='housekeeper'} onClick={()=>setActiveEditor(current=>current==='housekeeper'?null:'housekeeper')}>
+        <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{present(daily?.assigned_to)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+       </button>
+       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='activity'?' is-selected':'')} disabled={!canManage||!daily||busy} aria-expanded={activeEditor==='activity'} onClick={()=>setActiveEditor(current=>current==='activity'?null:'activity')}>
+        <span>Activity</span><span className="ops-hub-action-value"><strong>{present(daily?.reservation_status)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+       </button>
+       <button type="button" className="ops-hub-field ops-hub-action-card" disabled={!daily} onClick={()=>{setActiveEditor(null);inspectionRef.current?.scrollIntoView({behavior:'smooth',block:'start'})}}>
+        <span>Inspection</span><span className="ops-hub-action-value"><strong>{daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</strong>{daily&&<ChevronDown size={16}/>}</span>
+       </button>
       </div>
+      {canManage&&daily&&activeEditor&&<section className="ops-hub-quick-editor" aria-label="Quick room update">
+       <div className="ops-hub-quick-head"><strong>{activeEditor==='condition'?'Change room condition':activeEditor==='activity'?'Change operational activity':'Assign housekeeper'}</strong><button type="button" aria-label="Close quick editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
+       <div className="ops-hub-choices" role="group" aria-label={activeEditor==='condition'?'Room condition choices':activeEditor==='activity'?'Operational activity choices':'Housekeeper choices'}>
+        {activeEditor==='condition'&&conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}
+        {activeEditor==='activity'&&activities.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.reservation_status===value} className={daily.reservation_status===value?'is-current':''} onClick={()=>void changeActivity(value)}><span>{value}</span>{daily.reservation_status===value&&<Check size={16}/>}</button>)}
+        {activeEditor==='housekeeper'&&['',...(data.staffNames||[])].map(value=><button type="button" key={value||'unassigned'} disabled={busy} aria-pressed={(daily.assigned_to||'')===value} className={(daily.assigned_to||'')===value?'is-current':''} onClick={()=>void assignHousekeeper(value)}><span>{value||'Unassigned'}</span>{(daily.assigned_to||'')===value&&<Check size={16}/>}</button>)}
+       </div>
+       {activeEditor==='activity'&&<small>Operational status only. This does not edit the PMS reservation.</small>}
+      </section>}
       {daily?.check_issue_open&&<div className="ops-hub-issue"><AlertTriangle size={18}/><div><strong>Housekeeping issue</strong><p>{present(daily.check_issue_note)}</p></div></div>}
       {!daily&&<p className="ops-hub-muted">No operational room record is available for this date. Changes cannot be saved until the room day has been created through the existing scheduling workflow.</p>}
-      {canManage&&daily&&<div className="ops-hub-section">
-       <h3>Room condition</h3>
-       <label className="ops-hub-label">Live condition
-        <select value={daily.room_condition||''} disabled={busy} onChange={e=>void changeCondition(e.target.value)}><option value="" disabled>Not set</option>{conditions.map(v=><option key={v} value={v}>{v}</option>)}</select>
-       </label>
-       <label className="ops-hub-label">Operational activity
-        <select value={daily.reservation_status||''} disabled={busy} onChange={e=>void changeActivity(e.target.value)}><option value="" disabled>Not set</option>{activities.map(v=><option key={v} value={v}>{v}</option>)}</select>
-       </label>
-       <small className="ops-hub-muted">These are operational overrides, not changes to the PMS booking. All edits save to the shared Housekeeping record. Inspection signoff is separate.</small>
-      </div>}
-      <div className="ops-hub-section">
+
+      <section ref={inspectionRef} tabIndex={-1} className="ops-hub-section ops-hub-inspection">
        <h3><ClipboardCheck size={18}/> Room inspection</h3>
        {daily?.inspected&&<p className="ops-hub-good"><Check size={16}/> Passed {daily.inspected_at?'· '+new Date(daily.inspected_at).toLocaleString('en-US',{dateStyle:'short',timeStyle:'short'}):''}</p>}
        {!data.inspectionEligible&&<p className="ops-hub-muted">No inspection is required for this room on the selected date.</p>}
@@ -131,7 +148,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
          </div>}
        </>}
        {data.inspectionEligible&&!canInspect&&<p className="ops-hub-muted">Inspection actions require room-check permission.</p>}
-      </div>
+      </section>
       <div className="ops-hub-section">
        <h3>Room notes</h3>
        {canManage&&daily?<><textarea value={roomNotes} onChange={e=>setRoomNotes(e.target.value)} disabled={busy} rows={3} aria-label="Room notes"/><button type="button" className="ops-hub-secondary" disabled={busy||roomNotes===String(daily.notes||'')} onClick={()=>void run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{notes:roomNotes}},'Room notes saved')}><Save size={16}/> Save room notes</button></>:<p className="ops-hub-note">{present(daily?.notes)}</p>}
