@@ -437,7 +437,7 @@ export async function PATCH(req: NextRequest) {
       if(!['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].includes(condition))
         return NextResponse.json({error:'Choose a valid room condition.'},{status:400})
     }
-    const dbPatch:any={updated_at:now}
+    const dbPatch:any={updated_at:now,updated_by:access.userId}
     if(manager && Object.prototype.hasOwnProperty.call(requested,'reservationStatus')) dbPatch.reservation_status=cleanText(requested.reservationStatus)
     if (manager && Object.prototype.hasOwnProperty.call(requested,'assignedTo')) dbPatch.assigned_to=cleanText(requested.assignedTo)
     if (manager && Object.prototype.hasOwnProperty.call(requested,'cleanOrder')) dbPatch.clean_order=Number.isFinite(Number(requested.cleanOrder))&&requested.cleanOrder!==null&&requested.cleanOrder!==''?Number(requested.cleanOrder):null
