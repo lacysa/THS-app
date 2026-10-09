@@ -207,26 +207,11 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        </div>}
       </section>}
       {daily?.check_issue_open&&<div className="ops-hub-issue"><AlertTriangle size={18}/><div><strong>Housekeeping issue</strong><p>{present(daily.check_issue_note)}</p></div></div>}
-      {!daily&&<p className="ops-hub-muted">No operational room record is available for this date. Changes cannot be saved until the room day has been created through the existing scheduling workflow.</p>}
-
-      <section ref={inspectionRef} tabIndex={-1} className="ops-hub-section ops-hub-inspection">
-       <h3><ClipboardCheck size={18}/> Room inspection</h3>
-       {daily?.inspected&&<p className="ops-hub-good"><Check size={16}/> Passed {daily.inspected_at?'· '+new Date(daily.inspected_at).toLocaleString('en-US',{dateStyle:'short',timeStyle:'short'}):''}</p>}
-       {!data.inspectionEligible&&<p className="ops-hub-muted">No inspection is required for this room on the selected date.</p>}
-       {data.inspectionEligible&&canInspect&&<>
-        {daily?.check_issue_open&&!data.inspectionReady
-         ? <><p className="ops-hub-muted">Correction is open. Mark it fixed after the room has been corrected, then reinspect.</p><button type="button" disabled={busy} className="ops-hub-secondary" onClick={()=>void inspect('fixed')}>Mark correction fixed</button></>
-         : <div className="ops-hub-inspection-actions">
-          <button type="button" disabled={busy||Boolean(daily?.inspected)} className="ops-hub-primary" onClick={()=>void inspect('pass')}><Check size={16}/> {daily?.inspected?'Already passed':'Pass inspection'}</button>
-          <label className="ops-hub-label">Found an issue?<textarea value={issueNote} onChange={e=>setIssueNote(e.target.value)} disabled={busy} placeholder="Describe what needs correction" rows={2}/></label>
-          <button type="button" disabled={busy||!issueNote.trim()} className="ops-hub-secondary" onClick={()=>void inspect('fail')}><AlertTriangle size={16}/> Fail / flag issue</button>
-         </div>}
-       </>}
-       {data.inspectionEligible&&!canInspect&&<p className="ops-hub-muted">Inspection actions require room-check permission.</p>}
-      </section>
-      <div className="ops-hub-section">
-       <h3>Room notes</h3>
-       {canManage&&daily?<><textarea value={roomNotes} onChange={e=>setRoomNotes(e.target.value)} disabled={busy} rows={3} aria-label="Room notes"/><button type="button" className="ops-hub-secondary" disabled={busy||roomNotes===String(daily.notes||'')} onClick={()=>void run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{notes:roomNotes}},'Room notes saved')}><Save size={16}/> Save room notes</button></>:<p className="ops-hub-note">{present(daily?.notes)}</p>}
+      {!daily&&<p className="ops-hub-muted">No operational record for this date. Room controls remain read-only until the existing scheduling workflow creates it.</p>}
+      <div className="ops-hub-tag-row" role="group" aria-label="Room tags">
+       <button type="button" aria-pressed={Boolean(daily?.late_arrival)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('lateArrival')} className={daily?.late_arrival?'selected':''}>{daily?.late_arrival&&<Check size={14}/>}Late arrival</button>
+       <button type="button" aria-pressed={blocked} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('stripHold')} className={blocked?'selected warning':''}>{blocked&&<Check size={14}/>}Block room</button>
+       <button type="button" aria-pressed={Boolean(daily?.breakfast_tag)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('breakfastTag')} className={daily?.breakfast_tag?'selected':''}>{daily?.breakfast_tag&&<Check size={14}/>}Breakfast</button>
       </div>
      </>}
      {view==='guest'&&data.stay&&<div className="ops-hub-section ops-hub-guest">
