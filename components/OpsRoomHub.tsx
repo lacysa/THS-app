@@ -7,6 +7,7 @@ type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|
 type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean}
 type View='room'|'guest'
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
+const activities=['Arrival','Stayover','Checkout','Out/In','Vacant','Dirty','Blocked']
 function present(value:unknown){return String(value??'').trim()||'Not recorded'}
 function dateLabel(value:string){return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z'))}
 function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="ops-hub-field"><span>{label}</span><strong>{children}</strong></div>}
@@ -64,6 +65,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(condition==='Vacant (Dirty)'||condition==='Cleaning')patch.complete=false
   await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Room condition updated')
  }
+ async function changeActivity(status:string){
+  if(!daily||!canManage)return
+  const patch:Record<string,unknown>={reservationStatus:status}
+  if(status==='Blocked')patch.stripHold='Hold'
+  else if(blocked)patch.stripHold=''
+  await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Operational activity updated')
+ }
  async function inspect(decision:'pass'|'fail'|'fixed'){
   if(decision==='fail'&&!issueNote.trim()){setError('Describe the housekeeping issue before failing the inspection.');return}
   await run('/api/room-checks',{date,roomId,decision,note:issueNote.trim()},decision==='pass'?'Inspection passed':decision==='fixed'?'Correction marked ready for reinspection':'Issue reported to housekeeping')
@@ -103,7 +111,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <label className="ops-hub-label">Live condition
         <select value={daily.room_condition||''} disabled={busy} onChange={e=>void changeCondition(e.target.value)}><option value="" disabled>Not set</option>{conditions.map(v=><option key={v} value={v}>{v}</option>)}</select>
        </label>
-       <small className="ops-hub-muted">Changes save immediately to the shared Housekeeping record. Inspection signoff is separate.</small>
+       <label className="ops-hub-label">Operational activity
+        <select value={daily.reservation_status||''} disabled={busy} onChange={e=>void changeActivity(e.target.value)}><option value="" disabled>Not set</option>{activities.map(v=><option key={v} value={v}>{v}</option>)}</select>
+       </label>
+       <small className="ops-hub-muted">These are operational overrides, not changes to the PMS booking. All edits save to the shared Housekeeping record. Inspection signoff is separate.</small>
       </div>}
       <div className="ops-hub-section">
        <h3><ClipboardCheck size={18}/> Room inspection</h3>
