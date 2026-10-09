@@ -96,6 +96,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const markedOut=/^OUT(?:-[A-Z]{2,4})?$/.test(serviceCode)
  const envelopeInitials=/^OUT-([A-Z]{2,4})$/.exec(serviceCode)?.[1]||''
  const envelopeCollected=Boolean(envelopeInitials)
+ const selectedPackageNames=[...new Set([...(data?.importedPackageIds||[]),...(data?.manualPackageIds||[])])].map(id=>data?.packageOptions.find(p=>p.id===id)?.name).filter((name):name is string=>Boolean(name))
  const needsCorrection=Boolean(daily?.check_issue_open)
  const inspectionDue=Boolean(data?.inspectionEligible&&!daily?.inspected&&(daily?.complete||daily?.ready_for_inspection))
  const awaitingClean=Boolean(daily&&!blocked&&!isStayover&&!daily.complete&&(
@@ -212,6 +213,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <div className="ops-hub-context">
         <span><strong>Activity</strong> {present(daily?.reservation_status)}</span>
         <span><strong>Inspection</strong> {daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</span>
+        {daily?.breakfast_tag&&<span className="ops-hub-context-positive"><Check size={12}/> Breakfast included</span>}
+        {selectedPackageNames.length>0&&<span className="ops-hub-context-package"><strong>Packages</strong> {selectedPackageNames.join(', ')}</span>}
        </div>
       </div>
       {attentionTitle&&<div className={'ops-hub-next-action'+(needsCorrection?' needs-correction':blocked?' is-blocked':'')}>
@@ -220,10 +223,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        {inspectionDue&&canInspect&&<button type="button" onClick={()=>setActiveEditor('inspection')} disabled={busy}>Open inspection <ChevronRight size={16}/></button>}
        {needsCorrection&&canInspect&&<button type="button" onClick={()=>setActiveEditor('inspection')} disabled={busy}>Review correction <ChevronRight size={16}/></button>}
       </div>}
-      {!!daily?.notes?.trim()&&<div className="ops-hub-prominent-note">
+      {!!daily?.notes?.trim()&&<button type="button" className="ops-hub-prominent-note" disabled={!canManage||busy} onClick={()=>setActiveEditor('room_notes')} aria-label={canManage?'Edit room note':'Room note'}>
        <div><span>Room note</span><p>{daily.notes}</p></div>
-       {canManage&&<button type="button" disabled={busy} onClick={()=>setActiveEditor('room_notes')} aria-label="Edit room note"><Pencil size={17}/></button>}
-      </div>}
+       {canManage&&<Pencil size={17} className="ops-hub-note-pencil"/>}
+      </button>}
       <div className="ops-hub-quick-section">
        <span className="ops-hub-overline">Quick actions</span>
        <div className="ops-hub-quick-actions">
