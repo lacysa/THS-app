@@ -56,6 +56,40 @@ export async function GET(req:NextRequest){
   if(previous.error)return NextResponse.json({error:'Unable to load last housekeeper assignment'},{status:500})
   if(previous.data?.assigned_to)lastAssigned={name:String(previous.data.assigned_to).trim(),date:String(previous.data.service_date)}
  }
+ // Stayovers show the latest VERIFIED completed clean, not merely an
+ // assignment. The operational day is preserved separately from the actual
+ // local completion date (a room may be cleaned the evening before arrival).
+ let lastCleaned:{name:string;date:string;serviceDate:string}|null=null
+ if(String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'){
+  const finished=await admin.from('housekeeping_daily_rooms')
+   .select('assigned_to,service_date,completed_at,housekeeper_attested_by')
+   .eq('room_id',roomId)
+   .lte('service_date',date)
+   .eq('complete',true)
+   .order('service_date',{ascending:false})
+   .limit(1)
+   .maybeSingle()
+  if(finished.error)return NextResponse.json({error:'Unable to load cleaning history'},{status:500})
+  if(finished.data){
+   let cleaner=String(finished.data.assigned_to||'').trim()
+   if(!cleaner&&finished.data.housekeeper_attested_by){
+    const person=await admin.from('staff_members').select('name')
+     .eq('id',finished.data.housekeeper_attested_by).maybeSingle()
+    if(person.error)return NextResponse.json({error:'Unable to identify last cleaner'},{status:500})
+    cleaner=String(person.data?.name||'').trim()
+   }
+   let cleanedDate=String(finished.data.service_date)
+   if(finished.data.completed_at){
+    const finishedAt=new Date(finished.data.completed_at)
+    if(!Number.isNaN(finishedAt.getTime())){
+     const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(finishedAt)
+     const part=(type:string)=>parts.find(item=>item.type===type)?.value||''
+     cleanedDate=`${part('year')}-${part('month')}-${part('day')}`
+    }
+   }
+   lastCleaned={name:cleaner,date:cleanedDate,serviceDate:String(finished.data.service_date)}
+  }
+ }
  const caps=gate.access.capabilities||[]
  const canManage=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
  const canInspect=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c)))
@@ -66,7 +100,7 @@ export async function GET(req:NextRequest){
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,lastAssigned,
+  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
