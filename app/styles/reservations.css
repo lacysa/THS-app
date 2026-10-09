@@ -492,3 +492,12 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-calendar-note>span{font-family:Arial,Helvetica,sans-serif;font-size:10px!important;font-weight:800;line-height:12px}
 .ths-calendar-note>small{display:block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:Arial,Helvetica,sans-serif;font-size:10px!important;line-height:12px}
 .ths-calendar-note-full{font-size:14px!important;color:#2b4658!important;line-height:1.55!important;white-space:pre-wrap;overflow-wrap:anywhere}
+
+
+/* Compact, consistent Ops tape typography on iOS Safari */
+.ths-calendar-grid,.ths-calendar-grid *{-webkit-text-size-adjust:none;text-size-adjust:none}
+.ths-calendar-stay>strong,.ths-calendar-stay>small{display:block;max-width:100%;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:Arial,Helvetica,sans-serif!important}
+.ths-calendar-stay>strong{font-size:12px!important;line-height:16px!important;font-weight:750!important}
+.ths-calendar-stay>small{font-size:10px!important;line-height:13px!important;font-weight:500!important}
+.ths-calendar-note{justify-content:center}
+.ths-calendar-note>.ths-calendar-note-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:anywhere;max-width:100%;font-family:Arial,Helvetica,sans-serif!important;font-size:11px!important;line-height:14px!important;font-weight:650!important;color:#385779}
