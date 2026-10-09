@@ -6,7 +6,7 @@ type Entry={id:string;roomId:string|null;roomName:string;serviceDate:string;even
 type Room={id:string;name:string}
 type Filter='all'|'open'|'guest'|'housekeeping'
 const labels:Record<string,string>={
-  guest_request:'Guest request',housekeeping_issue:'Housekeeping issue',team_note:'Team note',
+  guest_request:'Guest request',housekeeping_issue:'Housekeeping issue',team_note:'Team note',out_marked:'Room OUT',out_cleared:'OUT cleared',tip_envelope_collected:'Tips collected',tip_envelope_cleared:'Tip mark removed',
   assignment_changed:'Staff assignment',assignment_snapshot:'Staff assigned',refresh_requested:'Refresh requested',
   refresh_completed:'Refresh completed',refresh_snapshot:'Scheduled refresh',clean_completed:'Room cleaned',
   inspection_passed:'Inspection passed',issue_reported:'Inspection issue',issue_resolved:'Correction resolved',
