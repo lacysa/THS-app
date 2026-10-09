@@ -58,40 +58,40 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   }
   const stayById=new Map<string,any>(stays.map((stay:any)=>[String(stay.id),stay]))
 
-  const rows=links
-    .map((row:any)=>{
-      const roomId=String(row.room_id||'')
-      const current=housekeepingByRoom.get(roomId)||{}
-      const prior=priorHousekeepingByRoom.get(roomId)||{}
-      const currentCondition=String(current.room_condition||'').trim()
-      const priorEos=String(prior.next_shift_condition||prior.room_condition||'').trim()
-      const inheritedReady=!currentCondition && priorEos==='Vacant (Clean)'
-      return {
-        roomId,
-        roomName:roomNameById.get(roomId)||'Room',
-        status:String(row.reservation_status||'Vacant'),
-        primary:row.primary_reservation_id?stayById.get(String(row.primary_reservation_id))||null:null,
-        arriving:row.arriving_reservation_id?stayById.get(String(row.arriving_reservation_id))||null:null,
-        staying:row.stay_reservation_id?stayById.get(String(row.stay_reservation_id))||null:null,
-        departing:row.departing_reservation_id?stayById.get(String(row.departing_reservation_id))||null:null,
-        serviceType:String(current.service_type||''),
-        operationalStatus:String(current.reservation_status||row.reservation_status||''),
-        stripHold:String(current.strip_hold||''),
-        roomNotes:String(current.notes||''),
-        breakfastTag:Boolean(current.breakfast_tag),
-        lateArrival:Boolean(current.late_arrival),
-        roomCondition:currentCondition||(inheritedReady?'Ready':''),
-        nextShiftCondition:String(current.next_shift_condition||''),
-        complete:Boolean(current.complete),
-        inspected:Boolean(current.inspected),
-        fohChecked:Boolean(current.foh_signed_by),
-        haChecked:Boolean(current.ha_signed_by),
-        housekeeperAttested:Boolean(current.housekeeper_attested_by),
-        checkIssueOpen:Boolean(current.check_issue_open)
-      }
-    })
-    .filter((row:any)=>row.status!=='Vacant')
-    .sort((a:any,b:any)=>(sortById.get(a.roomId)??9999)-(sortById.get(b.roomId)??9999))
+  const linksByRoom=new Map<string,any>(links.map((link:any)=>[String(link.room_id),link]))
+  // Include all 17 operational rooms, even when there is no reservation link.
+  const rows=rooms.map((room:any)=>{
+    const roomId=String(room.id)
+    const link=linksByRoom.get(roomId)||{}
+    const current=housekeepingByRoom.get(roomId)||{}
+    const prior=priorHousekeepingByRoom.get(roomId)||{}
+    const currentCondition=String(current.room_condition||'').trim()
+    const priorEos=String(prior.next_shift_condition||prior.room_condition||'').trim()
+    const inheritedReady=!currentCondition&&priorEos==='Vacant (Clean)'
+    return {
+      roomId,
+      roomName:roomNameById.get(roomId)||'Room',
+      status:String(link.reservation_status||current.reservation_status||'Vacant'),
+      primary:link.primary_reservation_id?stayById.get(String(link.primary_reservation_id))||null:null,
+      arriving:link.arriving_reservation_id?stayById.get(String(link.arriving_reservation_id))||null:null,
+      staying:link.stay_reservation_id?stayById.get(String(link.stay_reservation_id))||null:null,
+      departing:link.departing_reservation_id?stayById.get(String(link.departing_reservation_id))||null:null,
+      serviceType:String(current.service_type||''),
+      operationalStatus:String(current.reservation_status||link.reservation_status||'Vacant'),
+      stripHold:String(current.strip_hold||''),
+      roomNotes:String(current.notes||''),
+      breakfastTag:Boolean(current.breakfast_tag),
+      lateArrival:Boolean(current.late_arrival),
+      roomCondition:currentCondition||(inheritedReady?'Ready':''),
+      nextShiftCondition:String(current.next_shift_condition||''),
+      complete:Boolean(current.complete),
+      inspected:Boolean(current.inspected),
+      fohChecked:Boolean(current.foh_signed_by),
+      haChecked:Boolean(current.ha_signed_by),
+      housekeeperAttested:Boolean(current.housekeeper_attested_by),
+      checkIssueOpen:Boolean(current.check_issue_open)
+    }
+  }).sort((a:any,b:any)=>(sortById.get(a.roomId)??9999)-(sortById.get(b.roomId)??9999))
 
   const canEdit=!gate.access.isPreviewMode && Boolean(gate.access.isAdmin || gate.access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap)))
   const roomGate=await canUseModule('housekeeping')
