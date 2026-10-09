@@ -408,3 +408,25 @@ html[data-theme="dark"] .reservation-checkout-only small{
   .ths-calendar-stay strong{font-size:12px}
   .ths-calendar-stay small{font-size:10px}
 }
+
+
+/* Freeze room labels above the reservation tape during horizontal scrolling.
+   Reservation bars are positioned layers; the frozen column must paint above them. */
+.ths-calendar-scroll{position:relative;isolation:isolate;overflow-x:auto;overflow-y:visible}
+.ths-calendar-grid{position:relative;isolation:isolate}
+.ths-calendar-room{
+  position:sticky!important;
+  left:0!important;
+  z-index:20!important;
+  background:#f9fcfd!important;
+  box-shadow:2px 0 0 #d9e5e9,8px 0 12px -12px rgba(28,57,78,.55);
+}
+.ths-calendar-corner{
+  position:sticky!important;
+  left:0!important;
+  z-index:30!important;
+  background:#f4f9fb!important;
+  box-shadow:2px 0 0 #d9e5e9;
+}
+.ths-calendar-band{z-index:auto}
+.ths-calendar-stay{z-index:1}
