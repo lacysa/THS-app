@@ -1,6 +1,6 @@
 'use client'
-import {useCallback,useEffect,useRef,useState} from 'react'
-import {AlertTriangle,Check,ChevronDown,ClipboardCheck,Pencil,Save,X} from 'lucide-react'
+import {useCallback,useEffect,useState} from 'react'
+import {AlertTriangle,Check,ChevronDown,Pencil,Save,X} from 'lucide-react'
 import OpsActivityLog from '@/components/OpsActivityLog'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
@@ -42,12 +42,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [reload,setReload]=useState(0)
  const [view,setView]=useState<View>('room')
  const [activeEditor,setActiveEditor]=useState<Editor>(null)
- const inspectionRef=useRef<HTMLElement|null>(null)
  const [roomNotes,setRoomNotes]=useState('')
  const [issueNote,setIssueNote]=useState('')
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
  const [roomOrder,setRoomOrder]=useState('')
- const [guestEdits,setGuestEdits]=useState({guest_comments:'',innkeeper_notes:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
  useEffect(()=>{setView('room');setActiveEditor(null);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
@@ -56,7 +54,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   setError('')
   fetch('/api/ops/room?roomId='+encodeURIComponent(roomId)+'&date='+encodeURIComponent(date)+(reservationId?'&reservationId='+encodeURIComponent(reservationId):''),{cache:'no-store',signal:controller.signal})
    .then(async response=>{const value=await response.json();if(!response.ok)throw new Error(value.error||'Could not load room');return value as Data})
-   .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setManualPackageDraft(value.manualPackageIds||[]);setRoomOrder(value.daily?.clean_order==null?'':String(value.daily.clean_order));setGuestEdits({guest_comments:value.stay?.guest_comments||'',innkeeper_notes:value.stay?.innkeeper_notes||''})}})
+   .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setManualPackageDraft(value.manualPackageIds||[]);setRoomOrder(value.daily?.clean_order==null?'':String(value.daily.clean_order))}})
    .catch(e=>{if(!controller.signal.aborted)setError(String(e.message||'Could not load room'))})
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
@@ -214,24 +212,30 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <button type="button" aria-pressed={Boolean(daily?.breakfast_tag)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('breakfastTag')} className={daily?.breakfast_tag?'selected':''}>{daily?.breakfast_tag&&<Check size={14}/>}Breakfast</button>
       </div>
      </>}
-     {view==='guest'&&data.stay&&<div className="ops-hub-section ops-hub-guest">
+     {view==='guest'&&data.stay&&<section className="ops-hub-guest">
       <div className="ops-hub-kpis">
-       <Field label="Guest">{present(data.stay.guest_name)}</Field>
-       <Field label="Phone">{data.stay.guest_phone?<a href={'tel:'+String(data.stay.guest_phone).replace(/[^+\d]/g,'')}>{data.stay.guest_phone}</a>:'Not recorded'}</Field>
-       <Field label="Arrival">{present(data.stay.arrival_date)}</Field>
-       <Field label="Departure">{present(data.stay.checkout_date)}</Field>
-       <Field label="Guests">{data.stay.occupancy??'Not recorded'}</Field>
-       <Field label="Rate plan">{present(data.stay.rate_plan)}</Field>
-       <Field label="Check-in">{present(data.stay.check_in_time)}</Field>
-       <Field label="Breakfast">{daily?.breakfast_tag?'Included / tagged':'Not tagged'}</Field>
+       <div className="ops-hub-field"><span>Arrival</span><strong>{present(data.stay.arrival_date)}</strong></div>
+       <div className="ops-hub-field"><span>Departure</span><strong>{present(data.stay.checkout_date)}</strong></div>
+       <div className="ops-hub-field"><span>Breakfast</span><strong>{daily?.breakfast_tag?'Included / tagged':'Not tagged'}</strong></div>
+       <div className="ops-hub-field"><span>Reservation</span><strong>{present(data.stay.reservation_number)}</strong></div>
       </div>
-      {data.stay.products_raw&&<div><h3>Packages & requests</h3><p className="ops-hub-note">{data.stay.products_raw}</p></div>}
-      {data.stay.dietary_restrictions&&<div><h3>Dietary requests</h3><p className="ops-hub-note">{data.stay.dietary_restrictions}</p></div>}
-      <h3>Guest comments</h3>
-      {canManage?<textarea rows={3} value={guestEdits.guest_comments} onChange={e=>setGuestEdits(v=>({...v,guest_comments:e.target.value}))} disabled={busy}/>:<p className="ops-hub-note">{present(data.stay.guest_comments)}</p>}
-      <h3>Innkeeper notes</h3>
-      {canManage?<><textarea rows={3} value={guestEdits.innkeeper_notes} onChange={e=>setGuestEdits(v=>({...v,innkeeper_notes:e.target.value}))} disabled={busy}/><button type="button" className="ops-hub-primary" disabled={busy||(guestEdits.guest_comments===String(data.stay.guest_comments||'')&&guestEdits.innkeeper_notes===String(data.stay.innkeeper_notes||''))} onClick={()=>void saveGuest()}><Save size={16}/> Save guest notes</button></>:<p className="ops-hub-note">{present(data.stay.innkeeper_notes)}</p>}
-     </div>}
+      <div className="ops-hub-guest-grid">
+       {([
+        {field:'guest_name',label:'Guest name'},
+        {field:'guest_phone',label:'Phone'},
+        {field:'occupancy',label:'Number of guests'},
+        {field:'check_in_time',label:'Check-in time'},
+        {field:'rate_plan',label:'Rate plan'},
+        {field:'reason_for_visit',label:'Reason for visit',large:true},
+        {field:'dietary_restrictions',label:'Dietary requests',large:true},
+        {field:'guest_comments',label:'Guest comments',large:true},
+        {field:'innkeeper_notes',label:'Innkeeper notes',large:true}
+       ] as Array<{field:EditableGuestField;label:string;large?:boolean}>).map(item=><GuestCard key={item.field} field={item.field} label={item.label} value={data.stay?.[item.field]} large={item.large} canEdit={canManage} busy={busy} onSave={saveGuestField}/>)}
+      </div>
+      {data.stay.products_raw&&<div className="ops-hub-section"><h3>Imported products and requests</h3><p className="ops-hub-note">{data.stay.products_raw}</p></div>}
+      {!canManage&&<p className="ops-hub-muted">Guest information is view only. Manager permission is required to change it.</p>}
+      <p className="ops-hub-muted">Reservation dates are view only because changing them requires reservation-calendar relinking. Room packages and service can be managed from Room & checks.</p>
+     </section>}
     </>}
    </div>
   </section>
