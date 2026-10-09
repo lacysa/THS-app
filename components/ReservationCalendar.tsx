@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useState} from 'react'
 import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw} from 'lucide-react'
 
-type Cell={date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
+type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
 type Data={start:string;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[]}
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
@@ -37,24 +37,35 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
       </div>
     </div>
     <div className="ths-calendar-date"><CalendarDays size={17}/><input aria-label="First date" type="date" value={start} onChange={e=>{if(e.target.value)setStart(e.target.value)}}/></div>
-    <p className="ths-calendar-help">Scroll sideways to see the week. Select a reservation to see stay details. Check your PMS before treating a blank day as available.</p>
+    <p className="ths-calendar-help">Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.</p>
     {error&&<div role="alert" className="ths-ops-empty">{error}</div>}
     {loading&&<div className="ths-ops-empty">Loading calendar…</div>}
     {data&&!loading&&<div className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
       <div className="ths-calendar-corner">Room</div>
       {data.days.map(day=><div className={day===serviceDate?'ths-calendar-day today':'ths-calendar-day'} key={day}>{pretty(day)}</div>)}
-      {data.rooms.map(room=><div className="ths-calendar-row" key={room.id} style={{display:'contents'}}>
-        <div className="ths-calendar-room">{room.name}</div>
-        {data.days.map(day=>{
-          const c=cells.get(day+'|'+room.id),blocked=holds.has(day+'|'+room.id)||Boolean(c?.blocked)
-          const isBooked=Boolean(c&&occupied(c))
-          const label=blocked?'Blocked':isBooked?c!.guest:c?.status==='Checkout'?'Departure':c?'No active stay':'Not imported'
-          return <button key={day} type="button" className={'ths-calendar-cell '+(blocked?'blocked':isBooked?'booked':c?'unbooked':'unknown')+(c?.arrival===day?' arrival':'')} onClick={()=>c?setSelected(c):undefined} disabled={!c&&!blocked} title={room.name+' · '+pretty(day)+' · '+label}>
-            <span>{label}</span>
-            {isBooked&&<small>{c!.arrival===day?'Check-in':c!.departure===shift(day,1)?'Last night':'In house'}</small>}
-          </button>
-        })}
-      </div>)}
+      {data.rooms.map(room=>{
+        const matching=data.cells.filter(c=>c.roomId===room.id)
+        const stays=new Map<string,Cell>()
+        for(const c of matching)if(occupied(c)&&c.reservationId&&!stays.has(c.reservationId))stays.set(c.reservationId,c)
+        const bars=[...stays.values()].map(c=>{
+          const first=data.days.findIndex(day=>day>=c.arrival&&day<c.departure)
+          const last=data.days.findLastIndex(day=>day>=c.arrival&&day<c.departure)
+          return {...c,first,last}
+        }).filter(c=>c.first>=0&&c.last>=c.first)
+        return <div className="ths-calendar-row" key={room.id} style={{display:'contents'}}>
+          <div className="ths-calendar-room">{room.name}</div>
+          <div className="ths-calendar-band">
+            {data.days.map(day=>{
+              const c=cells.get(day+'|'+room.id)
+              const blocked=holds.has(day+'|'+room.id)||Boolean(c?.blocked)
+              return <div key={day} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')} title={room.name+' · '+pretty(day)+(blocked?' · Blocked':'')}/>
+            })}
+            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={()=>setSelected(bar)}>
+              <strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}</small>
+            </button>)}
+          </div>
+        </div>
+      }})}
     </div></div>}
     {selected&&<div className="ths-calendar-selection">
       <div><strong>{data?.rooms.find(r=>r.id===selected.roomId)?.name}</strong><span>{pretty(selected.date)}</span></div>
