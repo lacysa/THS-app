@@ -433,11 +433,11 @@ export default function DailyDashboard({
         </Link>
       })()}
 
-      {!commandMode && <section className={`daily-panel daily-attention-panel ${attentionCount===0?'all-clear':''}`}>
-        <div className="daily-panel-head">
+      {!commandMode && <details open className={`daily-collapsible-panel daily-panel daily-attention-panel ${attentionCount===0?'all-clear':''}`}>
+        <summary className="daily-panel-head">
           <div>{attentionCount===0?<CheckCircle2 size={17}/>:<AlertTriangle size={17}/>}<strong>Needs attention</strong></div>
           <span>{attentionCount===0?'All clear':`${attentionCount} item${attentionCount===1?'':'s'}`}</span>
-        </div>
+        </summary>
         {attentionCount===0 ? (
           <div className="daily-attention-clear">No operational issues currently need attention.</div>
         ) : (
@@ -492,14 +492,14 @@ export default function DailyDashboard({
             )}
           </div>
         )}
-      </section>}
+      </details>}
 
       {showHousekeeping && arrivals.length>0 && (
-        <section className="daily-panel">
-          <div className="daily-panel-head">
+        <details open className="daily-collapsible-panel daily-panel">
+          <summary className="daily-panel-head">
             <div><BedDouble size={17}/><strong>Arrivals</strong></div>
             <span>{arrivals.length} room{arrivals.length===1?'':'s'}</span>
-          </div>
+          </summary>
           <div className="daily-arrival-list">
             {arrivals.map(row=>(
               <Link href={`/housekeeping#room-${encodeURIComponent(row.roomId)}`} className="daily-arrival-row" key={row.id}>
@@ -517,15 +517,15 @@ export default function DailyDashboard({
               </Link>
             ))}
           </div>
-        </section>
+        </details>
       )}
 
       {showHousekeeping && (
-        <section className="daily-panel daily-housekeeping-panel">
-          <div className="daily-panel-head">
+        <details open className="daily-collapsible-panel daily-panel daily-housekeeping-panel">
+          <summary className="daily-panel-head">
             <div><BedDouble size={17}/><strong>Housekeeping today</strong></div>
             <span>{housekeeping.length} rooms</span>
-          </div>
+          </summary>
           {housekeeping.length===0 ? (
             <div className="daily-empty">No housekeeping rooms assigned.</div>
           ) : (
@@ -540,7 +540,7 @@ export default function DailyDashboard({
               ))}
             </div>
           )}
-        </section>
+        </details>
       )}
 
       <div className="daily-dashboard-grid">
@@ -581,11 +581,11 @@ export default function DailyDashboard({
           </section>
         )}
 
-        <section className="daily-panel">
-          <div className="daily-panel-head">
+        <details open className="daily-collapsible-panel daily-panel">
+          <summary className="daily-panel-head">
             <div><Users size={17}/><strong>Today&apos;s staff</strong></div>
             <span>{todayStaff.length} on site</span>
-          </div>
+          </summary>
           <div className="daily-staff-list">
             {todayStaff.length
               ? todayStaff.map(person=>{
@@ -601,7 +601,7 @@ export default function DailyDashboard({
                 })
               : <div className="daily-empty">No on-site staff schedule entered for today.</div>}
           </div>
-        </section>
+        </details>
 
         {showMaintenance && (
           <section className="daily-panel">
@@ -623,11 +623,11 @@ export default function DailyDashboard({
 
 
         {(showLaundry || showLobby) && (
-          <section className="daily-panel">
-            <div className="daily-panel-head">
+          <details open className="daily-collapsible-panel daily-panel">
+            <summary className="daily-panel-head">
               <div><ClipboardList size={17}/><strong>Department handoff</strong></div>
               <span>Today</span>
-            </div>
+            </summary>
             <div className="daily-notes-grid">
               {showLaundry && (
                 <Link href="/laundry" className="daily-note-block daily-note-link">
@@ -640,7 +640,7 @@ export default function DailyDashboard({
                 </Link>
               )}
             </div>
-          </section>
+          </details>
         )}
       </div>
 
