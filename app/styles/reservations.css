@@ -851,3 +851,12 @@ html[data-theme="dark"] .reservation-checkout-only small{
  .ops-hub-quick-actions .ops-hub-quick-action small{font-size:9px}
  .ops-hub-next-action{padding:12px}
 }
+
+
+/* Compact context tags and entire-card note edit */
+.ops-hub-context-positive{display:inline-flex;align-items:center;gap:4px;color:#317c66!important;font-weight:750}
+.ops-hub-context-package{max-width:100%;overflow-wrap:anywhere}
+button.ops-hub-prominent-note{width:100%;appearance:none;text-align:left;font-family:Arial,Helvetica,sans-serif;cursor:pointer}
+button.ops-hub-prominent-note:disabled{cursor:default;opacity:1}
+button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;background:linear-gradient(110deg,#e7f4f9,#edf0fc)}
+.ops-hub-note-pencil{flex-shrink:0;color:#678a9d}
