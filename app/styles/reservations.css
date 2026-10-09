@@ -704,3 +704,40 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ops-activity-done{display:inline-flex;align-items:center;gap:4px;color:#39765e}
 .ops-activity.compact .ops-activity-heading{padding:12px}.ops-activity.compact .ops-activity-heading h2{font-size:16px}
 @media(max-width:700px){.ops-activity-heading{align-items:flex-start}.ops-activity-heading-buttons{width:100%;justify-content:flex-end}.ops-activity-controls label{min-width:125px}.ops-hub-tabs button{font-size:11px}.ops-activity-item{padding:12px}.ops-activity-filters button{font-size:10px}}
+
+
+/* Consistent tap-to-edit room and guest cards, shared by Ops and Rooms */
+.ops-hub-guest{display:grid;gap:12px;min-width:0}
+.ops-hub-guest-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.ops-hub-guest-card{min-width:0;display:grid;align-content:start;gap:0;overflow:hidden;border:1px solid #dae5e9;border-radius:14px;background:rgba(255,255,255,.94)}
+.ops-hub-guest-card.wide{grid-column:span 2}
+.ops-hub-guest-card-trigger{appearance:none;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:9px;row-gap:7px;align-items:center;width:100%;min-height:78px;padding:13px;text-align:left;border:0;background:transparent;color:#24485a;font-family:Arial,Helvetica,sans-serif;cursor:pointer}
+.ops-hub-guest-card-trigger>span{grid-column:1 / 3;font-size:11px;line-height:1.2;font-weight:750;color:#718696;text-transform:uppercase;letter-spacing:.035em}
+.ops-hub-guest-card-trigger>strong{grid-column:1;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0;font-size:13px;line-height:1.4;font-weight:750;color:#294759}
+.ops-hub-guest-card-trigger>svg{grid-column:2;color:#7897a5}
+.ops-hub-guest-card-trigger:disabled{cursor:default;opacity:1}
+.ops-hub-guest-card-trigger:not(:disabled):hover,.ops-hub-guest-card.is-editing .ops-hub-guest-card-trigger{background:linear-gradient(110deg,#edf9f6,#f3f0ff)}
+.ops-hub-guest-card:focus-within{border-color:#93c6c2}
+.ops-hub-guest-card-editor{display:grid;gap:9px;padding:0 12px 12px}
+.ops-hub-guest-card-editor input,.ops-hub-guest-card-editor textarea,.ops-hub-inline-form input,.ops-hub-inline-form textarea{width:100%;min-width:0;min-height:42px;border:1px solid #cbdde4;border-radius:10px;background:#fff;color:#284b60;font:500 14px/1.4 Arial,Helvetica,sans-serif;padding:10px}
+.ops-hub-guest-card-editor textarea,.ops-hub-inline-form textarea{resize:vertical;min-height:90px}
+.ops-hub-inline-actions{display:flex;flex-wrap:wrap;gap:7px}
+.ops-hub-inline-actions button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 12px;border:1px solid #b6d4d5;border-radius:9px;background:#e5f5f0;color:#265c54;font:750 12px/1.2 Arial,Helvetica,sans-serif;cursor:pointer}
+.ops-hub-inline-actions button:last-child{background:#fff;border-color:#d6e1e6;color:#627a8b}
+.ops-hub-inline-actions button:disabled{opacity:.45;cursor:not-allowed}
+.ops-hub-inline-form{display:grid;gap:10px}
+.ops-hub-package-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:230px;overflow-y:auto}
+.ops-hub-package-options label{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid #d4e2e8;border-radius:11px;background:#fff;color:#355469;font:650 12px/1.3 Arial,Helvetica,sans-serif;cursor:pointer}
+.ops-hub-package-options label:has(input:checked){background:#e8f7f2;border-color:#a8d2c7}
+.ops-hub-package-options label>span{min-width:0;flex:1;overflow-wrap:anywhere}
+.ops-hub-package-options label input{accent-color:#397f6b;width:17px;height:17px;flex-shrink:0}
+.ops-hub-package-options label small{font-size:10px;color:#758898}
+.ops-hub-tag-row{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:10px 0 2px}
+.ops-hub-tag-row button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:39px;flex:1 1 120px;padding:8px 10px;border:1px solid #d1e0e4;border-radius:11px;background:#fff;color:#54707e;font:750 12px/1.25 Arial,Helvetica,sans-serif;cursor:pointer}
+.ops-hub-tag-row button.selected{background:#e0f6ee;color:#2b735e;border-color:#92c4b4}
+.ops-hub-tag-row button.warning{background:#f9eee4;color:#895a37;border-color:#d8b69b}
+.ops-hub-tag-row button:disabled{cursor:default;opacity:.82}
+.ops-hub-action-card .ops-hub-action-value>strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;white-space:normal;line-height:1.3}
+.ops-hub-quick-editor .ops-hub-primary{width:100%}
+.ops-hub-guest .ops-hub-kpis{margin:0}
+@media(max-width:700px){.ops-hub-guest-grid{gap:8px}.ops-hub-guest-card-trigger{padding:11px;min-height:76px}.ops-hub-guest-card.wide{grid-column:span 2}.ops-hub-package-options{grid-template-columns:1fr}.ops-hub-tag-row button{flex:1 1 auto}}
