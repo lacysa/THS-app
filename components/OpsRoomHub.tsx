@@ -5,9 +5,10 @@ import OpsActivityLog from '@/components/OpsActivityLog'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null}
-type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null}
+type PackageOption={id:string;name:string;available:boolean}
+type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[]}
 type View='room'|'guest'|'log'
-type Editor='condition'|'activity'|'housekeeper'|null
+type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'packages'|'room_notes'|'clean_order'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
 const activities=['Arrival','Stayover','Checkout','Out/In','Vacant','Dirty','Blocked']
 function present(value:unknown){return String(value??'').trim()||'Not recorded'}
@@ -26,6 +27,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const inspectionRef=useRef<HTMLElement|null>(null)
  const [roomNotes,setRoomNotes]=useState('')
  const [issueNote,setIssueNote]=useState('')
+ const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
+ const [roomOrder,setRoomOrder]=useState('')
  const [guestEdits,setGuestEdits]=useState({guest_comments:'',innkeeper_notes:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
  useEffect(()=>{setView('room');setActiveEditor(null);setMessage('')},[roomId,date,reservationId])
@@ -35,7 +38,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   setError('')
   fetch('/api/ops/room?roomId='+encodeURIComponent(roomId)+'&date='+encodeURIComponent(date)+(reservationId?'&reservationId='+encodeURIComponent(reservationId):''),{cache:'no-store',signal:controller.signal})
    .then(async response=>{const value=await response.json();if(!response.ok)throw new Error(value.error||'Could not load room');return value as Data})
-   .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setGuestEdits({guest_comments:value.stay?.guest_comments||'',innkeeper_notes:value.stay?.innkeeper_notes||''})}})
+   .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setManualPackageDraft(value.manualPackageIds||[]);setRoomOrder(value.daily?.clean_order==null?'':String(value.daily.clean_order));setGuestEdits({guest_comments:value.stay?.guest_comments||'',innkeeper_notes:value.stay?.innkeeper_notes||''})}})
    .catch(e=>{if(!controller.signal.aborted)setError(String(e.message||'Could not load room'))})
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
