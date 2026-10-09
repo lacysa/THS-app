@@ -1,26 +1,26 @@
 'use client'
 import {useEffect,useMemo,useState} from 'react'
-import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw,X} from 'lucide-react'
+import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw} from 'lucide-react'
+import OpsRoomHub from '@/components/OpsRoomHub'
 
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
 type Data={start:string;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
 function occupied(c:Cell){return Boolean(c.guest&&c.arrival&&c.departure&&c.date>=c.arrival&&c.date<c.departure)}
-export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDate:string;onOpenRoom?:(id:string)=>void}){
+export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
   const [start,setStart]=useState(()=>shift(serviceDate,-2))
   const [data,setData]=useState<Data|null>(null)
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
-  const [selected,setSelected]=useState<Cell|null>(null)
-  const [selectedNote,setSelectedNote]=useState<{date:string;roomId:string;text:string}|null>(null)
+  const [activeRoom,setActiveRoom]=useState<{roomId:string;date:string;reservationId?:string}|null>(null)
   const [reload,setReload]=useState(0)
   useEffect(()=>{
     let active=true
     setLoading(true);setError('')
     fetch('/api/reservations/calendar?start='+encodeURIComponent(start),{cache:'no-store'})
       .then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not load calendar');return d as Data})
-      .then(d=>{if(active){setData(d);setSelected(null)}})
+      .then(d=>{if(active){setData(d)}})
       .catch(e=>{if(active){setData(null);setError(String(e.message||e))}})
       .finally(()=>{if(active)setLoading(false)})
     return()=>{active=false}
@@ -62,47 +62,20 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
               const blocked=holds.has(day+'|'+room.id)||Boolean(c?.blocked)
               const note=notes.get(day+'|'+room.id)
               const coveredByStay=[...stays.values()].some(stay=>day>=stay.arrival&&day<stay.departure)
-              return <div key={day} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')} title={room.name+' · '+pretty(day)+(blocked?' · Blocked':'')}>
-                {note&&!coveredByStay&&<button type="button" className="ths-calendar-note" title={note.text} aria-label={'Room note for '+room.name+' on '+pretty(day)+': '+note.text} onClick={()=>setSelectedNote(note)}><span className="ths-calendar-note-text">{note.text}</span></button>}
+              return <div key={day} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')}>
+                <button type="button" className={'ths-calendar-empty-slot'+(note&&!coveredByStay?' has-note':'')} title={note?.text||room.name+' · '+pretty(day)} aria-label={'Open '+room.name+' on '+pretty(day)+(note&&!coveredByStay?': '+note.text:'')} onClick={()=>setActiveRoom({roomId:room.id,date:day})}>
+                  {note&&!coveredByStay&&<span className="ths-calendar-note-text">{note.text}</span>}
+                </button>
               </div>
             })}
-            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={()=>setSelected(bar)}>
+            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={()=>setActiveRoom({roomId:room.id,date:data.days.includes(serviceDate)&&serviceDate>=bar.arrival&&serviceDate<bar.departure?serviceDate:bar.date,reservationId:bar.reservationId})}>
               <span className="ths-calendar-stay-text"><strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}</small></span>
             </button>)}
           </div>
         </div>
       })}
     </div></div>}
-    {selectedNote&&<div className="ths-calendar-reservation-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelectedNote(null)}}>
-      <section className="ths-calendar-reservation-sheet" role="dialog" aria-modal="true" aria-label="Room note">
-        <header className="ths-calendar-reservation-head">
-          <div><span>Room note · {pretty(selectedNote.date)}</span><strong>{data?.rooms.find(r=>r.id===selectedNote.roomId)?.name||'Room'}</strong></div>
-          <button type="button" aria-label="Close room note" onClick={()=>setSelectedNote(null)}><X size={20}/></button>
-        </header>
-        <div className="ths-calendar-reservation-content">
-          <p className="ths-calendar-note-full">{selectedNote.text}</p>
-          {onOpenRoom&&<button type="button" className="ths-calendar-open-room" onClick={()=>{const roomId=selectedNote.roomId;setSelectedNote(null);onOpenRoom(roomId)}}>Manage room <ChevronRight size={17}/></button>}
-        </div>
-      </section>
-    </div>}
-    {selected&&<div className="ths-calendar-reservation-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelected(null)}}>
-      <section className="ths-calendar-reservation-sheet" role="dialog" aria-modal="true" aria-label="Reservation details">
-        <header className="ths-calendar-reservation-head">
-          <div><span>Reservation details</span><strong>{selected.guest||'Guest reservation'}</strong></div>
-          <button type="button" aria-label="Close reservation" onClick={()=>setSelected(null)}><X size={20}/></button>
-        </header>
-        <div className="ths-calendar-reservation-content">
-          <div className="ths-calendar-reservation-meta">
-            <div><span>Room</span><strong>{data?.rooms.find(r=>r.id===selected.roomId)?.name||'Room'}</strong></div>
-            <div><span>Arrival</span><strong>{selected.arrival||'—'}</strong></div>
-            <div><span>Departure</span><strong>{selected.departure||'—'}</strong></div>
-            <div><span>Calendar status</span><strong>{selected.status||'Imported stay'}</strong></div>
-          </div>
-          <p>Read-only reservation summary from the latest PMS import. Changes to guest information remain in Guests.</p>
-          {onOpenRoom&&<button type="button" className="ths-calendar-open-room" onClick={()=>{const roomId=selected.roomId;setSelected(null);onOpenRoom(roomId)}}>Manage room <ChevronRight size={17}/></button>}
-        </div>
-      </section>
-    </div>}
+    {activeRoom&&<OpsRoomHub key={activeRoom.roomId+'|'+activeRoom.date+'|'+(activeRoom.reservationId||'')} roomId={activeRoom.roomId} date={activeRoom.date} reservationId={activeRoom.reservationId} onClose={()=>setActiveRoom(null)} onUpdate={()=>setReload(n=>n+1)}/>}
     <p className="ths-calendar-caveat">This view reflects the latest imported reservation links, not live PMS inventory or prices. Gray/blank cells must not be treated as confirmed availability. No reservation or breakfast data is changed here.</p>
   </div>
 }
