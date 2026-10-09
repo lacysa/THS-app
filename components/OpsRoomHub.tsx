@@ -8,7 +8,7 @@ type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|
 type PackageOption={id:string;name:string;available:boolean}
 type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string}
 type View='room'|'guest'|'log'
-type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'packages'|'room_notes'|'clean_order'|null
+type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
 const activities=['Arrival','Stayover','Checkout','Out/In','Vacant','Dirty','Blocked']
 function present(value:unknown){return String(value??'').trim()||'Not recorded'}
@@ -91,6 +91,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const canManage=Boolean(data?.permissions.canManage)
  const canInspect=Boolean(data?.permissions.canInspect)
  const blocked=Boolean(daily?.strip_hold?.toLowerCase().includes('hold')||daily?.reservation_status?.toLowerCase()==='blocked'||daily?.room_condition==='Blocked')
+ const serviceCode=String(daily?.service_type||'').trim().toUpperCase()
+ const markedOut=/^OUT(?:-[A-Z]{2,4})?$/.test(serviceCode)
+ const envelopeInitials=/^OUT-([A-Z]{2,4})$/.exec(serviceCode)?.[1]||''
+ const envelopeCollected=Boolean(envelopeInitials)
  async function changeCondition(condition:string){
   if(!daily||!canManage)return
   const patch:Record<string,unknown>={roomCondition:condition}
@@ -133,7 +137,24 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  async function setService(code:string){
   if(!daily||!canManage)return
   if(code==='RF'&&!isStayover){setError('Refresh service is only available on stayover rooms.');return}
+  // Re-selecting OUT must never erase the manager's existing tip collection initials.
+  if(code==='OUT'&&markedOut){setActiveEditor(null);return}
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:code}},'Service updated'))setActiveEditor(null)
+ }
+ async function markOut(){
+  if(!daily||!canManage||busy||markedOut||blocked)return
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:'OUT'}},'Room marked OUT'))setActiveEditor(null)
+ }
+ async function markEnvelopeCollected(){
+  if(!daily||!canManage||busy||envelopeCollected)return
+  if(!markedOut){setError('Mark the room OUT before confirming tip-envelope collection.');return}
+  const initials=String(data?.managerInitials||'').trim().toUpperCase()
+  if(!/^[A-Z]{2,4}$/.test(initials)){setError('Your manager initials could not be determined. Please check your staff profile.');return}
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:'OUT-'+initials}},'Tip envelope recorded as collected by '+initials))setActiveEditor(null)
+ }
+ async function clearEnvelopeCollected(){
+  if(!daily||!canManage||!envelopeCollected||busy)return
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:'OUT'}},'Tip envelope collection cleared; room remains OUT'))setActiveEditor(null)
  }
  async function savePackages(){
   if(!daily||!canManage)return
