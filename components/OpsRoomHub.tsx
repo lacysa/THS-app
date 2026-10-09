@@ -4,7 +4,7 @@ import {AlertTriangle,Check,ChevronDown,ClipboardCheck,Pencil,Save,X} from 'luci
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null}
-type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[]}
+type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null}
 type View='room'|'guest'
 type Editor='condition'|'activity'|'housekeeper'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
@@ -113,7 +113,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         <span>Condition</span><span className="ops-hub-action-value"><strong>{present(daily?.room_condition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
        <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} disabled={!canManage||!daily||busy} aria-expanded={activeEditor==='housekeeper'} onClick={()=>setActiveEditor(current=>current==='housekeeper'?null:'housekeeper')}>
-        <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{present(daily?.assigned_to)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+        <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{String(daily?.assigned_to||'').trim()||data.lastAssigned?.name||'Not assigned'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+        {!String(daily?.assigned_to||'').trim()&&data.lastAssigned&&<small className="ops-hub-last-assigned">Last assigned · {dateLabel(data.lastAssigned.date)}</small>}
        </button>
        <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='activity'?' is-selected':'')} disabled={!canManage||!daily||busy} aria-expanded={activeEditor==='activity'} onClick={()=>setActiveEditor(current=>current==='activity'?null:'activity')}>
         <span>Activity</span><span className="ops-hub-action-value"><strong>{present(daily?.reservation_status)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
@@ -129,6 +130,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         {activeEditor==='activity'&&activities.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.reservation_status===value} className={daily.reservation_status===value?'is-current':''} onClick={()=>void changeActivity(value)}><span>{value}</span>{daily.reservation_status===value&&<Check size={16}/>}</button>)}
         {activeEditor==='housekeeper'&&['',...(data.staffNames||[])].map(value=><button type="button" key={value||'unassigned'} disabled={busy} aria-pressed={(daily.assigned_to||'')===value} className={(daily.assigned_to||'')===value?'is-current':''} onClick={()=>void assignHousekeeper(value)}><span>{value||'Unassigned'}</span>{(daily.assigned_to||'')===value&&<Check size={16}/>}</button>)}
        </div>
+       {activeEditor==='housekeeper'&&data.lastAssigned&&!String(daily.assigned_to||'').trim()&&<small>Last assigned: {data.lastAssigned.name} on {dateLabel(data.lastAssigned.date)}. No one is assigned for this date until you choose a staff member.</small>}
        {activeEditor==='activity'&&<small>Operational status only. This does not edit the PMS reservation.</small>}
       </section>}
       {daily?.check_issue_open&&<div className="ops-hub-issue"><AlertTriangle size={18}/><div><strong>Housekeeping issue</strong><p>{present(daily.check_issue_note)}</p></div></div>}
