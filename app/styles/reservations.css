@@ -509,3 +509,11 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-calendar-shortcuts button{min-height:36px;padding:7px 11px;border:1px solid #c9dade;border-radius:10px;background:rgba(255,255,255,.8);font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:750;color:#395a6c;cursor:pointer}
 .ths-calendar-shortcuts button[aria-pressed=true]{background:linear-gradient(110deg,#d7f5ee,#e9e5ff);border-color:#a4cbc7;color:#245852}
 @media(max-width:700px){.ths-calendar-shortcuts{width:100%;margin-left:0}.ths-calendar-shortcuts button{flex:1}}
+
+
+/* Reservation duration must never affect iOS text scaling.
+   A fixed-width text island avoids Safari's width-dependent text inflation. */
+.ths-calendar-stay{font-size:12px!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
+.ths-calendar-stay-text{display:flex;flex-direction:column;justify-content:center;gap:3px;width:142px;max-width:100%;min-width:0;flex:0 0 auto;font-family:Arial,Helvetica,sans-serif!important;font-size:12px!important;line-height:1.25!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
+.ths-calendar-stay-text>strong{display:block;width:100%;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:inherit!important;font-size:12px!important;line-height:16px!important;font-weight:750!important}
+.ths-calendar-stay-text>small{display:block;width:100%;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:inherit!important;font-size:10px!important;line-height:13px!important;font-weight:500!important}
