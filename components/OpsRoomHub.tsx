@@ -6,7 +6,7 @@ import OpsActivityLog from '@/components/OpsActivityLog'
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null}
 type PackageOption={id:string;name:string;available:boolean}
-type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string}
+type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string}
 type View='room'|'guest'|'log'
 type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'packages'|'room_notes'|'clean_order'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
@@ -95,7 +95,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(!daily||!canManage)return
   const patch:Record<string,unknown>={roomCondition:condition}
   if(condition==='Blocked')patch.stripHold='Hold'
-  else if(blocked)patch.stripHold=''
+  else if(blocked){patch.stripHold='';if(daily.reservation_status==='Blocked')patch.reservationStatus=data?.pmsActivity==='Blocked'?'Vacant':(data?.pmsActivity||'Vacant')}
   if(condition==='Vacant (Dirty)'||condition==='Cleaning')patch.complete=false
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Room condition updated'))setActiveEditor(null)
  }
@@ -126,12 +126,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(!daily||!canManage)return
   const isBlocked=blocked
   const patch=kind==='lateArrival'?{lateArrival:!daily.late_arrival}:
-   kind==='stripHold'?{stripHold:isBlocked?'':'Hold'}:
+   kind==='stripHold'?(isBlocked?{stripHold:'',...(daily.reservation_status==='Blocked'?{reservationStatus:data?.pmsActivity==='Blocked'?'Vacant':(data?.pmsActivity||'Vacant')}:{})}:{stripHold:'Hold'}):
    {breakfastTag:!daily.breakfast_tag}
   await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Room tag updated')
  }
  async function setService(code:string){
   if(!daily||!canManage)return
+  if(code==='RF'&&!isStayover){setError('Refresh service is only available on stayover rooms.');return}
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:code}},'Service updated'))setActiveEditor(null)
  }
  async function savePackages(){
@@ -187,7 +188,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        {activeEditor==='condition'&&canManage&&<div className="ops-hub-choices">{conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}</div>}
        {activeEditor==='activity'&&canManage&&<><div className="ops-hub-choices">{activities.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.reservation_status===value} className={daily.reservation_status===value?'is-current':''} onClick={()=>void changeActivity(value)}><span>{value}</span>{daily.reservation_status===value&&<Check size={16}/>}</button>)}</div><small>Operational status only; the PMS booking is unchanged.</small></>}
        {activeEditor==='housekeeper'&&canManage&&<><div className="ops-hub-choices">{['',...(data.staffNames||[])].map(value=><button type="button" key={value||'unassigned'} disabled={busy} aria-pressed={(daily.assigned_to||'')===value} className={(daily.assigned_to||'')===value?'is-current':''} onClick={()=>void assignHousekeeper(value)}><span>{value||'Unassigned'}</span>{(daily.assigned_to||'')===value&&<Check size={16}/>}</button>)}</div>{isStayover&&<small>Historical cleaner and date are retained. Assigning staff does not mark a clean complete.</small>}</>}
-       {activeEditor==='service'&&canManage&&<div className="ops-hub-choices">{[{label:'No service',value:''},{label:'OUT',value:'OUT'},...(data.managerInitials?[{label:'Initial OUT',value:'OUT-'+data.managerInitials}]:[]),{label:'Refresh · RF',value:'RF'}].map(item=><button type="button" key={item.label} disabled={busy} aria-pressed={(daily.service_type||'')===item.value} className={(daily.service_type||'')===item.value?'is-current':''} onClick={()=>void setService(item.value)}><span>{item.label}</span>{(daily.service_type||'')===item.value&&<Check size={16}/>}</button>)}</div>}
+       {activeEditor==='service'&&canManage&&<div className="ops-hub-choices">{[{label:'No service',value:''},{label:'OUT',value:'OUT'},...(data.managerInitials?[{label:'Initial OUT',value:'OUT-'+data.managerInitials}]:[]),{label:'Refresh · RF',value:'RF'}].map(item=><button type="button" key={item.label} disabled={busy||(item.value==='RF'&&!isStayover)} aria-pressed={(daily.service_type||'')===item.value} className={(daily.service_type||'')===item.value?'is-current':''} onClick={()=>void setService(item.value)}><span>{item.label}</span>{(daily.service_type||'')===item.value&&<Check size={16}/>}</button>)}</div>}
        {activeEditor==='packages'&&canManage&&<><div className="ops-hub-package-options">{data.packageOptions.filter(p=>p.available||data.importedPackageIds.includes(p.id)||manualPackageDraft.includes(p.id)).map(p=>{
          const isImported=data.importedPackageIds.includes(p.id)
          const checked=isImported||manualPackageDraft.includes(p.id)
