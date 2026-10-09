@@ -33,7 +33,7 @@ export async function GET(req:NextRequest){
       const stayId=l.stay_reservation_id||l.arriving_reservation_id||l.primary_reservation_id||l.departing_reservation_id
       const stay:any=byId.get(String(stayId||''))||{}
       const h:any=conditions.get(String(l.service_date)+'|'+String(l.room_id))||{}
-      return {date:String(l.service_date),roomId:String(l.room_id),status:String(l.reservation_status||h.reservation_status||'Vacant'),guest:String(stay.guest_name||''),arrival:String(stay.arrival_date||''),departure:String(stay.checkout_date||''),blocked:String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked',condition:String(h.room_condition||''),lateArrival:Boolean(h.late_arrival)}
+      return {reservationId:String(stayId||''),date:String(l.service_date),roomId:String(l.room_id),status:String(l.reservation_status||h.reservation_status||'Vacant'),guest:String(stay.guest_name||''),arrival:String(stay.arrival_date||''),departure:String(stay.checkout_date||''),blocked:String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked',condition:String(h.room_condition||''),lateArrival:Boolean(h.late_arrival)}
     }),
     holds:(housekeepingRes.data||[]).filter((h:any)=>String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked').map((h:any)=>({date:String(h.service_date),roomId:String(h.room_id)}))
   },{headers:{'cache-control':'private, no-store'}})
