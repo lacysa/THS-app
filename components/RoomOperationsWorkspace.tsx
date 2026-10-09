@@ -4,10 +4,9 @@ import {useEffect,useMemo,useState} from 'react'
 import {ArrowLeft,ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
 import ReservationsBoard from '@/components/ReservationsBoard'
 import UnifiedRoomsBoard from '@/components/UnifiedRoomsBoard'
-import ReservationCalendar from '@/components/ReservationCalendar'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
-type View='rooms'|'tasks'|'guests'|'calendar'
+type View='rooms'|'tasks'|'guests'
 type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'
 
 function reservationType(row:ReservationRow){
@@ -78,7 +77,6 @@ export default function RoomOperationsWorkspace({serviceDate,rows,canEdit,canMan
       <button type="button" aria-pressed={view==='rooms'} className={view==='rooms'?'active':''} onClick={()=>switchView('rooms')}>Rooms</button>
       {canManageRooms&&<button type="button" aria-pressed={view==='tasks'} className={view==='tasks'?'active':''} onClick={()=>switchView('tasks')}>Tasks</button>}
       <button type="button" aria-pressed={view==='guests'} className={view==='guests'?'active':''} onClick={()=>switchView('guests')}>Guests</button>
-      <button type="button" aria-pressed={view==='calendar'} className={view==='calendar'?'active':''} onClick={()=>switchView('calendar')}>Calendar</button>
     </nav>
     {view==='rooms'&&<>
       <div className="ths-ops-stats" aria-label="Reservation activity">
@@ -106,10 +104,9 @@ export default function RoomOperationsWorkspace({serviceDate,rows,canEdit,canMan
         {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters. Clear the search or select another category.</div>}
       </div>
     </>}
-    {view==='calendar'&&<ReservationCalendar serviceDate={serviceDate} onOpenRoom={canManageRooms?setSelectedRoom:undefined}/>}
     {view==='tasks'&&canManageRooms&&<section className="ths-ops-work-area"><UnifiedRoomsBoard initialDate={serviceDate}/></section>}
     {view==='guests'&&<section className="ths-ops-work-area"><ReservationsBoard serviceDate={serviceDate} rows={rows} canEdit={canEdit} hideViewSwitch view={canEdit?'edit':'overview'}/></section>}
-    {selectedRoom&&(view==='rooms'||view==='calendar')&&canManageRooms&&<div className="ths-ops-panel-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelectedRoom('')}}><section className="ths-ops-detail-panel" role="dialog" aria-modal="true" aria-label="Manage room">
+    {selectedRoom&&view==='rooms'&&canManageRooms&&<div className="ths-ops-panel-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelectedRoom('')}}><section className="ths-ops-detail-panel" role="dialog" aria-modal="true" aria-label="Manage room">
       <div className="ths-ops-panel-header"><button type="button" onClick={()=>setSelectedRoom('')}><ArrowLeft size={18}/> Rooms</button><strong>{liveRows.find(r=>r.roomId===selectedRoom)?.roomName||'Room details'}</strong><button type="button" aria-label="Close room details" onClick={()=>setSelectedRoom('')}><X size={20}/></button></div>
       <div className="ths-ops-panel-body"><UnifiedRoomsBoard key={selectedRoom} initialDate={serviceDate} initialRoomId={selectedRoom}/></div>
     </section></div>}
