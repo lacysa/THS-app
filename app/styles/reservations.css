@@ -645,3 +645,14 @@ html[data-theme="dark"] .reservation-checkout-only small{
   .ops-hub-quick-editor{padding:12px}
   .ops-hub-choices{max-height:205px}
 }
+
+
+/* Historical housekeeper attribution, distinct from a current staff assignment. */
+.ops-hub-last-assigned{
+  display:block;
+  color:#708798;
+  font:600 10px/1.35 Arial,Helvetica,sans-serif;
+  letter-spacing:0;
+  overflow-wrap:anywhere;
+  text-transform:none;
+}
