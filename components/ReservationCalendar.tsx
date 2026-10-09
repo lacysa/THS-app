@@ -41,8 +41,8 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
     <div className="ths-calendar-date"><CalendarDays size={17}/><input aria-label="First date" type="date" value={start} onChange={e=>{if(e.target.value)setStart(e.target.value)}}/><div className="ths-calendar-shortcuts"><button type="button" aria-pressed={start===shift(serviceDate,-2)} onClick={()=>setStart(shift(serviceDate,-2))}>Daily ops</button><button type="button" aria-pressed={start===shift(serviceDate,-6)} onClick={()=>setStart(shift(serviceDate,-6))}>Past 7 days</button></div></div>
     <p className="ths-calendar-help">Daily ops shows the previous 2 days, today, and the next 4. Past 7 days shows the last 6 days plus today. Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.</p>
     {error&&<div role="alert" className="ths-ops-empty">{error}</div>}
-    {loading&&<div className="ths-ops-empty">Loading calendar…</div>}
-    {data&&!loading&&<div className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
+    {loading&&!data&&<div className="ths-ops-empty">Loading calendar…</div>}
+    {data&&<div className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
       <div className="ths-calendar-corner">Room</div>
       {data.days.map(day=><div className={day===serviceDate?'ths-calendar-day today':'ths-calendar-day'} key={day}>{pretty(day)}</div>)}
       {data.rooms.map(room=>{
