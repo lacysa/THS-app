@@ -1,6 +1,6 @@
 'use client'
 import {useEffect,useMemo,useState} from 'react'
-import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw} from 'lucide-react'
+import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw,X} from 'lucide-react'
 
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
 type Data={start:string;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[]}
@@ -67,10 +67,23 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
         </div>
       })}
     </div></div>}
-    {selected&&<div className="ths-calendar-selection">
-      <div><strong>{data?.rooms.find(r=>r.id===selected.roomId)?.name}</strong><span>{pretty(selected.date)}</span></div>
-      <p><b>{selected.blocked?'Blocked':selected.guest||selected.status}</b>{selected.arrival&&selected.departure?<span> · {selected.arrival} to {selected.departure}</span>:null}</p>
-      <div className="ths-calendar-controls"><button type="button" onClick={()=>setSelected(null)}>Close</button>{onOpenRoom&&<button type="button" onClick={()=>onOpenRoom(selected.roomId)}>Open room</button>}</div>
+    {selected&&<div className="ths-calendar-reservation-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelected(null)}}>
+      <section className="ths-calendar-reservation-sheet" role="dialog" aria-modal="true" aria-label="Reservation details">
+        <header className="ths-calendar-reservation-head">
+          <div><span>Reservation details</span><strong>{selected.guest||'Guest reservation'}</strong></div>
+          <button type="button" aria-label="Close reservation" onClick={()=>setSelected(null)}><X size={20}/></button>
+        </header>
+        <div className="ths-calendar-reservation-content">
+          <div className="ths-calendar-reservation-meta">
+            <div><span>Room</span><strong>{data?.rooms.find(r=>r.id===selected.roomId)?.name||'Room'}</strong></div>
+            <div><span>Arrival</span><strong>{selected.arrival||'—'}</strong></div>
+            <div><span>Departure</span><strong>{selected.departure||'—'}</strong></div>
+            <div><span>Calendar status</span><strong>{selected.status||'Imported stay'}</strong></div>
+          </div>
+          <p>Read-only reservation summary from the latest PMS import. Changes to guest information remain in Guests.</p>
+          {onOpenRoom&&<button type="button" className="ths-calendar-open-room" onClick={()=>{const roomId=selected.roomId;setSelected(null);onOpenRoom(roomId)}}>Manage room <ChevronRight size={17}/></button>}
+        </div>
+      </section>
     </div>}
     <p className="ths-calendar-caveat">This view reflects the latest imported reservation links, not live PMS inventory or prices. Gray/blank cells must not be treated as confirmed availability. No reservation or breakfast data is changed here.</p>
   </div>
