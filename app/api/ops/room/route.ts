@@ -26,8 +26,13 @@ export async function GET(req:NextRequest){
  if(!roomResult.data)return NextResponse.json({error:'Room not found'},{status:404})
  const daily=dailyResult.data
  const link=linkResult.data
+ // A calendar empty-cell click is room-only, even on checkout days where
+ // the daily link still points to a departing guest. Only an explicit click
+ // on a reservation bar is allowed to load that guest.
  const availableIds=[link?.arriving_reservation_id,link?.stay_reservation_id,link?.primary_reservation_id,link?.departing_reservation_id].filter(Boolean).map(String)
- const chosen=reservationId&&availableIds.includes(reservationId)?reservationId:availableIds[0]
+ if(reservationId&&!availableIds.includes(reservationId))
+  return NextResponse.json({error:'Selected reservation is not linked to this room on this date.'},{status:409})
+ const chosen=reservationId||null
  let stay:any=null
  if(chosen){
   const result=await admin.from('reservation_stays').select('id,reservation_number,guest_name,guest_phone,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,guest_comments,innkeeper_notes,reason_for_visit').eq('id',chosen).maybeSingle()
