@@ -67,7 +67,7 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
               </div>
             })}
             {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={()=>setSelected(bar)}>
-              <strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}</small>
+              <span className="ths-calendar-stay-text"><strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}</small></span>
             </button>)}
           </div>
         </div>
