@@ -1,6 +1,6 @@
 'use client'
 import {useCallback,useEffect,useState} from 'react'
-import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,Pencil,Save,SlidersHorizontal,X} from 'lucide-react'
+import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,Pencil,Save,SlidersHorizontal,Wallet,X} from 'lucide-react'
 import OpsActivityLog from '@/components/OpsActivityLog'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
@@ -228,10 +228,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <span className="ops-hub-overline">Quick actions</span>
        <div className="ops-hub-quick-actions">
        <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(markedOut?' ops-hub-complete-card':'')+(activeEditor==='out'?' is-selected':'')} disabled={!canManage||!daily||busy||(blocked&&!markedOut)||((isStayover||serviceCode==='RF')&&!markedOut)} onClick={()=>markedOut?setActiveEditor(v=>v==='out'?null:'out'):void markOut()} aria-label={markedOut?'Room marked OUT; tap to manage OUT':'Mark room OUT'}>
-        <span>OUT</span><span className="ops-hub-action-value"><strong>{markedOut?'Marked OUT':'Mark room OUT'}</strong>{markedOut?<Check size={16}/>:canManage&&daily&&<Pencil size={15}/>}</span>
+        <span className="ops-hub-quick-icon"><DoorOpen size={18}/></span><span className="ops-hub-quick-name">OUT</span><small>{markedOut?'Marked':'Mark room'}</small>{markedOut&&<Check size={14} className="ops-hub-quick-check"/>}
        </button>
        <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(envelopeCollected?' ops-hub-complete-card':'')+(activeEditor==='tip_envelope'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='tip_envelope'?null:'tip_envelope')} aria-label={envelopeCollected?'Tip envelope collected by '+envelopeInitials:'Tip envelope not collected'}>
-        <span>Tip envelope</span><span className="ops-hub-action-value"><strong>{envelopeCollected?'Collected · '+envelopeInitials:'Not collected'}</strong>{envelopeCollected?<Check size={16}/>:canManage&&daily&&<Pencil size={15}/>}</span>
+        <span className="ops-hub-quick-icon"><Wallet size={18}/></span><span className="ops-hub-quick-name">Tips</span><small>{envelopeCollected?'Collected · '+envelopeInitials:'Not collected'}</small>{envelopeCollected&&<Check size={14} className="ops-hub-quick-check"/>}
        </button>
        <button type="button" className={'ops-hub-quick-action'+(daily?.late_arrival?' selected':'')} aria-pressed={Boolean(daily?.late_arrival)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('lateArrival')}>
         <span className="ops-hub-quick-icon"><Clock3 size={18}/></span><span className="ops-hub-quick-name">Late arrival</span>{daily?.late_arrival&&<Check size={15} className="ops-hub-quick-check"/>}
