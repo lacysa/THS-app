@@ -541,3 +541,18 @@
 .rooms-stayover-collapsible[open]>summary svg{transform:rotate(180deg)}
 .rooms-stayover-collapsible>.rooms-stayover-grid{padding:0 16px 16px}
 @media(max-width:680px){.rooms-stayover-collapsible>summary{padding:12px;flex-direction:row;align-items:center}.rooms-stayover-collapsible>summary>span{white-space:normal;flex-shrink:0}.rooms-stayover-collapsible>.rooms-stayover-grid{padding:0 12px 12px}}
+
+
+/* Action-first room detail: controls before reference information */
+.rooms-action-heading{display:grid;gap:2px;padding:0 1px}
+.rooms-action-heading strong{color:#244455;font-size:17px}
+.rooms-action-heading span{color:#67808c;font-size:12px}
+.rooms-primary-controls{border:1px solid #bcdad9;border-radius:15px;background:linear-gradient(115deg,rgba(227,249,245,.68),rgba(244,241,255,.63));overflow:hidden}
+.rooms-primary-controls>summary{font-weight:800;cursor:pointer;padding:13px 15px;color:#254b5d}
+.rooms-primary-controls[open]>summary{border-bottom:1px solid #cfe1e4}
+.rooms-primary-controls>.rooms-manager-edit{padding:14px}
+.rooms-secondary-details{border:1px solid #dee6e8;border-radius:12px;background:rgba(255,255,255,.7);overflow:hidden}
+.rooms-secondary-details>summary{cursor:pointer;padding:12px 14px;color:#536d7a;font-size:13px;font-weight:750}
+.rooms-secondary-details>.rooms-meta-grid{padding:0 12px 12px}
+.rooms-card-body>.rooms-dirty-action{padding:0;opacity:.85}
+@media(max-width:700px){.rooms-primary-controls>summary{font-size:14px}.rooms-card-body{gap:12px}.rooms-primary-controls>.rooms-manager-edit{padding:11px}}
