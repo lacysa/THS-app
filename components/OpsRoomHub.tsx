@@ -15,6 +15,24 @@ function present(value:unknown){return String(value??'').trim()||'Not recorded'}
 function dateLabel(value:string){return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z'))}
 function shortDate(value:string){return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z'))}
 function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="ops-hub-field"><span>{label}</span><strong>{children}</strong></div>}
+type EditableGuestField='guest_name'|'guest_phone'|'occupancy'|'rate_plan'|'check_in_time'|'dietary_restrictions'|'reason_for_visit'|'guest_comments'|'innkeeper_notes'
+function GuestCard({label,value,field,canEdit,busy,onSave,large=false}:{label:string;value:string|number|null|undefined;field:EditableGuestField;canEdit:boolean;busy:boolean;large?:boolean;onSave:(field:EditableGuestField,value:string)=>Promise<boolean>}){
+ const [editing,setEditing]=useState(false)
+ const [draft,setDraft]=useState(String(value??''))
+ useEffect(()=>{if(!editing)setDraft(String(value??''))},[value,editing])
+ const save=async()=>{if(await onSave(field,draft))setEditing(false)}
+ return <div className={'ops-hub-guest-card'+(large?' wide':'')+(editing?' is-editing':'')}>
+  <button type="button" className="ops-hub-guest-card-trigger" disabled={!canEdit||busy} onClick={()=>{setDraft(String(value??''));setEditing(v=>!v)}} aria-expanded={editing}>
+   <span>{label}</span>
+   <strong>{String(value??'').trim()||'Not recorded'}</strong>
+   {canEdit&&<Pencil size={15}/>}
+  </button>
+  {editing&&canEdit&&<div className="ops-hub-guest-card-editor">
+   {large?<textarea rows={3} aria-label={'Edit '+label} value={draft} maxLength={6000} disabled={busy} onChange={e=>setDraft(e.target.value)}/>:<input aria-label={'Edit '+label} type={field==='occupancy'?'number':field==='guest_phone'?'tel':'text'} min={field==='occupancy'?1:undefined} max={field==='occupancy'?20:undefined} maxLength={6000} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)}/>}
+   <div className="ops-hub-inline-actions"><button type="button" disabled={busy||draft===String(value??'')} onClick={()=>void save()}><Save size={14}/>Save</button><button type="button" disabled={busy} onClick={()=>setEditing(false)}>Cancel</button></div>
+  </div>}
+ </div>
+}
 export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:{roomId:string;date:string;reservationId?:string;onClose:()=>void;onUpdate?:()=>void}){
  const [data,setData]=useState<Data|null>(null)
  const [error,setError]=useState('')
