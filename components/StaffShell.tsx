@@ -93,6 +93,7 @@ const iconMap: Record<string, any> = {
   housekeeping_guide: BookOpen,
   reservation_sync: RefreshCw,
   reservations: CalendarDays,
+  ops: CalendarDays,
   housekeeping_quality: BarChart3,
   staff: UsersRound
 }
@@ -133,6 +134,7 @@ const hrefFallback: Record<string, string> = {
   housekeeping_guide: '/housekeeping/resources',
   reservation_sync: '/reservation-sync',
   reservations: '/reservations',
+  ops: '/ops',
   housekeeping_quality: '/housekeeping/quality',
   staff: '/staff'
 }
@@ -159,6 +161,7 @@ const operationsModules = new Set([
   'housekeeping_guide',
   'reservation_sync',
   'reservations',
+  'ops',
   'staff'
 ])
 
