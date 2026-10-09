@@ -119,7 +119,9 @@ export async function POST(req:NextRequest){
 export async function PATCH(req:NextRequest){
  const gate=await gateOps()
  if(!gate.access)return NextResponse.json({error:'Unauthorized'},{status:401})
- if(!gate.allowed||gate.access.isPreviewMode)return NextResponse.json({error:'Forbidden'},{status:403})
+ const caps=gate.access.capabilities||[]
+ const manager=gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c))
+ if(!gate.allowed||gate.access.isPreviewMode||!manager)return NextResponse.json({error:'Manager access required to resolve Ops requests'},{status:403})
  const body=await req.json().catch(()=>null)
  const id=short(body?.id)
  if(!uuidPattern.test(id)||body?.status!=='done')return NextResponse.json({error:'Invalid action'},{status:400})
