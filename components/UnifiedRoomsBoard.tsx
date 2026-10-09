@@ -662,8 +662,8 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
       </div>
     </div>
 
-    {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<section className="rooms-stayover-planner">
-      <div className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Visible for planning. Assigning coverage alone does not request a refresh or add a cleaning task.</span></div><span>{inactiveStayovers.length} stayovers</span></div>
+    {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
+      <summary className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Occupied rooms without a refresh request · tap to expand</span></div><span>{inactiveStayovers.length} stayovers <ChevronDown size={15}/></span></summary>
       <div className="rooms-stayover-grid">
         {inactiveStayovers.map(row=><div className="rooms-stayover-item" key={row.roomId}>
           <div><strong>{row.roomName}</strong><small>Occupied · no refresh requested</small></div>
@@ -673,11 +673,11 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
           <button type="button" onClick={()=>setRefresh(row)}>Request RF</button>
         </div>)}
       </div>
-    </section>}
-    {viewMode==='assigned'&&inactiveStayovers.length>0&&<section className="rooms-stayover-planner">
-      <div className="rooms-stayover-heading"><div><strong>Stayover coverage</strong><span>These rooms are assigned to you for awareness. No refresh is due unless RF is requested.</span></div><span>{inactiveStayovers.length} assigned</span></div>
+    </details>}
+    {viewMode==='assigned'&&inactiveStayovers.length>0&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
+      <summary className="rooms-stayover-heading"><div><strong>Stayover coverage</strong><span>No refresh due unless RF requested · tap to expand</span></div><span>{inactiveStayovers.length} assigned <ChevronDown size={15}/></span></summary>
       <div className="rooms-stayover-grid">{inactiveStayovers.map(row=><div className="rooms-stayover-item" key={row.roomId}><div><strong>{row.roomName}</strong><small>No service requested</small></div></div>)}</div>
-    </section>}
+    </details>}
 
     {<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
       <button type="button" className={managerDisplay==='focus'?'active':''} onClick={()=>chooseManagerDisplay('focus')}>Focus</button>
