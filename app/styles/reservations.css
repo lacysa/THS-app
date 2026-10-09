@@ -484,3 +484,11 @@ html[data-theme="dark"] .reservation-checkout-only small{
   line-height:13px!important;
   letter-spacing:0!important;
 }
+
+
+/* Vacant-day notes: visible without implying a reservation */
+.ths-calendar-day-bg{position:relative;min-width:0}
+.ths-calendar-note{position:absolute;inset:5px 4px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-width:0;padding:5px 7px;border:1px solid #c9d8ee;border-radius:9px;background:linear-gradient(115deg,#eaf2ff,#f3f0ff);color:#3b587b;text-align:left;cursor:pointer;overflow:hidden}
+.ths-calendar-note>span{font-family:Arial,Helvetica,sans-serif;font-size:10px!important;font-weight:800;line-height:12px}
+.ths-calendar-note>small{display:block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:Arial,Helvetica,sans-serif;font-size:10px!important;line-height:12px}
+.ths-calendar-note-full{font-size:14px!important;color:#2b4658!important;line-height:1.55!important;white-space:pre-wrap;overflow-wrap:anywhere}
