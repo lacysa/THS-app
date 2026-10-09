@@ -37,11 +37,14 @@ export async function GET(req:NextRequest){
  const caps=gate.access.capabilities||[]
  const canManage=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
  const canInspect=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c)))
+ const staffResult=canManage?await admin.from('staff_members').select('name').eq('active',true).order('name'):null
+ if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
+ const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
  const status=String(daily?.reservation_status||'').toLowerCase()
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},
+  permissions:{canManage,canInspect},staffNames,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
