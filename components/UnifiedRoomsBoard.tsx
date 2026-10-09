@@ -824,13 +824,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
               {row.checkIssueOpen&&<div className="rooms-correction-box"><AlertTriangle size={17}/><div><strong>Correction required</strong><span>{row.checkIssueNote||'A room check found an issue that must be corrected.'}</span>{row.checkIssueByName&&<small>Flagged by {row.checkIssueByName}</small>}</div></div>}
 
               <div className="rooms-action-heading"><strong>Room controls</strong><span>Make changes without opening another page</span></div>
-              <div className="rooms-meta-grid">
-                <div><span>Assigned</span><strong>{assigned.length?assigned.join(', '):'Unassigned'}</strong></div>
-                <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
-                <div><span>Next</span><strong>{roomNextAction(effectiveRow)}</strong></div>
-                {row.housekeeperAttestedAt&&<div><span>Self-check</span><strong>{shortTime(row.housekeeperAttestedAt)}</strong></div>}
-                {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
-              </div>
+
 
               {isManager(access)&&<details open={Boolean(initialRoomId)} className="rooms-details-drawer rooms-primary-controls"><summary>Room status, assignments & services</summary><div className="rooms-manager-edit">
                 <div className="rooms-manager-context">
@@ -862,6 +856,15 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
                   })}</div>
                 </div>
               </div></details>}
+
+              <details className="rooms-secondary-details"><summary>Room overview & timestamps</summary>              <div className="rooms-meta-grid">
+                <div><span>Assigned</span><strong>{assigned.length?assigned.join(', '):'Unassigned'}</strong></div>
+                <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
+                <div><span>Next</span><strong>{roomNextAction(effectiveRow)}</strong></div>
+                {row.housekeeperAttestedAt&&<div><span>Self-check</span><strong>{shortTime(row.housekeeperAttestedAt)}</strong></div>}
+                {row.inspectedAt&&<div><span>Inspected</span><strong>{shortTime(row.inspectedAt)}</strong></div>}
+              </div></details>
+              {isManager(access)&&!isBlocked(row)&&!isStayover(row)&&<div className="rooms-dirty-action"><button type="button" className="ops-secondary-btn" disabled={normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected} onClick={()=>void markRoomDirty(row)}><AlertTriangle size={15}/>{normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected?'Marked dirty':'Mark dirty · reopen clean'}</button></div>}
 
               {viewMode==='manager'&&packageNames.length>0&&<div className="rooms-info-callout"><strong>Selected room items</strong><span>{packageNames.join(', ')}</span></div>}
 
