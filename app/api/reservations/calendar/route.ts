@@ -6,9 +6,9 @@ export const dynamic='force-dynamic'
 function addDay(day:string,days:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
 
 export async function GET(req:NextRequest){
-  const gate=await canUseModule('reservations')
-  if(!gate.access)return NextResponse.json({error:'Unauthorized'},{status:401})
-  if(!gate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
+  const [reservationGate,opsGate]=await Promise.all([canUseModule('reservations'),canUseModule('ops')])
+  if(!reservationGate.access)return NextResponse.json({error:'Unauthorized'},{status:401})
+  if(!reservationGate.allowed&&!opsGate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
   const start=req.nextUrl.searchParams.get('start')||''
   if(!/^20\d{2}-\d{2}-\d{2}$/.test(start)||Number.isNaN(Date.parse(start+'T12:00:00Z')))return NextResponse.json({error:'Invalid start date'},{status:400})
   const end=addDay(start,6)
