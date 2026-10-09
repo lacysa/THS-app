@@ -3,7 +3,7 @@ import {useEffect,useMemo,useState} from 'react'
 import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw,X} from 'lucide-react'
 
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
-type Data={start:string;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[]}
+type Data={start:string;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
 function occupied(c:Cell){return Boolean(c.guest&&c.arrival&&c.departure&&c.date>=c.arrival&&c.date<c.departure)}
@@ -13,6 +13,7 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
   const [selected,setSelected]=useState<Cell|null>(null)
+  const [selectedNote,setSelectedNote]=useState<{date:string;roomId:string;text:string}|null>(null)
   const [reload,setReload]=useState(0)
   useEffect(()=>{
     let active=true
@@ -25,6 +26,7 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
     return()=>{active=false}
   },[start,reload])
   const cells=useMemo(()=>new Map((data?.cells||[]).map(c=>[c.date+'|'+c.roomId,c])),[data])
+  const notes=useMemo(()=>new Map((data?.notes||[]).map(n=>[n.date+'|'+n.roomId,n])),[data])
   const holds=useMemo(()=>new Set((data?.holds||[]).map(h=>h.date+'|'+h.roomId)),[data])
   return <div className="ths-calendar">
     <div className="ths-calendar-toolbar">
@@ -58,7 +60,11 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
             {data.days.map(day=>{
               const c=cells.get(day+'|'+room.id)
               const blocked=holds.has(day+'|'+room.id)||Boolean(c?.blocked)
-              return <div key={day} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')} title={room.name+' · '+pretty(day)+(blocked?' · Blocked':'')}/>
+              const note=notes.get(day+'|'+room.id)
+              const coveredByStay=[...stays.values()].some(stay=>day>=stay.arrival&&day<stay.departure)
+              return <div key={day} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')} title={room.name+' · '+pretty(day)+(blocked?' · Blocked':'')}>
+                {note&&!coveredByStay&&<button type="button" className="ths-calendar-note" title={note.text} aria-label={'Room note for '+room.name+' on '+pretty(day)+': '+note.text} onClick={()=>setSelectedNote(note)}><span>Note</span><small>{note.text}</small></button>}
+              </div>
             })}
             {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={()=>setSelected(bar)}>
               <strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}</small>
@@ -67,6 +73,18 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
         </div>
       })}
     </div></div>}
+    {selectedNote&&<div className="ths-calendar-reservation-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelectedNote(null)}}>
+      <section className="ths-calendar-reservation-sheet" role="dialog" aria-modal="true" aria-label="Room note">
+        <header className="ths-calendar-reservation-head">
+          <div><span>Room note · {pretty(selectedNote.date)}</span><strong>{data?.rooms.find(r=>r.id===selectedNote.roomId)?.name||'Room'}</strong></div>
+          <button type="button" aria-label="Close room note" onClick={()=>setSelectedNote(null)}><X size={20}/></button>
+        </header>
+        <div className="ths-calendar-reservation-content">
+          <p className="ths-calendar-note-full">{selectedNote.text}</p>
+          {onOpenRoom&&<button type="button" className="ths-calendar-open-room" onClick={()=>{const roomId=selectedNote.roomId;setSelectedNote(null);onOpenRoom(roomId)}}>Manage room <ChevronRight size={17}/></button>}
+        </div>
+      </section>
+    </div>}
     {selected&&<div className="ths-calendar-reservation-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelected(null)}}>
       <section className="ths-calendar-reservation-sheet" role="dialog" aria-modal="true" aria-label="Reservation details">
         <header className="ths-calendar-reservation-head">
