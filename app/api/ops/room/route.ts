@@ -1,0 +1,48 @@
+import {NextRequest,NextResponse} from 'next/server'
+import {canUseModule} from '@/lib/access'
+import {createSupabaseAdmin} from '@/lib/supabase/admin'
+
+export const dynamic='force-dynamic'
+const validDate=(value:string)=>/^20\d{2}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+'T12:00:00Z'))
+const validId=(value:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+
+export async function GET(req:NextRequest){
+ const gate=await canUseModule('ops')
+ if(!gate.access)return NextResponse.json({error:'Unauthorized'},{status:401})
+ if(!gate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
+ const date=req.nextUrl.searchParams.get('date')||''
+ const roomId=req.nextUrl.searchParams.get('roomId')||''
+ const reservationId=req.nextUrl.searchParams.get('reservationId')||''
+ if(!validDate(date)||!validId(roomId)||(reservationId&&!validId(reservationId)))
+   return NextResponse.json({error:'Invalid room or date'},{status:400})
+ const admin=createSupabaseAdmin()
+ const [roomResult,dailyResult,linkResult]=await Promise.all([
+  admin.from('rooms').select('id,name').eq('id',roomId).eq('active',true).maybeSingle(),
+  admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,reservation_status,service_type,room_condition,strip_hold,complete,ready_for_inspection,inspected,inspected_at,check_issue_open,check_issue_note,breakfast_tag,late_arrival,housekeeper_attested_by').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
+  admin.from('reservation_daily_links').select('primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').eq('service_date',date).eq('room_id',roomId).maybeSingle()
+ ])
+ if(roomResult.error||dailyResult.error||linkResult.error)
+  return NextResponse.json({error:'Unable to load room operations'},{status:500})
+ if(!roomResult.data)return NextResponse.json({error:'Room not found'},{status:404})
+ const daily=dailyResult.data
+ const link=linkResult.data
+ const availableIds=[link?.arriving_reservation_id,link?.stay_reservation_id,link?.primary_reservation_id,link?.departing_reservation_id].filter(Boolean).map(String)
+ const chosen=reservationId&&availableIds.includes(reservationId)?reservationId:availableIds[0]
+ let stay:any=null
+ if(chosen){
+  const result=await admin.from('reservation_stays').select('id,reservation_number,guest_name,guest_phone,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,guest_comments,innkeeper_notes,reason_for_visit').eq('id',chosen).maybeSingle()
+  if(result.error)return NextResponse.json({error:'Unable to load guest stay'},{status:500})
+  stay=result.data
+ }
+ const caps=gate.access.capabilities||[]
+ const canManage=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
+ const canInspect=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c)))
+ const status=String(daily?.reservation_status||'').toLowerCase()
+ const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
+ const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
+ return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
+  permissions:{canManage,canInspect},
+  inspectionEligible:eligible,
+  inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
+ },{headers:{'cache-control':'private, no-store'}})
+}
