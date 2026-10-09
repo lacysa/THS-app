@@ -322,3 +322,28 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-ops-panel-header button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:#27485a;font:inherit;font-weight:750;cursor:pointer;padding:10px}
 .ths-ops-panel-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:15px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
 @media(max-width:700px){.ths-ops-nav{margin-bottom:10px}.ths-ops-stats{gap:5px}.ths-ops-stats button{padding:10px 2px}.ths-ops-stats strong{font-size:20px}.ths-ops-stats span{font-size:10px}.ths-ops-room-row{padding:12px 10px}.ths-ops-condition{max-width:90px;font-size:10px}.ths-ops-panel-backdrop{align-items:flex-end}.ths-ops-detail-panel{height:94dvh;border-radius:20px 20px 0 0}.ths-ops-panel-body{padding:10px}}
+
+
+/* PMS-inspired room tape chart: modern colors, sticky room names, mobile scrolling */
+.ths-operations-simplified>.ths-ops-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ths-calendar{display:grid;gap:12px;min-width:0}
+.ths-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border:1px solid #d3e5e8;border-radius:18px;padding:14px;background:linear-gradient(112deg,#e3f9f4,#f0f1ff)}
+.ths-calendar-toolbar>div:first-child{display:grid;gap:3px}.ths-calendar-toolbar strong{font-size:18px;color:#243f51}.ths-calendar-toolbar small{font-size:11px;color:#657c8b}
+.ths-calendar-controls{display:flex;gap:5px;align-items:center}.ths-calendar-controls button{border:1px solid #cddce4;border-radius:10px;background:#fff;color:#315167;min-width:36px;min-height:36px;padding:7px 10px;font:inherit;font-size:12px;font-weight:750;cursor:pointer}
+.ths-calendar-date{display:flex;align-items:center;gap:8px;color:#45697b;font-size:13px}.ths-calendar-date input{border:1px solid #cbdce4;border-radius:10px;background:#fff;color:#243d50;padding:9px;font:inherit}
+.ths-calendar-help,.ths-calendar-caveat{margin:0;color:#657d8c;font-size:12px;line-height:1.5}
+.ths-calendar-scroll{overflow-x:auto;overscroll-behavior-x:contain;border:1px solid #d3e1e7;border-radius:16px;background:#fff;box-shadow:0 9px 24px #2442570d}
+.ths-calendar-grid{display:grid;min-width:944px}
+.ths-calendar-grid>div.ths-calendar-row{display:contents}
+.ths-calendar-corner,.ths-calendar-day{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:12px 8px;font-size:12px;font-weight:800;color:#476477;border-bottom:1px solid #d7e3e8;background:#f4f9fb}
+.ths-calendar-corner{left:0;z-index:4}
+.ths-calendar-day.today{background:#d8f5ec;color:#23584e}
+.ths-calendar-room{position:sticky;left:0;z-index:1;display:flex;align-items:center;padding:10px;border-bottom:1px solid #e1e9ed;border-right:1px solid #d9e5e9;background:#f9fcfd;color:#243d50;font-size:12px;font-weight:800}
+.ths-calendar-cell{height:66px;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:8px;border:0;border-right:1px solid #e5edf0;border-bottom:1px solid #e5edf0;text-align:left;background:#fff;color:#677d89;font:inherit;font-size:11px;cursor:pointer}
+.ths-calendar-cell span{white-space:nowrap;text-overflow:ellipsis;overflow:hidden;font-weight:750}.ths-calendar-cell small{font-size:10px;opacity:.8}
+.ths-calendar-cell.booked{background:#d7f6e4;color:#28604b;border-left:3px solid #5ab88f}.ths-calendar-cell.arrival{background:#d1f2e5;border-left:4px solid #7a80e9}
+.ths-calendar-cell.blocked{background:repeating-linear-gradient(135deg,#e6e8ed,#e6e8ed 5px,#f6f7f9 5px,#f6f7f9 10px);color:#596575}
+.ths-calendar-cell.unknown{background:#fafbfc;color:#9aabb4;cursor:default}.ths-calendar-cell:hover:not(:disabled){filter:brightness(.97)}
+.ths-calendar-selection{padding:14px;border:1px solid #bad9d9;border-radius:15px;background:linear-gradient(115deg,#f0fcf8,#f5f2ff)}
+.ths-calendar-selection>div:first-child{display:flex;justify-content:space-between;gap:10px;color:#244658}.ths-calendar-selection>div:first-child span{color:#658090;font-size:12px}.ths-calendar-selection p{margin:9px 0 12px;font-size:13px;color:#3a596c}
+@media(max-width:700px){.ths-operations-simplified>.ths-ops-nav button{font-size:12px;min-height:42px}.ths-calendar-toolbar{padding:12px}.ths-calendar-grid{min-width:874px;grid-template-columns:106px repeat(7,minmax(109px,1fr))!important}.ths-calendar-room{font-size:11px}.ths-calendar-cell{height:60px;padding:7px}.ths-calendar-toolbar strong{font-size:15px}}
