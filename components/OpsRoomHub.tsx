@@ -1,6 +1,6 @@
 'use client'
 import {useCallback,useEffect,useState} from 'react'
-import {AlertTriangle,Check,ChevronDown,Pencil,Save,X} from 'lucide-react'
+import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,Pencil,Save,SlidersHorizontal,X} from 'lucide-react'
 import OpsActivityLog from '@/components/OpsActivityLog'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
@@ -42,12 +42,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [reload,setReload]=useState(0)
  const [view,setView]=useState<View>('room')
  const [activeEditor,setActiveEditor]=useState<Editor>(null)
+ const [showDetails,setShowDetails]=useState(false)
  const [roomNotes,setRoomNotes]=useState('')
  const [issueNote,setIssueNote]=useState('')
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
  const [roomOrder,setRoomOrder]=useState('')
  const refresh=useCallback(()=>setReload(n=>n+1),[])
- useEffect(()=>{setView('room');setActiveEditor(null);setMessage('')},[roomId,date,reservationId])
+ useEffect(()=>{setView('room');setActiveEditor(null);setShowDetails(false);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
   const controller=new AbortController()
   if(!data)setLoading(true)
@@ -95,6 +96,23 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const markedOut=/^OUT(?:-[A-Z]{2,4})?$/.test(serviceCode)
  const envelopeInitials=/^OUT-([A-Z]{2,4})$/.exec(serviceCode)?.[1]||''
  const envelopeCollected=Boolean(envelopeInitials)
+ const needsCorrection=Boolean(daily?.check_issue_open)
+ const inspectionDue=Boolean(data?.inspectionEligible&&!daily?.inspected&&(daily?.complete||daily?.ready_for_inspection))
+ const awaitingClean=Boolean(daily&&!blocked&&!isStayover&&!daily.complete&&(
+   /dirty|cleaning/i.test(String(daily.room_condition||''))||markedOut
+ ))
+ const refreshPending=Boolean(isStayover&&serviceCode==='RF'&&!daily?.complete)
+ const attentionTitle=needsCorrection?'Housekeeping correction needed':
+   blocked?'Room blocked':
+   inspectionDue?'Ready for inspection':
+   awaitingClean?'Cleaning not completed':
+   refreshPending?'Refresh requested':''
+ const attentionDescription=needsCorrection?present(daily?.check_issue_note):
+   blocked?'This room is held from normal service.':
+   inspectionDue?'Review the room and record the final inspection.':
+   awaitingClean?'The room clean has not been marked complete.':
+   refreshPending?'The requested refresh has not been marked complete.':''
+
  async function changeCondition(condition:string){
   if(!daily||!canManage)return
   const patch:Record<string,unknown>={roomCondition:condition}
@@ -179,41 +197,81 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
      <nav className="ops-hub-tabs" aria-label="Room hub views"><button type="button" className={view==='room'?'active':''} onClick={()=>setView('room')}>Room & checks</button><button type="button" className={view==='guest'?'active':''} onClick={()=>setView('guest')} disabled={!data.stay}>Guest & notes</button><button type="button" className={view==='log'?'active':''} onClick={()=>setView('log')}>Activity</button></nav>
      {view==='log'&&<OpsActivityLog serviceDate={date} roomId={roomId} compact/>}
      {view==='room'&&<>
-      <div className="ops-hub-kpis">
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
+      <div className="ops-hub-priority">
+       <div className="ops-hub-primary-cards">
+       <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
         <span>Condition</span><span className="ops-hub-action-value"><strong>{present(daily?.room_condition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='housekeeper'?null:'housekeeper')}>
+       <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='housekeeper'?null:'housekeeper')}>
         <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{cleanerDisplay}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
         {isStayover
          ? <small className="ops-hub-last-assigned">{data.lastCleaned?'Last completed clean':'Last clean not recorded'}{currentHousekeeper&&(!data.lastCleaned||currentHousekeeper.toLowerCase()!==data.lastCleaned.name.toLowerCase()||!daily?.complete)?` · Assigned: ${currentHousekeeper}`:''}</small>
          : !currentHousekeeper&&data.lastAssigned&&<small className="ops-hub-last-assigned">Last assigned · {dateLabel(data.lastAssigned.date)}</small>}
        </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='activity'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='activity'?null:'activity')}>
-        <span>Activity</span><span className="ops-hub-action-value"><strong>{present(daily?.reservation_status)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-       </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='inspection'?' is-selected':'')} disabled={!daily||busy} onClick={()=>setActiveEditor(v=>v==='inspection'?null:'inspection')}>
-        <span>Inspection</span><span className="ops-hub-action-value"><strong>{daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</strong>{daily&&<ChevronDown size={16}/>}</span>
-       </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='service'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>
-        <span>Service</span><span className="ops-hub-action-value"><strong>{markedOut?'OUT':daily?.service_type||'No service'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-       </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(markedOut?' ops-hub-complete-card':'')+(activeEditor==='out'?' is-selected':'')} disabled={!canManage||!daily||busy||(blocked&&!markedOut)||((isStayover||serviceCode==='RF')&&!markedOut)} onClick={()=>markedOut?setActiveEditor(v=>v==='out'?null:'out'):void markOut()} aria-label={markedOut?'Room marked OUT; tap to manage OUT':'Mark room OUT'}>
+       </div>
+       <div className="ops-hub-context">
+        <span><strong>Activity</strong> {present(daily?.reservation_status)}</span>
+        <span><strong>Inspection</strong> {daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</span>
+       </div>
+      </div>
+      {attentionTitle&&<div className={'ops-hub-next-action'+(needsCorrection?' needs-correction':blocked?' is-blocked':'')}>
+       <div className="ops-hub-next-heading"><AlertTriangle size={17}/><strong>{attentionTitle}</strong></div>
+       <p>{attentionDescription}</p>
+       {inspectionDue&&canInspect&&<button type="button" onClick={()=>setActiveEditor('inspection')} disabled={busy}>Open inspection <ChevronRight size={16}/></button>}
+       {needsCorrection&&canInspect&&<button type="button" onClick={()=>setActiveEditor('inspection')} disabled={busy}>Review correction <ChevronRight size={16}/></button>}
+      </div>}
+      {!!daily?.notes?.trim()&&<div className="ops-hub-prominent-note">
+       <div><span>Room note</span><p>{daily.notes}</p></div>
+       {canManage&&<button type="button" disabled={busy} onClick={()=>setActiveEditor('room_notes')} aria-label="Edit room note"><Pencil size={17}/></button>}
+      </div>}
+      <div className="ops-hub-quick-section">
+       <span className="ops-hub-overline">Quick actions</span>
+       <div className="ops-hub-quick-actions">
+       <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(markedOut?' ops-hub-complete-card':'')+(activeEditor==='out'?' is-selected':'')} disabled={!canManage||!daily||busy||(blocked&&!markedOut)||((isStayover||serviceCode==='RF')&&!markedOut)} onClick={()=>markedOut?setActiveEditor(v=>v==='out'?null:'out'):void markOut()} aria-label={markedOut?'Room marked OUT; tap to manage OUT':'Mark room OUT'}>
         <span>OUT</span><span className="ops-hub-action-value"><strong>{markedOut?'Marked OUT':'Mark room OUT'}</strong>{markedOut?<Check size={16}/>:canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(envelopeCollected?' ops-hub-complete-card':'')+(activeEditor==='tip_envelope'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='tip_envelope'?null:'tip_envelope')} aria-label={envelopeCollected?'Tip envelope collected by '+envelopeInitials:'Tip envelope not collected'}>
+       <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(envelopeCollected?' ops-hub-complete-card':'')+(activeEditor==='tip_envelope'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='tip_envelope'?null:'tip_envelope')} aria-label={envelopeCollected?'Tip envelope collected by '+envelopeInitials:'Tip envelope not collected'}>
         <span>Tip envelope</span><span className="ops-hub-action-value"><strong>{envelopeCollected?'Collected · '+envelopeInitials:'Not collected'}</strong>{envelopeCollected?<Check size={16}/>:canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='packages'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>
+       <button type="button" className={'ops-hub-quick-action'+(daily?.late_arrival?' selected':'')} aria-pressed={Boolean(daily?.late_arrival)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('lateArrival')}>
+        <span className="ops-hub-quick-icon"><Clock3 size={18}/></span><span className="ops-hub-quick-name">Late arrival</span>{daily?.late_arrival&&<Check size={15} className="ops-hub-quick-check"/>}
+       </button>
+       <button type="button" className={'ops-hub-quick-action'+(blocked?' selected warning':'')} aria-pressed={blocked} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('stripHold')}>
+        <span className="ops-hub-quick-icon"><Ban size={18}/></span><span className="ops-hub-quick-name">Block room</span>{blocked&&<Check size={15} className="ops-hub-quick-check"/>}
+       </button>
+       </div>
+      </div>
+      <section className="ops-hub-details-section">
+       <button type="button" className="ops-hub-details-toggle" onClick={()=>setShowDetails(v=>!v)} aria-expanded={showDetails}>
+        <span><SlidersHorizontal size={18}/> More room details</span>
+        <ChevronDown size={18} className={showDetails?'expanded':''}/>
+       </button>
+       {showDetails&&<div className="ops-hub-details-inner">
+        <div className="ops-hub-detail-cards">
+       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='activity'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='activity'?null:'activity')}>
+        <span>Activity</span><span className="ops-hub-action-value"><strong>{present(daily?.reservation_status)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+       </button>
+       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='inspection'?' is-selected':'')} disabled={!daily||busy} onClick={()=>setActiveEditor(v=>v==='inspection'?null:'inspection')}>
+        <span>Inspection</span><span className="ops-hub-action-value"><strong>{daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</strong>{daily&&<ChevronDown size={16}/>}</span>
+       </button>
+       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='service'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>
+        <span>Service</span><span className="ops-hub-action-value"><strong>{markedOut?'OUT':daily?.service_type||'No service'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+       </button>
+       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='packages'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>
         <span>Packages</span><span className="ops-hub-action-value"><strong>{[...new Set([...(data.importedPackageIds||[]),...(data.manualPackageIds||[])])].map(id=>data.packageOptions.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'None selected'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='clean_order'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='clean_order'?null:'clean_order')}>
+       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='clean_order'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='clean_order'?null:'clean_order')}>
         <span>Clean order</span><span className="ops-hub-action-value"><strong>{daily?.clean_order??'Not assigned'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-       <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='room_notes'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>
+       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='room_notes'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>
         <span>Room notes</span><span className="ops-hub-action-value"><strong>{daily?.notes?.trim()||'No notes'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-      </div>
+        </div>
+        <div className="ops-hub-extra-tags">
+         <button type="button" aria-pressed={Boolean(daily?.breakfast_tag)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('breakfastTag')} className={daily?.breakfast_tag?'selected':''}>{daily?.breakfast_tag&&<Check size={15}/>} Breakfast {daily?.breakfast_tag?'included':'tag'}</button>
+        </div>
+       </div>}
+      </section>
       {activeEditor&&daily&&<section className="ops-hub-quick-editor" aria-label="Room card editor">
        <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',inspection:'Room inspection',service:'Choose service',out:'OUT status',tip_envelope:'Tip envelope collection',packages:'Room packages',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
        {activeEditor==='condition'&&canManage&&<div className="ops-hub-choices">{conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}</div>}
@@ -245,13 +303,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         {data.inspectionEligible&&!canInspect&&<p className="ops-hub-muted">Room-check permission required.</p>}
        </div>}
       </section>}
-      {daily?.check_issue_open&&<div className="ops-hub-issue"><AlertTriangle size={18}/><div><strong>Housekeeping issue</strong><p>{present(daily.check_issue_note)}</p></div></div>}
-      {!daily&&<p className="ops-hub-muted">No operational record for this date. Room controls remain read-only until the existing scheduling workflow creates it.</p>}
-      <div className="ops-hub-tag-row" role="group" aria-label="Room tags">
-       <button type="button" aria-pressed={Boolean(daily?.late_arrival)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('lateArrival')} className={daily?.late_arrival?'selected':''}>{daily?.late_arrival&&<Check size={14}/>}Late arrival</button>
-       <button type="button" aria-pressed={blocked} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('stripHold')} className={blocked?'selected warning':''}>{blocked&&<Check size={14}/>}Block room</button>
-       <button type="button" aria-pressed={Boolean(daily?.breakfast_tag)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('breakfastTag')} className={daily?.breakfast_tag?'selected':''}>{daily?.breakfast_tag&&<Check size={14}/>}Breakfast</button>
-      </div>
+      {!daily&&<p className="ops-hub-muted">No operational record exists for this date. Management controls become available once the room day is scheduled.</p>}
      </>}
      {view==='guest'&&data.stay&&<section className="ops-hub-guest">
       <div className="ops-hub-kpis">
