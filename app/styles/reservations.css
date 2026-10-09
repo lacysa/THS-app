@@ -347,3 +347,15 @@ html[data-theme="dark"] .reservation-checkout-only small{
 .ths-calendar-selection{padding:14px;border:1px solid #bad9d9;border-radius:15px;background:linear-gradient(115deg,#f0fcf8,#f5f2ff)}
 .ths-calendar-selection>div:first-child{display:flex;justify-content:space-between;gap:10px;color:#244658}.ths-calendar-selection>div:first-child span{color:#658090;font-size:12px}.ths-calendar-selection p{margin:9px 0 12px;font-size:13px;color:#3a596c}
 @media(max-width:700px){.ths-operations-simplified>.ths-ops-nav button{font-size:12px;min-height:42px}.ths-calendar-toolbar{padding:12px}.ths-calendar-grid{min-width:874px;grid-template-columns:106px repeat(7,minmax(109px,1fr))!important}.ths-calendar-room{font-size:11px}.ths-calendar-cell{height:60px;padding:7px}.ths-calendar-toolbar strong{font-size:15px}}
+
+
+/* THS calendar tape chart: span reservation bars across booked nights */
+.ths-calendar-band{grid-column:span 7;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:64px;position:relative;min-width:0}
+.ths-calendar-day-bg{grid-row:1;min-width:0;border-bottom:1px solid #e5edf0;border-right:1px solid #e5edf0;background:#fff}
+.ths-calendar-day-bg.unknown{background:#fafbfc}
+.ths-calendar-day-bg.blocked{background:repeating-linear-gradient(135deg,#e6e8ed,#e6e8ed 5px,#f6f7f9 5px,#f6f7f9 10px)}
+.ths-calendar-stay{grid-row:1;z-index:1;align-self:center;display:flex;flex-direction:column;justify-content:center;min-width:0;min-height:51px;margin:4px 3px;padding:7px 10px;text-align:left;border:1px solid #b0e2cf;border-left:4px solid #75ae9d;border-radius:10px;background:linear-gradient(105deg,#cbf2e2,#d8f0ea);color:#275749;box-shadow:0 3px 10px #2d856014;cursor:pointer}
+.ths-calendar-stay strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.ths-calendar-stay small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#527e70}
+.ths-calendar-stay:hover{filter:brightness(.97);border-color:#7bbba4}
+@media(max-width:700px){.ths-calendar-band{grid-template-rows:58px}.ths-calendar-stay{min-height:46px;padding:6px 8px;margin:3px}.ths-calendar-stay strong{font-size:11px}}
