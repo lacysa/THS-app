@@ -20,7 +20,7 @@ export async function GET(req:NextRequest){
  const [roomResult,dailyResult,linkResult]=await Promise.all([
   admin.from('rooms').select('id,name').eq('id',roomId).eq('active',true).maybeSingle(),
   admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,reservation_status,service_type,room_condition,strip_hold,clean_order,complete,ready_for_inspection,inspected,inspected_at,check_issue_open,check_issue_note,breakfast_tag,late_arrival,housekeeper_attested_by').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
-  admin.from('reservation_daily_links').select('primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').eq('service_date',date).eq('room_id',roomId).maybeSingle()
+  admin.from('reservation_daily_links').select('reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').eq('service_date',date).eq('room_id',roomId).maybeSingle()
  ])
  if(roomResult.error||dailyResult.error||linkResult.error)
   return NextResponse.json({error:'Unable to load room operations'},{status:500})
@@ -112,7 +112,7 @@ export async function GET(req:NextRequest){
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,
+  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
