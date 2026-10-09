@@ -145,6 +145,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(!daily||!canManage||busy||markedOut||blocked)return
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:'OUT'}},'Room marked OUT'))setActiveEditor(null)
  }
+ async function clearOut(){
+  if(!daily||!canManage||busy||!markedOut)return
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:''}},'OUT removed from room'))setActiveEditor(null)
+ }
  async function markEnvelopeCollected(){
   if(!daily||!canManage||busy||envelopeCollected)return
   if(!markedOut){setError('Mark the room OUT before confirming tip-envelope collection.');return}
@@ -192,7 +196,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         <span>Inspection</span><span className="ops-hub-action-value"><strong>{daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</strong>{daily&&<ChevronDown size={16}/>}</span>
        </button>
        <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='service'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>
-        <span>Service</span><span className="ops-hub-action-value"><strong>{daily?.service_type||'No service'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+        <span>Service</span><span className="ops-hub-action-value"><strong>{markedOut?'OUT':daily?.service_type||'No service'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+       </button>
+       <button type="button" className={'ops-hub-field ops-hub-action-card'+(markedOut?' ops-hub-complete-card':'')+(activeEditor==='out'?' is-selected':'')} disabled={!canManage||!daily||busy||(blocked&&!markedOut)||((isStayover||serviceCode==='RF')&&!markedOut)} onClick={()=>markedOut?setActiveEditor(v=>v==='out'?null:'out'):void markOut()} aria-label={markedOut?'Room marked OUT; tap to manage OUT':'Mark room OUT'}>
+        <span>OUT</span><span className="ops-hub-action-value"><strong>{markedOut?'Marked OUT':'Mark room OUT'}</strong>{markedOut?<Check size={16}/>:canManage&&daily&&<Pencil size={15}/>}</span>
+       </button>
+       <button type="button" className={'ops-hub-field ops-hub-action-card'+(envelopeCollected?' ops-hub-complete-card':'')+(activeEditor==='tip_envelope'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='tip_envelope'?null:'tip_envelope')} aria-label={envelopeCollected?'Tip envelope collected by '+envelopeInitials:'Tip envelope not collected'}>
+        <span>Tip envelope</span><span className="ops-hub-action-value"><strong>{envelopeCollected?'Collected · '+envelopeInitials:'Not collected'}</strong>{envelopeCollected?<Check size={16}/>:canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
        <button type="button" className={'ops-hub-field ops-hub-action-card'+(activeEditor==='packages'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>
         <span>Packages</span><span className="ops-hub-action-value"><strong>{[...new Set([...(data.importedPackageIds||[]),...(data.manualPackageIds||[])])].map(id=>data.packageOptions.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'None selected'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
@@ -205,10 +215,19 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        </button>
       </div>
       {activeEditor&&daily&&<section className="ops-hub-quick-editor" aria-label="Room card editor">
-       <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',inspection:'Room inspection',service:'Choose service',packages:'Room packages',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
+       <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',inspection:'Room inspection',service:'Choose service',out:'OUT status',tip_envelope:'Tip envelope collection',packages:'Room packages',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
        {activeEditor==='condition'&&canManage&&<div className="ops-hub-choices">{conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}</div>}
        {activeEditor==='activity'&&canManage&&<><div className="ops-hub-choices">{activities.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.reservation_status===value} className={daily.reservation_status===value?'is-current':''} onClick={()=>void changeActivity(value)}><span>{value}</span>{daily.reservation_status===value&&<Check size={16}/>}</button>)}</div><small>Operational status only; the PMS booking is unchanged.</small></>}
        {activeEditor==='housekeeper'&&canManage&&<><div className="ops-hub-choices">{['',...(data.staffNames||[])].map(value=><button type="button" key={value||'unassigned'} disabled={busy} aria-pressed={(daily.assigned_to||'')===value} className={(daily.assigned_to||'')===value?'is-current':''} onClick={()=>void assignHousekeeper(value)}><span>{value||'Unassigned'}</span>{(daily.assigned_to||'')===value&&<Check size={16}/>}</button>)}</div>{isStayover&&<small>Historical cleaner and date are retained. Assigning staff does not mark a clean complete.</small>}</>}
+       {activeEditor==='out'&&canManage&&<div className="ops-hub-inline-form">
+        <p className="ops-hub-muted">{envelopeCollected?'Envelope collection is currently recorded under '+envelopeInitials+'. Clearing OUT will also remove its collected indicator.':'The room is marked OUT. You can clear it if this was a mistake.'}</p>
+        <button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void clearOut()}>Remove OUT{envelopeCollected?' and envelope mark':''}</button>
+       </div>}
+       {activeEditor==='tip_envelope'&&canManage&&<div className="ops-hub-inline-form">
+        {!markedOut?<p className="ops-hub-muted">Mark the room OUT first, then confirm management collected the tip envelope.</p>:
+         envelopeCollected?<><p className="ops-hub-good"><Check size={16}/> Collected by management · {envelopeInitials}</p><button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void clearEnvelopeCollected()}>Undo collection mark (keep room OUT)</button></>:
+         <><p className="ops-hub-muted">Only mark this collected after the envelope has physically been collected by management.</p><button type="button" className="ops-hub-primary" disabled={busy||!/^[A-Z]{2,4}$/.test(data.managerInitials||'')} onClick={()=>void markEnvelopeCollected()}><Check size={16}/> Envelope collected · {data.managerInitials||'Manager'}</button>{!/^[A-Z]{2,4}$/.test(data.managerInitials||'')&&<p className="ops-hub-error">Manager initials are unavailable. Check your staff profile.</p>}</>}
+       </div>}
        {activeEditor==='service'&&canManage&&<div className="ops-hub-choices">{[{label:'No service',value:''},{label:'OUT',value:'OUT'},...(data.managerInitials?[{label:'Initial OUT',value:'OUT-'+data.managerInitials}]:[]),{label:'Refresh · RF',value:'RF'}].map(item=><button type="button" key={item.label} disabled={busy||(item.value==='RF'&&!isStayover)} aria-pressed={(daily.service_type||'')===item.value} className={(daily.service_type||'')===item.value?'is-current':''} onClick={()=>void setService(item.value)}><span>{item.label}</span>{(daily.service_type||'')===item.value&&<Check size={16}/>}</button>)}</div>}
        {activeEditor==='packages'&&canManage&&<><div className="ops-hub-package-options">{data.packageOptions.filter(p=>p.available||data.importedPackageIds.includes(p.id)||manualPackageDraft.includes(p.id)).map(p=>{
          const isImported=data.importedPackageIds.includes(p.id)
