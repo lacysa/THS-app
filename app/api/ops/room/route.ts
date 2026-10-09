@@ -7,9 +7,10 @@ const validDate=(value:string)=>/^20\d{2}-\d{2}-\d{2}$/.test(value)&&!Number.isN
 const validId=(value:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 
 export async function GET(req:NextRequest){
- const gate=await canUseModule('ops')
+ const [opsGate,reservationGate]=await Promise.all([canUseModule('ops'),canUseModule('reservations')])
+ const gate=opsGate.allowed?opsGate:reservationGate
  if(!gate.access)return NextResponse.json({error:'Unauthorized'},{status:401})
- if(!gate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
+ if(!opsGate.allowed&&!reservationGate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
  const date=req.nextUrl.searchParams.get('date')||''
  const roomId=req.nextUrl.searchParams.get('roomId')||''
  const reservationId=req.nextUrl.searchParams.get('reservationId')||''
@@ -18,7 +19,7 @@ export async function GET(req:NextRequest){
  const admin=createSupabaseAdmin()
  const [roomResult,dailyResult,linkResult]=await Promise.all([
   admin.from('rooms').select('id,name').eq('id',roomId).eq('active',true).maybeSingle(),
-  admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,reservation_status,service_type,room_condition,strip_hold,complete,ready_for_inspection,inspected,inspected_at,check_issue_open,check_issue_note,breakfast_tag,late_arrival,housekeeper_attested_by').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
+  admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,reservation_status,service_type,room_condition,strip_hold,clean_order,complete,ready_for_inspection,inspected,inspected_at,check_issue_open,check_issue_note,breakfast_tag,late_arrival,housekeeper_attested_by').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
   admin.from('reservation_daily_links').select('primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').eq('service_date',date).eq('room_id',roomId).maybeSingle()
  ])
  if(roomResult.error||dailyResult.error||linkResult.error)
@@ -96,11 +97,19 @@ export async function GET(req:NextRequest){
  const staffResult=canManage?await admin.from('staff_members').select('name').eq('active',true).order('name'):null
  if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
  const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
+ const [catalogResult,packageResult]=await Promise.all([
+  admin.from('room_package_catalog').select('id,name,available').order('name'),
+  admin.from('housekeeping_room_packages').select('package_id,source').eq('service_date',date).eq('room_id',roomId)
+ ])
+ if(catalogResult.error||packageResult.error)return NextResponse.json({error:'Unable to load room packages'},{status:500})
+ const packageOptions=(catalogResult.data||[]).map((p:any)=>({id:String(p.id),name:String(p.name),available:Boolean(p.available)}))
+ const manualPackageIds=(packageResult.data||[]).filter((p:any)=>p.source==='manual').map((p:any)=>String(p.package_id))
+ const importedPackageIds=(packageResult.data||[]).filter((p:any)=>p.source!=='manual').map((p:any)=>String(p.package_id))
  const status=String(daily?.reservation_status||'').toLowerCase()
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,
+  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
