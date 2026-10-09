@@ -325,7 +325,7 @@ html[data-theme="dark"] .reservation-checkout-only small{
 
 
 /* PMS-inspired room tape chart: modern colors, sticky room names, mobile scrolling */
-.ths-operations-simplified>.ths-ops-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ths-operations-simplified>.ths-ops-nav{grid-template-columns:repeat(3,minmax(0,1fr))}
 .ths-calendar{display:grid;gap:12px;min-width:0}
 .ths-calendar-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border:1px solid #d3e5e8;border-radius:18px;padding:14px;background:linear-gradient(112deg,#e3f9f4,#f0f1ff)}
 .ths-calendar-toolbar>div:first-child{display:grid;gap:3px}.ths-calendar-toolbar strong{font-size:18px;color:#243f51}.ths-calendar-toolbar small{font-size:11px;color:#657c8b}
