@@ -30,7 +30,7 @@ export default function ReservationCalendar({serviceDate,onOpenRoom}:{serviceDat
   const holds=useMemo(()=>new Set((data?.holds||[]).map(h=>h.date+'|'+h.roomId)),[data])
   return <div className="ths-calendar">
     <div className="ths-calendar-toolbar">
-      <div><strong>Reservation calendar</strong><small>7-day room tape chart · imported reservations</small></div>
+      <div><strong>Ops</strong><small>Room calendar · 7-day view</small></div>
       <div className="ths-calendar-controls">
         <button type="button" title="Previous week" aria-label="Previous week" onClick={()=>setStart(shift(start,-7))}><ChevronLeft size={18}/></button>
         <button type="button" onClick={()=>setStart(serviceDate)}>Today</button>
