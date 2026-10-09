@@ -1651,3 +1651,15 @@ html[data-theme="dark"] .daily-state.neutral{
 .ops-command-columns{align-items:stretch}
 .ops-command-card{height:100%}
 @media(max-width:1050px){.ops-command-card{height:auto}}
+
+
+/* Expandable dashboard groups, preserving the existing summary counts. */
+details.daily-collapsible-panel{display:block;overflow:hidden}
+details.daily-collapsible-panel>summary.daily-panel-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;user-select:none;gap:10px}
+details.daily-collapsible-panel>summary.daily-panel-head::-webkit-details-marker{display:none}
+details.daily-collapsible-panel>summary.daily-panel-head::after{content:"";width:9px;height:9px;flex-shrink:0;border-right:2px solid #668196;border-bottom:2px solid #668196;transform:rotate(45deg);transition:transform .15s ease;margin:0 5px 5px 3px}
+details.daily-collapsible-panel[open]>summary.daily-panel-head::after{transform:rotate(225deg);margin:6px 5px 0 3px}
+details.daily-collapsible-panel>summary.daily-panel-head:focus-visible{outline:3px solid #73aea9;outline-offset:-3px;border-radius:12px}
+details.daily-collapsible-panel:not([open])>summary.daily-panel-head{border-bottom:0}
+.daily-collapse-open-link{display:inline-block;margin:10px 18px;color:#356679;font-size:13px;font-weight:700}
+@media(max-width:700px){details.daily-collapsible-panel>summary.daily-panel-head{min-height:55px;padding-right:14px}details.daily-collapsible-panel>summary.daily-panel-head>span{margin-left:auto}}
