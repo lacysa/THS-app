@@ -290,6 +290,24 @@ export default async function DashboardPage() {
     id:String(r.staff_member_id),name:staffNameMap.get(String(r.staff_member_id))||'Staff',
     roleLabel:String(r.role_label||''),shiftStart:String(r.shift_start||''),shiftEnd:String(r.shift_end||'')
   }))
+  // Desserts delivered today are for breakfast-inclusive stays tomorrow.
+  // Match the existing shift report room-rate and explicit +breakfast override rules.
+  const {data:dessertReservationRows}=await admin.from('reservation_stays')
+    .select('room_id,rate_plan,innkeeper_notes')
+    .eq('active',true)
+    .lte('arrival_date',tomorrow)
+    .gt('checkout_date',tomorrow)
+  const dessertRoomIds=new Set<string>()
+  for (const row of (dessertReservationRows||[])) {
+    const id=String((row as any).room_id||'')
+    const room=roomMap.get(id)||'Room'
+    const rate=String((row as any).rate_plan||'').toLowerCase()
+    const notes=String((row as any).innkeeper_notes||'')
+    const index=notes.toLowerCase().indexOf('+breakfast')
+    const override=index>=0&&notes.slice(index+'+breakfast'.length).toLowerCase().includes(room.toLowerCase())
+    if(id&&(rate.includes('breakfast')||override))dessertRoomIds.add(id)
+  }
+  const dessertCount=dessertRoomIds.size
   const displayName = access.preferredName || access.name || 'Staff'
 
   return (
@@ -318,6 +336,7 @@ export default async function DashboardPage() {
         showReservationDaily={moduleKeys.has('reservations')}
         reservationDaily={reservationDaily}
         todayStaff={todayStaff}
+        dessertCount={dessertCount}
       />}
         operations={<ManagerCommandCenter
         today={today} tomorrow={tomorrow} rooms={housekeeping}
@@ -350,6 +369,7 @@ export default async function DashboardPage() {
         showReservationDaily={moduleKeys.has('reservations')}
         reservationDaily={reservationDaily}
         todayStaff={todayStaff}
+        dessertCount={dessertCount}
       />}
     </StaffShell>
   )
