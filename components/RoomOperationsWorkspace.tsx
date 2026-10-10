@@ -62,10 +62,10 @@ export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:
  },[serviceDate])
  const counts=useMemo(()=>{
   const count=(type:Category)=>liveRows.filter(row=>reservationType(row)===type).length
-  return {all:liveRows.length,Arrival:count('Arrival'),Stayover:count('Stayover'),Checkout:count('Checkout'),'Out/In':count('Out/In')}
+  return {all:liveRows.length,Arrival:count('Arrival')+count('Out/In'),Stayover:count('Stayover'),Checkout:count('Checkout'),'Out/In':count('Out/In')}
  },[liveRows])
  const filtered=useMemo(()=>liveRows.filter(row=>{
-  if(category!=='all'&&reservationType(row)!==category)return false
+  if(category!=='all'&&!(category==='Arrival'?['Arrival','Out/In'].includes(reservationType(row)):reservationType(row)===category))return false
   if(conditionsOnly&&!/dirty|issue|blocked|not confirmed/i.test(roomCondition(row))&&!row.checkIssueOpen)return false
   const guest=activeGuest(row,serviceDate)?.guest_name||''
   return !query.trim()||[row.roomName,guest,row.roomNotes||''].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
