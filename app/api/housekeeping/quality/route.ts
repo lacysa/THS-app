@@ -29,6 +29,22 @@ function pct(n:number,d:number){
   return d?Math.round((n/d)*1000)/10:0
 }
 
+
+// Small, conservative rules: only classify clear words, and allow multiple findings in one note.
+// Unrecognized text remains "Other / review" rather than fabricating a defect.
+function correctionCategories(value:string){
+  const text=value.toLowerCase()
+  const found=new Set<string>()
+  if(/(?:water\s*spot|spotty|streak|fingerprint|smudge|cloudy).{0,45}(?:glass|cup|mirror|window)|(?:glass|cup|mirror|window).{0,45}(?:water\s*spot|spotty|streak|fingerprint|smudge|cloudy)/i.test(text))found.add('Glassware & mirrors: spots / streaks')
+  if(/(?:missing|no|short|not enough|forgot).{0,40}(?:hanger|towel|robe|toiletr|amenit|supply)|(?:hanger|towel|robe).{0,25}missing/i.test(text))found.add('Missing amenities & supplies')
+  if(/(?:water left|standing water|sink full|wet sink|water in the).{0,40}(?:sink|basin)|(?:sink|basin).{0,40}(?:water left|standing water)/i.test(text))found.add('Sink / kitchenette: water left')
+  if(/(?:hair|dust|crumb|debris|dirt|dirty|trash|residue|stain|grease|sticky|not wiped|not cleaned)/i.test(text))found.add('Cleaning / surface debris')
+  if(/(?:bed|sheet|pillow|linen|comforter|blanket).{0,25}(?:wrinkl|stain|dirty|missing|hair|incorrect)|(?:wrinkl|stain).{0,20}(?:bed|sheet|linen)/i.test(text))found.add('Bed & linens')
+  if(/(?:toilet|shower|tub|bathroom).{0,35}(?:dirty|hair|stain|soap|residue|water|spot)/i.test(text))found.add('Bathroom cleaning')
+  if(/(?:broken|damaged|not working|leak|clog)/i.test(text))found.add('Maintenance / damage')
+  return [...found].length?[...found]:['Other / review']
+}
+
 export async function GET(req:NextRequest){
   const access=await getStaffAccess()
   if(!access) return NextResponse.json({error:'Unauthorized'},{status:401})
@@ -85,8 +101,11 @@ export async function GET(req:NextRequest){
         const housekeeperId=matchedIds.length===1?matchedIds[0]:null
         return {id:String(event.id),serviceDate:String(event.service_date),roomName:roomNameById.get(String(event.room_id))||'Room',
           housekeeperId,housekeeperName:housekeeperId?assignment:null,assignedTo:assignment||null,
-          note:String(event.note||''),resolved:fixedKeys.has(key),createdAt:String(event.created_at)}
+          note:String(event.note||''),categories:correctionCategories(String(event.note||'')),resolved:fixedKeys.has(key),createdAt:String(event.created_at)}
       })
+    const categoryCounts=new Map<string,number>()
+    for(const entry of documentedCorrections)for(const category of entry.categories)categoryCounts.set(category,(categoryCounts.get(category)||0)+1)
+    const correctionCategoriesSummary=[...categoryCounts].map(([category,count])=>({category,count})).sort((a,b)=>b.count-a.count||a.category.localeCompare(b.category))
     const documentedByHousekeeper=new Map<string,typeof documentedCorrections>()
     for(const entry of documentedCorrections){
       if(!entry.housekeeperId)continue
@@ -185,7 +204,8 @@ export async function GET(req:NextRequest){
       weekly,
       individuals,
       commonMisses,
-      documentedCorrections
+      documentedCorrections,
+      correctionCategoriesSummary
     })
   }catch(error:any){
     return NextResponse.json({error:error?.message||'Could not load housekeeping quality trends.'},{status:500})
