@@ -3,6 +3,7 @@
 import { useEffect,useMemo,useState } from 'react'
 import { AlertTriangle,BarChart3,CheckCircle2,RefreshCw,ShieldCheck,Users } from 'lucide-react'
 
+type RoomCorrection={id:string;serviceDate:string;roomName:string;housekeeperId:string|null;housekeeperName:string|null;assignedTo:string|null;note:string;resolved:boolean;createdAt:string}
 type Miss={itemId:string;label:string;zone:string;count:number}
 type Individual={
   housekeeperId:string
@@ -14,6 +15,7 @@ type Individual={
   missesPer100Rooms:number
   unresolved:number
   commonMisses:Miss[]
+  documentedCorrections:RoomCorrection[]
 }
 type Weekly={week:string;inspections:number;passes:number;discrepancies:number;firstPassRate:number}
 type Data={
@@ -31,6 +33,7 @@ type Data={
   weekly:Weekly[]
   individuals:Individual[]
   commonMisses:Miss[]
+  documentedCorrections:RoomCorrection[]
 }
 
 function shortDate(value:string){
@@ -148,9 +151,26 @@ export default function HousekeepingQualityDashboard(){
         {!data.individuals.length?<div className="quality-empty-chart">No housekeeper inspection data has been collected yet.</div>:
           <div className="quality-person-bars">
             {data.individuals.map(person=><div className="quality-person-row" key={person.housekeeperId}>
-              <div className="quality-person-name"><strong>{person.name}</strong><small>{person.roomsInspected} inspected · {person.discrepancies} discrepancies</small></div>
+              <div className="quality-person-name"><strong>{person.name}</strong><small>{person.roomsInspected} inspected · {person.discrepancies} checklist discrepancies · {person.documentedCorrections?.length||0} room corrections</small></div>
               <div className="quality-person-track"><span style={{width:Math.max(person.firstPassRate>0?4:0,person.firstPassRate)+'%'}}/></div>
               <strong className="quality-person-rate">{rateLabel(person.firstPassRate)}</strong>
+            </div>)}
+          </div>}
+      </section>
+
+      <section className="quality-card">
+        <div className="quality-card-head">
+          <div><CheckCircle2 size={17}/><span><strong>Documented room corrections</strong><small>Fix notes from Room Operations, attributed to the assigned housekeeper. A reported issue and its resolution count as one correction.</small></span></div>
+          <strong>{data.documentedCorrections?.length||0}</strong>
+        </div>
+        {!data.documentedCorrections?.length?<div className="quality-empty-chart">No Room Operations corrections recorded in this range.</div>:
+          <div className="quality-person-bars">
+            {data.documentedCorrections.map(item=><div className="quality-person-row" key={item.id} style={{alignItems:'start',gap:12}}>
+              <div className="quality-person-name" style={{flex:'1 1 auto'}}>
+                <strong>{item.housekeeperName||('Unattributed'+(item.assignedTo?' (assigned: '+item.assignedTo+')':''))} · {item.roomName}</strong>
+                <small>{shortDate(item.serviceDate)} · {item.resolved?'Marked fixed':'Correction reported'}</small>
+                <div style={{fontSize:13,marginTop:5,overflowWrap:'anywhere'}}>{item.note}</div>
+              </div>
             </div>)}
           </div>}
       </section>
@@ -161,7 +181,7 @@ export default function HousekeepingQualityDashboard(){
         </div>
         <div className="quality-table-wrap">
           <table className="quality-table">
-            <thead><tr><th>Housekeeper</th><th>Inspected</th><th>First-pass</th><th>Discrepancies</th><th>Misses / 100 rooms</th><th>Most common misses</th></tr></thead>
+            <thead><tr><th>Housekeeper</th><th>Inspected</th><th>First-pass</th><th>Discrepancies</th><th>Misses / 100 rooms</th><th>Most common misses</th><th>Room corrections</th></tr></thead>
             <tbody>{data.individuals.map(person=><tr key={person.housekeeperId}>
               <td><strong>{person.name}</strong></td>
               <td>{person.roomsInspected}</td>
@@ -169,6 +189,7 @@ export default function HousekeepingQualityDashboard(){
               <td>{person.discrepancies}{person.unresolved?<small className="quality-open"> · {person.unresolved} open</small>:null}</td>
               <td>{person.missesPer100Rooms}</td>
               <td>{person.commonMisses.length?person.commonMisses.map(m=>m.label+' ×'+m.count).join(' · '):'—'}</td>
+              <td>{person.documentedCorrections?.length||0}</td>
             </tr>)}</tbody>
           </table>
         </div>
