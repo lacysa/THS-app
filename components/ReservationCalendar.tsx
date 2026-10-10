@@ -1,6 +1,6 @@
 'use client'
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
-import {CalendarDays,ChevronLeft,ChevronRight,RefreshCw} from 'lucide-react'
+import {CalendarDays,ChevronLeft,ChevronRight,LayoutGrid,Rows3,RefreshCw} from 'lucide-react'
 import OpsRoomHub from '@/components/OpsRoomHub'
 
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
@@ -19,6 +19,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
   const [error,setError]=useState('')
   const [activeRoom,setActiveRoom]=useState<{roomId:string;date:string;reservationId?:string}|null>(null)
   const [reload,setReload]=useState(0)
+  const [layout,setLayout]=useState<'grid'|'cards'>('grid')
   useEffect(()=>{
     let active=true
     setLoading(true);setError('')
@@ -49,7 +50,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
     const roomHeader=scroller.querySelector<HTMLElement>('.ths-calendar-corner')
     const target=Array.from(scroller.querySelectorAll<HTMLElement>('.ths-calendar-day')).find(el=>el.dataset.date===focusedDate)
     scroller.scrollLeft=scrollMode==='beginning'?0:Math.max(0,(target?.offsetLeft||0)-(roomHeader?.offsetWidth||0))
-  },[data?.start,start,focusedDate,scrollMode,scrollRequest])
+  },[data?.start,start,focusedDate,scrollMode,scrollRequest,layout])
   const cells=useMemo(()=>new Map((data?.cells||[]).map(c=>[c.date+'|'+c.roomId,c])),[data])
   const notes=useMemo(()=>new Map((data?.notes||[]).map(n=>[n.date+'|'+n.roomId,n])),[data])
   const holds=useMemo(()=>new Set((data?.holds||[]).map(h=>h.date+'|'+h.roomId)),[data])
@@ -64,10 +65,14 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
       </div>
     </div>
     <div className="ths-calendar-date"><CalendarDays size={17}/><input aria-label="Focus date" type="date" value={focusedDate} onChange={e=>{if(e.target.value)focusOnDay(e.target.value)}}/><div className="ths-calendar-shortcuts"><button type="button" aria-pressed={start===shift(serviceDate,-2)} onClick={()=>focusOnDay(serviceDate)}>Daily ops</button><button type="button" aria-pressed={start===shift(serviceDate,-6)} onClick={viewHistory}>Past 7 days</button></div></div>
-    <p className="ths-calendar-help">Daily ops shows the previous 2 days, today, and the next 4. Past 7 days shows the last 6 days plus today. Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.</p>
+    <div className="ths-calendar-view-switch" role="group" aria-label="Calendar display">
+      <button type="button" aria-pressed={layout==='grid'} onClick={()=>setLayout('grid')}><Rows3 size={16}/> Timeline</button>
+      <button type="button" aria-pressed={layout==='cards'} onClick={()=>setLayout('cards')}><LayoutGrid size={16}/> Day cards</button>
+    </div>
+    <p className="ths-calendar-help">{layout==='grid'?'Daily ops shows the previous 2 days, today, and the next 4. Past 7 days shows the last 6 days plus today. Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.':'Cards show the selected date only. Choose another day above to see its guests, room holds and notes. Tap a card for the room details.'}</p>
     {error&&<div role="alert" className="ths-ops-empty">{error}</div>}
     {loading&&!data&&<div className="ths-ops-empty">Loading calendar…</div>}
-    {data&&<div ref={scrollRef} className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
+    {data&&(layout==='grid'?<div ref={scrollRef} className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
       <div className="ths-calendar-corner">Room</div>
       {data.days.map(day=><div data-date={day} className={day===serviceDate?'ths-calendar-day today':'ths-calendar-day'} key={day}>{pretty(day)}</div>)}
       {data.rooms.map(room=>{
@@ -108,7 +113,28 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
           </div>
         </div>
       })}
-    </div></div>}
+    </div></div>:<section className="ths-calendar-cards" aria-label={'Room cards for '+pretty(focusedDate)}>
+      <div className="ths-calendar-cards-heading"><strong>{pretty(focusedDate)}</strong><span>{data.rooms.length} rooms</span></div>
+      <div className="ths-calendar-card-grid">
+        {data.rooms.map(room=>{
+          const cell=cells.get(focusedDate+'|'+room.id)
+          const note=notes.get(focusedDate+'|'+room.id)
+          const held=holds.has(focusedDate+'|'+room.id)||Boolean(cell?.blocked)
+          const guestActive=Boolean(cell&&occupied(cell))
+          const checkingOut=Boolean(cell?.guest&&cell?.departure===focusedDate)
+          const label=held?'Room hold':guestActive?(cell?.arrival===focusedDate?'Arrival':'Stayover'):checkingOut?'Checkout':cell?.status&&!/vacant/i.test(cell.status)?cell.status:'No imported stay'
+          return <button type="button" key={room.id} className={'ths-calendar-room-card'+(held?' is-held':guestActive?' has-guest':'')} onClick={()=>setActiveRoom({roomId:room.id,date:focusedDate,reservationId:cell?.reservationId||undefined})} aria-label={'Open '+room.name+' on '+pretty(focusedDate)}>
+            <span className="ths-calendar-room-card-head"><strong>{room.name}</strong><span>{label}</span></span>
+            {cell?.guest&&(guestActive||checkingOut)&&<span className="ths-calendar-room-card-guest">{cell.guest}<small>{cell.arrival} → {cell.departure}</small></span>}
+            {!guestActive&&!checkingOut&&!held&&<span className="ths-calendar-room-card-muted">No active guest stay shown for this day</span>}
+            {held&&<span className="ths-calendar-room-card-flag">Blocked / held</span>}
+            {cell?.lateArrival&&<span className="ths-calendar-room-card-flag">Late arrival</span>}
+            {cell?.condition&&<span className="ths-calendar-room-card-condition">Live condition: {cell.condition}</span>}
+            {note&&<span className="ths-calendar-room-card-note"><strong>Room note</strong>{note.text}</span>}
+          </button>
+        })}
+      </div>
+    </section>)}
     {activeRoom&&<OpsRoomHub key={activeRoom.roomId+'|'+activeRoom.date+'|'+(activeRoom.reservationId||'')} roomId={activeRoom.roomId} date={activeRoom.date} reservationId={activeRoom.reservationId} onClose={()=>setActiveRoom(null)} onUpdate={()=>setReload(n=>n+1)}/>}
     <p className="ths-calendar-caveat">This view reflects the latest imported reservation links, not live PMS inventory or prices. Gray/blank cells must not be treated as confirmed availability. No reservation or breakfast data is changed here.</p>
   </div>
