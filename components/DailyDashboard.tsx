@@ -108,6 +108,7 @@ type Props = {
   showReservationDaily:boolean
   reservationDaily:ReservationDailyRow[]
   todayStaff:TodayStaffRow[]
+  dessertCount:number
 }
 
 function formatTime(value:string) {
@@ -205,7 +206,8 @@ export default function DailyDashboard({
   departmentNotes,
   showReservationDaily,
   reservationDaily,
-  todayStaff
+  todayStaff,
+  dessertCount
 }:Props) {
   const breakfastScheduled = breakfast.filter(r=>r.status==='scheduled' && !r.breakfastSkipped)
   const missingMenus = breakfastScheduled.filter(r=>!r.menuSubmitted)
@@ -365,6 +367,10 @@ export default function DailyDashboard({
           </div>
 
           <div className="daily-progress-stack">
+            {showBreakfast && <div className="daily-progress-row">
+              <div><span>Desserts tonight</span><b>{dessertCount}</b></div>
+              <small>Rooms receiving breakfast tomorrow</small>
+            </div>}
             <div className="daily-progress-row">
               <div><span>Housekeeping</span><b>{hkComplete.length}/{housekeepingWorkload.length}</b></div>
               <div className="daily-progress-track"><i style={{width:`${hkPercent}%`}}/></div>
