@@ -411,7 +411,7 @@ export default function DailyDashboard({
 
       {showReservationDaily && reservationDaily.some(item=>item.status!=='Vacant') && (() => {
         const active=reservationDaily.filter(item=>item.status!=='Vacant')
-        const arrivals=active.filter(item=>item.status==='Arrival').length
+        const arrivals=active.filter(item=>item.status==='Arrival' || item.status==='Out/In').length
         const stayovers=active.filter(item=>item.status==='Stayover').length
         const checkouts=active.filter(item=>item.status==='Checkout').length
         const outIn=active.filter(item=>item.status==='Out/In').length
