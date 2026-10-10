@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, FileText, Printer, RefreshCw, Save } from 'lucide-react'
 
 type AutoData = {
@@ -66,6 +66,85 @@ export default function ShiftReportBoard() {
   const [noteText,setNoteText] = useState('')
   const [includeNote,setIncludeNote] = useState(true)
   const [draft,setDraft] = useState({guestNotes:'',staffNotes:'',suppliesNotes:'',tomorrowNotes:'',generalNotes:'',managementNotes:''})
+
+
+  type StaffNote={section:string;staff_member_id:string;content:string;name:string;initials:string}
+  const [staffNotes,setStaffNotes]=useState<StaffNote[]>([])
+  const [myStaffId,setMyStaffId]=useState('')
+  const [myNotes,setMyNotes]=useState<Record<string,string>>({})
+  const [notesReady,setNotesReady]=useState(false)
+  const [noteStatus,setNoteStatus]=useState('Saved')
+  const currentNotesRef=useRef<Record<string,string>>({})
+  const pendingNotesRef=useRef(new Set<string>())
+  const saveTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null)
+  const loadTokenRef=useRef(0)
+  const noteSections=['guest','staff','supplies','tomorrow','general','management']
+  const localKey=(id:string,part:string)=>'ths-shift-draft:'+id+':'+date+':'+shift+':'+part
+  async function savePersonalNotes() {
+    if(!myStaffId||!pendingNotesRef.current.size)return
+    const sections=[...pendingNotesRef.current]
+    setNoteStatus('Saving…')
+    let errors=false
+    for(const section of sections){
+      const content=currentNotesRef.current[section]||''
+      try{
+        const res=await fetch('/api/shift-report-notes',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,shift,section,content})})
+        if(!res.ok)throw new Error('Save failed')
+        if(content===currentNotesRef.current[section]){
+          pendingNotesRef.current.delete(section)
+          localStorage.removeItem(localKey(myStaffId,section))
+        }
+        setStaffNotes(old=>[...old.filter(x=>!(x.section===section&&x.staff_member_id===myStaffId)),{section,staff_member_id:myStaffId,content,name:currentStaffName,initials:initials(currentStaffName)}])
+      }catch{errors=true}
+    }
+    setNoteStatus(errors?'Not saved to server — copy kept on this device':pendingNotesRef.current.size?'Unsaved changes':'Saved')
+  }
+  function editPersonalNote(section:string,content:string){
+    currentNotesRef.current={...currentNotesRef.current,[section]:content}
+    setMyNotes(currentNotesRef.current)
+    pendingNotesRef.current.add(section)
+    localStorage.setItem(localKey(myStaffId,section),JSON.stringify({content,at:Date.now()}))
+    setNoteStatus('Unsaved changes')
+    if(saveTimerRef.current)clearTimeout(saveTimerRef.current)
+    saveTimerRef.current=setTimeout(()=>void savePersonalNotes(),1500)
+  }
+  useEffect(()=>{
+    const token=++loadTokenRef.current
+    setNotesReady(false)
+    setMyStaffId('')
+    pendingNotesRef.current.clear()
+    if(saveTimerRef.current)clearTimeout(saveTimerRef.current)
+    void (async()=>{
+      try{
+        const res=await fetch('/api/shift-report-notes?date='+encodeURIComponent(date)+'&shift='+encodeURIComponent(shift),{cache:'no-store'})
+        const data=await res.json()
+        if(!res.ok)throw new Error(data.error||'Unable to load notes')
+        if(token!==loadTokenRef.current)return
+        const id=String(data.currentStaffId||'')
+        const notes:StaffNote[]=data.entries||[]
+        const mine:Record<string,string>={}
+        for(const section of noteSections){
+          const remote=notes.find(x=>x.section===section&&x.staff_member_id===id)?.content||''
+          const cached=localStorage.getItem(localKey(id,section))
+          if(cached!==null){
+            try {mine[section]=JSON.parse(cached).content??remote} catch {mine[section]=remote}
+            if(mine[section]!==remote)pendingNotesRef.current.add(section)
+            else localStorage.removeItem(localKey(id,section))
+          }else mine[section]=remote
+        }
+        currentNotesRef.current=mine
+        setMyNotes(mine);setMyStaffId(id);setStaffNotes(notes);setNotesReady(true)
+        setNoteStatus(pendingNotesRef.current.size?'Unsaved changes':'Saved')
+      }catch(e:any){if(token===loadTokenRef.current)setNoteStatus(e?.message||'Unable to load notes')}
+    })()
+    return ()=>{loadTokenRef.current++;if(saveTimerRef.current)clearTimeout(saveTimerRef.current)}
+  },[date,shift])
+  useEffect(()=>{
+    if(notesReady&&myStaffId&&pendingNotesRef.current.size){
+      if(saveTimerRef.current)clearTimeout(saveTimerRef.current)
+      saveTimerRef.current=setTimeout(()=>void savePersonalNotes(),1500)
+    }
+  },[notesReady,myStaffId])
 
   async function load() {
     setLoading(true); setMessage('')
@@ -243,10 +322,15 @@ export default function ShiftReportBoard() {
   },[roomHandoff,summary.menusMissing,summary.maintenanceOpen])
 
   function textarea(key:keyof typeof draft,label:string,placeholder:string,authorKey?:keyof NonNullable<Report['note_authors']>) {
-    const author=authorKey ? report?.note_authors?.[authorKey] : null
+    const section=String(authorKey||key.replace('Notes','')).toLowerCase()
+    const prior=draft[key]||''
+    const other=staffNotes.filter(e=>e.section===section&&e.staff_member_id!==myStaffId&&e.content.trim())
     return <label>{label}
-      {author && <span className="shift-note-author">{author.initials} · {author.name}</span>}
-      <textarea value={draft[key]} onChange={e=>setDraft(cur=>({...cur,[key]:e.target.value}))} disabled={!canManage||locked} placeholder={placeholder}/>
+      {prior&&<div style={{whiteSpace:'pre-wrap',marginBottom:8}}><strong>{report?.note_authors?.[authorKey||'staff']?.initials||'Previous'}:</strong> {prior}</div>}
+      {other.map(e=><div key={e.staff_member_id} style={{whiteSpace:'pre-wrap',marginBottom:8}}><strong>{e.initials}:</strong> {e.content}</div>)}
+      {notesReady&&myStaffId&&<div><span className="shift-note-author">{initials(currentStaffName)} · Your note</span>
+        <textarea value={myNotes[section]||''} onChange={e=>editPersonalNote(section,e.target.value)} disabled={locked||(section==='management'&&!canManage)} placeholder={placeholder}/>
+      </div>}
     </label>
   }
 
