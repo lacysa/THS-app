@@ -1,7 +1,7 @@
 'use client'
 import {useEffect,useMemo,useState} from 'react'
-import {ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
-import type ReservationsBoard from '@/components/ReservationsBoard'
+import {ChevronRight,LayoutGrid,Rows3,Search,SlidersHorizontal,X} from 'lucide-react'
+import ReservationsBoard from '@/components/ReservationsBoard'
 import OpsRoomHub from '@/components/OpsRoomHub'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
@@ -33,9 +33,10 @@ function conditionTone(condition:string){
  if(/occupied/.test(value))return 'occupied'
  return 'neutral'
 }
-export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:string;rows:ReservationRow[];canEdit:boolean;canManageRooms:boolean}){
+export default function RoomOperationsWorkspace({serviceDate,rows,canEdit}:{serviceDate:string;rows:ReservationRow[];canEdit:boolean;canManageRooms:boolean}){
  const [selected,setSelected]=useState<{roomId:string;reservationId?:string}|null>(null)
  const [category,setCategory]=useState<Category>('all')
+ const [layout,setLayout]=useState<'cards'|'list'>('cards')
  const [query,setQuery]=useState('')
  const [conditionsOnly,setConditionsOnly]=useState(false)
  const [liveRows,setLiveRows]=useState<ReservationRow[]>(rows)
@@ -79,7 +80,11 @@ export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:
     <button type="button" className={conditionsOnly?'active':''} aria-pressed={conditionsOnly} onClick={()=>setConditionsOnly(value=>!value)}><SlidersHorizontal size={16}/> Needs attention</button>
    </div>
    <label className="ths-ops-search"><Search size={18}/><input aria-label="Find room or guest" placeholder="Find room or guest" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button type="button" aria-label="Clear search" onClick={()=>setQuery('')}><X size={16}/></button>}</label>
-   <div className="ths-ops-room-list">
+   <div className="ths-ops-layout-switch" role="group" aria-label="Reservation display">
+    <button type="button" aria-pressed={layout==='cards'} onClick={()=>setLayout('cards')}><LayoutGrid size={16}/> Cards</button>
+    <button type="button" aria-pressed={layout==='list'} onClick={()=>setLayout('list')}><Rows3 size={16}/> List</button>
+   </div>
+   {layout==='cards'?<div className="ths-ops-card-view"><ReservationsBoard serviceDate={serviceDate} rows={filtered.filter(row=>Boolean(row.arriving||row.staying||row.departing||row.primary))} canEdit={canEdit} view="overview" hideViewSwitch showRoomActions onManageRoom={roomId=>{const row=liveRows.find(item=>item.roomId===roomId);setSelected({roomId,reservationId:row?activeGuest(row,serviceDate)?.id:undefined})}}/></div>:<div className="ths-ops-room-list">
     {filtered.map(row=>{
      const type=reservationType(row)
      const condition=roomCondition(row)
@@ -94,7 +99,7 @@ export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:
      </button>
     })}
     {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters. Clear search or select another category.</div>}
-   </div>
+   </div>}
    {selected&&<OpsRoomHub roomId={selected.roomId} date={serviceDate} reservationId={selected.reservationId} onClose={()=>setSelected(null)}/>}
   </div>
 }
