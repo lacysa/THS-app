@@ -6,6 +6,7 @@ import { CheckCircle2, FileText, Printer, RefreshCw, Save } from 'lucide-react'
 type AutoData = {
   breakfastDate:string
   housekeeping:any[]
+  housekeepingFixes?:{id:string;roomName:string;note:string;resolved:boolean;assignedTo:string}[]
   breakfast:any[]
   maintenance:any[]
   roomNotes:any[]
@@ -397,6 +398,10 @@ export default function ShiftReportBoard() {
         {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site:</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
+      <section className="shift-print-section">
+        <h3>Housekeeping fix(s) needed</h3>
+        {auto.housekeepingFixes?.length ? <ul className="shift-print-action-list">{auto.housekeepingFixes.map(f=><li key={f.id}><strong>{f.roomName} · {f.assignedTo||'Unassigned'}</strong> — {f.note} ({f.resolved?'Fixed':'Needs correction'})</li>)}</ul> : <p className="shift-print-narrative">No fixes reported for this date.</p>}
+      </section>
       {actionItems.length>0 && <section className="shift-print-section">
         <h3>Action Required / Handoff</h3>
         <ul className="shift-print-action-list">
@@ -450,6 +455,13 @@ export default function ShiftReportBoard() {
     </div>
 
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-report-flow">
+      <section className="quality-card">
+        <div className="quality-card-head"><div><CheckCircle2 size={17}/><span><strong>Housekeeping fix(s) needed</strong><small>Room Operations corrections · automatic daily summary</small></span></div></div>
+        {(auto.housekeepingFixes||[]).length ? (auto.housekeepingFixes||[]).map(f=><div key={f.id} style={{padding:'8px 0',borderBottom:'1px solid #e3eaf0'}}>
+          <strong>{f.roomName} · {f.assignedTo||'Unassigned'}</strong> <small>· {f.resolved?'Fixed':'Needs correction'}</small>
+          <div style={{fontSize:13,marginTop:4}}>{f.note}</div>
+        </div>) : <p>No housekeeping fixes reported for this date.</p>}
+      </section>
       <section className="shift-section shift-snapshot-section shift-day-section">
         <div className="shift-day-heading">
           <div><span>TODAY</span><h3>{date}</h3></div>
