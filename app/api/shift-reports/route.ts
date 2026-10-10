@@ -51,7 +51,7 @@ function authorInitials(name:string) {
 async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: string) {
   const breakfastDate = nextDate(date)
 
-  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes, breakfastTagRes, todayStaffRes, tomorrowStaffRes, tomorrowHousekeepingRes, tomorrowReservationsRes] = await Promise.all([
+  const [roomsRes, housekeepingRes, breakfastRes, maintenanceRes, notesRes, staffRes, breakfastTagRes, todayStaffRes, tomorrowStaffRes, tomorrowHousekeepingRes, tomorrowReservationsRes, correctionsRes] = await Promise.all([
     admin.from('rooms').select('id,name,sort_order,active').eq('active', true).order('sort_order'),
     admin.from('housekeeping_daily_rooms').select('*').eq('service_date', date),
     admin.from('breakfast_bookings').select('room_id,status,menu_submitted,time_slot').eq('service_date', breakfastDate),
@@ -66,15 +66,19 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
       .select('room_id,rate_plan,occupancy,innkeeper_notes,updated_at')
       .eq('active',true)
       .lte('arrival_date',breakfastDate)
-      .gt('checkout_date',breakfastDate)
+      .gt('checkout_date',breakfastDate),
+    admin.from('housekeeping_correction_events').select('id,room_id,service_date,event_type,note,created_at').eq('service_date',date).order('created_at',{ascending:true})
   ])
 
-  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error || todayStaffRes.error || tomorrowStaffRes.error || tomorrowHousekeepingRes.error || tomorrowReservationsRes.error
+  const error = roomsRes.error || housekeepingRes.error || breakfastRes.error || maintenanceRes.error || notesRes.error || staffRes.error || breakfastTagRes.error || todayStaffRes.error || tomorrowStaffRes.error || tomorrowHousekeepingRes.error || tomorrowReservationsRes.error || correctionsRes.error
   if (error) throw new Error(error.message)
 
   const rooms = roomsRes.data || []
   const roomById = new Map(rooms.map((r: any) => [String(r.id), r.name]))
   const staffById = new Map((staffRes.data || []).map((s: any) => [String(s.id), s.name]))
+
+  const fixedNotes=new Set((correctionsRes.data||[]).filter((e:any)=>e.event_type==='fixed').map((e:any)=>[e.room_id,String(e.note||'').trim()].join('|')))
+  const housekeepingFixes=(correctionsRes.data||[]).filter((e:any)=>e.event_type==='found').map((e:any)=>({id:e.id,roomName:roomById.get(String(e.room_id))||'Room',note:String(e.note||''),resolved:fixedNotes.has([e.room_id,String(e.note||'').trim()].join('|')),assignedTo:String((housekeepingRes.data||[]).find((d:any)=>d.room_id===e.room_id)?.assigned_to||'')}))
 
   const housekeeping = (housekeepingRes.data || []).map((row: any) => ({
     roomId: row.room_id,
@@ -187,6 +191,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
   return {
     breakfastDate,
     housekeeping,
+    housekeepingFixes,
     breakfast,
     maintenance,
     roomNotes,
