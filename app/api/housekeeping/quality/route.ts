@@ -42,7 +42,7 @@ export async function GET(req:NextRequest){
   const admin=createSupabaseAdmin()
 
   try{
-    const [{data:checks,error:checkErr},{data:discrepancies,error:discErr},{data:people,error:peopleErr},{data:items,error:itemErr}]=await Promise.all([
+    const [{data:checks,error:checkErr},{data:discrepancies,error:discErr},{data:people,error:peopleErr},{data:items,error:itemErr},{data:corrections,error:correctionErr},{data:dailyAssignments,error:assignErr},{data:roomNames,error:roomErr}]=await Promise.all([
       admin.from('housekeeping_quality_checks')
         .select('id,service_date,room_id,stage,housekeeper_id,actor_id,status,submitted_at')
         .gte('service_date',start)
@@ -54,10 +54,46 @@ export async function GET(req:NextRequest){
         .gte('service_date',start)
         .lte('service_date',end),
       admin.from('staff_members').select('id,name').eq('active',true),
-      admin.from('room_check_items').select('id,zone,label').eq('active',true)
+      admin.from('room_check_items').select('id,zone,label').eq('active',true),
+      admin.from('housekeeping_correction_events').select('id,service_date,room_id,event_type,note,created_at').gte('service_date',start).lte('service_date',end).order('created_at',{ascending:false}).limit(1000),
+      admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to').gte('service_date',start).lte('service_date',end),
+      admin.from('rooms').select('id,name')
     ])
-    const error=checkErr||discErr||peopleErr||itemErr
+    const error=checkErr||discErr||peopleErr||itemErr||correctionErr||assignErr||roomErr
     if(error) throw new Error(error.message)
+
+    // Room Operations correction history is an independent source from formal checklist inspections.
+    // Count each "found" once; its matching "fixed" event is resolution, not another miss.
+    const assignmentByRoomDay=new Map((dailyAssignments||[]).map((row:any)=>[
+      String(row.service_date)+'|'+String(row.room_id),String(row.assigned_to||'').trim()
+    ]))
+    const roomNameById=new Map((roomNames||[]).map((row:any)=>[String(row.id),String(row.name||'Room')]))
+    const idsByName=new Map<string,string[]>()
+    for(const person of people||[]){
+      const key=String((person as any).name||'').trim().toLowerCase()
+      idsByName.set(key,[...(idsByName.get(key)||[]),String((person as any).id)])
+    }
+    const fixedKeys=new Set((corrections||[]).filter((event:any)=>event.event_type==='fixed')
+      .map((event:any)=>[event.service_date,event.room_id,String(event.note||'').trim()].join('|')))
+    const documentedCorrections=(corrections||[])
+      .filter((event:any)=>event.event_type==='found')
+      .map((event:any)=>{
+        const key=[event.service_date,event.room_id,String(event.note||'').trim()].join('|')
+        const assignment=assignmentByRoomDay.get(String(event.service_date)+'|'+String(event.room_id))||''
+        // Do not guess if there are multiple cleaners or ambiguous names.
+        const matchedIds=idsByName.get(assignment.toLowerCase())||[]
+        const housekeeperId=matchedIds.length===1?matchedIds[0]:null
+        return {id:String(event.id),serviceDate:String(event.service_date),roomName:roomNameById.get(String(event.room_id))||'Room',
+          housekeeperId,housekeeperName:housekeeperId?assignment:null,assignedTo:assignment||null,
+          note:String(event.note||''),resolved:fixedKeys.has(key),createdAt:String(event.created_at)}
+      })
+    const documentedByHousekeeper=new Map<string,typeof documentedCorrections>()
+    for(const entry of documentedCorrections){
+      if(!entry.housekeeperId)continue
+      const previous=documentedByHousekeeper.get(entry.housekeeperId)||[]
+      previous.push(entry)
+      documentedByHousekeeper.set(entry.housekeeperId,previous)
+    }
 
     const nameById=new Map((people||[]).map((p:any)=>[String(p.id),String(p.name||'Staff')]))
     const itemById=new Map((items||[]).map((i:any)=>[String(i.id),{label:String(i.label||'Checklist item'),zone:String(i.zone||'Other')}]))
@@ -104,6 +140,7 @@ export async function GET(req:NextRequest){
     const housekeeperIds=new Set<string>()
     for(const check of firstInspections as any[]) if(check.housekeeper_id) housekeeperIds.add(String(check.housekeeper_id))
     for(const disc of discrepancies||[]) if((disc as any).housekeeper_id) housekeeperIds.add(String((disc as any).housekeeper_id))
+    for(const id of documentedByHousekeeper.keys()) housekeeperIds.add(id)
 
     const individuals=[...housekeeperIds].map(id=>{
       const inspections=(firstInspections as any[]).filter(c=>String(c.housekeeper_id||'')===id)
@@ -127,7 +164,8 @@ export async function GET(req:NextRequest){
         discrepancies:personDiscs.length,
         missesPer100Rooms:inspections.length?Math.round((personDiscs.length/inspections.length)*1000)/10:0,
         unresolved:personDiscs.filter((d:any)=>!d.corrected_at).length,
-        commonMisses
+        commonMisses,
+        documentedCorrections:documentedByHousekeeper.get(id)||[]
       }
     }).sort((a,b)=>b.roomsInspected-a.roomsInspected||a.name.localeCompare(b.name))
 
@@ -146,7 +184,8 @@ export async function GET(req:NextRequest){
       department,
       weekly,
       individuals,
-      commonMisses
+      commonMisses,
+      documentedCorrections
     })
   }catch(error:any){
     return NextResponse.json({error:error?.message||'Could not load housekeeping quality trends.'},{status:500})
