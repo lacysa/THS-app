@@ -394,6 +394,7 @@ export default function ShiftReportBoard() {
           <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
           <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
           <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
+          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
         </div>
         {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site:</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
@@ -474,6 +475,7 @@ export default function ShiftReportBoard() {
           <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
           <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
           <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
+          <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
         </div>
         {summary.todayStaff.length>0 && <div className="shift-staff-strip">
           {summary.todayStaff.map((person:any)=><span key={person.staffMemberId}><strong>{person.name}</strong><small>{person.roleLabel||'On site'}</small></span>)}
