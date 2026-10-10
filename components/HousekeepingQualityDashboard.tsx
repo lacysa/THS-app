@@ -3,7 +3,7 @@
 import { useEffect,useMemo,useState } from 'react'
 import { AlertTriangle,BarChart3,CheckCircle2,RefreshCw,ShieldCheck,Users } from 'lucide-react'
 
-type RoomCorrection={id:string;serviceDate:string;roomName:string;housekeeperId:string|null;housekeeperName:string|null;assignedTo:string|null;note:string;resolved:boolean;createdAt:string}
+type RoomCorrection={categories:string[];id:string;serviceDate:string;roomName:string;housekeeperId:string|null;housekeeperName:string|null;assignedTo:string|null;note:string;resolved:boolean;createdAt:string}
 type Miss={itemId:string;label:string;zone:string;count:number}
 type Individual={
   housekeeperId:string
@@ -16,6 +16,7 @@ type Individual={
   unresolved:number
   commonMisses:Miss[]
   documentedCorrections:RoomCorrection[]
+  correctionCategoriesSummary?:{category:string;count:number}[]
 }
 type Weekly={week:string;inspections:number;passes:number;discrepancies:number;firstPassRate:number}
 type Data={
@@ -34,6 +35,7 @@ type Data={
   individuals:Individual[]
   commonMisses:Miss[]
   documentedCorrections:RoomCorrection[]
+  correctionCategoriesSummary:{category:string;count:number}[]
 }
 
 function shortDate(value:string){
@@ -153,9 +155,20 @@ export default function HousekeepingQualityDashboard(){
             {data.individuals.map(person=><div className="quality-person-row" key={person.housekeeperId}>
               <div className="quality-person-name"><strong>{person.name}</strong><small>{person.roomsInspected} inspected · {person.discrepancies} checklist discrepancies · {person.documentedCorrections?.length||0} room corrections</small></div>
               <div className="quality-person-track"><span style={{width:Math.max(person.firstPassRate>0?4:0,person.firstPassRate)+'%'}}/></div>
-              <strong className="quality-person-rate">{rateLabel(person.firstPassRate)}</strong>
+              <strong className="quality-person-rate">{person.roomsInspected?rateLabel(person.firstPassRate):'N/A'}</strong>
             </div>)}
           </div>}
+      </section>
+
+      <section className="quality-card">
+        <div className="quality-card-head"><div><BarChart3 size={17}/><span><strong>Recurring correction categories</strong><small>Automatically identified from fix notes; one note may contain multiple issues</small></span></div></div>
+        {(data.correctionCategoriesSummary||[]).length ? <div className="quality-miss-list">
+          {(data.correctionCategoriesSummary||[]).map((item,index)=><div className="quality-miss-row" key={item.category}>
+            <span className="rank">{index+1}</span>
+            <div><strong>{item.category}</strong><i><b style={{width:Math.max(4,item.count/Math.max(1,data.correctionCategoriesSummary[0].count)*100)+'%'}}/></i></div>
+            <strong>{item.count}</strong>
+          </div>)}
+        </div> : <div className="quality-empty-chart">No classified corrections in this date range.</div>}
       </section>
 
       <section className="quality-card">
@@ -170,6 +183,7 @@ export default function HousekeepingQualityDashboard(){
                 <strong>{item.housekeeperName||('Unattributed'+(item.assignedTo?' (assigned: '+item.assignedTo+')':''))} · {item.roomName}</strong>
                 <small>{shortDate(item.serviceDate)} · {item.resolved?'Marked fixed':'Correction reported'}</small>
                 <div style={{fontSize:13,marginTop:5,overflowWrap:'anywhere'}}>{item.note}</div>
+                <small>Categories: {(item.categories||['Other / review']).join(' · ')}</small>
               </div>
             </div>)}
           </div>}
