@@ -248,7 +248,21 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
           }
           const operationalState=derivedLiveCondition(roomState)
           const readyForNextArrival=roomWorkflowLabel(roomState)==='Ready for guest' || ['ready for guest','vacant (clean)'].includes(operationalState.toLowerCase())
-          return <article className={'reservation-card '+statusClass(status)} key={row.roomId}>
+          const cardOpensRoom=Boolean(onManageRoom&&!showRoomActions)
+          return <article
+            className={'reservation-card '+statusClass(status)}
+            key={row.roomId}
+            role={cardOpensRoom?'button':undefined}
+            tabIndex={cardOpensRoom?0:undefined}
+            aria-label={cardOpensRoom?'Open '+row.roomName+' reservation details':undefined}
+            onClick={cardOpensRoom?()=>onManageRoom?.(row.roomId):undefined}
+            onKeyDown={cardOpensRoom?event=>{
+              if(event.key==='Enter'||event.key===' '){
+                event.preventDefault()
+                onManageRoom?.(row.roomId)
+              }
+            }:undefined}
+          >
             <div className="reservation-card-head">
               <div><strong>{row.roomName}</strong><span>{status}</span>{row.lateArrival&&<span className="reservations-late-badge">Late arrival</span>}</div>
               {!isCheckoutOnly && stay?.door_code && <div className="reservation-door"><DoorOpen size={15}/><b>{stay.door_code}</b></div>}
