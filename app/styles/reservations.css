@@ -861,32 +861,18 @@ button.ops-hub-prominent-note:disabled{cursor:default;opacity:1}
 button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;background:linear-gradient(110deg,#e7f4f9,#edf0fc)}
 .ops-hub-note-pencil{flex-shrink:0;color:#678a9d}
 
-/* Additive reservation and calendar presentation switches; existing modules remain unchanged. */
-.ths-ops-layout-switch,.ths-calendar-view-switch{display:inline-flex;justify-self:start;gap:5px;padding:5px;border:1px solid #d4e3e6;border-radius:13px;background:linear-gradient(115deg,#e8f7f2,#f1effd)}
-.ths-ops-layout-switch{margin:0 0 12px}
-.ths-ops-layout-switch button,.ths-calendar-view-switch button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 14px;border:0;border-radius:10px;background:transparent;color:#435f70;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
-.ths-ops-layout-switch button[aria-pressed=true],.ths-calendar-view-switch button[aria-pressed=true]{background:#213645;color:#fff;box-shadow:0 3px 9px #17314222}
-.ths-ops-card-view .reservations-hero,.ths-ops-card-view .reservations-snapshot,.ths-ops-card-view .reservations-filter-bar{display:none}
-.ths-ops-card-view .reservations-page{gap:0}
-.ths-ops-card-view .reservations-grid{margin:0}
-.ths-calendar-cards{min-width:0;display:grid;gap:12px}
+/* Ops Calendar view switch and the original detailed reservation cards. */
+.ths-calendar-view-switch{display:inline-flex;justify-self:start;gap:5px;padding:5px;border:1px solid #d4e3e6;border-radius:13px;background:linear-gradient(115deg,#e8f7f2,#f1effd)}
+.ths-calendar-view-switch button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 14px;border:0;border-radius:10px;background:transparent;color:#435f70;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.ths-calendar-view-switch button[aria-pressed=true]{background:#213645;color:#fff;box-shadow:0 3px 9px #17314222}
+.ths-calendar-reservation-cards{min-width:0;display:grid;gap:14px}
 .ths-calendar-cards-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#284456}
 .ths-calendar-cards-heading strong{font-size:16px}
 .ths-calendar-cards-heading span{font-size:12px;color:#6b8190}
-.ths-calendar-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:11px}
-.ths-calendar-room-card{display:grid;align-content:start;gap:9px;min-width:0;padding:15px;border:1px solid #dbe5ec;border-left:4px solid #9fb7c8;border-radius:16px;background:linear-gradient(125deg,#fff,#f9fbff);color:#294457;text-align:left;font:inherit;cursor:pointer;box-shadow:0 5px 14px #2644540b}
-.ths-calendar-room-card.has-guest{border-left-color:#76b2a2;background:linear-gradient(125deg,#fff,#f0faf7)}
-.ths-calendar-room-card.is-held{border-left-color:#b3a1ba;background:linear-gradient(125deg,#fff,#f8f5fb)}
-.ths-calendar-room-card:focus-visible{outline:2px solid #627bdb;outline-offset:2px}
-.ths-calendar-room-card-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px}
-.ths-calendar-room-card-head>strong{font-size:17px;font-weight:850}
-.ths-calendar-room-card-head>span{padding:5px 9px;border-radius:999px;background:#e9f1f5;color:#43667a;font-size:10px;font-weight:800}
-.ths-calendar-room-card-guest{display:grid;gap:4px;font-size:14px;font-weight:750;overflow-wrap:anywhere}
-.ths-calendar-room-card-guest small,.ths-calendar-room-card-muted{font-size:11px;font-weight:500;color:#6b8190}
-.ths-calendar-room-card-flag{justify-self:start;padding:4px 8px;border-radius:8px;background:#f4e6ef;color:#785170;font-size:11px;font-weight:750}
-.ths-calendar-room-card-condition{font-size:12px;color:#426878;font-weight:700}
-.ths-calendar-room-card-note{display:grid;gap:4px;max-width:100%;padding:10px;border:1px solid #d2e5ee;border-radius:10px;background:#f4fafd;color:#36586a;font-size:12px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
-.ths-calendar-room-card-note strong{font-size:10px;text-transform:uppercase;letter-spacing:.06em}
-@media(max-width:700px){.ths-calendar-card-grid{grid-template-columns:1fr}.ths-ops-layout-switch{width:100%}.ths-ops-layout-switch button{flex:1}}
-html[data-theme="dark"] .ths-calendar-room-card{background:linear-gradient(125deg,#192733,#17212d);border-color:#344c5c;color:#eff5f8}
-html[data-theme="dark"] .ths-calendar-room-card-head>span,html[data-theme="dark"] .ths-calendar-room-card-note{background:#243848;color:#c7dfec}
+.ths-calendar-reservation-cards .reservations-page{gap:14px;min-width:0}
+.ths-calendar-reservation-cards .reservations-hero,.ths-calendar-reservation-cards .reservations-snapshot{display:none}
+.ths-calendar-reservation-cards .reservation-live-room-state{display:none}
+.ths-calendar-reservation-cards .reservation-card[role=button]{cursor:pointer}
+.ths-calendar-reservation-cards .reservation-card[role=button]:hover{box-shadow:0 10px 24px rgba(45,63,94,.13)}
+.ths-calendar-reservation-cards .reservation-card[role=button]:focus-visible{outline:2px solid #5a8ca9;outline-offset:3px}
+@media(max-width:700px){.ths-calendar-reservation-cards .reservations-grid{grid-template-columns:1fr}}
