@@ -295,6 +295,7 @@ export default function ReservationSyncBoard(){
   const [error,setError]=useState('')
   const [success,setSuccess]=useState('')
   const [rows,setRows]=useState<PreviewRow[]>([])
+  const [filter,setFilter]=useState<'all'|'stayovers'|'new'|'updated'|'review'>('all')
   const [rooms,setRooms]=useState<Room[]>([])
   const [reportStart,setReportStart]=useState<string|null>(null)
   const [reportEnd,setReportEnd]=useState<string|null>(null)
@@ -547,6 +548,16 @@ export default function ReservationSyncBoard(){
     finally{ setBusy(false) }
   }
 
+  // Filtering changes the displayed cards only; source indices and import selection stay intact.
+  const visibleRows=useMemo(()=>rows.map((row,index)=>({row,index})).filter(({row})=>
+    filter==='all' || (filter==='stayovers' ? row.sourceSection==='stayover'
+      : filter==='new' ? row.changeType==='new'
+      : filter==='updated' ? row.changeType==='updated'
+      : row.needsReview)
+  ),[rows,filter])
+
+  function toggleFilter(next:typeof filter){setFilter(current=>current===next?'all':next)}
+
   const stats=useMemo(()=>({
     total:rows.length,
     newCount:rows.filter(r=>r.changeType==='new').length,
@@ -584,20 +595,22 @@ export default function ReservationSyncBoard(){
     </section>
 
     {rows.length>0 && <>
-      <section className="rs-stats">
-        <div><span>Total found</span><strong>{stats.total}</strong></div>
-        <div><span>Stayovers found</span><strong>{stats.stayovers}</strong></div>
-        <div><span>New</span><strong>{stats.newCount}</strong></div>
-        <div><span>Changed</span><strong>{stats.updated}</strong></div>
-        <div><span>Needs review</span><strong>{stats.review}</strong></div>
+      <section className="rs-stats" aria-label="Filter reservation preview">
+        <button type="button" aria-pressed={filter==='all'} onClick={()=>setFilter('all')}><span>Total found</span><strong>{stats.total}</strong></button>
+        <button type="button" aria-pressed={filter==='stayovers'} onClick={()=>toggleFilter('stayovers')}><span>Stayovers found</span><strong>{stats.stayovers}</strong></button>
+        <button type="button" aria-pressed={filter==='new'} onClick={()=>toggleFilter('new')}><span>New</span><strong>{stats.newCount}</strong></button>
+        <button type="button" aria-pressed={filter==='updated'} onClick={()=>toggleFilter('updated')}><span>Changed</span><strong>{stats.updated}</strong></button>
+        <button type="button" aria-pressed={filter==='review'} onClick={()=>toggleFilter('review')}><span>Needs review</span><strong>{stats.review}</strong></button>
       </section>
       {warnings.length>0 && <div className="rs-alert warning"><TriangleAlert size={17}/><div>{warnings.map(w=><div key={w}>{w}</div>)}</div></div>}
       <section className="rs-review-head">
         <div><h2>Review before import</h2><p>Rows that need review are left unchecked. Fix them, then include them when they are accurate.</p></div>
         <button className="rs-btn" disabled={busy||stats.selected===0} onClick={commit}>Import {stats.selected} selected</button>
       </section>
+      {filter!=='all' && <p className="rs-filter-note" role="status">Showing {visibleRows.length} of {stats.total} reservations. Import selections are unchanged.</p>}
       <section className="rs-reservations">
-        {rows.map((row,index)=><article className={`rs-reservation ${row.needsReview?'needs-review':''}`} key={`${row.reservationKey}-${index}`}>
+        {visibleRows.length===0 && <p className="rs-filter-empty">No reservations match this filter.</p>}
+        {visibleRows.map(({row,index})=><article className={`rs-reservation ${row.needsReview?'needs-review':''}`} key={`${row.reservationKey}-${index}`}>
           <div className="rs-row-top">
             <label className="rs-include"><input type="checkbox" checked={row.include} onChange={e=>patch(index,{include:e.target.checked})}/> Include</label>
             <span className={`rs-change ${row.changeType}`}>{row.changeType}</span>
