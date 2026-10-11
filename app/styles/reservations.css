@@ -1014,3 +1014,41 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
    combined with overflow:hidden on cards, clip their interactive content. */
 .ops-hub-content{grid-auto-rows:max-content;align-content:start}
 .ops-hub-content>.ops-hub-accordion{min-height:max-content}
+
+/* Room Ops modal: normal document flow inside the one scrolling surface.
+   No grid row can collapse an open accordion or clip its editor. */
+.ops-hub-sheet > .ops-hub-content{
+ display:block;
+ flex:1 1 auto;
+ min-height:0;
+ height:auto;
+ overflow-y:auto;
+ overflow-x:hidden;
+ overscroll-behavior-y:contain;
+ -webkit-overflow-scrolling:touch;
+}
+.ops-hub-content > .ops-hub-accordion{
+ display:block;
+ height:auto;
+ max-height:none;
+ min-height:0;
+ overflow:visible;
+ margin:0 0 13px;
+}
+.ops-hub-content > .ops-hub-accordion > .ops-hub-accordion-inner{
+ display:grid;
+ height:auto;
+ max-height:none;
+ min-height:0;
+ overflow:visible;
+}
+.ops-hub-content > .ops-hub-accordion > .ops-hub-accordion-toggle{
+ border-radius:15px 15px 0 0;
+}
+.ops-hub-content > .ops-hub-accordion > .ops-hub-accordion-toggle[aria-expanded="false"]{
+ border-radius:15px;
+}
+.ops-hub-mention-picker{display:grid;gap:3px;padding:5px;border:1px solid #cddfe4;border-radius:10px;background:white;max-height:220px;overflow-y:auto}
+.ops-hub-mention-picker button{display:block;text-align:left;padding:10px 12px;border:0;border-radius:7px;background:transparent;color:#27495a;cursor:pointer}
+.ops-hub-mention-picker button:hover,.ops-hub-mention-picker button:focus-visible{background:#e8f5f2}
+.ops-hub-mention-picker span{padding:9px;color:#647d88;font-size:12px}
