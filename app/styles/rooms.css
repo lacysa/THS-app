@@ -593,3 +593,8 @@
   color: #875600 !important;
   border-color: #EACF88 !important;
 }
+
+/* Daily housekeeper label on the unified room cards. */
+.rooms-card-title .rooms-assigned-housekeeper{display:inline-flex;align-items:center;gap:5px;max-width:100%;width:max-content;margin-top:6px;padding:4px 9px;border:1px solid #b9dfd5;border-radius:999px;background:#e9f7f2;color:#286c60;font-size:11px;font-weight:750;line-height:1.2;white-space:normal;overflow-wrap:anywhere}
+.rooms-card-title .rooms-assigned-housekeeper.unassigned{border-color:#d5e0e6;background:#f0f4f6;color:#647786}
+.rooms-card-title .rooms-assigned-housekeeper svg{flex-shrink:0}
