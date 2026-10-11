@@ -40,7 +40,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [loading,setLoading]=useState(true)
  const [busy,setBusy]=useState(false)
  const [reload,setReload]=useState(0)
- const [view,setView]=useState<View>('room')
+ const [sections,setSections]=useState<Record<View,boolean>>({room:true,guest:false,log:false})
+ const toggleSection=(key:View)=>setSections(current=>({...current,[key]:!current[key]}))
  const [activeEditor,setActiveEditor]=useState<Editor>(null)
  const [showDetails,setShowDetails]=useState(false)
  const [roomNotes,setRoomNotes]=useState('')
@@ -48,7 +49,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
  const [roomOrder,setRoomOrder]=useState('')
  const refresh=useCallback(()=>setReload(n=>n+1),[])
- useEffect(()=>{setView('room');setActiveEditor(null);setShowDetails(false);setMessage('')},[roomId,date,reservationId])
+ useEffect(()=>{setSections({room:true,guest:false,log:false});setActiveEditor(null);setShowDetails(false);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
   const controller=new AbortController()
   if(!data)setLoading(true)
@@ -203,9 +204,12 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
     {error&&<p className="ops-hub-error" role="alert">{error}</p>}
     {message&&!loading&&<p className="ops-hub-success" role="status"><Check size={16}/>{message}</p>}
     {data&&<>
-     <nav className="ops-hub-tabs" aria-label="Room hub views"><button type="button" className={view==='room'?'active':''} onClick={()=>setView('room')}>Room & checks</button><button type="button" className={view==='guest'?'active':''} onClick={()=>setView('guest')} disabled={!data.stay}>Guest & notes</button><button type="button" className={view==='log'?'active':''} onClick={()=>setView('log')}>Activity</button></nav>
-     {view==='log'&&<OpsActivityLog serviceDate={date} roomId={roomId} compact/>}
-     {view==='room'&&<>
+     <section className="ops-hub-accordion">
+      <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.room} onClick={()=>toggleSection('room')}>
+       <span><SlidersHorizontal size={17}/><strong>Room & checks</strong><small>{present(daily?.room_condition)} · {currentHousekeeper||'Housekeeper unassigned'}</small></span>
+       <ChevronDown size={19} className={sections.room?'expanded':''}/>
+      </button>
+      {sections.room&&<div className="ops-hub-accordion-inner">
       <div className="ops-hub-priority">
        <div className="ops-hub-primary-cards">
        <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
@@ -318,8 +322,14 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        </div>}
       </section>}
       {!daily&&<p className="ops-hub-muted">No operational record exists for this date. Management controls become available once the room day is scheduled.</p>}
-     </>}
-     {view==='guest'&&data.stay&&<section className="ops-hub-guest">
+     </div>}
+     </section>
+     {data.stay&&<section className="ops-hub-accordion">
+      <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.guest} onClick={()=>toggleSection('guest')}>
+       <span><DoorOpen size={17}/><strong>Guest & reservation</strong><small>{data.stay.guest_name||'Guest'} · Arrival {data.stay.arrival_date||'Not recorded'}</small></span>
+       <ChevronDown size={19} className={sections.guest?'expanded':''}/>
+      </button>
+      {sections.guest&&<div className="ops-hub-accordion-inner ops-hub-guest">
       <div className="ops-hub-kpis">
        <div className="ops-hub-field"><span>Arrival</span><strong>{present(data.stay.arrival_date)}</strong></div>
        <div className="ops-hub-field"><span>Departure</span><strong>{present(data.stay.checkout_date)}</strong></div>
@@ -342,7 +352,15 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
       {data.stay.products_raw&&<div className="ops-hub-section"><h3>Imported products and requests</h3><p className="ops-hub-note">{data.stay.products_raw}</p></div>}
       {!canManage&&<p className="ops-hub-muted">Guest information is view only. Manager permission is required to change it.</p>}
       <p className="ops-hub-muted">Reservation dates are view only because changing them requires reservation-calendar relinking. Room packages and service can be managed from Room & checks.</p>
+      </div>}
      </section>}
+     <section className="ops-hub-accordion">
+      <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.log} onClick={()=>toggleSection('log')}>
+       <span><Clock3 size={17}/><strong>Room activity</strong><small>Assignments, inspections, corrections and notes</small></span>
+       <ChevronDown size={19} className={sections.log?'expanded':''}/>
+      </button>
+      {sections.log&&<div className="ops-hub-accordion-inner"><OpsActivityLog serviceDate={date} roomId={roomId} compact/></div>}
+     </section>
     </>}
    </div>
   </section>
