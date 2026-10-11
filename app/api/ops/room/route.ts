@@ -97,6 +97,7 @@ export async function GET(req:NextRequest){
  const staffResult=canManage?await admin.from('staff_members').select('name,auth_user_id').eq('active',true).order('name'):null
  if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
  const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
+ const mentionableStaff=(staffResult?.data||[]).filter((m:any)=>m.auth_user_id&&m.name).map((m:any)=>({name:String(m.name).trim(),userId:String(m.auth_user_id)}))
  // Keep the legacy OUT-XX envelope initial format used by Housekeeping.
  // Match the existing staff initials mapping so the same manager shows consistently.
  const managerText=[gate.access.name,gate.access.preferredName,gate.access.email].filter(Boolean).join(' ').toLowerCase()
@@ -119,7 +120,7 @@ export async function GET(req:NextRequest){
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
+  permissions:{canManage,canInspect},staffNames,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
