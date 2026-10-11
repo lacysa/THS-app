@@ -556,3 +556,18 @@
 .rooms-secondary-details>.rooms-meta-grid{padding:0 12px 12px}
 .rooms-card-body>.rooms-dirty-action{padding:0;opacity:.85}
 @media(max-width:700px){.rooms-primary-controls>summary{font-size:14px}.rooms-card-body{gap:12px}.rooms-primary-controls>.rooms-manager-edit{padding:11px}}
+
+/* Desktop Rooms: full-width scan-friendly cards instead of cramped two-column tiles. */
+@media (min-width:1200px){
+  .rooms-workspace .rooms-card-list{display:grid;grid-template-columns:minmax(0,1fr)!important;gap:12px;align-items:stretch}
+  .rooms-workspace .rooms-card{grid-column:auto!important;border-radius:17px;box-shadow:0 3px 14px rgba(25,49,65,.045);border-color:#d7e2e5}
+  .rooms-workspace .rooms-card-header{padding:15px 20px;min-height:70px;gap:18px}
+  .rooms-workspace .rooms-card-title{gap:13px}
+  .rooms-workspace .rooms-card-title strong{font-size:17px;line-height:1.25}
+  .rooms-workspace .rooms-card-title small{font-size:13px;margin-top:2px}
+  .rooms-workspace .rooms-state-pill{font-size:12px;padding:7px 13px}
+  .rooms-workspace .rooms-progress-summary{padding:0 20px 13px;gap:14px}
+  .rooms-workspace .rooms-card-note{padding-left:20px;padding-right:20px}
+  .rooms-workspace .rooms-dirty-action{padding-left:20px;padding-right:20px}
+  .rooms-workspace .rooms-card-body{padding:18px 22px 22px}
+}
