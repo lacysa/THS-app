@@ -21,16 +21,17 @@ export async function GET(req: NextRequest) {
   const admin = createSupabaseAdmin()
 
   try {
-    const [roomsResult, dailyResult, staffResult, scheduleResult, linksResult] = await Promise.all([
+    const [roomsResult, dailyResult, staffResult, scheduleResult, linksResult, capabilitiesResult] = await Promise.all([
       admin.from('rooms').select('id,name,sort_order').eq('active', true).order('sort_order'),
       admin.from('housekeeping_daily_rooms')
         .select('room_id,reservation_status,service_type,room_condition,strip_hold,assigned_to,clean_order,complete,ready_for_inspection,check_issue_open')
         .eq('service_date', date),
       admin.from('staff_members').select('id,name,job_title,active,full_room_clean_limit').eq('active', true).order('name'),
       admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date', date),
-      admin.from('reservation_daily_links').select('room_id,reservation_status').eq('service_date', date)
+      admin.from('reservation_daily_links').select('room_id,reservation_status').eq('service_date', date),
+      admin.from('staff_member_capabilities').select('staff_member_id,capability_key')
     ])
-    for (const result of [roomsResult, dailyResult, staffResult, scheduleResult, linksResult]) {
+    for (const result of [roomsResult, dailyResult, staffResult, scheduleResult, linksResult, capabilitiesResult]) {
       if (result.error) throw new Error(result.error.message)
     }
     const dailyByRoom = new Map((dailyResult.data || []).map((row: any) => [String(row.room_id), row]))
@@ -42,19 +43,29 @@ export async function GET(req: NextRequest) {
       // An on-site entry takes precedence if a person has multiple shifts.
       if (!existing || (item.work_mode === 'onsite' && existing.work_mode !== 'onsite')) scheduleByStaff.set(id, item)
     }
+    const capabilitiesByStaff = new Map<string, Set<string>>()
+    for (const row of capabilitiesResult.data || []) {
+      const id = String(row.staff_member_id)
+      const caps = capabilitiesByStaff.get(id) || new Set<string>()
+      caps.add(String(row.capability_key || ''))
+      capabilitiesByStaff.set(id, caps)
+    }
     const staff = (staffResult.data || []).map((person: any) => {
       const shift = scheduleByStaff.get(String(person.id))
+      const roleLabel = String(shift?.role_label || person.job_title || '')
+      const capabilities = capabilitiesByStaff.get(String(person.id)) || new Set<string>()
+      const housekeepingEligible = ['housekeeping', 'runner', 'hospitality_assistant', 'laundry'].some(cap => capabilities.has(cap)) || /housekeep|hospitality|laundry|runner/i.test(roleLabel)
       return {
         id: String(person.id),
         name: String(person.name || ''),
-        roleLabel: String(shift?.role_label || person.job_title || ''),
+        roleLabel, housekeepingEligible,
         onSite: shift?.work_mode === 'onsite',
         scheduleState: String(shift?.work_mode || 'not_scheduled'),
         shiftStart: shift?.shift_start || null,
         shiftEnd: shift?.shift_end || null,
         fullRoomCleanLimit: Number(person.full_room_clean_limit ?? 2)
       }
-    }).sort((a, b) => Number(b.onSite) - Number(a.onSite) || a.name.localeCompare(b.name))
+    }).sort((a, b) => Number(b.onSite) - Number(a.onSite) || Number(b.housekeepingEligible) - Number(a.housekeepingEligible) || a.name.localeCompare(b.name))
     const rooms = (roomsResult.data || []).map((room: any) => {
       const daily: any = dailyByRoom.get(String(room.id)) || {}
       const link: any = linkedByRoom.get(String(room.id)) || {}
