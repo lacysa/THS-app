@@ -1052,3 +1052,6 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 .ops-hub-mention-picker button{display:block;text-align:left;padding:10px 12px;border:0;border-radius:7px;background:transparent;color:#27495a;cursor:pointer}
 .ops-hub-mention-picker button:hover,.ops-hub-mention-picker button:focus-visible{background:#e8f5f2}
 .ops-hub-mention-picker span{padding:9px;color:#647d88;font-size:12px}
+
+/* Readable note preview in Room Operations table; row click opens full note editor. */
+.ths-ops-note-preview{margin-top:7px;max-width:300px;padding:8px 10px;border:1px solid #d5e5ea;border-radius:9px;background:#f0f8f8;color:#35576a;font-size:12px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
