@@ -1,0 +1,181 @@
+/* THS TABLET WORKSPACE
+ * A dedicated iPad / tablet presentation layered over the shared app shell.
+ * No changes to API, reservation, housekeeping, or breakfast workflows.
+ * Phone landscape is excluded via min-height, so it does not inherit an iPad rail.
+ * Keep these media queries aligned with lib/layout-breakpoints.ts.
+ */
+.hsk-tablet-layout-picker{display:none}
+
+@media (min-width:701px) and (max-width:1199px) and (min-height:600px),
+       (min-width:701px) and (max-width:1600px) and (min-height:600px) and (pointer:coarse) and (hover:none) {
+  :root{--ths-header-height:70px}
+
+  /* The tablet gets real space instead of a scaled-down desktop canvas. */
+  .staff-ops-app,.staff-ops-main,.staff-page-content{min-width:0!important;max-width:100%}
+  .staff-ops-topbar{
+    min-height:70px!important;
+    padding:10px 20px!important;
+    gap:12px!important;
+  }
+  .staff-page-title{min-width:0!important;flex:0 1 auto!important}
+  .staff-page-title strong{font-size:19px!important;line-height:1.2}
+  .staff-page-content{
+    width:100%!important;max-width:none!important;
+    padding:20px 22px 42px!important;
+  }
+  .mobile-nav-toggle{width:44px!important;height:44px!important;flex-basis:44px!important}
+  .staff-ops-nav a{min-height:44px}
+  .staff-ops-nav a.sidebar-nested-link{min-height:40px}
+
+  /* Touch-accessible operations controls without changing their behavior. */
+  .rooms-toolbar .toolbar-actions,
+  .housekeeping-workspace-top,
+  .hsk-toolbar-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+  .rooms-toolbar .date-control input,
+  .hsk-toolbar-actions .date-control input,
+  .rooms-toolbar button,
+  .hsk-toolbar-actions button{min-height:44px}
+  .rooms-workspace,.housekeeping-workspace,.hsk-module,
+  .rooms-card-list,.rooms-table-shell,.rooms-table-scroll,
+  .hsk-table-card,.hsk-table-wrapper{min-width:0;max-width:100%}
+
+  /* Room picker and detail cards: readable width in either orientation. */
+  .rooms-room-picker{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(175px,1fr));
+    gap:10px;
+  }
+  .rooms-card-list{display:grid;grid-template-columns:minmax(0,1fr);gap:13px}
+  .rooms-meta-grid,.rooms-manager-status-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rooms-filter-strip{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .rooms-table-shell{max-width:100%;width:100%}
+  .rooms-table-scroll{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+  .rooms-table{min-width:1110px}
+  .rooms-table-shell:has(.rooms-table){display:block!important}
+
+  /* Room Board: stop the eight-column desktop row squeezing the touch targets. */
+  .rb-room-main,.rb-room-card[data-workflow="minimal"] .rb-room-main{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+  }
+  .rb-room-name,.rb-room-card[data-workflow="minimal"] .rb-room-name{grid-column:1/-1}
+  .rb-status-field,.rb-room-card[data-workflow="minimal"] .rb-status-field{grid-column:1}
+  .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field):not(.rb-staff-summary):not(.rb-order-summary):not(.rb-progress-field),
+  .rb-room-card[data-workflow="minimal"] .rb-room-main>.rb-field:not(.rb-status-field):not(.rb-end-field){grid-column:2}
+  .rb-staff-summary{grid-column:1}
+  .rb-order-summary{grid-column:2}
+  .rb-progress-field{grid-column:1/-1}
+  .rb-end-field,.rb-details-btn,
+  .rb-room-card[data-workflow="minimal"] .rb-end-field,
+  .rb-room-card[data-workflow="minimal"] .rb-details-btn{grid-column:1/-1}
+  .rb-room-main select,.rb-room-main input,.rb-details-btn{min-height:44px}
+  .rb-room-card{min-width:0}
+
+  /* Full housekeeping interactions are available in either card or table view.
+     On an iPad, open in cards by default, with explicit access to the full table. */
+  .hsk-tablet-layout-picker{
+    display:inline-flex;align-items:center;gap:3px;
+    align-self:center;flex-wrap:nowrap;
+    padding:4px;border:1px solid var(--app-border,#d7dce3);border-radius:12px;
+    background:var(--app-surface,#fff);
+  }
+  .hsk-tablet-layout-picker button{
+    min-height:40px;padding:8px 13px;border:0;border-radius:9px;
+    background:transparent;color:var(--app-muted,#667085);
+    font-size:12px;font-weight:800;cursor:pointer;
+  }
+  .hsk-tablet-layout-picker button[aria-pressed="true"]{
+    color:var(--app-text,#263a4e);
+    background:color-mix(in srgb,var(--app-accent,#6ca9ba) 17%,var(--app-surface,#fff));
+    box-shadow:0 1px 4px rgba(30,45,70,.06);
+  }
+  .hsk-module:not(.hsk-tablet-table) .hsk-manager-desktop{display:none!important}
+  .hsk-module:not(.hsk-tablet-table) .hsk-manager-mobile{display:block!important}
+  .hsk-module.hsk-tablet-table .hsk-manager-desktop{display:block!important}
+  .hsk-module.hsk-tablet-table .hsk-manager-mobile{display:none!important}
+  .housekeeping-workspace .hsk-module.hsk-tablet-table .hsk-scroll-control{display:grid!important}
+  .hsk-table-wrapper{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important}
+  .hsk-table{min-width:1360px}
+  .hsk-mobile-room-list{display:grid;grid-template-columns:minmax(0,1fr);gap:13px}
+  .hsk-mobile-room-card{min-width:0}
+  .hsk-mobile-room-card button,.hsk-mobile-room-card select{min-height:42px}
+
+  /* Calendar and Room Ops tables can scroll inside themselves, never stretch the page. */
+  .ths-ops-table-scroll,.ths-calendar-scroll{
+    max-width:100%;overflow-x:auto!important;
+    overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+  }
+  .ths-ops-full-table{min-width:760px}
+
+  /* Keep large dashboard grids readable in a tablet-sized workspace. */
+  .ops-command-columns{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ops-command-attention{grid-column:1/-1}
+}
+
+/* TABLET LANDSCAPE: persistent collapsible navigation rail + wide workspace.
+ * iPad portrait retains the existing accessible navigation drawer. */
+@media (min-width:1024px) and (max-width:1199px) and (min-height:600px) and (orientation:landscape),
+       (min-width:1024px) and (max-width:1600px) and (min-height:600px) and (orientation:landscape) and (pointer:coarse) and (hover:none) {
+  .staff-ops-sidebar,.staff-ops-sidebar.collapsed{
+    display:flex!important;position:fixed!important;inset:0 auto 0 0!important;
+    width:var(--ths-sidebar-width)!important;height:100dvh!important;
+    padding:18px 12px 14px!important;overflow-x:hidden!important;overflow-y:auto!important;
+    transform:none!important;transition:width .2s ease,padding .2s ease!important;
+    z-index:60!important;box-shadow:none!important;
+  }
+  .staff-ops-main,.sidebar-collapsed .staff-ops-main{
+    width:calc(100% - var(--ths-sidebar-width))!important;
+    margin-left:var(--ths-sidebar-width)!important;
+    min-width:0!important;
+    transition:width .2s ease,margin-left .2s ease!important;
+  }
+  .staff-ops-sidebar.collapsed{
+    width:68px!important;padding-left:8px!important;padding-right:8px!important;
+  }
+  .sidebar-collapsed .staff-ops-main{
+    width:calc(100% - 68px)!important;margin-left:68px!important;
+  }
+  .sidebar-collapse-btn{display:grid!important;width:32px;height:32px}
+  .mobile-nav-toggle,.mobile-sidebar-backdrop{display:none!important}
+  .staff-ops-app.mobile-nav-open{height:auto!important;overflow:visible!important}
+  .staff-ops-topbar .staff-global-search.ops-search{
+    display:flex!important;width:min(265px,28vw)!important;
+    max-width:265px!important;flex:0 1 265px!important;
+  }
+  .staff-ops-sidebar.collapsed .ops-logo-copy,
+  .staff-ops-sidebar.collapsed .ops-nav-label,
+  .staff-ops-sidebar.collapsed .sidebar-link-label,
+  .staff-ops-sidebar.collapsed .preview-badge,
+  .staff-ops-sidebar.collapsed .ops-sidebar-profile-copy,
+  .staff-ops-sidebar.collapsed .sidebar-footer-actions span{display:none!important}
+  .staff-ops-sidebar.collapsed .sidebar-brand{padding:34px 0 0!important}
+  .staff-ops-sidebar.collapsed .sidebar-collapse-btn{top:0!important;right:8px!important}
+  .staff-ops-sidebar.collapsed .ops-logo{justify-content:center!important;padding:2px 0 10px!important}
+  .staff-ops-sidebar.collapsed .staff-ops-nav a,
+  .staff-ops-sidebar.collapsed .sidebar-footer-actions button,
+  .staff-ops-sidebar.collapsed .ops-sidebar-profile{
+    justify-content:center!important;padding-left:0!important;padding-right:0!important;
+  }
+  .staff-ops-sidebar.collapsed .sidebar-nested-links{
+    margin:0!important;padding:0!important;border:0!important;
+  }
+  .staff-ops-sidebar.collapsed .staff-ops-nav a.sidebar-nested-link{
+    padding-left:0!important;padding-right:0!important;
+  }
+  .staff-ops-sidebar.collapsed .sidebar-link-icon{width:22px!important;flex-basis:22px!important}
+  .staff-ops-sidebar.collapsed .ops-logo-mark{width:34px!important;height:34px!important;flex-basis:34px!important}
+}
+
+/* Tablet portrait: no forced sidebar column, no min-width desktop sheet. */
+@media (min-width:701px) and (max-width:1199px) and (min-height:600px) and (orientation:portrait),
+       (min-width:701px) and (max-width:1600px) and (min-height:600px) and (orientation:portrait) and (pointer:coarse) and (hover:none) {
+  .staff-page-content{padding:18px 18px 36px!important}
+  .rooms-room-picker{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ops-command-columns{grid-template-columns:minmax(0,1fr)}
+  .ops-command-attention{grid-column:auto}
+  .staff-global-search{display:none!important}
+}
+
+@media (min-width:701px) and (max-width:850px) and (orientation:portrait) {
+  .rooms-room-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
