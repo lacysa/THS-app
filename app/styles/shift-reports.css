@@ -897,3 +897,43 @@ html[data-theme="dark"] .shift-today-correction-status.open{color:#f0bd96}
   }
 
 }
+
+
+/* Shift Report print isolation (iOS Safari / installed PWA).
+   Print the body-level portal, not an off-screen part of the interactive app.
+   Invisible app elements must be removed from layout, not merely hidden. */
+@media print {
+  body:has(> .shift-print-document) {
+    display:block!important;
+    position:static!important;
+    min-height:0!important;
+    height:auto!important;
+    overflow:visible!important;
+    background:#fff!important;
+  }
+  body:has(> .shift-print-document) > :not(.shift-print-document) {
+    display:none!important;
+  }
+  body > .shift-print-document {
+    display:block!important;
+    visibility:visible!important;
+    position:static!important;
+    inset:auto!important;
+    clear:both!important;
+    float:none!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+    transform:none!important;
+    contain:none!important;
+    break-before:auto!important;
+    page-break-before:auto!important;
+  }
+  body > .shift-print-document * {
+    visibility:visible!important;
+  }
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, FileText, Printer, RefreshCw, Save } from 'lucide-react'
+import { createPortal } from 'react-dom'
 
 type AutoData = {
   breakfastDate:string
@@ -50,6 +51,8 @@ function initials(value:string) {
 }
 
 export default function ShiftReportBoard() {
+  const [printMounted,setPrintMounted] = useState(false)
+  useEffect(()=>{setPrintMounted(true)},[])
   const [date,setDate] = useState(todayDetroit())
   const [shift,setShift] = useState('Daily')
   const [tab,setTab] = useState<'report'|'room-notes'|'handoff'|'management'>('report')
@@ -359,44 +362,10 @@ export default function ShiftReportBoard() {
     </section>
   }
 
-  return <div className="shift-page module-pretty-page">
-    <section className="module-pretty-hero no-print">
-      <div>
-        <div className="module-kicker">Operations handoff</div>
-        <h1>Shift Reports</h1>
-        <p>Capture the day clearly, surface exceptions, and leave the next shift with the information they actually need.</p>
-      </div>
-      <div className="module-pretty-hero-stat">
-        <span>Status</span>
-        <strong>{report?.status || 'Draft'}</strong>
-      </div>
-    </section>
-
-    <div className="shift-toolbar no-print module-pretty-toolbar">
-      <div className="shift-toolbar-left">
-        <label>Date <input type="date" value={date} onChange={e=>setDate(e.target.value)} /></label>
-        <label>Shift <select value={shift} onChange={e=>setShift(e.target.value)}><option>Daily</option><option>Morning</option><option>Evening</option></select></label>
-        <span className={`shift-status ${report?.status || 'draft'}`}>{report?.status || 'New draft'}</span>
-      </div>
-      <div className="shift-toolbar-right">
-        <button type="button" className="ops-secondary-btn" onClick={load}><RefreshCw size={15}/>Refresh</button>
-        <button type="button" className="ops-secondary-btn" onClick={()=>window.print()}><Printer size={15}/>Print / Save PDF</button>
-        {canManage && !locked && <button type="button" className="ops-secondary-btn" onClick={()=>saveReport('save')} disabled={saving}><Save size={15}/>{saving?'Saving…':'Save Draft'}</button>}
-        {canManage && !locked && <button type="button" className="ops-primary-btn" onClick={()=>saveReport('finalize')} disabled={saving}><CheckCircle2 size={15}/>Finalize</button>}
-        {canManage && locked && <button type="button" className="ops-secondary-btn" onClick={()=>saveReport('reopen')} disabled={saving}>Reopen report</button>}
-      </div>
-    </div>
-
-    {message && <div className="module-message">{message}</div>}
-
-    <div className="shift-tabs no-print">
-      <button className={tab==='report'?'active':''} onClick={()=>setTab('report')}>Daily Shift Report</button>
-      <button className={tab==='room-notes'?'active':''} onClick={()=>setTab('room-notes')}>Room Notes</button>
-      <button className={tab==='handoff'?'active':''} onClick={()=>setTab('handoff')}>Shift Handoff</button>
-      {canManage && <button className={tab==='management'?'active':''} onClick={()=>setTab('management')}>Management Notes</button>}
-    </div>
-
-    <div className="shift-print-document" aria-hidden="true">
+  // Render the printable handoff directly under <body>, away from the app shell.
+  // iOS AirPrint paginates this as a document rather than a grid item inside the app.
+  const printDocument = (
+<div className="shift-print-document" role="document" aria-label="The Hotel Saugatuck shift report">
       <header className="shift-print-heading">
         <div className="shift-print-letterhead">
           <div className="shift-print-brand">
@@ -501,6 +470,46 @@ export default function ShiftReportBoard() {
       {canManage&&printNotes('management','Management notes',draft.managementNotes,'management')}
       <footer className="shift-print-footer"><span>THE HOTEL SAUGATUCK · INTERNAL OPERATIONS</span><span>{date} · {shift}</span></footer>
     </div>
+  )
+
+  return <div className="shift-page module-pretty-page">
+    <section className="module-pretty-hero no-print">
+      <div>
+        <div className="module-kicker">Operations handoff</div>
+        <h1>Shift Reports</h1>
+        <p>Capture the day clearly, surface exceptions, and leave the next shift with the information they actually need.</p>
+      </div>
+      <div className="module-pretty-hero-stat">
+        <span>Status</span>
+        <strong>{report?.status || 'Draft'}</strong>
+      </div>
+    </section>
+
+    <div className="shift-toolbar no-print module-pretty-toolbar">
+      <div className="shift-toolbar-left">
+        <label>Date <input type="date" value={date} onChange={e=>setDate(e.target.value)} /></label>
+        <label>Shift <select value={shift} onChange={e=>setShift(e.target.value)}><option>Daily</option><option>Morning</option><option>Evening</option></select></label>
+        <span className={`shift-status ${report?.status || 'draft'}`}>{report?.status || 'New draft'}</span>
+      </div>
+      <div className="shift-toolbar-right">
+        <button type="button" className="ops-secondary-btn" onClick={load}><RefreshCw size={15}/>Refresh</button>
+        <button type="button" className="ops-secondary-btn" onClick={()=>window.print()}><Printer size={15}/>Print / Save PDF</button>
+        {canManage && !locked && <button type="button" className="ops-secondary-btn" onClick={()=>saveReport('save')} disabled={saving}><Save size={15}/>{saving?'Saving…':'Save Draft'}</button>}
+        {canManage && !locked && <button type="button" className="ops-primary-btn" onClick={()=>saveReport('finalize')} disabled={saving}><CheckCircle2 size={15}/>Finalize</button>}
+        {canManage && locked && <button type="button" className="ops-secondary-btn" onClick={()=>saveReport('reopen')} disabled={saving}>Reopen report</button>}
+      </div>
+    </div>
+
+    {message && <div className="module-message">{message}</div>}
+
+    <div className="shift-tabs no-print">
+      <button className={tab==='report'?'active':''} onClick={()=>setTab('report')}>Daily Shift Report</button>
+      <button className={tab==='room-notes'?'active':''} onClick={()=>setTab('room-notes')}>Room Notes</button>
+      <button className={tab==='handoff'?'active':''} onClick={()=>setTab('handoff')}>Shift Handoff</button>
+      {canManage && <button className={tab==='management'?'active':''} onClick={()=>setTab('management')}>Management Notes</button>}
+    </div>
+
+    {printMounted && createPortal(printDocument,document.body)}
 
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-report-flow">
       <section className="shift-section shift-snapshot-section shift-day-section">
