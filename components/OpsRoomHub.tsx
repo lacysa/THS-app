@@ -4,7 +4,7 @@ import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,Pencil,
 import OpsActivityLog from '@/components/OpsActivityLog'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
-type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null}
+type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
 type PackageOption={id:string;name:string;available:boolean}
 type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string}
 type View='room'|'guest'|'log'
@@ -103,6 +103,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
    /dirty|cleaning/i.test(String(daily.room_condition||''))||markedOut
  ))
  const refreshPending=Boolean(isStayover&&serviceCode==='RF'&&!daily?.complete)
+ const refreshInitials=String(daily?.refresh_completed_initials||'').trim().toUpperCase()
  const attentionTitle=needsCorrection?'Housekeeping correction needed':
    blocked?'Room blocked':
    inspectionDue?'Ready for inspection':
@@ -244,7 +245,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         <span className="ops-hub-quick-icon"><Wallet size={18}/></span><span className="ops-hub-quick-name">Tips</span><small>{envelopeCollected?'Collected · '+envelopeInitials:'Not collected'}</small>{envelopeCollected&&<Check size={14} className="ops-hub-quick-check"/>}
        </button>
        {isStayover&&serviceCode==='RF'&&<button type="button" className={'ops-hub-quick-action'+(daily?.complete?' ops-hub-complete-card':'')} aria-pressed={Boolean(daily?.complete)} disabled={!canManage||!daily||busy||blocked||Boolean(daily?.complete)} onClick={()=>void markRefreshComplete()} aria-label={daily?.complete?'Refresh complete':'Mark refresh complete'}>
-        <span className="ops-hub-quick-icon"><Check size={18}/></span><span className="ops-hub-quick-name">RF Complete</span><small>{daily?.complete?'Completed':'Mark complete'}</small>
+        <span className="ops-hub-quick-icon"><Check size={18}/></span><span className="ops-hub-quick-name">{daily?.complete?'RF complete'+(refreshInitials?'-'+refreshInitials:''):'RF complete'}</span><small>{daily?.complete?'Completed':'Tap to complete'}</small>
        </button>}
        <button type="button" className={'ops-hub-quick-action'+(daily?.late_arrival?' selected':'')} aria-pressed={Boolean(daily?.late_arrival)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('lateArrival')}>
         <span className="ops-hub-quick-icon"><Clock3 size={18}/></span><span className="ops-hub-quick-name">Late arrival</span>{daily?.late_arrival&&<Check size={15} className="ops-hub-quick-check"/>}
@@ -268,7 +269,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         <span>Inspection</span><span className="ops-hub-action-value"><strong>{daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</strong>{daily&&<ChevronDown size={16}/>}</span>
        </button>
        <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='service'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>
-        <span>Service</span><span className="ops-hub-action-value"><strong>{markedOut?'OUT':daily?.service_type||'No service'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+        <span>Service</span><span className="ops-hub-action-value"><strong>{serviceCode==='RF'&&daily?.complete?'RF complete'+(refreshInitials?'-'+refreshInitials:''):markedOut?'OUT':daily?.service_type||'No service'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
        <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='packages'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>
         <span>Packages</span><span className="ops-hub-action-value"><strong>{[...new Set([...(data.importedPackageIds||[]),...(data.manualPackageIds||[])])].map(id=>data.packageOptions.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'None selected'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
