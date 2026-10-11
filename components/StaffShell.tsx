@@ -84,6 +84,7 @@ const iconMap: Record<string, any> = {
   housekeeping: BedDouble,
   room_board: BedDouble,
   housekeeping_setup: ClipboardList,
+  housekeeping_assignments: ClipboardList,
   room_checks: ShieldCheck,
   projects: FolderKanban,
   maintenance: Wrench,
@@ -125,6 +126,7 @@ const hrefFallback: Record<string, string> = {
   housekeeping: '/housekeeping',
   room_board: '/room-board',
   housekeeping_setup: '/housekeeping/setup',
+  housekeeping_assignments: '/housekeeping/assignments',
   room_checks: '/room-checks',
   projects: '/projects',
   maintenance: '/maintenance',
@@ -412,9 +414,16 @@ export default function StaffShell({
     operationsModules.has(item.module_key)
   )
 
+  const assignmentSidebarItem: ModuleRow | undefined = managementWorkspace && roomsSidebarItem ? {
+    module_key: 'housekeeping_assignments', title: 'Assignments', label: 'Assignments',
+    href: '/housekeeping/assignments', active: true, enabled: true, published: true,
+    status: 'active', sort_order: 0
+  } : undefined
   const nestedChildrenByParent: Record<string, string[]> = {
-    reservations: ['ops', 'reservation_sync', 'housekeeping'],
-    housekeeping: ['room_checks', 'housekeeping_quality']
+    reservations: managementWorkspace
+      ? ['ops', 'reservation_sync', 'housekeeping', 'housekeeping_assignments', 'room_checks']
+      : ['ops', 'reservation_sync', 'housekeeping'],
+    housekeeping: managementWorkspace ? [] : ['room_checks', 'housekeeping_quality']
   }
 
   const nestedChildKeys = new Set(
@@ -427,7 +436,7 @@ export default function StaffShell({
 
   const nestedChildrenFor = (parentKey: string) =>
     (nestedChildrenByParent[parentKey] || [])
-      .map(key => key==='housekeeping' && parentKey==='reservations' ? roomsSidebarItem : operationsNav.find(item => item.module_key === key))
+      .map(key => key==='housekeeping' && parentKey==='reservations' ? roomsSidebarItem : key==='housekeeping_assignments' ? assignmentSidebarItem : operationsNav.find(item => item.module_key === key))
       .filter(Boolean) as ModuleRow[]
 
   const orphanedNestedChildren = operationsNav.filter(item => {
@@ -523,8 +532,8 @@ export default function StaffShell({
       <Link
         key={item.module_key}
         href={href}
-        title={item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
-        aria-label={item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+        title={item.module_key==='housekeeping'?'Housekeeping':item.module_key==='room_checks'?'Room Inspections':managementWorkspace && item.module_key==='ops'?'Calendar & Activity':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+        aria-label={item.module_key==='housekeeping'?'Housekeeping':item.module_key==='room_checks'?'Room Inspections':managementWorkspace && item.module_key==='ops'?'Calendar & Activity':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
         className={[
           active ? 'active' : '',
           nested ? 'sidebar-nested-link' : '',
@@ -536,7 +545,7 @@ export default function StaffShell({
         </span>
 
         <span className="sidebar-link-label">
-          {item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+          {item.module_key==='housekeeping'?'Housekeeping':item.module_key==='room_checks'?'Room Inspections':managementWorkspace && item.module_key==='ops'?'Calendar & Activity':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
         </span>
 
         {preview && (
