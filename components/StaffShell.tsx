@@ -3,7 +3,7 @@
 import { getStaffSession } from '@/lib/client/staff-session'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutGrid,
@@ -354,6 +354,16 @@ export default function StaffShell({
 
   const managementWorkspace=Boolean(access?.isAdmin || access?.capabilities?.some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap)))
   const hasReservations=modules.some(module=>module.module_key==='reservations'&&module.active!==false&&module.enabled!==false)
+  // Keep the dedicated Rooms workspace visible to managers without moving the
+  // existing Room Operations submenu or reparenting HSK Quality.
+  const roomsSidebarItem = managementWorkspace && hasReservations
+    ? modules.find(module=>
+        module.module_key==='housekeeping' &&
+        module.active!==false &&
+        module.enabled!==false &&
+        (module.published!==false || access?.canPreviewUnpublished)
+      )
+    : undefined
 
   const nav = useMemo(
     () =>
@@ -512,7 +522,7 @@ export default function StaffShell({
         </span>
 
         <span className="sidebar-link-label">
-          {managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+          {item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
         </span>
 
         {preview && (
@@ -652,7 +662,10 @@ export default function StaffShell({
                 Operations
               </div>
 
-              {operationRoots.map(renderOperationItem)}
+              {operationRoots.map(item=><Fragment key={item.module_key}>
+                {renderOperationItem(item)}
+                {item.module_key==='reservations' && roomsSidebarItem && renderNavLink(roomsSidebarItem)}
+              </Fragment>)}
               {orphanedNestedChildren.map(item =>
                 renderNavLink(item)
               )}
