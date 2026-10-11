@@ -1,12 +1,12 @@
 'use client'
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
-import {CalendarDays,ChevronLeft,ChevronRight,LayoutGrid,Rows3,RefreshCw} from 'lucide-react'
+import {CalendarDays,ChevronLeft,ChevronRight,LayoutGrid,Rows3,RefreshCw,Trash2} from 'lucide-react'
 import OpsRoomHub from '@/components/OpsRoomHub'
 import ReservationsBoard from '@/components/ReservationsBoard'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
-type Data={start:string;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
+type Data={start:string;canRemove:boolean;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
 function occupied(c:Cell){return Boolean(c.guest&&c.arrival&&c.departure&&c.date>=c.arrival&&c.date<c.departure)}
@@ -26,6 +26,39 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
   const [cardsForDate,setCardsForDate]=useState('')
   const [cardsLoading,setCardsLoading]=useState(false)
   const [cardsError,setCardsError]=useState('')
+  const [removeTarget,setRemoveTarget]=useState<{id:string;guest:string;room:string;arrival:string;departure:string}|null>(null)
+  const [removeBusy,setRemoveBusy]=useState(false)
+  const [removeError,setRemoveError]=useState('')
+  const pressTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
+  const pressStart=useRef<{x:number;y:number}|null>(null)
+  const suppressNextTap=useRef(false)
+  function stopLongPress(){
+    if(pressTimer.current!==null){clearTimeout(pressTimer.current);pressTimer.current=null}
+    pressStart.current=null
+  }
+  function requestRemoval(bar:Cell,room:string){
+    if(!data?.canRemove)return
+    setRemoveError('')
+    setRemoveTarget({id:bar.reservationId,guest:bar.guest,room,arrival:bar.arrival,departure:bar.departure})
+  }
+  async function removeReservation(){
+    if(!removeTarget||removeBusy)return
+    setRemoveBusy(true);setRemoveError('')
+    try{
+      const response=await fetch('/api/reservations/remove',{
+        method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({id:removeTarget.id})
+      })
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not remove reservation')
+      setRemoveTarget(null)
+      setActiveRoom(null)
+      setReload(n=>n+1)
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(error:any){
+      setRemoveError(String(error?.message||error))
+    }finally{setRemoveBusy(false)}
+  }
   useEffect(()=>{
     let active=true
     setLoading(true);setError('')
@@ -92,7 +125,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
       <button type="button" aria-pressed={layout==='grid'} onClick={()=>setLayout('grid')}><Rows3 size={16}/> Timeline</button>
       <button type="button" aria-pressed={layout==='cards'} onClick={()=>setLayout('cards')}><LayoutGrid size={16}/> Day cards</button>
     </div>
-    <p className="ths-calendar-help">{layout==='grid'?'Daily ops shows the previous 2 days, today, and the next 4. Past 7 days shows the last 6 days plus today. Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds.':'Detailed reservation cards for the selected day, including arrivals, stayovers, checkouts and OUT/IN rooms. Tap a card to open its room details.'}</p>
+    <p className="ths-calendar-help">{layout==='grid'?'Daily ops shows the previous 2 days, today, and the next 4. Past 7 days shows the last 6 days plus today. Swipe sideways to browse. Each teal bar represents an imported guest stay across its booked nights. Hatched dates represent room holds. Managers: press and hold a reservation bar to remove a cancelled booking.':'Detailed reservation cards for the selected day, including arrivals, stayovers, checkouts and OUT/IN rooms. Tap a card to open its room details.'}</p>
     {layout==='grid'&&error&&<div role="alert" className="ths-ops-empty">{error}</div>}
     {layout==='grid'&&loading&&!data&&<div className="ths-ops-empty">Loading calendar…</div>}
     {layout==='grid'?(data&&<div ref={scrollRef} className="ths-calendar-scroll" tabIndex={0} aria-label="Scrollable seven-day reservation calendar"><div className="ths-calendar-grid" style={{gridTemplateColumns:'118px repeat(7, minmax(118px, 1fr))'}}>
@@ -121,7 +154,24 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
                 </button>
               </div>
             })}
-            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure} onClick={event=>{
+            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(data.canRemove?' · Hold to remove':'')}
+              onPointerDown={event=>{
+                if(!data.canRemove||event.button!==0)return
+                stopLongPress();suppressNextTap.current=false
+                pressStart.current={x:event.clientX,y:event.clientY}
+                pressTimer.current=setTimeout(()=>{pressTimer.current=null;pressStart.current=null;suppressNextTap.current=true;requestRemoval(bar,room.name)},650)
+              }}
+              onPointerMove={event=>{
+                const origin=pressStart.current
+                if(origin&&(Math.abs(event.clientX-origin.x)>12||Math.abs(event.clientY-origin.y)>12))stopLongPress()
+              }}
+              onPointerUp={stopLongPress}
+              onPointerCancel={stopLongPress}
+              onPointerLeave={stopLongPress}
+              onContextMenu={event=>{if(!data.canRemove)return;event.preventDefault();stopLongPress();suppressNextTap.current=true;requestRemoval(bar,room.name)}}
+              onKeyDown={event=>{if(data.canRemove&&(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))){event.preventDefault();requestRemoval(bar,room.name)}}}
+              onClick={event=>{
+              if(suppressNextTap.current){suppressNextTap.current=false;return}
               // A multi-night bar is one visual element: derive the operational date
               // from the precise day column tapped, not today's or the first stay day.
               const band=event.currentTarget.parentElement
@@ -155,6 +205,18 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
         />:<div className="ths-ops-empty">No imported guest reservations for this date. Use Timeline to view available room slots and holds.</div>)}
     </section>}
     {activeRoom&&<OpsRoomHub key={activeRoom.roomId+'|'+activeRoom.date+'|'+(activeRoom.reservationId||'')} roomId={activeRoom.roomId} date={activeRoom.date} reservationId={activeRoom.reservationId} onClose={()=>setActiveRoom(null)} onUpdate={()=>setReload(n=>n+1)}/>}
-    <p className="ths-calendar-caveat">This view reflects the latest imported reservation links, not live PMS inventory or prices. Gray/blank cells must not be treated as confirmed availability. No reservation or breakfast data is changed here.</p>
+    {removeTarget&&<div className="ths-calendar-remove-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget&&!removeBusy)setRemoveTarget(null)}}>
+      <section className="ths-calendar-remove-dialog" role="dialog" aria-modal="true" aria-labelledby="ths-calendar-remove-title">
+        <div className="ths-calendar-remove-title"><span className="ths-calendar-remove-icon"><Trash2 size={21}/></span><div><small>Manager action</small><h3 id="ths-calendar-remove-title">Remove reservation?</h3></div></div>
+        <p>Remove <strong>{removeTarget.guest}</strong> from <strong>{removeTarget.room}</strong> ({removeTarget.arrival} → {removeTarget.departure})?</p>
+        <p className="ths-calendar-remove-note">This removes the booking from THS Ops, not the PMS. The reservation is kept in history, and importing the same report will not restore it. Existing breakfast orders are not deleted.</p>
+        {removeError&&<p className="ths-calendar-remove-error" role="alert">{removeError}</p>}
+        <div className="ths-calendar-remove-actions">
+          <button type="button" disabled={removeBusy} onClick={()=>setRemoveTarget(null)}>Keep reservation</button>
+          <button type="button" disabled={removeBusy} onClick={()=>void removeReservation()}><Trash2 size={16}/>{removeBusy?'Removing…':'Remove from Ops'}</button>
+        </div>
+      </section>
+    </div>}
+    <p className="ths-calendar-caveat">This view reflects imported reservations, not live PMS inventory or rates. Blank cells are not confirmed availability. Removing a booking here does not cancel it in the PMS or delete breakfast orders.</p>
   </div>
 }
