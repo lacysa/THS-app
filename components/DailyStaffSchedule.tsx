@@ -7,7 +7,7 @@ type ScheduleRow={
   id:string
   name:string
   jobTitle:string
-  workMode:'unscheduled'|'onsite'|'remote'|'time_off'|'unavailable'
+  workMode:'unscheduled'|'onsite'|'remote'|'time_off'|'unavailable'|'called_off'|'no_call_no_show'
   shiftStart:string
   shiftEnd:string
   roleLabel:string
@@ -103,7 +103,7 @@ export default function DailyStaffSchedule(){
                 <small>{row.jobTitle||'Staff'}</small>
               </div>
 
-              <button type="button" className="staffing-row-toggle" aria-expanded={expandedId===row.id} onClick={()=>setExpandedId(id=>id===row.id?'':row.id)}><span>{row.workMode==='onsite'?'On site':row.workMode.replace('_',' ')}</span><span>{expandedId===row.id?'Hide details':'Edit shift'} ▾</span></button>
+              <button type="button" className="staffing-row-toggle" aria-expanded={expandedId===row.id} onClick={()=>setExpandedId(id=>id===row.id?'':row.id)}><span>{row.workMode==='onsite'?'On site':row.workMode==='called_off'?'Called off':row.workMode==='no_call_no_show'?'No call / No show':row.workMode.replace('_',' ')}</span><span>{expandedId===row.id?'Hide details':'Edit shift'} ▾</span></button>
               <div className="staffing-row-fields">
               <label>
                 <span>Status</span>
@@ -113,6 +113,8 @@ export default function DailyStaffSchedule(){
                   <option value="remote">Remote</option>
                   <option value="time_off">Time off</option>
                   <option value="unavailable">Unavailable</option>
+                  <option value="called_off">Called off</option>
+                  <option value="no_call_no_show">No call / No show</option>
                 </select>
               </label>
 
