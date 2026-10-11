@@ -13,6 +13,7 @@ type ModuleAccess={
   effectiveAccess:boolean
   override:boolean|null
 }
+type CleanLimit={id:string; fullRoomCleanLimit:number}
 type StaffRow={
   userId:string
   memberId:string|null
@@ -31,6 +32,9 @@ export default function StaffAccessBoard(){
   const [search,setSearch]=useState('')
   const [loading,setLoading]=useState(true)
   const [message,setMessage]=useState('')
+  const [cleanLimits,setCleanLimits]=useState<Record<string,number>>({})
+  const [limitsError,setLimitsError]=useState('')
+  const [savingLimit,setSavingLimit]=useState('')
 
   async function load(){
     setLoading(true)
@@ -38,6 +42,12 @@ export default function StaffAccessBoard(){
     const d=await r.json().catch(()=>({}))
     if(!r.ok){ setMessage(d.error||'Could not load staff.'); setLoading(false); return }
     setStaff(d.staff||[])
+    const limitsResponse=await fetch('/api/housekeeping/clean-limits',{cache:'no-store'})
+    const limitsData=await limitsResponse.json().catch(()=>({}))
+    if(limitsResponse.ok){
+      setCleanLimits(Object.fromEntries(((limitsData.staff||[]) as CleanLimit[]).map(person=>[person.id,person.fullRoomCleanLimit])))
+      setLimitsError('')
+    } else setLimitsError(limitsData.error||'Could not load cleaning limits.')
     setSelectedId(id=>id || d.staff?.[0]?.userId || '')
     setLoading(false)
   }
@@ -74,6 +84,24 @@ export default function StaffAccessBoard(){
     setMessage('Saved.')
   }
 
+
+  async function saveCleanLimit(memberId:string,limit:number){
+    if(savingLimit || !Number.isInteger(limit) || limit<0 || limit>10) return
+    setSavingLimit(memberId)
+    setLimitsError('')
+    try {
+      const response=await fetch('/api/housekeeping/clean-limits',{
+        method:'PATCH',headers:{'content-type':'application/json'},
+        body:JSON.stringify({staffMemberId:memberId,limit})
+      })
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok) throw new Error(result.error||'Could not save cleaning limit.')
+      setCleanLimits(current=>({...current,[memberId]:result.staff.fullRoomCleanLimit}))
+      setMessage('Cleaning limit saved. Housekeeping Assignments will use the new limit.')
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    } catch(error:any){setLimitsError(error?.message||'Unable to save cleaning limit.')}
+    finally {setSavingLimit('')}
+  }
 
   async function startPreview(){
     if(!selected || selected.isOwner) return
@@ -145,6 +173,20 @@ export default function StaffAccessBoard(){
             </div>
           </div>
         </header>
+
+        {selected.memberId && /housekeep/i.test([selected.jobTitle,selected.roleName].join(' ')) && <div className="staff-clean-limit">
+          <div className="staff-clean-limit-copy">
+            <strong>Full room cleans per shift</strong>
+            <span>Maximum full cleans for {selected.name}. Refreshes are counted separately. Used by Housekeeping Assignments.</span>
+            {limitsError && <small role="alert">{limitsError}</small>}
+          </div>
+          {Object.prototype.hasOwnProperty.call(cleanLimits,selected.memberId) ? <div className="staff-clean-limit-control">
+            <button type="button" aria-label="Decrease full cleans per shift" disabled={Boolean(savingLimit)||cleanLimits[selected.memberId]===0} onClick={()=>void saveCleanLimit(selected.memberId!,cleanLimits[selected.memberId!]-1)}>−</button>
+            <output aria-label="Full cleans per shift">{cleanLimits[selected.memberId]}</output>
+            <button type="button" aria-label="Increase full cleans per shift" disabled={Boolean(savingLimit)||cleanLimits[selected.memberId]===10} onClick={()=>void saveCleanLimit(selected.memberId!,cleanLimits[selected.memberId!]+1)}>+</button>
+            {savingLimit===selected.memberId && <small>Saving…</small>}
+          </div> : <span className="staff-clean-limit-pending">Cleaning limit unavailable</span>}
+        </div>}
 
         {selected.isOwner&&<div className="staff-access-owner-note">Owner access is always available and cannot be restricted here.</div>}
 
