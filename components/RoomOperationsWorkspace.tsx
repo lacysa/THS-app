@@ -1,6 +1,7 @@
 'use client'
-import {useEffect,useMemo,useState} from 'react'
-import {ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
+import {useEffect,useMemo,useState,useTransition} from 'react'
+import {useRouter} from 'next/navigation'
+import {CalendarDays,ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
 import type ReservationsBoard from '@/components/ReservationsBoard'
 import OpsRoomHub from '@/components/OpsRoomHub'
 
@@ -26,6 +27,11 @@ function activeGuest(row:ReservationRow,day:string){
   return Boolean(s.arrival_date&&s.checkout_date&&day>=s.arrival_date&&day<s.checkout_date)
  })||null
 }
+function shiftDate(day:string,days:number){
+ const date=new Date(day+'T12:00:00Z')
+ date.setUTCDate(date.getUTCDate()+days)
+ return date.toISOString().slice(0,10)
+}
 function conditionTone(condition:string){
  const value=condition.toLowerCase()
  if(/dirty|issue|blocked/.test(value))return 'warning'
@@ -33,13 +39,24 @@ function conditionTone(condition:string){
  if(/occupied/.test(value))return 'occupied'
  return 'neutral'
 }
-export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:string;rows:ReservationRow[];canEdit:boolean;canManageRooms:boolean}){
+export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{serviceDate:string;todayDate:string;rows:ReservationRow[];canEdit:boolean;canManageRooms:boolean}){
+ const router=useRouter()
+ const [isChangingDate,startDateTransition]=useTransition()
+ const [dateInput,setDateInput]=useState(serviceDate)
  const [selected,setSelected]=useState<{roomId:string;reservationId?:string}|null>(null)
  const [category,setCategory]=useState<Category>('all')
  const [query,setQuery]=useState('')
  const [conditionsOnly,setConditionsOnly]=useState(false)
  const [liveRows,setLiveRows]=useState<ReservationRow[]>(rows)
  useEffect(()=>{setLiveRows(rows)},[rows])
+ useEffect(()=>{setDateInput(serviceDate)},[serviceDate])
+ function chooseDate(date:string){
+  if(!/^20\d{2}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date+'T12:00:00Z')))return
+  setDateInput(date)
+  if(date===serviceDate)return
+  setSelected(null)
+  startDateTransition(()=>router.replace('/reservations?date='+encodeURIComponent(date),{scroll:false}))
+ }
  useEffect(()=>{
   let active=true
   const refresh=async()=>{
@@ -70,7 +87,17 @@ export default function RoomOperationsWorkspace({serviceDate,rows}:{serviceDate:
   const guest=activeGuest(row,serviceDate)?.guest_name||''
   return !query.trim()||[row.roomName,guest,row.roomNotes||''].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
  }),[liveRows,category,conditionsOnly,query,serviceDate])
- return <div className="ths-unified-operations ths-operations-simplified">
+ return <div className={'ths-unified-operations ths-operations-simplified'+(isChangingDate?' is-date-loading':'')}>
+   <div className="ths-calendar-date ths-room-operations-date" aria-label="Choose room operations date">
+    <CalendarDays size={18} aria-hidden="true"/>
+    <input aria-label="Room operations date" type="date" value={dateInput} disabled={isChangingDate} onChange={event=>chooseDate(event.target.value)}/>
+    <div className="ths-calendar-shortcuts" role="group" aria-label="Navigate dates">
+     <button type="button" disabled={isChangingDate} onClick={()=>chooseDate(shiftDate(serviceDate,-1))}>Previous day</button>
+     <button type="button" disabled={isChangingDate} aria-pressed={serviceDate===todayDate} onClick={()=>chooseDate(todayDate)}>Today</button>
+     <button type="button" disabled={isChangingDate} onClick={()=>chooseDate(shiftDate(serviceDate,1))}>Next day</button>
+    </div>
+    {isChangingDate&&<span className="ths-room-operations-date-loading" role="status">Updating rooms…</span>}
+   </div>
    <div className="ths-ops-stats" aria-label="Daily room activity">
     {(['Arrival','Stayover','Checkout','Out/In'] as const).map(type=><button key={type} type="button" aria-pressed={category===type} onClick={()=>setCategory(category===type?'all':type)}><strong>{counts[type]}</strong><span>{type==='Arrival'?'Arrivals':type==='Stayover'?'Stayovers':type==='Checkout'?'Checkouts':'Out / In'}</span></button>)}
    </div>
