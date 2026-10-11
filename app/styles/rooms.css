@@ -612,3 +612,8 @@
 .rooms-staff-overview-scroll tbody th small{display:block;margin-top:3px;color:#277765}
 .rooms-staff-overview-scroll tr.is-mine{background:#f0faf7}
 .rooms-staff-overview-note{max-width:330px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;color:#345468}
+
+.rooms-staff-daily-status{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.rooms-staff-out-tag,.rooms-staff-tip-tag{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;font-size:10px;line-height:1.3;font-weight:750;white-space:nowrap}
+.rooms-staff-out-tag{background:#e5eef6;color:#355c79}
+.rooms-staff-tip-tag{background:#e3f3eb;color:#25664c}
