@@ -290,24 +290,27 @@ export default async function DashboardPage() {
     id:String(r.staff_member_id),name:staffNameMap.get(String(r.staff_member_id))||'Staff',
     roleLabel:String(r.role_label||''),shiftStart:String(r.shift_start||''),shiftEnd:String(r.shift_end||'')
   }))
-  // Desserts delivered today are for breakfast-inclusive stays tomorrow.
-  // Match the existing shift report room-rate and explicit +breakfast override rules.
-  const {data:dessertReservationRows}=await admin.from('reservation_stays')
-    .select('room_id,rate_plan,innkeeper_notes')
-    .eq('active',true)
-    .lte('arrival_date',tomorrow)
-    .gt('checkout_date',tomorrow)
-  const dessertRoomIds=new Set<string>()
-  for (const row of (dessertReservationRows||[])) {
-    const id=String((row as any).room_id||'')
-    const room=roomMap.get(id)||'Room'
-    const rate=String((row as any).rate_plan||'').toLowerCase()
-    const notes=String((row as any).innkeeper_notes||'')
-    const index=notes.toLowerCase().indexOf('+breakfast')
-    const override=index>=0&&notes.slice(index+'+breakfast'.length).toLowerCase().includes(room.toLowerCase())
-    if(id&&(rate.includes('breakfast')||override))dessertRoomIds.add(id)
+  // Dessert delivery tonight equals the number of expected breakfast menus
+  // for tomorrow (received plus still missing), not menu submissions.
+  let dessertCount=breakfastDate===tomorrow
+    ? breakfast.filter((row:any)=>row.status==='scheduled'&&!row.breakfastSkipped).length
+    : 0
+  if(breakfastDate!==tomorrow){
+    const [tomorrowBookings,tomorrowTags]=await Promise.all([
+      admin.from('breakfast_bookings').select('room_id,status').eq('service_date',tomorrow).in('status',['scheduled','declined']),
+      admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date',today).eq('breakfast_tag',true)
+    ])
+    const expected=new Set<string>()
+    for(const item of (tomorrowBookings.data||[])){
+      if((item as any).status==='scheduled'&&(item as any).room_id)expected.add(String((item as any).room_id))
+    }
+    const booked=new Set((tomorrowBookings.data||[]).map((x:any)=>String(x.room_id||'')))
+    for(const item of (tomorrowTags.data||[])){
+      const id=String((item as any).room_id||'')
+      if(id&&!booked.has(id)&&!(item as any).breakfast_skipped)expected.add(id)
+    }
+    dessertCount=expected.size
   }
-  const dessertCount=dessertRoomIds.size
   const displayName = access.preferredName || access.name || 'Staff'
 
   return (
