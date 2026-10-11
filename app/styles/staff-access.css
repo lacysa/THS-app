@@ -116,3 +116,18 @@ html[data-theme="dark"] .staff-preview-nav-item:hover,html[data-theme="dark"] .s
  .staff-access-layout{grid-template-columns:minmax(0,1fr)!important;gap:12px}
  .staff-access-list{display:none!important}
 }
+
+
+/* Housekeeper shift capacity, shared with the existing assignment limits API. */
+.staff-clean-limit{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid var(--app-border);background:linear-gradient(110deg,color-mix(in srgb,var(--app-accent) 8%,var(--app-surface)),var(--app-surface) 75%)}
+.staff-clean-limit-copy{display:grid;gap:5px;min-width:0}
+.staff-clean-limit-copy strong{font-size:13px;color:var(--app-text)}
+.staff-clean-limit-copy span{font-size:11px;color:var(--app-muted);line-height:1.5}
+.staff-clean-limit-copy small{color:#b44545;font-size:11px}
+.staff-clean-limit-control{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.staff-clean-limit-control button{width:38px;height:38px;border:1px solid var(--app-border);border-radius:11px;background:var(--app-surface);color:var(--app-text);font-size:21px;font-weight:700;cursor:pointer}
+.staff-clean-limit-control button:hover:not(:disabled){background:var(--app-surface2)}
+.staff-clean-limit-control button:disabled{opacity:.4;cursor:not-allowed}
+.staff-clean-limit-control output{display:grid;place-items:center;width:42px;min-height:38px;border:1px solid var(--app-border);border-radius:11px;background:var(--app-surface);color:var(--app-text);font-weight:800;font-size:16px;font-variant-numeric:tabular-nums}
+.staff-clean-limit-control small,.staff-clean-limit-pending{color:var(--app-muted);font-size:10px}
+@media(max-width:620px){.staff-clean-limit{align-items:flex-start;flex-direction:column}.staff-clean-limit-control{width:100%;justify-content:flex-start}}
