@@ -1003,3 +1003,8 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
  .ops-hub-accordion-inner{padding:12px}
  .ops-hub-accordion-toggle{padding:13px 14px}
 }
+
+.ths-ops-list-heading .ths-ops-assignments-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px;border:1px solid #bdd8d6;border-radius:11px;background:#e8f5f1;color:#28675c;font:750 12px/1.25 Arial,Helvetica,sans-serif;text-decoration:none;white-space:nowrap}
+.ths-ops-list-heading .ths-ops-assignments-link:hover{border-color:#76aaa4;background:#dff1ec}
+.ths-ops-list-heading .ths-ops-assignments-link:focus-visible{outline:2px solid #4c9892;outline-offset:2px}
+@media(max-width:700px){.ths-ops-list-heading .ths-ops-assignments-link{flex:1 0 auto;min-height:36px;font-size:11px}}
