@@ -401,7 +401,7 @@ export default function StaffShell({
   )
 
   const nestedChildrenByParent: Record<string, string[]> = {
-    reservations: ['ops', 'reservation_sync'],
+    reservations: ['ops', 'reservation_sync', 'housekeeping'],
     housekeeping: ['room_checks', 'housekeeping_quality']
   }
 
@@ -410,12 +410,12 @@ export default function StaffShell({
   )
 
   const operationRoots = operationsNav.filter(
-    item => !nestedChildKeys.has(item.module_key)
+    item => !nestedChildKeys.has(item.module_key) && item.module_key !== 'housekeeping'
   )
 
   const nestedChildrenFor = (parentKey: string) =>
     (nestedChildrenByParent[parentKey] || [])
-      .map(key => operationsNav.find(item => item.module_key === key))
+      .map(key => key==='housekeeping' && parentKey==='reservations' ? roomsSidebarItem : operationsNav.find(item => item.module_key === key))
       .filter(Boolean) as ModuleRow[]
 
   const orphanedNestedChildren = operationsNav.filter(item => {
@@ -664,7 +664,7 @@ export default function StaffShell({
 
               {operationRoots.map(item=><Fragment key={item.module_key}>
                 {renderOperationItem(item)}
-                {item.module_key==='reservations' && roomsSidebarItem && renderNavLink(roomsSidebarItem)}
+
               </Fragment>)}
               {orphanedNestedChildren.map(item =>
                 renderNavLink(item)
