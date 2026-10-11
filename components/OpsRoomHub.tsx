@@ -6,7 +6,7 @@ import OpsActivityLog from '@/components/OpsActivityLog'
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
 type PackageOption={id:string;name:string;available:boolean}
-type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string}
+type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string}
 type View='room'|'guest'|'log'
 type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
@@ -49,6 +49,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(showDetails)roomDetailsRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
  },[showDetails])
  const [roomNotes,setRoomNotes]=useState('')
+ const [mentionSearch,setMentionSearch]=useState<string|null>(null)
+ const roomNoteInput=useRef<HTMLTextAreaElement|null>(null)
+ const mentionStart=useRef(-1)
+ const [mentionIds,setMentionIds]=useState<string[]>([])
  const [issueNote,setIssueNote]=useState('')
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
  const [roomOrder,setRoomOrder]=useState('')
@@ -86,6 +90,42 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   }catch(e:any){setError(String(e.message||'Could not save changes'));return false}
   finally{setBusy(false)}
  }
+ const updateMentionQuery=(value:string,caret:number)=>{
+  const prefix=value.slice(0,caret)
+  const match=prefix.match(/(?:^|\\s)@([\\p{L}\\p{N} .'-]{0,40})$/u)
+  if(!match){setMentionSearch(null);mentionStart.current=-1;return}
+  const term=match[1]
+  // A completed @name followed by whitespace is no longer a search.
+  if(term.includes('  ')){setMentionSearch(null);return}
+  mentionStart.current=caret-term.length-1
+  setMentionSearch(term)
+ }
+ const selectMention=(member:{name:string;userId:string})=>{
+  const caret=roomNoteInput.current?.selectionStart??roomNotes.length
+  const start=mentionStart.current
+  if(start<0)return
+  const next=roomNotes.slice(0,start)+'@'+member.name+' '+roomNotes.slice(caret)
+  setRoomNotes(next);setMentionIds(ids=>[...new Set([...ids,member.userId])]);setMentionSearch(null)
+  requestAnimationFrame(()=>{roomNoteInput.current?.focus();roomNoteInput.current?.setSelectionRange(start+member.name.length+2,start+member.name.length+2)})
+ }
+ const saveRoomNotes=async()=>{
+  if(!daily)return
+  const previous=String(daily.notes||'')
+  const ok=await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{notes:roomNotes}},'Room notes saved')
+  if(!ok)return
+  setActiveEditor(null);setMentionSearch(null)
+  const previouslyMentioned=new Set((data?.mentionableStaff||[]).filter(s=>previous.toLocaleLowerCase().includes('@'+s.name.toLocaleLowerCase())).map(s=>s.userId))
+  const tagged=(data?.mentionableStaff||[]).filter(s=>roomNotes.toLocaleLowerCase().includes('@'+s.name.toLocaleLowerCase())&&!previouslyMentioned.has(s.userId)).map(s=>s.userId)
+  if(!tagged.length)return
+  try{
+   const response=await fetch('/api/ops/mentions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomId,date,note:roomNotes,userIds:tagged})})
+   const value=await response.json().catch(()=>({}))
+   if(!response.ok)throw new Error(value.error||'Mention notification failed')
+   setMessage('Room notes saved · '+value.count+' staff notification'+(value.count===1?'':'s')+' sent')
+   window.dispatchEvent(new CustomEvent('ths:notifications-refresh'))
+  }catch(e:any){setError('Room notes saved, but @mention delivery failed: '+String(e.message||e))}
+ }
+ const mentionMatches=mentionSearch===null?[]:(data?.mentionableStaff||[]).filter(s=>s.name.toLocaleLowerCase().includes(mentionSearch.toLocaleLowerCase())).slice(0,7)
  const daily=data?.daily
  const isStayover=String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'
  const currentHousekeeper=String(daily?.assigned_to||'').trim()
@@ -315,7 +355,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
          return <label key={p.id}><input type="checkbox" checked={checked} disabled={busy||isImported} onChange={e=>setManualPackageDraft(current=>e.target.checked?[...new Set([...current,p.id])]:current.filter(id=>id!==p.id))}/><span>{p.name}</span>{isImported&&<small>From PMS</small>}</label>
        })}</div><button type="button" className="ops-hub-primary" disabled={busy||JSON.stringify([...manualPackageDraft].sort())===JSON.stringify([...(data.manualPackageIds||[])].sort())} onClick={()=>void savePackages()}><Save size={15}/> Save selected packages</button><small>Multiple selections allowed. Imported packages cannot be removed here.</small></>}
        {activeEditor==='clean_order'&&canManage&&<div className="ops-hub-inline-form"><input aria-label="Cleaning order" type="number" inputMode="numeric" min="1" value={roomOrder} disabled={busy} onChange={e=>setRoomOrder(e.target.value)}/><button type="button" className="ops-hub-primary" disabled={busy} onClick={()=>void run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{cleanOrder:roomOrder.trim()?Number(roomOrder):null}},'Cleaning order updated').then(ok=>{if(ok)setActiveEditor(null)})}>Save order</button></div>}
-       {activeEditor==='room_notes'&&canManage&&<div className="ops-hub-inline-form"><textarea rows={3} aria-label="Room notes" value={roomNotes} disabled={busy} onChange={e=>setRoomNotes(e.target.value)}/><button type="button" className="ops-hub-primary" disabled={busy||roomNotes===String(daily.notes||'')} onClick={()=>void run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{notes:roomNotes}},'Room notes saved').then(ok=>{if(ok)setActiveEditor(null)})}><Save size={15}/>Save room notes</button></div>}
+       {activeEditor==='room_notes'&&canManage&&<div className="ops-hub-inline-form"><textarea ref={roomNoteInput} rows={3} aria-label="Room notes" value={roomNotes} disabled={busy} onChange={e=>{setRoomNotes(e.target.value);updateMentionQuery(e.target.value,e.target.selectionStart)}} onClick={e=>updateMentionQuery(roomNotes,e.currentTarget.selectionStart)} placeholder="Type @ to mention a staff member"/>{mentionSearch!==null&&<div className="ops-hub-mention-picker" role="listbox" aria-label="Mention a staff member">{mentionMatches.length?mentionMatches.map(person=><button type="button" role="option" aria-selected={false} key={person.userId} onClick={()=>selectMention(person)}>@{person.name}</button>):<span>No matching active staff account</span>}</div>}<button type="button" className="ops-hub-primary" disabled={busy||roomNotes===String(daily.notes||'')} onClick={()=>void saveRoomNotes()}><Save size={15}/>Save room notes</button></div>}
        {activeEditor==='inspection'&&<div className="ops-hub-inspection-actions">
         {daily.inspected&&<p className="ops-hub-good"><Check size={16}/>Passed inspection</p>}
         {!data.inspectionEligible&&<p className="ops-hub-muted">No inspection required for this date.</p>}
