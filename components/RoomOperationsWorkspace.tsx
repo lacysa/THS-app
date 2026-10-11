@@ -47,13 +47,29 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
  const [category,setCategory]=useState<Category>('all')
  const [query,setQuery]=useState('')
  const [conditionsOnly,setConditionsOnly]=useState(false)
- const [displayMode,setDisplayMode]=useState<'table'|'cards'>('table')
+ const [displayMode,setDisplayMode]=useState<'table'|'cards'>('cards')
+ const [isCompact,setIsCompact]=useState(false)
  useEffect(()=>{
-  try {if(window.localStorage.getItem('ths-room-ops-view')==='cards')setDisplayMode('cards')}catch{}
+  const media=window.matchMedia('(max-width: 1199px), (max-width: 1600px) and (pointer: coarse) and (hover: none)')
+  const sync=()=>{
+   const compact=media.matches
+   setIsCompact(compact)
+   try{
+    // Separate preferences prevent choosing Table on desktop from overriding the mobile default.
+    const saved=window.localStorage.getItem(compact?'ths-room-ops-view-mobile':'ths-room-ops-view-desktop')
+     ||(!compact?window.localStorage.getItem('ths-room-ops-view'):null)
+    setDisplayMode(saved==='table'||saved==='cards'?saved:(compact?'cards':'table'))
+   }catch{
+    setDisplayMode(compact?'cards':'table')
+   }
+  }
+  sync()
+  media.addEventListener('change',sync)
+  return()=>media.removeEventListener('change',sync)
  },[])
  function chooseDisplayMode(mode:'table'|'cards'){
   setDisplayMode(mode)
-  try{window.localStorage.setItem('ths-room-ops-view',mode)}catch{}
+  try{window.localStorage.setItem(isCompact?'ths-room-ops-view-mobile':'ths-room-ops-view-desktop',mode)}catch{}
  }
 
  const [liveRows,setLiveRows]=useState<ReservationRow[]>(rows)
