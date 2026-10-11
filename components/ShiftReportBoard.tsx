@@ -245,7 +245,7 @@ export default function ShiftReportBoard() {
       menusReceived,
       menusMissing,
       breakfastExpected:scheduledBreakfast.length,
-      dessertsTonight:(auto.tomorrowDessertRooms || []).length,
+      dessertsTonight:scheduledBreakfast.length,
       dessertRooms:auto.tomorrowDessertRooms || [],
       todayStaff:auto.todayStaff || [],
       tomorrowStaff:auto.tomorrowStaff || [],
