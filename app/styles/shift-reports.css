@@ -847,4 +847,53 @@ html[data-theme="dark"] .shift-today-correction-status.open{color:#f0bd96}
     line-height:1.25!important;
     break-inside:avoid!important;
   }
+  /* Priority handoff belongs above the longer departmental detail and stays readable. */
+  .shift-print-document .shift-print-attention .shift-print-section-title {
+    background:#eef5f8!important;
+    border:1px solid #d5e5ed!important;
+    border-left:4px solid #3d8498!important;
+    border-radius:6px!important;
+    padding:8px 10px!important;
+    margin:0 0 5px!important;
+  }
+  .shift-print-document .shift-print-attention .shift-print-section-title h3 {
+    color:#20556b!important;
+  }
+  .shift-print-document .shift-print-attention .shift-print-section-title>span {
+    color:#416b7b!important;
+  }
+  /* Keep compact, complete summaries together, not isolated on a last page. */
+  .shift-print-document .shift-print-tomorrow,
+  .shift-print-document .shift-print-snapshot {
+    break-inside:avoid-page!important;
+    page-break-inside:avoid!important;
+  }
+  .shift-print-document .shift-print-section-title {
+    break-after:avoid-page!important;
+    page-break-after:avoid!important;
+  }
+  /* Legible body copy without the excess whitespace that creates orphan pages. */
+  .shift-print-document .shift-print-section {
+    margin-bottom:9px!important;
+    padding-bottom:8px!important;
+  }
+  .shift-print-document .shift-print-action-row {
+    padding:4px 0!important;
+    font-size:9.1pt!important;
+    line-height:1.32!important;
+  }
+  .shift-print-document .shift-print-row strong,
+  .shift-print-document .shift-print-row span {
+    font-size:9.1pt!important;
+  }
+  .shift-print-document .shift-print-correction p {
+    font-size:9pt!important;
+  }
+  .shift-print-document .shift-print-note {
+    font-size:9.2pt!important;
+    line-height:1.32!important;
+    margin-bottom:5px!important;
+    padding-bottom:5px!important;
+  }
+
 }

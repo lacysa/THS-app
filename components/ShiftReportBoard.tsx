@@ -428,6 +428,17 @@ export default function ShiftReportBoard() {
         {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
+      {actionItems.filter(item=>item.key!=='breakfast-missing').length>0 && <section className="shift-print-section shift-print-attention">
+        <div className="shift-print-section-title">
+          <h3>ATTN · Action required</h3><span>For the next shift</span>
+        </div>
+        <div className="shift-print-action-rows">
+          {actionItems.filter(item=>item.key!=='breakfast-missing').map(item=><div key={`print-action-${item.key}`} className="shift-print-action-row">
+            <strong>{item.title}</strong><span>{item.detail}</span>
+          </div>)}
+        </div>
+      </section>}
+
       {(auto.housekeepingFixes||[]).length>0 && <section className="shift-print-section shift-print-corrections">
         <div className="shift-print-section-title">
           <h3>Housekeeping corrections</h3>
@@ -446,17 +457,6 @@ export default function ShiftReportBoard() {
         </div>
       </section>}
 
-      {actionItems.filter(item=>item.key!=='breakfast-missing').length>0 && <section className="shift-print-section shift-print-attention">
-        <div className="shift-print-section-title">
-          <h3>Action required / handoff</h3><span>For the next shift</span>
-        </div>
-        <div className="shift-print-action-rows">
-          {actionItems.filter(item=>item.key!=='breakfast-missing').map(item=><div key={`print-action-${item.key}`} className="shift-print-action-row">
-            <strong>{item.title}</strong><span>{item.detail}</span>
-          </div>)}
-        </div>
-      </section>}
-
       <section className="shift-print-section shift-print-breakfast">
         <div className="shift-print-section-title">
           <h3>Breakfast outlook</h3><span>{auto.breakfastDate}</span>
@@ -467,20 +467,6 @@ export default function ShiftReportBoard() {
         </p>
         {summary.menusMissing.length>0 && <p className="shift-print-missing"><strong>Still needed:</strong> {summary.menusMissing.map((r:any)=>r.roomName).join(', ')}</p>}
       </section>
-
-      {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <section className="shift-print-section shift-print-room-notes">
-        <div className="shift-print-section-title"><h3>Room / guest notes</h3><span>Guest-facing context</span></div>
-        <div className="shift-print-list">
-          {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
-            <strong>{n.roomName}</strong><span><b>{initials(n.createdByName)}:</b> {n.note}</span>
-          </div>)}
-        </div>
-      </section>}
-      {printNotes('guest','Additional guest notes',draft.guestNotes,'guest')}
-      {printNotes('staff','Staff notes',draft.staffNotes,'staff')}
-      {printNotes('supplies','Supplies / inventory',draft.suppliesNotes,'supplies')}
-      {printNotes('tomorrow','Tomorrow / follow-up',draft.tomorrowNotes,'tomorrow')}
-      {printNotes('general','General notes',draft.generalNotes,'general')}
 
       <section className="shift-print-section shift-print-tomorrow">
         <div className="shift-print-section-title">
@@ -497,6 +483,20 @@ export default function ShiftReportBoard() {
         {summary.tomorrowStaff.length>0 && <p className="shift-print-narrative"><strong>Scheduled</strong> {summary.tomorrowStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
         {summary.dessertRooms.length>0 && <p className="shift-print-narrative"><strong>Dessert rooms</strong> {summary.dessertRooms.map((r:any)=>r.roomName).join(', ')}</p>}
       </section>
+
+      {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <section className="shift-print-section shift-print-room-notes">
+        <div className="shift-print-section-title"><h3>Room / guest notes</h3><span>Guest-facing context</span></div>
+        <div className="shift-print-list">
+          {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
+            <strong>{n.roomName}</strong><span><b>{initials(n.createdByName)}:</b> {n.note}</span>
+          </div>)}
+        </div>
+      </section>}
+      {printNotes('guest','Additional guest notes',draft.guestNotes,'guest')}
+      {printNotes('staff','Staff notes',draft.staffNotes,'staff')}
+      {printNotes('supplies','Supplies / inventory',draft.suppliesNotes,'supplies')}
+      {printNotes('tomorrow','Tomorrow / follow-up',draft.tomorrowNotes,'tomorrow')}
+      {printNotes('general','General notes',draft.generalNotes,'general')}
 
       {canManage&&printNotes('management','Management notes',draft.managementNotes,'management')}
       <footer className="shift-print-footer"><span>THE HOTEL SAUGATUCK · INTERNAL OPERATIONS</span><span>{date} · {shift}</span></footer>
