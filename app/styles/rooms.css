@@ -586,3 +586,10 @@
 }
 .rooms-workspace .rooms-card-header:focus:not(:focus-visible){outline:none!important;box-shadow:none!important}
 .rooms-workspace .rooms-card-header:focus-visible{outline:2px solid #397d91;outline-offset:-3px;border-radius:16px}
+
+/* Cleaning is work in progress, not guest-ready. Keep this consistent in table/card views. */
+.ths-ops-condition.cleaning {
+  background: #FFF0C7 !important;
+  color: #875600 !important;
+  border-color: #EACF88 !important;
+}
