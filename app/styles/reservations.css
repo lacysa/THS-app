@@ -1008,3 +1008,9 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 .ths-ops-list-heading .ths-ops-assignments-link:hover{border-color:#76aaa4;background:#dff1ec}
 .ths-ops-list-heading .ths-ops-assignments-link:focus-visible{outline:2px solid #4c9892;outline-offset:2px}
 @media(max-width:700px){.ths-ops-list-heading .ths-ops-assignments-link{flex:1 0 auto;min-height:36px;font-size:11px}}
+
+/* Keep expanded room hub accordions at their natural height.
+   Grid's default auto rows may shrink to fit the modal viewport and,
+   combined with overflow:hidden on cards, clip their interactive content. */
+.ops-hub-content{grid-auto-rows:max-content;align-content:start}
+.ops-hub-content>.ops-hub-accordion{min-height:max-content}
