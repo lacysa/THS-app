@@ -233,7 +233,7 @@ export default function ShiftReportBoard() {
 
     const tomorrowCleans = tomorrowHk.filter(isFullRoomClean)
     const tomorrowRefreshes = tomorrowHk.filter(isRefresh)
-    const scheduledBreakfast = breakfast.filter((r:any)=>r.status==='scheduled'&&!r.breakfastSkipped)
+    const scheduledBreakfast = [...new Map(breakfast.filter((r:any)=>r.status==='scheduled'&&!r.breakfastSkipped&&r.roomId).map((r:any)=>[String(r.roomId),r])).values()]
     const menusReceived = scheduledBreakfast.filter((r:any)=>r.menuSubmitted).length
     const menusMissing = scheduledBreakfast.filter((r:any)=>!r.menuSubmitted)
 
