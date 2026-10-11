@@ -166,7 +166,8 @@ export async function GET(req: NextRequest) {
       })
       .filter(Boolean)
 
-    const staffOptions = (scheduleRows || []).length ? onsiteStaffOptions : allStaffOptions
+    const onsiteIds = new Set(onsiteStaffOptions.map((person:any)=>String(person.id)))
+    const staffOptions = [...onsiteStaffOptions, ...allStaffOptions.filter((person:any)=>!onsiteIds.has(String(person.id)) && !(scheduleRows||[]).some((r:any)=>String(r.staff_member_id)===String(person.id) && ['called_off','no_call_no_show','time_off','unavailable'].includes(String(r.work_mode))))]
 
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
@@ -515,6 +516,17 @@ export async function PATCH(req: NextRequest) {
         dbPatch.foh_signed_at=null
         dbPatch.room_condition=nextService==='RF'?'Occupied':'Cleaning'
       }
+    }
+
+    // Marking OUT or OUT-initials means management confirmed the guest departed.
+    // The room is vacant but still needs cleaning, not automatically completed.
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')
+       && /^OUT(?:-[A-Z]{2,4})?$/i.test(cleanText(requested.serviceType))
+       && !Object.prototype.hasOwnProperty.call(requested,'roomCondition')) {
+      dbPatch.room_condition='Vacant (Dirty)'
+      dbPatch.complete=false
+      dbPatch.ready_for_inspection=false
+      dbPatch.inspected=false
     }
 
     const { error:updateError } = await admin
