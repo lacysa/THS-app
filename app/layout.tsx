@@ -20,6 +20,8 @@ import './styles/staff-access.css'
 import './styles/module-polish.css'
 import './styles/housekeeping-mobile.css'
 import './styles/rooms.css'
+// Intentionally last: paper-only breakfast styles must override theme/module polish.
+import './styles/breakfast-overview-print.css'
 
 export const viewport: Viewport = {
   width: 'device-width',
