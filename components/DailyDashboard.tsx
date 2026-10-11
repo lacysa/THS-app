@@ -405,6 +405,8 @@ export default function DailyDashboard({
           </div>
         </section>
 
+        <div style={{margin:'4px 0 16px'}}><Link href="/daily-sheet" className="ops-secondary-btn" style={{display:'inline-flex',alignItems:'center',gap:8,textDecoration:'none',padding:'11px 16px'}}>Print Daily Operations Sheet ↗</Link></div>
+
         {metrics.length > 0 && (
           <div className="daily-metric-grid daily-metric-stack">
             {metrics.map(({label,value,sub,icon:Icon,href,tone})=>(
