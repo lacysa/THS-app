@@ -32,6 +32,7 @@ type Row={
   departing:Stay|null
   serviceType?:string
   roomCondition?:string
+  assignedTo?:string
   nextShiftCondition?:string
   complete?:boolean
   inspected?:boolean
