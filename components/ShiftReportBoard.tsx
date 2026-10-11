@@ -394,6 +394,7 @@ export default function ShiftReportBoard() {
           <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
           <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
         </div>
+        <p className="shift-print-narrative"><strong>Desserts to prepare tonight · rooms for {auto.breakfastDate}</strong> {summary.dessertRooms.length?summary.dessertRooms.map((r:any)=>r.roomName).join(', '):'None scheduled'}</p>
         {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
@@ -526,6 +527,7 @@ export default function ShiftReportBoard() {
           <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
           <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
         </div>
+        <div className="shift-dessert-rooms"><strong>Desserts to prepare tonight · rooms for {auto.breakfastDate}</strong><span>{summary.dessertRooms.length?summary.dessertRooms.map((room:any)=>room.roomName).join(', '):'None scheduled'}</span></div>
         {(auto.housekeepingFixes||[]).length>0 && <div className="shift-today-corrections">
           <div className="shift-today-corrections-head">
             <div>
