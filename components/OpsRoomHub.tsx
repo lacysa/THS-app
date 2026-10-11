@@ -1,5 +1,5 @@
 'use client'
-import {useCallback,useEffect,useState} from 'react'
+import {useCallback,useEffect,useRef,useState} from 'react'
 import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,Pencil,Save,SlidersHorizontal,Wallet,X} from 'lucide-react'
 import OpsActivityLog from '@/components/OpsActivityLog'
 
@@ -44,6 +44,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const toggleSection=(key:View)=>setSections(current=>({...current,[key]:!current[key]}))
  const [activeEditor,setActiveEditor]=useState<Editor>(null)
  const [showDetails,setShowDetails]=useState(false)
+ const roomDetailsRef=useRef<HTMLDivElement|null>(null)
+ useEffect(()=>{
+  if(showDetails)roomDetailsRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
+ },[showDetails])
  const [roomNotes,setRoomNotes]=useState('')
  const [issueNote,setIssueNote]=useState('')
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
@@ -264,7 +268,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         <span><SlidersHorizontal size={18}/> More room details</span>
         <ChevronDown size={18} className={showDetails?'expanded':''}/>
        </button>
-       {showDetails&&<div className="ops-hub-details-inner">
+       {showDetails&&<div ref={roomDetailsRef} className="ops-hub-details-inner">
         <div className="ops-hub-detail-cards">
        <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='activity'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='activity'?null:'activity')}>
         <span>Activity</span><span className="ops-hub-action-value"><strong>{present(daily?.reservation_status)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
