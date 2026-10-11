@@ -815,7 +815,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
             }}>
               <div className="rooms-card-title">
                 <span className="rooms-chevron">{isOpen?<ChevronDown size={18}/>:<ChevronRight size={18}/>}</span>
-                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType?` · ${row.serviceType}`:''}</small></span>
+                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType?` · ${row.serviceType}`:''}</small><span className={row.assignedTo?.trim()?'rooms-assigned-housekeeper':'rooms-assigned-housekeeper unassigned'}><UserRoundCheck size={13}/>{row.assignedTo?.trim()||'Unassigned'}</span></span>
               </div>
               <div className={`rooms-state-pill ${state}`}>
                 {roomWorkflowLabel(effectiveRow)}
