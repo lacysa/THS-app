@@ -168,6 +168,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(!daily||!canManage||busy||!markedOut)return
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:''}},'OUT removed from room'))setActiveEditor(null)
  }
+ async function markRefreshComplete(){
+  if(!daily||!canManage||busy||!isStayover||serviceCode!=='RF'||daily.complete||blocked)return
+  await run('/api/housekeeping/day',{
+   serviceDate:date,roomId,
+   patch:{complete:true,readyForInspection:false,roomCondition:'Occupied'}
+  },'Refresh marked complete')
+ }
  async function markEnvelopeCollected(){
   if(!daily||!canManage||busy||envelopeCollected)return
   if(!markedOut){setError('Mark the room OUT before confirming tip-envelope collection.');return}
@@ -236,6 +243,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(envelopeCollected?' ops-hub-complete-card':'')+(activeEditor==='tip_envelope'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='tip_envelope'?null:'tip_envelope')} aria-label={envelopeCollected?'Tip envelope collected by '+envelopeInitials:'Tip envelope not collected'}>
         <span className="ops-hub-quick-icon"><Wallet size={18}/></span><span className="ops-hub-quick-name">Tips</span><small>{envelopeCollected?'Collected · '+envelopeInitials:'Not collected'}</small>{envelopeCollected&&<Check size={14} className="ops-hub-quick-check"/>}
        </button>
+       {isStayover&&serviceCode==='RF'&&<button type="button" className={'ops-hub-quick-action'+(daily?.complete?' ops-hub-complete-card':'')} aria-pressed={Boolean(daily?.complete)} disabled={!canManage||!daily||busy||blocked||Boolean(daily?.complete)} onClick={()=>void markRefreshComplete()} aria-label={daily?.complete?'Refresh complete':'Mark refresh complete'}>
+        <span className="ops-hub-quick-icon"><Check size={18}/></span><span className="ops-hub-quick-name">RF Complete</span><small>{daily?.complete?'Completed':'Mark complete'}</small>
+       </button>}
        <button type="button" className={'ops-hub-quick-action'+(daily?.late_arrival?' selected':'')} aria-pressed={Boolean(daily?.late_arrival)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('lateArrival')}>
         <span className="ops-hub-quick-icon"><Clock3 size={18}/></span><span className="ops-hub-quick-name">Late arrival</span>{daily?.late_arrival&&<Check size={15} className="ops-hub-quick-check"/>}
        </button>
