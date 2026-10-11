@@ -681,7 +681,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       <div className="rooms-staff-overview-scroll"><table><thead><tr><th>Room</th><th>Activity</th><th>Housekeeper</th><th>Condition</th><th>Room notes</th></tr></thead><tbody>
       {dailyOverview.map(row=><tr key={row.roomId} className={row.isMine?'is-mine':''}>
         <th scope="row">{row.roomName}{row.isMine&&<small>Your room</small>}</th>
-        <td>{row.reservationStatus||'—'}</td>
+        <td><span className="rooms-staff-daily-status">{row.reservationStatus||'—'}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-staff-out-tag">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-staff-tip-tag">Tips · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span></td>
         <td>{row.assignedTo?.trim()||'Unassigned'}</td>
         <td>{row.roomCondition||'Not recorded'}</td>
         <td className="rooms-staff-overview-note">{row.notes?.trim()||'—'}</td>
