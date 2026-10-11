@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState,useTransition} from 'react'
 import {useRouter} from 'next/navigation'
 import Link from 'next/link'
+import { roomServiceTask } from '@/lib/room-state'
 import {CalendarDays,ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
 import type ReservationsBoard from '@/components/ReservationsBoard'
 import OpsRoomHub from '@/components/OpsRoomHub'
@@ -35,10 +36,13 @@ function shiftDate(day:string,days:number){
  return date.toISOString().slice(0,10)
 }
 function hasUnassignedService(row:ReservationRow){
- const type=reservationType(row)
- const isRefresh=type==='Stayover'&&String(row.serviceType||'').trim().toUpperCase()==='RF'
- const isClean=['Checkout','Out/In'].includes(type)||String(row.serviceType||'').trim().toUpperCase().startsWith('OUT')
- return !row.complete&&!row.assignedTo?.trim()&&!/blocked|hold/i.test(roomCondition(row))&&(isRefresh||isClean)
+ const task=roomServiceTask({
+  reservationStatus:row.operationalStatus||row.status,
+  serviceType:row.serviceType,
+  roomCondition:row.roomCondition,
+  stripHold:row.stripHold
+ })
+ return (task==='full'||task==='refresh')&&!row.complete&&!row.assignedTo?.trim()
 }
 function conditionTone(condition:string){
  const value=condition.toLowerCase()
