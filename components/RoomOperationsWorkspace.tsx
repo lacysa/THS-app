@@ -1,6 +1,7 @@
 'use client'
 import {useEffect,useMemo,useState,useTransition} from 'react'
 import {useRouter} from 'next/navigation'
+import Link from 'next/link'
 import {CalendarDays,ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
 import type ReservationsBoard from '@/components/ReservationsBoard'
 import OpsRoomHub from '@/components/OpsRoomHub'
@@ -33,6 +34,12 @@ function shiftDate(day:string,days:number){
  date.setUTCDate(date.getUTCDate()+days)
  return date.toISOString().slice(0,10)
 }
+function hasUnassignedService(row:ReservationRow){
+ const type=reservationType(row)
+ const isRefresh=type==='Stayover'&&String(row.serviceType||'').trim().toUpperCase()==='RF'
+ const isClean=['Checkout','Out/In'].includes(type)||String(row.serviceType||'').trim().toUpperCase().startsWith('OUT')
+ return !row.complete&&!row.assignedTo?.trim()&&!/blocked|hold/i.test(roomCondition(row))&&(isRefresh||isClean)
+}
 function conditionTone(condition:string){
  const value=condition.toLowerCase()
  if(/dirty|issue|blocked/.test(value))return 'warning'
@@ -41,7 +48,7 @@ function conditionTone(condition:string){
  if(/occupied/.test(value))return 'occupied'
  return 'neutral'
 }
-export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{serviceDate:string;todayDate:string;rows:ReservationRow[];canEdit:boolean;canManageRooms:boolean}){
+export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canManageRooms}:{serviceDate:string;todayDate:string;rows:ReservationRow[];canEdit:boolean;canManageRooms:boolean}){
  const router=useRouter()
  const [isChangingDate,startDateTransition]=useTransition()
  const [dateInput,setDateInput]=useState(serviceDate)
@@ -110,9 +117,9 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
  },[liveRows])
  const filtered=useMemo(()=>liveRows.filter(row=>{
   if(category!=='all'&&!(category==='Arrival'?['Arrival','Out/In'].includes(reservationType(row)):reservationType(row)===category))return false
-  if(conditionsOnly&&!/dirty|issue|blocked|not confirmed/i.test(roomCondition(row))&&!row.checkIssueOpen)return false
+  if(conditionsOnly&&!/dirty|issue|blocked|not confirmed/i.test(roomCondition(row))&&!row.checkIssueOpen&&!hasUnassignedService(row))return false
   const guest=activeGuest(row,serviceDate)?.guest_name||''
-  return !query.trim()||[row.roomName,guest,row.roomNotes||''].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
+  return !query.trim()||[row.roomName,guest,row.roomNotes||'',row.assignedTo||''].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
  }),[liveRows,category,conditionsOnly,query,serviceDate])
  return <div className={'ths-unified-operations ths-operations-simplified'+(isChangingDate?' is-date-loading':'')}>
    <div className="ths-calendar-date ths-room-operations-date" aria-label="Choose room operations date">
@@ -135,6 +142,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
      <button type="button" className={displayMode==='cards'?'active':''} aria-pressed={displayMode==='cards'} onClick={()=>chooseDisplayMode('cards')}>Cards</button>
     </div>
     <button type="button" className={conditionsOnly?'active':''} aria-pressed={conditionsOnly} onClick={()=>setConditionsOnly(value=>!value)}><SlidersHorizontal size={16}/> Needs attention</button>
+    {canManageRooms&&<Link className="ths-ops-assignments-link" href={'/housekeeping/assignments?date='+encodeURIComponent(serviceDate)}>Staff assignments</Link>}
    </div>
    <label className="ths-ops-search"><Search size={18}/><input aria-label="Find room or guest" placeholder="Find room or guest" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button type="button" aria-label="Clear search" onClick={()=>setQuery('')}><X size={16}/></button>}</label>
    {displayMode==='table'&&<div className="ths-ops-table-scroll" style={{overflowX:'auto',width:'100%',WebkitOverflowScrolling:'touch',borderRadius:16,border:'1px solid #dce5e9',background:'white'}}>
@@ -176,7 +184,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
       <span className="ths-ops-room-info">
        <span className="ths-ops-room-name">{row.roomName}<span className="ths-ops-activity">{type}</span></span>
        <span className="ths-ops-guest">{guest?.guest_name||'No active reservation'}</span>
-       <span className="ths-ops-tags">{row.assignedTo?.trim()&&<span className="ths-ops-housekeeper-tag">Housekeeper · {row.assignedTo.trim()}</span>}{!row.assignedTo?.trim()&&(type==='Checkout'||type==='Out/In'||String(row.serviceType||'').toUpperCase()==='RF')&&<span className="ths-ops-housekeeper-unassigned">Housekeeper · Unassigned</span>}{row.breakfastTag&&<span>Breakfast</span>}{row.lateArrival&&<span>Late arrival</span>}{row.checkIssueOpen&&<span className="alert">Inspection issue</span>}{row.roomNotes&&<span>Room note</span>}{String(row.serviceType||'').toUpperCase()==='RF'&&<span>Refresh</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span>OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span>Tips collected · {String(row.serviceType||'').trim().toUpperCase().split('-')[1]}</span>}</span>
+       <span className="ths-ops-tags">{row.assignedTo?.trim()&&<span className="ths-ops-housekeeper-tag">Housekeeper · {row.assignedTo.trim()}</span>}{hasUnassignedService(row)&&<span className="ths-ops-housekeeper-unassigned">Housekeeper · Unassigned</span>}{row.breakfastTag&&<span>Breakfast</span>}{row.lateArrival&&<span>Late arrival</span>}{row.checkIssueOpen&&<span className="alert">Inspection issue</span>}{row.roomNotes&&<span>Room note</span>}{String(row.serviceType||'').toUpperCase()==='RF'&&<span>Refresh</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span>OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span>Tips collected · {String(row.serviceType||'').trim().toUpperCase().split('-')[1]}</span>}</span>
       </span>
       <span className="ths-ops-row-end"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18}/></span>
      </button>
