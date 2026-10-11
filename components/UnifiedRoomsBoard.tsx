@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react'
 
+type DailyOverviewRow={roomId:string;roomName:string;reservationStatus:string;assignedTo:string;roomCondition:string;serviceType:string;notes:string;complete:boolean;isMine:boolean}
 type Access={
   userId?:string|null
   name?:string|null
@@ -149,6 +150,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   const [date,setDate]=useState(initialDate||todayDetroit())
   const [access,setAccess]=useState<Access|null>(null)
   const [rows,setRows]=useState<RoomRow[]>([])
+  const [dailyOverview,setDailyOverview]=useState<DailyOverviewRow[]>([])
   const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
   const [packageOptions,setPackageOptions]=useState<PackageOption[]>([])
   const [viewMode,setViewMode]=useState<'assigned'|'manager'>('manager')
@@ -211,6 +213,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       if(!dayResponse.ok)throw new Error(day.error||'Could not load rooms.')
       const nextRows=(day.rows||[]) as RoomRow[]
       setRows(nextRows);rowsRef.current=nextRows
+      setDailyOverview(Array.isArray(day.dailyOverview)?day.dailyOverview:[])
       setViewMode(day.viewMode==='assigned'?'assigned':'manager')
       if(!canUseAdvancedRoomsViews(nextAccess))setManagerDisplay('cards')
       setStaffOptions(day.staffOptions||[])
@@ -673,6 +676,19 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       </div>
     </div>
 
+    {viewMode==='assigned'&&<section className="rooms-staff-daily-overview" aria-label="Daily housekeeping overview">
+      <div className="rooms-staff-overview-head"><strong>Daily room overview</strong><span>Read-only context for all rooms. Only your assigned rooms can be updated below.</span></div>
+      <div className="rooms-staff-overview-scroll"><table><thead><tr><th>Room</th><th>Activity</th><th>Housekeeper</th><th>Condition</th><th>Room notes</th></tr></thead><tbody>
+      {dailyOverview.map(row=><tr key={row.roomId} className={row.isMine?'is-mine':''}>
+        <th scope="row">{row.roomName}{row.isMine&&<small>Your room</small>}</th>
+        <td>{row.reservationStatus||'—'}</td>
+        <td>{row.assignedTo?.trim()||'Unassigned'}</td>
+        <td>{row.roomCondition||'Not recorded'}</td>
+        <td className="rooms-staff-overview-note">{row.notes?.trim()||'—'}</td>
+      </tr>)}
+      {!dailyOverview.length&&!loading&&<tr><td colSpan={5}>No rooms scheduled for this date.</td></tr>}
+      </tbody></table></div>
+    </section>}
     {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
       <summary className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Occupied rooms without a refresh request · tap to expand</span></div><span>{inactiveStayovers.length} stayovers <ChevronDown size={15}/></span></summary>
       <div className="rooms-stayover-grid">
