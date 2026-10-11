@@ -162,31 +162,12 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     checkIssueOpen:Boolean(row.check_issue_open)
   }))
 
-  const dessertRoomsById = new Map<string,{roomId:string;roomName:string;ratePlan:string}>()
-  for (const row of (tomorrowReservationsRes.data || [])) {
-    const roomId=String((row as any).room_id || '')
-    const roomName=String(roomById.get(roomId) || 'Room')
-    const ratePlan=String((row as any).rate_plan || '').trim()
-    const notes=String((row as any).innkeeper_notes || '').trim()
-
-    const rateIncludesBreakfast=ratePlan.toLowerCase().includes('breakfast')
-    const markerIndex=notes.toLowerCase().indexOf('+breakfast')
-    const breakfastOverrideText=markerIndex>=0 ? notes.slice(markerIndex + '+breakfast'.length) : ''
-    const explicitRoomOverride=Boolean(
-      breakfastOverrideText &&
-      breakfastOverrideText.toLowerCase().includes(roomName.toLowerCase())
-    )
-
-    if (!roomId || (!rateIncludesBreakfast && !explicitRoomOverride)) continue
-
-    dessertRoomsById.set(roomId,{
-      roomId,
-      roomName,
-      ratePlan: rateIncludesBreakfast ? ratePlan : `${ratePlan} · +Breakfast override`
-    })
-  }
-  const tomorrowDessertRooms=[...dessertRoomsById.values()]
-    .sort((a,b)=>a.roomName.localeCompare(b.roomName))
+  // The list and count must use the same next-day scheduled breakfast rooms.
+  // Rate-plan strings alone miss imported tags and a-la-carte breakfasts.
+  const tomorrowDessertRooms=[...new Map(breakfast
+    .filter((row:any)=>row.status==='scheduled'&&!row.breakfastSkipped&&row.roomId)
+    .map((row:any)=>[String(row.roomId),{roomId:String(row.roomId),roomName:String(row.roomName||roomById.get(String(row.roomId))||'Room')}])
+  ).values()].sort((a,b)=>a.roomName.localeCompare(b.roomName))
 
   return {
     breakfastDate,
