@@ -876,3 +876,42 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 .ths-calendar-reservation-cards .reservation-card[role=button]:hover{box-shadow:0 10px 24px rgba(45,63,94,.13)}
 .ths-calendar-reservation-cards .reservation-card[role=button]:focus-visible{outline:2px solid #5a8ca9;outline-offset:3px}
 @media(max-width:700px){.ths-calendar-reservation-cards .reservations-grid{grid-template-columns:1fr}}
+
+/* Mobile-friendly reservation action: holding a stay must not select guest text. */
+.ths-calendar-stay,.ths-calendar-stay *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+.ths-calendar-remove-backdrop{
+  position:fixed;inset:0;z-index:12000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px 14px;
+  background:rgba(21,37,54,.56);
+  backdrop-filter:blur(5px);
+}
+.ths-calendar-remove-dialog{
+  width:min(100%,440px);
+  display:grid;gap:13px;
+  padding:21px;
+  border:1px solid #d8e2e8;border-radius:20px;
+  background:linear-gradient(145deg,#ffffff,#f5f8fb);
+  box-shadow:0 22px 70px rgba(15,31,48,.3);
+  color:#29465b;
+}
+.ths-calendar-remove-dialog p{margin:0;font-size:14px;line-height:1.55}
+.ths-calendar-remove-title{display:flex;align-items:center;gap:11px}
+.ths-calendar-remove-title h3{margin:2px 0 0;font-size:20px;line-height:1.2;color:#253d51}
+.ths-calendar-remove-title small{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#718394}
+.ths-calendar-remove-icon{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;border-radius:13px;background:#fae9eb;color:#aa4451}
+.ths-calendar-remove-dialog .ths-calendar-remove-note{padding:12px 13px;border-radius:12px;background:#eef3f7;color:#536b7d;font-size:12px}
+.ths-calendar-remove-dialog .ths-calendar-remove-error{color:#a83442;font-weight:700}
+.ths-calendar-remove-actions{display:flex;gap:9px;justify-content:flex-end}
+.ths-calendar-remove-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:43px;padding:10px 15px;border:1px solid #d0dae0;border-radius:11px;background:#fff;color:#365269;font:750 13px/1.25 Arial,Helvetica,sans-serif;cursor:pointer}
+.ths-calendar-remove-actions button:last-child{border-color:#a84d5a;background:#af4d5e;color:#fff}
+.ths-calendar-remove-actions button:disabled{opacity:.6;cursor:wait}
+@media(max-width:420px){
+  .ths-calendar-remove-dialog{padding:18px}
+  .ths-calendar-remove-actions{display:grid;grid-template-columns:1fr 1fr}
+  .ths-calendar-remove-actions button{padding:10px}
+}
