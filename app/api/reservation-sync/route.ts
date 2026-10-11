@@ -456,7 +456,9 @@ export async function POST(req:NextRequest){
       const saved=saveResult.data||[]
 
       await rebuildDaily(admin,start,end,rooms)
-      const packageCount=await syncPackages(admin,saved,packages)
+      // Removed reservations stay inactive even when the same PMS report is imported.
+      // Do not restore their imported package tags.
+      const packageCount=await syncPackages(admin,saved.filter((stay:any)=>stay.active),packages)
 
       const finishResult=await admin.from('reservation_import_batches').update({
         status:'committed',
