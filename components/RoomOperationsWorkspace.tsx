@@ -138,9 +138,9 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
    </div>
    <label className="ths-ops-search"><Search size={18}/><input aria-label="Find room or guest" placeholder="Find room or guest" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button type="button" aria-label="Clear search" onClick={()=>setQuery('')}><X size={16}/></button>}</label>
    {displayMode==='table'&&<div className="ths-ops-table-scroll" style={{overflowX:'auto',width:'100%',WebkitOverflowScrolling:'touch',borderRadius:16,border:'1px solid #dce5e9',background:'white'}}>
-    <table className="ths-ops-full-table" style={{width:'100%',borderCollapse:'collapse',minWidth:760,textAlign:'left',fontSize:14}}>
+    <table className="ths-ops-full-table" style={{width:'100%',borderCollapse:'collapse',minWidth:910,textAlign:'left',fontSize:14}}>
      <thead><tr style={{background:'#f0f6f8'}}>
-      {['Room','Service','Guest','Live condition','Details'].map(label=><th key={label} scope="col" style={{padding:'12px 14px',whiteSpace:'nowrap',borderBottom:'1px solid #dce5e9'}}>{label}</th>)}
+      {['Room','Service','Guest','Housekeeper','Live condition','Details'].map(label=><th key={label} scope="col" style={{padding:'12px 14px',whiteSpace:'nowrap',borderBottom:'1px solid #dce5e9'}}>{label}</th>)}
      </tr></thead>
      <tbody>{filtered.map(row=>{
       const type=reservationType(row)
@@ -151,6 +151,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
        <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.roomName}</th>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{type}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
+       <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.assignedTo?.trim()||'—'}</td>
        <td style={{padding:'12px 14px'}}><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span></td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
@@ -175,6 +176,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
       <span className="ths-ops-room-info">
        <span className="ths-ops-room-name">{row.roomName}<span className="ths-ops-activity">{type}</span></span>
        <span className="ths-ops-guest">{guest?.guest_name||'No active reservation'}</span>
+       <span className="ths-ops-assigned">Housekeeper: {row.assignedTo?.trim()||'Unassigned'}</span>
        <span className="ths-ops-tags">{row.breakfastTag&&<span>Breakfast</span>}{row.lateArrival&&<span>Late arrival</span>}{row.checkIssueOpen&&<span className="alert">Inspection issue</span>}{row.roomNotes&&<span>Room note</span>}{String(row.serviceType||'').toUpperCase()==='RF'&&<span>Refresh</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span>OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span>Tips collected · {String(row.serviceType||'').trim().toUpperCase().split('-')[1]}</span>}</span>
       </span>
       <span className="ths-ops-row-end"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18}/></span>
