@@ -340,6 +340,25 @@ export default function ShiftReportBoard() {
     return <>{author && <strong className="shift-note-prefix">{author.initials}: </strong>}{value}</>
   }
 
+  // Include the individually autosaved notes from every account in the printable handoff.
+  // The current editor's local value wins over the last saved copy so printing never
+  // quietly drops a note that is still waiting for the debounce to finish.
+  function printNotes(section:string,title:string,legacy:string,authorKey:keyof NonNullable<Report['note_authors']>) {
+    const mine=notesReady&&myStaffId ? (myNotes[section]||'').trim() : ''
+    const other=staffNotes.filter(n=>n.section===section&&n.content.trim()&&(!notesReady||n.staff_member_id!==myStaffId))
+    if(!legacy.trim()&&!mine&&!other.length)return null
+    return <section className="shift-print-section shift-print-note-section">
+      <div className="shift-print-section-title"><h3>{title}</h3></div>
+      <div className="shift-print-note-list">
+        {legacy.trim()&&<p className="shift-print-note"><span className="shift-print-note-body">{authoredText(legacy,authorKey)}</span></p>}
+        {other.map(n=><p className="shift-print-note" key={`print-note-${section}-${n.staff_member_id}`}>
+          <strong>{n.initials||initials(n.name)}:</strong> <span className="shift-print-note-body">{n.content}</span>
+        </p>)}
+        {mine&&<p className="shift-print-note"><strong>{initials(currentStaffName)}:</strong> <span className="shift-print-note-body">{mine}</span></p>}
+      </div>
+    </section>
+  }
+
   return <div className="shift-page module-pretty-page">
     <section className="module-pretty-hero no-print">
       <div>
@@ -379,67 +398,94 @@ export default function ShiftReportBoard() {
 
     <div className="shift-print-document" aria-hidden="true">
       <header className="shift-print-heading">
-        <h1>The Hotel Saugatuck</h1>
-        <h2>Daily Shift Report · {date} · {shift}</h2>
-        <div>Prepared by {currentStaffName}</div>
-        <div>Status: {report?.status || 'Draft'}</div>
+        <div className="shift-print-letterhead">
+          <div className="shift-print-brand">
+            <div className="shift-print-monogram">THS</div>
+            <div className="shift-print-brand-name"><strong>THE HOTEL SAUGATUCK</strong><span>OPERATIONS &amp; GUEST EXPERIENCE</span></div>
+          </div>
+          <span className={`shift-print-status-pill ${locked?'is-final':'is-draft'}`}>{locked?'Finalized':'Draft'}</span>
+        </div>
+        <div className="shift-print-title-row">
+          <div><span className="shift-print-eyebrow">DAILY OPERATIONS · {shift.toUpperCase()} SHIFT</span><h1>Shift Report</h1></div>
+          <div className="shift-print-date"><span>REPORT DATE</span><strong>{new Date(`${date}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</strong></div>
+        </div>
+        <div className="shift-print-byline"><span>Prepared by <strong>{currentStaffName}</strong></span><span>Management handoff · {date}</span></div>
       </header>
 
       <section className="shift-print-section shift-print-snapshot">
-        <h3>Today · {date}</h3>
+        <div className="shift-print-section-title">
+          <h3>Today at a glance</h3><span>{date}</span>
+        </div>
         <div className="shift-print-summary-grid shift-print-summary-six">
           <div><span>Staff on site</span><strong>{summary.todayStaff.length}</strong></div>
           <div><span>Room cleans</span><strong>{summary.roomCleans}</strong></div>
-          <div><span>Rooms completed</span><strong>{summary.completed}</strong></div>
+          <div><span>Completed</span><strong>{summary.completed}</strong></div>
           <div><span>Refreshes</span><strong>{summary.refreshes}</strong></div>
           <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
           <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
           <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
         </div>
-        {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site:</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
+        {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
-      <section className="shift-print-section">
-        <h3>Housekeeping fix(s) needed</h3>
-        {auto.housekeepingFixes?.length ? <ul className="shift-print-action-list">{auto.housekeepingFixes.map(f=><li key={f.id}><strong>{f.roomName} · {f.assignedTo||'Unassigned'}</strong> — {f.note} ({f.resolved?'Fixed':'Needs correction'})</li>)}</ul> : <p className="shift-print-narrative">No fixes reported for this date.</p>}
-      </section>
-      {actionItems.length>0 && <section className="shift-print-section">
-        <h3>Action Required / Handoff</h3>
-        <ul className="shift-print-action-list">
-          {actionItems.map(item=><li key={`print-action-${item.key}`}><strong>{item.title}</strong> — {item.detail}</li>)}
-        </ul>
+      {(auto.housekeepingFixes||[]).length>0 && <section className="shift-print-section shift-print-corrections">
+        <div className="shift-print-section-title">
+          <h3>Housekeeping corrections</h3>
+          <span>{(auto.housekeepingFixes||[]).filter(f=>!f.resolved).length
+            ? `${(auto.housekeepingFixes||[]).filter(f=>!f.resolved).length} open`
+            : 'All fixed'}</span>
+        </div>
+        <div className="shift-print-corrections-list">
+          {(auto.housekeepingFixes||[]).map(f=><div key={f.id} className="shift-print-correction">
+            <div className="shift-print-correction-head">
+              <strong>{f.roomName}</strong><span className="shift-print-assignee">{f.assignedTo||'Unassigned'}</span>
+              <span className={`shift-print-fix-status ${f.resolved?'resolved':'open'}`}>{f.resolved?'Fixed':'Needs correction'}</span>
+            </div>
+            <p>{f.note}</p>
+          </div>)}
+        </div>
       </section>}
 
-      <section className="shift-print-section">
-        <h3>Breakfast · {auto.breakfastDate}</h3>
-        <p><strong>{summary.menusReceived + summary.menusMissing.length} rooms expected</strong> · {summary.menusReceived} menus received · {summary.menusMissing.length} missing</p>
-        {summary.menusMissing.length>0 && <div className="shift-print-bullets">
-          <strong>Missing menus</strong>
-          <ul>{summary.menusMissing.map((r:any)=><li key={`print-menu-${r.roomId}`}>{r.roomName}</li>)}</ul>
-        </div>}
+      {actionItems.filter(item=>item.key!=='breakfast-missing').length>0 && <section className="shift-print-section shift-print-attention">
+        <div className="shift-print-section-title">
+          <h3>Action required / handoff</h3><span>For the next shift</span>
+        </div>
+        <div className="shift-print-action-rows">
+          {actionItems.filter(item=>item.key!=='breakfast-missing').map(item=><div key={`print-action-${item.key}`} className="shift-print-action-row">
+            <strong>{item.title}</strong><span>{item.detail}</span>
+          </div>)}
+        </div>
+      </section>}
+
+      <section className="shift-print-section shift-print-breakfast">
+        <div className="shift-print-section-title">
+          <h3>Breakfast outlook</h3><span>{auto.breakfastDate}</span>
+        </div>
+        <p className="shift-print-breakfast-line"><strong>{summary.menusReceived+summary.menusMissing.length}</strong> rooms expected <span>·</span>
+          <strong>{summary.menusReceived}</strong> menus received <span>·</span>
+          <strong>{summary.menusMissing.length}</strong> missing
+        </p>
+        {summary.menusMissing.length>0 && <p className="shift-print-missing"><strong>Still needed:</strong> {summary.menusMissing.map((r:any)=>r.roomName).join(', ')}</p>}
       </section>
 
-      {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <section className="shift-print-section">
-        <h3>Room / Guest Notes</h3>
+      {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <section className="shift-print-section shift-print-room-notes">
+        <div className="shift-print-section-title"><h3>Room / guest notes</h3><span>Guest-facing context</span></div>
         <div className="shift-print-list">
           {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
             <strong>{n.roomName}</strong><span><b>{initials(n.createdByName)}:</b> {n.note}</span>
           </div>)}
         </div>
-        {draft.guestNotes.trim() && <p className="shift-print-narrative">{authoredText(draft.guestNotes,'guest')}</p>}
       </section>}
+      {printNotes('guest','Additional guest notes',draft.guestNotes,'guest')}
+      {printNotes('staff','Staff notes',draft.staffNotes,'staff')}
+      {printNotes('supplies','Supplies / inventory',draft.suppliesNotes,'supplies')}
+      {printNotes('tomorrow','Tomorrow / follow-up',draft.tomorrowNotes,'tomorrow')}
+      {printNotes('general','General notes',draft.generalNotes,'general')}
 
-      {!roomNotes.filter(n=>n.include_in_shift_report).length && draft.guestNotes.trim() && <section className="shift-print-section">
-        <h3>Room / Guest Notes</h3><p>{authoredText(draft.guestNotes,'guest')}</p>
-      </section>}
-
-      {draft.staffNotes.trim() && <section className="shift-print-section"><h3>Staff Notes</h3><p>{authoredText(draft.staffNotes,'staff')}</p></section>}
-      {draft.suppliesNotes.trim() && <section className="shift-print-section"><h3>Supplies / Inventory</h3><p>{authoredText(draft.suppliesNotes,'supplies')}</p></section>}
-      {draft.tomorrowNotes.trim() && <section className="shift-print-section"><h3>Tomorrow / Follow-up</h3><p>{authoredText(draft.tomorrowNotes,'tomorrow')}</p></section>}
-      {draft.generalNotes.trim() && <section className="shift-print-section"><h3>General Notes</h3><p>{authoredText(draft.generalNotes,'general')}</p></section>}
-
-      <section className="shift-print-section">
-        <h3>Tomorrow · {auto.breakfastDate}</h3>
+      <section className="shift-print-section shift-print-tomorrow">
+        <div className="shift-print-section-title">
+          <h3>Tomorrow at a glance</h3><span>{auto.breakfastDate}</span>
+        </div>
         <div className="shift-print-summary-grid shift-print-summary-six">
           <div><span>Staff scheduled</span><strong>{summary.tomorrowStaff.length}</strong></div>
           <div><span>Room cleans</span><strong>{summary.tomorrowCleans}</strong></div>
@@ -448,11 +494,12 @@ export default function ShiftReportBoard() {
           <div><span>Menus received</span><strong>{summary.menusReceived}</strong></div>
           <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
         </div>
-        {summary.tomorrowStaff.length>0 && <p className="shift-print-narrative"><strong>Scheduled:</strong> {summary.tomorrowStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
-        {summary.dessertRooms.length>0 && <p className="shift-print-narrative"><strong>Dessert rooms:</strong> {summary.dessertRooms.map((r:any)=>r.roomName).join(', ')}</p>}
+        {summary.tomorrowStaff.length>0 && <p className="shift-print-narrative"><strong>Scheduled</strong> {summary.tomorrowStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
+        {summary.dessertRooms.length>0 && <p className="shift-print-narrative"><strong>Dessert rooms</strong> {summary.dessertRooms.map((r:any)=>r.roomName).join(', ')}</p>}
       </section>
 
-      {draft.managementNotes.trim() && <section className="shift-print-section"><h3>Management Notes</h3><p>{authoredText(draft.managementNotes,'management')}</p></section>}
+      {canManage&&printNotes('management','Management notes',draft.managementNotes,'management')}
+      <footer className="shift-print-footer"><span>THE HOTEL SAUGATUCK · INTERNAL OPERATIONS</span><span>{date} · {shift}</span></footer>
     </div>
 
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-report-flow">
