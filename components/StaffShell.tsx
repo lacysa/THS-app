@@ -391,7 +391,7 @@ export default function StaffShell({
   )
 
   const nestedChildrenByParent: Record<string, string[]> = {
-    reservations: ['reservation_sync'],
+    reservations: ['ops', 'reservation_sync'],
     housekeeping: ['room_checks', 'housekeeping_quality']
   }
 
