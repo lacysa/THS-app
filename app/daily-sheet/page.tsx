@@ -53,19 +53,26 @@ export default async function DailySheet({searchParams}:{searchParams:Promise<{d
   return {name:room.name,status,service,arrival,stayover:status==='Stayover',packages:pkgByRoom.get(room.id)||[],notes:[...new Set(inRoomNotes)],dessert:breakfastIds.has(room.id),lateArrival:Boolean(d.late_arrival)}
  })
  const count=(fn:(r:typeof record[number])=>boolean)=>record.filter(fn).length
+ const metrics=[
+  {label:'Desserts tonight',value:breakfastIds.size},
+  {label:'Stayovers',value:count(x=>x.stayover)},
+  {label:'Arrivals incl. Out/In',value:count(x=>x.arrival)},
+  {label:'Packages',value:count(x=>x.packages.length>0)}
+ ]
+ const sheetData={isoDate:date,dateLabel:readable(date),metrics,rows:record}
  return <main className="sheet-wrap">
  <style>{`
  body{background:#eaf1f6}.sheet-wrap{font-family:Arial,sans-serif;max-width:850px;margin:24px auto;background:white;color:#15242f;padding:35px;box-shadow:0 10px 35px #cbd5df}
- .sheet-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;gap:12px}.sheet-controls a{color:#284b65;text-decoration:none}.sheet-controls button{background:#152b3a;color:white;border:0;border-radius:9px;padding:12px 18px;cursor:pointer}
+ .sheet-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;gap:12px;flex-wrap:wrap}.sheet-controls a{color:#284b65;text-decoration:none}.sheet-controls button{background:#152b3a;color:white;border:0;border-radius:9px;padding:12px 18px;cursor:pointer}.sheet-print-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sheet-print-actions button:disabled{opacity:.6;cursor:wait}.sheet-print-error{width:100%;color:#a12727}.sheet-controls form{display:flex;gap:5px;flex-wrap:wrap}
  .sheet-head{border-bottom:2px solid #a5d4df;padding-bottom:12px}.sheet-kicker{letter-spacing:2px;text-transform:uppercase;font-size:10px;color:#607886;font-weight:700}h1{font-size:27px;margin:8px 0 3px}h2{font-size:15px;margin:24px 0 9px}.sheet-date{color:#607886;font-size:13px}
  .sheet-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:18px 0}.sheet-metric{border:1px solid #d5e1e8;border-radius:10px;padding:11px}.sheet-metric span{display:block;font-size:11px;color:#4d6779}.sheet-metric strong{display:block;font-size:25px;margin-top:4px}
  table{width:100%;border-collapse:collapse;font-size:11px}th{text-transform:uppercase;letter-spacing:.6px;font-size:10px;text-align:left;background:#eff6f9}td,th{padding:9px 7px;border-bottom:1px solid #dde7eb;vertical-align:top}td:first-child{font-weight:bold;width:21%}td:last-child{width:7%;text-align:center}.room-tag{display:inline-block;background:#eaf1f6;border-radius:5px;padding:2px 5px;margin:0 4px 4px 0}.room-note{margin-top:4px;color:#425666;white-space:pre-wrap}.sheet-check{font-size:19px;color:#94a4ac}.sheet-foot{margin-top:15px;font-size:10px;color:#657986}
  @media print{@page{size:letter portrait;margin:.38in}html,body{background:white!important}.sheet-wrap{margin:0;max-width:none;padding:0;box-shadow:none}.sheet-controls{display:none}.sheet-metrics{gap:7px;margin:12px 0}.sheet-metric{padding:8px}h1{font-size:22px}h2{margin:15px 0 7px}tr{break-inside:avoid}td,th{padding:6px 5px}.sheet-note{font-size:10px}}
  `}</style>
- <div className="sheet-controls"><Link href="/dashboard">← Dashboard</Link><form><label>Sheet date <input type="date" name="date" defaultValue={date}/></label><button type="submit">Load date</button></form><DailySheetPrintButton/></div>
+ <div className="sheet-controls"><Link href="/dashboard">← Dashboard</Link><form><label>Sheet date <input type="date" name="date" defaultValue={date}/></label><button type="submit">Load date</button></form><DailySheetPrintButton sheet={sheetData}/></div>
  <header className="sheet-head"><div className="sheet-kicker">The Hotel Saugatuck · Operations</div><h1>Daily Operations Sheet</h1><div className="sheet-date">{readable(date)}</div></header>
  <div className="sheet-metrics">
- {([{label:'Desserts tonight',value:breakfastIds.size},{label:'Stayovers',value:count(x=>x.stayover)},{label:'Arrivals incl. Out/In',value:count(x=>x.arrival)},{label:'Packages',value:count(x=>x.packages.length>0)}]).map(x=><div className="sheet-metric" key={x.label}><span>{x.label}</span><strong>{x.value}</strong></div>)}
+ {metrics.map(x=><div className="sheet-metric" key={x.label}><span>{x.label}</span><strong>{x.value}</strong></div>)}
  </div>
  <h2>Room-by-room activity · All {record.length} rooms</h2>
  <table><thead><tr><th>Room</th><th>Today's activity / delivery / notes</th><th>Done</th></tr></thead><tbody>
