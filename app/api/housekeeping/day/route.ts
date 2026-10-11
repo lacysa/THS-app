@@ -313,7 +313,22 @@ export async function GET(req: NextRequest) {
       ? visibleRows.find((row:any)=>row.checkIssueOpen)
       : null
 
+    // Context-only overview: no guest data, reservation identifiers or editing rights.
+    // Only the assigned-room rows above may be acted upon by housekeeping.
+    const dailyOverview = assignedOnlyView ? rows.map((row:any)=>({
+      roomId:row.roomId,
+      roomName:row.roomName,
+      reservationStatus:row.reservationStatus,
+      assignedTo:row.assignedTo,
+      roomCondition:row.roomCondition,
+      serviceType:row.serviceType,
+      notes:row.notes,
+      complete:row.complete,
+      isMine:Boolean(currentPerson && String(row.assignedTo||'').split(',').some((name:string)=>name.trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()))
+    })) : []
+
     return NextResponse.json({
+      dailyOverview,
       rows: responseRows,
       stripTasks,
       blockingRoomId: blockingRoom?.roomId || null,
