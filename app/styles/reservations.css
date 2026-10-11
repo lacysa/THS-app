@@ -915,3 +915,64 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
   .ths-calendar-remove-actions{display:grid;grid-template-columns:1fr 1fr}
   .ths-calendar-remove-actions button{padding:10px}
 }
+
+/* Match the Ops calendar's native date picker within Room Operations. */
+.ths-room-operations-date{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:9px 11px;
+  margin:0 0 15px;
+  padding:12px 14px;
+  border:1px solid #d0e2e6;
+  border-radius:15px;
+  background:linear-gradient(112deg,#ebf7f5,#f4f4ff);
+  box-shadow:0 2px 9px rgba(50,85,105,.04);
+}
+.ths-room-operations-date > svg{flex-shrink:0;color:#507a83}
+.ths-room-operations-date input[type=date]{
+  min-width:0;
+  min-height:40px;
+  padding:8px 10px;
+  font-size:14px;
+  font-weight:750;
+  color:#24495b;
+}
+.ths-room-operations-date .ths-calendar-shortcuts{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:nowrap;
+  margin-left:auto;
+}
+.ths-room-operations-date .ths-calendar-shortcuts button{
+  min-height:40px;
+  white-space:nowrap;
+}
+.ths-room-operations-date .ths-calendar-shortcuts button:disabled,
+.ths-room-operations-date input:disabled{opacity:.6;cursor:wait}
+.ths-room-operations-date-loading{
+  width:100%;
+  font-size:11px;
+  font-weight:700;
+  color:#537885;
+}
+.ths-operations-simplified.is-date-loading > :not(.ths-room-operations-date){
+  opacity:.55;
+  pointer-events:none;
+}
+@media(max-width:700px){
+  .ths-room-operations-date{padding:11px;gap:9px}
+  .ths-room-operations-date input[type=date]{flex:1;max-width:calc(100% - 34px)}
+  .ths-room-operations-date .ths-calendar-shortcuts{
+    width:100%;
+    margin-left:0;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .ths-room-operations-date .ths-calendar-shortcuts button{
+    min-width:0;
+    padding:9px 5px;
+    font-size:11px;
+  }
+}
