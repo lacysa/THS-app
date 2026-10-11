@@ -42,8 +42,8 @@ function timeLabel(raw: string | null) {
   return raw ? raw.slice(0, 5) : ''
 }
 
-export default function HousekeepingAssignments() {
-  const [date, setDate] = useState(todayDetroit)
+export default function HousekeepingAssignments({initialDate}:{initialDate?:string}={}) {
+  const [date, setDate] = useState(initialDate || todayDetroit())
   const [view, setView] = useState<View>('staff')
   const [data, setData] = useState<AssignmentData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -193,7 +193,7 @@ export default function HousekeepingAssignments() {
       <div className="hka-person-rooms">
         {theirs.length ? theirs.map(room => <div className="hka-person-room" key={room.roomId}>
           <div><strong>{room.roomName}</strong><small>{taskLabel(room)}{room.complete ? ' · Complete' : ''}</small></div>
-          <button type="button" disabled={Boolean(data?.readOnly) || Boolean(busyRoom)} onClick={() => void saveAssignment(room, '')} aria-label={'Unassign ' + room.roomName}>Unassign</button>
+          <button type="button" disabled={Boolean(data?.readOnly) || Boolean(busyRoom)} onClick={() => { if (names(room.assignedTo).length > 1 && !window.confirm('This room has multiple assigned people. Clear all assignments for ' + room.roomName + '?')) return; void saveAssignment(room, '') }} aria-label={'Clear assignment for ' + room.roomName}>{names(room.assignedTo).length > 1 ? 'Clear all' : 'Unassign'}</button>
         </div>) : <p className="hka-empty-line">No rooms assigned yet.</p>}
       </div>
       {person.onSite && available.length > 0 && <label className="hka-add">
