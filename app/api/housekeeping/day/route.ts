@@ -279,7 +279,8 @@ export async function GET(req: NextRequest) {
             .map((name:string)=>name.trim().toLowerCase())
             .filter(Boolean)
           const assignedToMe=assigned.includes(String(currentPerson.name || '').trim().toLowerCase())
-          return assignedToMe || Boolean(row.claimableRefresh)
+          // Show all stayovers for scheduling visibility; only unassigned RF rooms can be claimed.
+          return assignedToMe || Boolean(row.claimableRefresh) || String(row.reservationStatus||'').trim().toLowerCase()==='stayover'
         })
       : rows
 
