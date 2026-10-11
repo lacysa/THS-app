@@ -9,6 +9,8 @@ export async function GET(req:NextRequest){
   const [reservationGate,opsGate]=await Promise.all([canUseModule('reservations'),canUseModule('ops')])
   if(!reservationGate.access)return NextResponse.json({error:'Unauthorized'},{status:401})
   if(!reservationGate.allowed&&!opsGate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
+  const access=reservationGate.access||opsGate.access
+  const canRemove=Boolean(access&&!access.isPreviewMode&&(access.isAdmin||['foh_manager','manager','general_manager','operations_manager','owner'].some(cap=>access.capabilities?.includes(cap))))
   const start=req.nextUrl.searchParams.get('start')||''
   if(!/^20\d{2}-\d{2}-\d{2}$/.test(start)||Number.isNaN(Date.parse(start+'T12:00:00Z')))return NextResponse.json({error:'Invalid start date'},{status:400})
   const end=addDay(start,6)
@@ -27,6 +29,7 @@ export async function GET(req:NextRequest){
   const conditions=new Map((housekeepingRes.data||[]).map((h:any)=>[String(h.service_date)+'|'+String(h.room_id),h]))
   return NextResponse.json({
     start,
+    canRemove,
     days:Array.from({length:7},(_,i)=>addDay(start,i)),
     rooms:(roomsRes.data||[]).map((r:any)=>({id:String(r.id),name:String(r.name)})),
     cells:links.map((l:any)=>{
