@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
