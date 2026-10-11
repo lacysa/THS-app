@@ -480,8 +480,18 @@ export async function PATCH(req: NextRequest) {
       const status=String(existing.reservation_status||'').trim().toLowerCase()
       const service=String((requested.serviceType ?? existing.service_type)||'').trim().toUpperCase()
       const isRefresh=status==='stayover'&&service==='RF'
+      if(isRefresh && complete && !currentPerson?.id) return NextResponse.json({error:'An active staff profile is required to complete a refresh.'},{status:403})
       const requiresQuality=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(existing.check_issue_open)
       dbPatch.complete=complete
+      if(isRefresh){
+        const staffName=String(currentPerson?.name||'').trim()
+        const parts=staffName.split(/\s+/).filter(Boolean)
+        const low=staffName.toLowerCase()
+        const initials=low==='sarah'?'SL':low==='brittany'?'BH':low==='david'?'DH':parts.length>1?(parts[0][0]+parts[parts.length-1][0]).toUpperCase():staffName.replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase()
+        if(complete && !/^[A-Z]{2,4}$/.test(initials)) return NextResponse.json({error:'Staff initials are unavailable. Check your staff profile.'},{status:400})
+        dbPatch.refresh_completed_by=complete?currentPerson.id:null
+        dbPatch.refresh_completed_initials=complete?initials:null
+      }
       dbPatch.ready_for_inspection=!isRefresh&&complete
       dbPatch.inspected=false
       dbPatch.completed_at=complete?(existing.completed_at||now):null
@@ -509,6 +519,8 @@ export async function PATCH(req: NextRequest) {
         dbPatch.inspected=false
         dbPatch.completed_at=null
         dbPatch.inspected_at=null
+        dbPatch.refresh_completed_by=null
+        dbPatch.refresh_completed_initials=null
         dbPatch.housekeeper_attested_by=null
         dbPatch.housekeeper_attested_at=null
         dbPatch.ha_signed_by=null
