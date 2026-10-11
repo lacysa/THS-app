@@ -25,7 +25,8 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   if(!gate.allowed) redirect('/dashboard')
 
   const params=await searchParams
-  const serviceDate=validDate(params?.date)?params.date:ymdInHotelTz()
+  const todayDate=ymdInHotelTz()
+  const serviceDate=validDate(params?.date)?params.date:todayDate
   const admin=createSupabaseAdmin()
 
   const priorDate=previousDate(serviceDate)
@@ -96,5 +97,5 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const canEdit=!gate.access.isPreviewMode && Boolean(gate.access.isAdmin || gate.access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap)))
   const roomGate=await canUseModule('housekeeping')
   const canManageRooms=canEdit && Boolean(roomGate.allowed)
-  return <StaffShell title="Room Operations"><LiveDataRefresh intervalMs={10000}/><RoomOperationsWorkspace serviceDate={serviceDate} rows={rows} canEdit={canEdit} canManageRooms={canManageRooms}/></StaffShell>
+  return <StaffShell title="Room Operations"><LiveDataRefresh intervalMs={10000}/><RoomOperationsWorkspace serviceDate={serviceDate} todayDate={todayDate} rows={rows} canEdit={canEdit} canManageRooms={canManageRooms}/></StaffShell>
 }
