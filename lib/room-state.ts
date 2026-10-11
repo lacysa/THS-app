@@ -19,6 +19,19 @@ export function normalizeRoomValue(value:unknown){return String(value||'').trim(
 export function isStayoverRoom(row:RoomLike){return normalizeRoomValue(row.reservationStatus)==='stayover'}
 export function isRefreshRoom(row:RoomLike){return isStayoverRoom(row)&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
 export function isBlockedRoom(row:RoomLike){return normalizeRoomValue(row.reservationStatus)==='blocked'||normalizeRoomValue(row.stripHold).includes('hold')}
+export type RoomServiceTask='blocked'|'refresh'|'full'|'none'
+/** One definition of assignable room service across Room Operations and daily staffing. */
+export function roomServiceTask(row:RoomLike):RoomServiceTask{
+  const activity=normalizeRoomValue(row.reservationStatus)
+  const condition=normalizeRoomValue(row.roomCondition)
+  const service=String(row.serviceType||'').trim().toUpperCase()
+  if(isBlockedRoom(row)||condition==='blocked')return 'blocked'
+  if(isRefreshRoom(row))return 'refresh'
+  if(['checkout','out/in','dirty'].includes(activity))return 'full'
+  if(/^OUT(?:-[A-Z]{2,4})?$/.test(service)&&activity!=='stayover')return 'full'
+  if(['vacant','arrival'].includes(activity)&&/dirty|cleaning/.test(condition))return 'full'
+  return 'none'
+}
 export function requiresIndependentRoomCheck(row:RoomLike){return !isStayoverRoom(row)&&!isBlockedRoom(row)}
 export function requiresHousekeeperSelfCheck(row:RoomLike){
   const status=normalizeRoomValue(row.reservationStatus)
