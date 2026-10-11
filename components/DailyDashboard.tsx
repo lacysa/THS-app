@@ -317,6 +317,14 @@ export default function DailyDashboard({
       tone:hkComplete.length===housekeepingWorkload.length && housekeepingWorkload.length>0 ? 'good' : 'neutral'
     } : null,
     showBreakfast ? {
+      label:'Desserts tonight',
+      value:String(dessertCount),
+      sub:'Tomorrow’s breakfast rooms',
+      icon:UtensilsCrossed,
+      href:'/front-desk',
+      tone:'neutral'
+    } : null,
+    showBreakfast ? {
       label:`Breakfast · ${breakfastDate.slice(5)}`,
       value:String(breakfastScheduled.length),
       sub:`${missingMenus.length} missing · ${receivedMenus.length} received`,
