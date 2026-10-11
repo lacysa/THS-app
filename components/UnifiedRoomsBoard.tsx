@@ -1,6 +1,7 @@
 'use client'
 
 import { getStaffSession } from '@/lib/client/staff-session'
+import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 import { useEffect,useMemo,useRef,useState } from 'react'
 import { derivedLiveCondition, finalVerificationComplete, requiresHousekeeperSelfCheck, roomNextAction, roomWorkflowLabel, roomWorkflowState } from '@/lib/room-state'
@@ -174,13 +175,16 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
   const pendingPatches=useRef<Record<string,Partial<RoomRow>>>({})
   const saveQueues=useRef<Record<string,Promise<boolean>>>({})
   const [isCompact,setIsCompact]=useState(false)
+  const [isTablet,setIsTablet]=useState(false)
 
   useEffect(()=>{rowsRef.current=rows},[rows])
   useEffect(()=>{dateRef.current=date},[date])
   useEffect(()=>{
-    const query=window.matchMedia('(max-width: 1199px), (max-width: 1600px) and (pointer: coarse) and (hover: none)')
+    const query=window.matchMedia(NON_DESKTOP_WORKSPACE_MEDIA)
+    const tablet=window.matchMedia(TABLET_WORKSPACE_MEDIA)
     const sync=()=>{
       setIsCompact(query.matches)
+      setIsTablet(tablet.matches)
       if(query.matches){setManagerDisplay('cards');if(initialRoomId)setExpanded(current=>({...current,[initialRoomId]:true}));else setFilter(current=>current==='all'?'active':current)}
       else{
         try{
@@ -189,8 +193,8 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
         }catch{}
       }
     }
-    sync(); query.addEventListener('change',sync)
-    return()=>query.removeEventListener('change',sync)
+    sync(); query.addEventListener('change',sync); tablet.addEventListener('change',sync)
+    return()=>{query.removeEventListener('change',sync);tablet.removeEventListener('change',sync)}
   },[])
 
   async function load(){
@@ -611,7 +615,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
 
   function chooseManagerDisplay(next:'focus'|'cards'|'table'){
     if((next==='focus'||next==='table')&&!canUseAdvancedRoomsViews(access))return
-    if(isCompact&&next==='table')return
+    if(isCompact&&!isTablet&&next==='table')return
     setManagerDisplay(next)
     try{window.localStorage.setItem('ths-rooms-manager-view',next)}catch{}
   }
@@ -689,7 +693,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
     {canUseAdvancedRoomsViews(access)&&<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
       <button type="button" className={managerDisplay==='focus'?'active':''} onClick={()=>chooseManagerDisplay('focus')}>Focus</button>
       <button type="button" className={managerDisplay==='cards'?'active':''} onClick={()=>chooseManagerDisplay('cards')}>Cards</button>
-      {viewMode==='manager'&&!isCompact&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
+      {viewMode==='manager'&&(!isCompact||isTablet)&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
     </div>}
 
     <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">

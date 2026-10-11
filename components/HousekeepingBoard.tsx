@@ -193,6 +193,7 @@ export default function HousekeepingBoard() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [viewMode, setViewMode] = useState<'manager'|'assigned'>('manager')
+  const [tabletLayout, setTabletLayout] = useState<'cards'|'table'>('cards')
   const [access, setAccess] = useState<Access | null>(null)
   const [canHaSignoff, setCanHaSignoff] = useState(false)
   const [canFohSignoff, setCanFohSignoff] = useState(false)
@@ -213,6 +214,17 @@ export default function HousekeepingBoard() {
   const [tableScrollMax,setTableScrollMax] = useState(0)
   const [tableScrollLeft,setTableScrollLeft] = useState(0)
   const dateRef = useRef(date)
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem('ths-housekeeping-tablet-view') === 'table') setTabletLayout('table')
+    } catch {}
+  }, [])
+
+  function chooseTabletLayout(next:'cards'|'table') {
+    setTabletLayout(next)
+    try { window.localStorage.setItem('ths-housekeeping-tablet-view', next) } catch {}
+  }
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -1109,7 +1121,7 @@ export default function HousekeepingBoard() {
   }
 
   return (
-    <div className="ops-module hsk-module">
+    <div className={`ops-module hsk-module ${tabletLayout==='table'?'hsk-tablet-table':'hsk-tablet-cards'}`}>
       <div className="module-toolbar hsk-sticky-toolbar">
         <div className="hsk-title-block">
           <div className="module-kicker">Housekeeping</div>
@@ -1167,6 +1179,11 @@ export default function HousekeepingBoard() {
       </div>
 
 
+
+      <div className="hsk-tablet-layout-picker" role="group" aria-label="iPad housekeeping layout">
+        <button type="button" aria-pressed={tabletLayout==='cards'} onClick={()=>chooseTabletLayout('cards')}>Cards</button>
+        <button type="button" aria-pressed={tabletLayout==='table'} onClick={()=>chooseTabletLayout('table')}>Full table</button>
+      </div>
 
       <div className="hsk-manager-mobile">
         {loading ? (

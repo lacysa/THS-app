@@ -1,6 +1,7 @@
 'use client'
 
 import { getStaffSession } from '@/lib/client/staff-session'
+import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_RAIL_MEDIA } from '@/lib/layout-breakpoints'
 
 import Link from 'next/link'
 import { Fragment, useEffect, useMemo, useState } from 'react'
@@ -224,14 +225,24 @@ export default function StaffShell({
     useState(false)
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem('ths-sidebar-collapsed')
-      if (window.innerWidth <= 900) {
-        setSidebarCollapsed(false)
-      } else if (saved === '1') {
-        setSidebarCollapsed(true)
-      }
-    } catch {}
+    // Tablet landscape starts with an icon rail; desktop uses the saved preference.
+    // Portrait/tablet drawer and phones never inherit a collapsed desktop sidebar.
+    const tabletRail = window.matchMedia(TABLET_RAIL_MEDIA)
+    const nonDesktop = window.matchMedia(NON_DESKTOP_WORKSPACE_MEDIA)
+    const syncSidebarLayout = () => {
+      let saved: string | null = null
+      try { saved = window.localStorage.getItem('ths-sidebar-collapsed') } catch {}
+      setSidebarCollapsed(tabletRail.matches ? saved !== '0' : nonDesktop.matches ? false : saved === '1')
+      setMobileNavOpen(false)
+    }
+    syncSidebarLayout()
+    tabletRail.addEventListener('change', syncSidebarLayout)
+    nonDesktop.addEventListener('change', syncSidebarLayout)
+    // Device rotation should never leave a navigation backdrop covering the work area.
+    const cleanupSidebarLayout = () => {
+      tabletRail.removeEventListener('change', syncSidebarLayout)
+      nonDesktop.removeEventListener('change', syncSidebarLayout)
+    }
 
     getStaffSession()
       .then(d => {
@@ -244,6 +255,7 @@ export default function StaffShell({
           d.access?.theme || 'blue'
       })
       .catch(() => {})
+    return cleanupSidebarLayout
   }, [])
 
   useEffect(() => {
@@ -511,7 +523,9 @@ export default function StaffShell({
       <Link
         key={item.module_key}
         href={href}
-        className={[
+        title={item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+        aria-label={item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+        className=[
           active ? 'active' : '',
           nested ? 'sidebar-nested-link' : '',
           options?.parentActive ? 'sidebar-parent-active' : ''
