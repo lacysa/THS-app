@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
+import { roomServiceTask } from '@/lib/room-state'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,14 +73,7 @@ export async function GET(req: NextRequest) {
       const activity = String(daily.reservation_status || link.reservation_status || 'Vacant')
       const serviceType = String(daily.service_type || '')
       const condition = String(daily.room_condition || '')
-      const blocked = activity.toLowerCase() === 'blocked' ||
-        condition.toLowerCase() === 'blocked' ||
-        String(daily.strip_hold || '').toLowerCase().includes('hold')
-      const refresh = activity.toLowerCase() === 'stayover' && serviceType.toUpperCase() === 'RF'
-      const fullClean = ['checkout', 'out/in', 'dirty'].includes(activity.toLowerCase()) ||
-        (/^OUT(?:-[A-Z]{2,4})?$/i.test(serviceType) && activity.toLowerCase() !== 'stayover') ||
-        (['vacant', 'arrival'].includes(activity.toLowerCase()) && /dirty|cleaning/i.test(condition))
-      const task = blocked ? 'blocked' : refresh ? 'refresh' : fullClean ? 'full' : 'none'
+      const task = roomServiceTask({ reservationStatus: activity, serviceType, roomCondition: condition, stripHold: String(daily.strip_hold || '') })
       const assignedTo = String(daily.assigned_to || '').trim()
       return {
         roomId: String(room.id),
