@@ -128,11 +128,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const daily=data?.daily
  const isStayover=String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'
  const currentHousekeeper=String(daily?.assigned_to||'').trim()
- const cleanerDisplay=isStayover
-  ? data?.lastCleaned
-   ? `${data.lastCleaned.name||'Cleaner unknown'} (${shortDate(data.lastCleaned.date)})`
-   : 'No completed clean'
-  : currentHousekeeper||data?.lastAssigned?.name||'Not assigned'
+ const cleanerDisplay=currentHousekeeper||'Unassigned'
  const canManage=Boolean(data?.permissions.canManage)
  const canInspect=Boolean(data?.permissions.canInspect)
  const blocked=Boolean(daily?.strip_hold?.toLowerCase().includes('hold')||daily?.reservation_status?.toLowerCase()==='blocked'||daily?.room_condition==='Blocked')
@@ -261,8 +257,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='housekeeper'?null:'housekeeper')}>
         <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{cleanerDisplay}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
         {isStayover
-         ? <small className="ops-hub-last-assigned">{data.lastCleaned?'Last completed clean':'Last clean not recorded'}{currentHousekeeper&&(!data.lastCleaned||currentHousekeeper.toLowerCase()!==data.lastCleaned.name.toLowerCase()||!daily?.complete)?` · Assigned: ${currentHousekeeper}`:''}</small>
-         : !currentHousekeeper&&data.lastAssigned&&<small className="ops-hub-last-assigned">Last assigned · {dateLabel(data.lastAssigned.date)}</small>}
+         ? <small className="ops-hub-last-assigned">{data.lastCleaned?`Last completed clean: ${data.lastCleaned.name||'Cleaner unknown'} · ${shortDate(data.lastCleaned.date)}`:'Last completed clean not recorded'}</small>
+         : data.lastAssigned&&<small className="ops-hub-last-assigned">Previously assigned: {data.lastAssigned.name} · {shortDate(data.lastAssigned.date)}</small>}
        </button>
        </div>
        <div className="ops-hub-context">
