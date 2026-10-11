@@ -173,6 +173,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
          {row.roomNotes&&<span>Room note</span>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span>Tips · {String(row.serviceType).split('-')[1]}</span>}
         </span>
+        {row.roomNotes?.trim()&&<div className="ths-ops-note-preview" title={row.roomNotes} aria-label={'Room note: '+row.roomNotes}>{row.roomNotes}</div>}
        </td>
       </tr>
      })}</tbody>
