@@ -525,7 +525,7 @@ export default function StaffShell({
         href={href}
         title={item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
         aria-label={item.module_key==='housekeeping'?'Rooms':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
-        className=[
+        className={[
           active ? 'active' : '',
           nested ? 'sidebar-nested-link' : '',
           options?.parentActive ? 'sidebar-parent-active' : ''
