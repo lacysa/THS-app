@@ -4,6 +4,7 @@ import {useRouter} from 'next/navigation'
 import {CalendarDays,ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
 import type ReservationsBoard from '@/components/ReservationsBoard'
 import OpsRoomHub from '@/components/OpsRoomHub'
+import { NON_DESKTOP_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'
@@ -50,7 +51,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
  const [displayMode,setDisplayMode]=useState<'table'|'cards'>('cards')
  const [isCompact,setIsCompact]=useState(false)
  useEffect(()=>{
-  const media=window.matchMedia('(max-width: 1199px), (max-width: 1600px) and (pointer: coarse) and (hover: none)')
+  const media=window.matchMedia(NON_DESKTOP_WORKSPACE_MEDIA)
   const sync=()=>{
    const compact=media.matches
    setIsCompact(compact)
