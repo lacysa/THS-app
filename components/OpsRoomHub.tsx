@@ -52,7 +52,6 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [mentionSearch,setMentionSearch]=useState<string|null>(null)
  const roomNoteInput=useRef<HTMLTextAreaElement|null>(null)
  const mentionStart=useRef(-1)
- const [mentionIds,setMentionIds]=useState<string[]>([])
  const [issueNote,setIssueNote]=useState('')
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
  const [roomOrder,setRoomOrder]=useState('')
@@ -105,7 +104,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   const start=mentionStart.current
   if(start<0)return
   const next=roomNotes.slice(0,start)+'@'+member.name+' '+roomNotes.slice(caret)
-  setRoomNotes(next);setMentionIds(ids=>[...new Set([...ids,member.userId])]);setMentionSearch(null)
+  setRoomNotes(next);setMentionSearch(null)
   requestAnimationFrame(()=>{roomNoteInput.current?.focus();roomNoteInput.current?.setSelectionRange(start+member.name.length+2,start+member.name.length+2)})
  }
  const saveRoomNotes=async()=>{
