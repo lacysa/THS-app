@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckCircle2, ClipboardList, RefreshCw, Search, UsersRound } from 'lucide-react'
 
 type Staff = {
-  id: string; name: string; roleLabel: string; onSite: boolean
+  id: string; name: string; roleLabel: string; onSite: boolean; housekeepingEligible: boolean
   scheduleState: string; shiftStart: string | null; shiftEnd: string | null
   fullRoomCleanLimit: number
 }
@@ -80,9 +80,10 @@ export default function HousekeepingAssignments() {
 
   const rooms = data?.rooms || []
   const staff = data?.staff || []
-  const onSite = staff.filter(person => person.onSite)
+  const onSite = staff.filter(person => person.onSite && (person.housekeepingEligible || rooms.some(room => assigned(room, person.name))))
   const offSite = staff.filter(person => !person.onSite && rooms.some(room => assigned(room, person.name)))
-  const assignable = staff.filter(person => person.onSite)
+  const assignable = staff.filter(person => person.onSite && person.housekeepingEligible)
+  const otherScheduled = staff.filter(person => person.onSite && !person.housekeepingEligible)
   const otherActive = staff.filter(person => !person.onSite && !['called_off', 'no_call_no_show', 'time_off', 'unavailable'].includes(person.scheduleState))
   const absent = staff.filter(person => ['called_off', 'no_call_no_show', 'time_off', 'unavailable'].includes(person.scheduleState))
   const work = rooms.filter(room => room.task === 'full' || room.task === 'refresh')
@@ -144,6 +145,9 @@ export default function HousekeepingAssignments() {
           </option>
         })}
       </optgroup>
+      {otherScheduled.length > 0 && <optgroup label="Other scheduled staff">
+        {otherScheduled.map(person => <option key={person.id} value={person.name}>{person.name} · {person.roleLabel || 'Other role'}</option>)}
+      </optgroup>}
       {otherActive.length > 0 && <optgroup label="Other active staff (not scheduled on site)">
         {otherActive.map(person => <option key={person.id} value={person.name}>{person.name} · not on site</option>)}
       </optgroup>}
@@ -224,7 +228,7 @@ export default function HousekeepingAssignments() {
     </header>
 
     <div className="hka-stats">
-      <div><strong>{onSite.length}</strong><span>Scheduled on site</span></div>
+      <div><strong>{onSite.length}</strong><span>Scheduled room staff</span></div>
       <div><strong>{work.length}</strong><span>Services to assign</span></div>
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
@@ -242,7 +246,7 @@ export default function HousekeepingAssignments() {
     {loading && !data && <div className="hka-loading">Loading daily assignments…</div>}
     {data && data.date !== date && <div className="hka-loading">Loading {date}…</div>}
     {data && data.date === date && view === 'staff' && <>
-      {onSite.length === 0 ? <div className="hka-empty">There are no on-site scheduled staff members for this date. Check Staff & Scheduling or use the rooms view to assign an active employee.</div> :
+      {onSite.length === 0 ? <div className="hka-empty">There are no housekeeping or hospitality staff scheduled on site for this date. Check Staff & Scheduling or use the rooms view to assign an active employee.</div> :
         <div className="hka-staff-grid">{onSite.map(staffCard)}</div>}
       {offSite.length > 0 && <details className="hka-details"><summary>Assigned employees who are not scheduled on site ({offSite.length})</summary>
         <p>Review these assignments, especially if someone called off or did not show up.</p>
