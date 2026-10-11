@@ -502,7 +502,7 @@ export default function StaffShell({
       '#'
 
     const exactOnlyRoutes =
-      new Set(['/dashboard', '/breakfast'])
+      new Set(['/dashboard', '/breakfast', '/housekeeping'])
 
     return exactOnlyRoutes.has(href)
       ? pathname === href
