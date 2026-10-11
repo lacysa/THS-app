@@ -831,7 +831,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
             }}>
               <div className="rooms-card-title">
                 <span className="rooms-chevron">{isOpen?<ChevronDown size={18}/>:<ChevronRight size={18}/>}</span>
-                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType?` · ${row.serviceType}`:''}</small><span className={row.assignedTo?.trim()?'rooms-assigned-housekeeper':'rooms-assigned-housekeeper unassigned'}><UserRoundCheck size={13}/>{row.assignedTo?.trim()||'Unassigned'}</span></span>
+                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType&&!/^OUT(?:-[A-Z]{2,4})?$/i.test(row.serviceType.trim())?` · ${row.serviceType}`:''}</small><span className="rooms-card-daily-tags">{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-out">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-tips">Tips collected · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span><span className={row.assignedTo?.trim()?'rooms-assigned-housekeeper':'rooms-assigned-housekeeper unassigned'}><UserRoundCheck size={13}/>{row.assignedTo?.trim()||'Unassigned'}</span></span>
               </div>
               <div className={`rooms-state-pill ${state}`}>
                 {roomWorkflowLabel(effectiveRow)}
