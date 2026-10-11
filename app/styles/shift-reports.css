@@ -328,3 +328,161 @@ html[data-theme="dark"] .shift-dessert-rooms{
     border-radius:12px;
   }
 }
+
+
+/* Embedded corrections summary: part of Today, not a standalone dashboard card. */
+.shift-today-corrections{
+  margin-top:14px;
+  padding:13px 14px;
+  border:1px solid var(--ths-line);
+  border-radius:12px;
+  background:rgba(255,255,255,.76);
+  min-width:0;
+}
+.shift-today-corrections-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:10px;
+}
+.shift-today-corrections-head>div{min-width:0;flex:1 1 185px}
+.shift-today-corrections-kicker{
+  display:block;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.1em;
+  color:var(--ths-muted);
+}
+.shift-today-corrections h4{
+  margin:3px 0;
+  font-size:14px;
+  font-weight:800;
+  line-height:1.3;
+  color:var(--ths-text);
+}
+.shift-today-corrections-head p{
+  margin:0;
+  font-size:11px;
+  line-height:1.45;
+  color:var(--ths-muted);
+}
+.shift-today-corrections-total{
+  flex:0 0 auto;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#eaf2ed;
+  color:#37614b;
+  font-size:10px;
+  font-weight:800;
+}
+.shift-today-corrections-list{display:grid;gap:7px}
+.shift-today-correction{
+  min-width:0;
+  padding:9px 11px;
+  border:1px solid rgba(61,80,110,.10);
+  border-radius:9px;
+  background:rgba(250,251,253,.88);
+}
+.shift-today-correction-meta{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:3px 8px;
+  font-size:11px;
+  line-height:1.4;
+}
+.shift-today-correction-meta strong{font-size:12px;color:var(--ths-text)}
+.shift-today-correction-meta>span:not(.shift-today-correction-status){color:var(--ths-muted)}
+.shift-today-correction-status{margin-left:auto;font-weight:800;white-space:nowrap;font-size:10px}
+.shift-today-correction-status.resolved{color:#3e7459}
+.shift-today-correction-status.open{color:#a15a35}
+.shift-today-correction p{
+  margin:4px 0 0;
+  font-size:12px;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+  white-space:pre-wrap;
+  color:var(--ths-text);
+}
+html[data-theme="dark"] .shift-today-corrections{
+  background:rgba(27,40,51,.8);
+  border-color:#344353;
+}
+html[data-theme="dark"] .shift-today-correction{
+  background:rgba(26,37,48,.95);
+  border-color:#344353;
+}
+html[data-theme="dark"] .shift-today-corrections-total{background:#284637;color:#c6ebd6}
+html[data-theme="dark"] .shift-today-correction-status.resolved{color:#a5dfbb}
+html[data-theme="dark"] .shift-today-correction-status.open{color:#f0bd96}
+@media(max-width:560px){
+  .shift-today-corrections{padding:12px}
+  .shift-today-correction-meta{align-items:center}
+  .shift-today-correction-status{margin-left:0}
+}
+
+/* Only Shift Reports printing is normalized; other modules' print modes remain untouched.
+   Hiding with visibility alone retains huge off-screen heights on Mobile Safari. */
+@media print{
+  body:has(.shift-print-document),
+  body:has(.shift-print-document) .staff-ops-app,
+  body:has(.shift-print-document) .staff-ops-main,
+  body:has(.shift-print-document) .staff-page-content,
+  body:has(.shift-print-document) .shift-page{
+    display:block!important;
+    position:static!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+    background:#fff!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+  body:has(.shift-print-document) .staff-ops-sidebar,
+  body:has(.shift-print-document) .staff-ops-topbar,
+  body:has(.shift-print-document) .mobile-sidebar-backdrop,
+  body:has(.shift-print-document) .mobile-nav-toggle,
+  .shift-page>.module-pretty-hero,
+  .shift-page>.shift-toolbar,
+  .shift-page>.shift-tabs,
+  .shift-page>.shift-report-flow,
+  .shift-page>.shift-section,
+  .shift-page>.handoff-column,
+  .shift-page>.module-message,
+  .shift-page>.module-empty{
+    display:none!important;
+  }
+  .shift-page>.shift-print-document{
+    display:block!important;
+    position:static!important;
+    inset:auto!important;
+    width:100%!important;
+    max-width:none!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+  }
+  .shift-print-section{
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+  }
+  .shift-print-heading,.shift-print-section h3{
+    break-after:avoid!important;
+    page-break-after:avoid!important;
+  }
+  .shift-print-summary-grid>div,
+  .shift-print-row,
+  .shift-print-action-list li{
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+}
