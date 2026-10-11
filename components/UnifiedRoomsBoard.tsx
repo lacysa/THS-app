@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 
 type Access={
+  userId?:string|null
   name?:string|null
   preferredName?:string|null
   email?:string|null
@@ -122,6 +123,10 @@ function managerInitials(access:Access|null){
   if(parts.length>=2)return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase()
   return raw.slice(0,2).toUpperCase()
 }
+function canUseAdvancedRoomsViews(access:Access|null){
+  // Advanced Focus/Table workspace is reserved to Sarah's authenticated account.
+  return access?.userId==='316f638d-bd3a-4c6b-9ff3-47ff437a2390'
+}
 function isManager(access:Access|null){
   if(!access)return false
   const caps=access.capabilities||[]
@@ -203,6 +208,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
       const nextRows=(day.rows||[]) as RoomRow[]
       setRows(nextRows);rowsRef.current=nextRows
       setViewMode(day.viewMode==='assigned'?'assigned':'manager')
+      if(!canUseAdvancedRoomsViews(nextAccess))setManagerDisplay('cards')
       setStaffOptions(day.staffOptions||[])
       setPackageOptions(day.packageOptions||[])
       setCanHaSignoff(Boolean(day.signoffAccess?.canHaSignoff))
@@ -604,13 +610,14 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
   }
 
   function chooseManagerDisplay(next:'focus'|'cards'|'table'){
+    if((next==='focus'||next==='table')&&!canUseAdvancedRoomsViews(access))return
     if(isCompact&&next==='table')return
     setManagerDisplay(next)
     try{window.localStorage.setItem('ths-rooms-manager-view',next)}catch{}
   }
 
   function openRoomCard(row:RoomRow){
-    chooseManagerDisplay(isCompact?'cards':'focus')
+    chooseManagerDisplay(!canUseAdvancedRoomsViews(access)||isCompact?'cards':'focus')
     setSelectedRoomId(row.roomId)
     setExpanded(current=>({...current,[row.roomId]:true}))
     window.requestAnimationFrame(()=>{
@@ -679,10 +686,10 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
       <div className="rooms-stayover-grid">{inactiveStayovers.map(row=><div className="rooms-stayover-item" key={row.roomId}><div><strong>{row.roomName}</strong><small>No service requested</small></div></div>)}</div>
     </details>}
 
-    {<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
+    {canUseAdvancedRoomsViews(access)&&<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
       <button type="button" className={managerDisplay==='focus'?'active':''} onClick={()=>chooseManagerDisplay('focus')}>Focus</button>
       <button type="button" className={managerDisplay==='cards'?'active':''} onClick={()=>chooseManagerDisplay('cards')}>Cards</button>
-      {viewMode==='manager'&&isManager(access)&&!isCompact&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
+      {viewMode==='manager'&&!isCompact&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
     </div>}
 
     <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
@@ -707,7 +714,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
     {message&&<div className="module-message">{message}</div>}
 
     {loading?<div className="module-empty">Loading rooms…</div>:searchedRows.length===0?<div className="module-empty">No rooms match this view.</div>:
-      viewMode==='manager'&&isManager(access)&&managerDisplay==='table'
+      viewMode==='manager'&&canUseAdvancedRoomsViews(access)&&managerDisplay==='table'
         ? <div className="rooms-table-shell">
             <div className="rooms-table-scroll">
               <table className="rooms-table">
@@ -789,7 +796,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
           const inspection=checkByRoom.get(row.roomId)
           const effectiveRow={...row,checkIssueOpen:row.checkIssueOpen||inspection?.issueOpen}
           const state=roomWorkflowState(effectiveRow)
-          const isOpen=managerDisplay==='focus'||(Boolean(initialRoomId)&&row.roomId===initialRoomId)||Boolean(expanded[row.roomId])
+          const isOpen=(canUseAdvancedRoomsViews(access)&&managerDisplay==='focus')||(Boolean(initialRoomId)&&row.roomId===initialRoomId)||Boolean(expanded[row.roomId])
           const self=selfChecks[row.roomId]
           const zones=[...new Set((self?.items||[]).map(i=>i.zone))]
           const assigned=splitAssigned(row.assignedTo)
