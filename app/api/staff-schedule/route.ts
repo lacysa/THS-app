@@ -54,7 +54,7 @@ export async function POST(req:NextRequest){
     return NextResponse.json({ok:true})
   }
 
-  if(!['onsite','remote','time_off','unavailable'].includes(workMode)){
+  if(!['onsite','remote','time_off','unavailable','called_off','no_call_no_show'].includes(workMode)){
     return NextResponse.json({error:'Invalid work mode'},{status:400})
   }
 
