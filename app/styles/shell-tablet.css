@@ -51,7 +51,7 @@
   .rooms-table-shell{max-width:100%;width:100%}
   .rooms-table-scroll{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
   .rooms-table{min-width:1110px}
-  .rooms-table-shell:has(.rooms-table){display:block!important}
+  .rooms-table-shell{display:block!important}
 
   /* Room Board: stop the eight-column desktop row squeezing the touch targets. */
   .rb-room-main,.rb-room-card[data-workflow="minimal"] .rb-room-main{
