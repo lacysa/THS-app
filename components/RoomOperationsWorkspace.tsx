@@ -36,7 +36,8 @@ function shiftDate(day:string,days:number){
 function conditionTone(condition:string){
  const value=condition.toLowerCase()
  if(/dirty|issue|blocked/.test(value))return 'warning'
- if(/ready|clean/.test(value))return 'ready'
+ if(/cleaning|in progress/.test(value))return 'cleaning'
+ if(/ready|vacant \(clean\)/.test(value))return 'ready'
  if(/occupied/.test(value))return 'occupied'
  return 'neutral'
 }
