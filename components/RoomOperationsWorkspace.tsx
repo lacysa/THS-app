@@ -122,14 +122,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
    {displayMode==='table'&&<div className="ths-ops-table-scroll" style={{overflowX:'auto',width:'100%',WebkitOverflowScrolling:'touch',borderRadius:16,border:'1px solid #dce5e9',background:'white'}}>
     <table className="ths-ops-full-table" style={{width:'100%',borderCollapse:'collapse',minWidth:760,textAlign:'left',fontSize:14}}>
      <thead><tr style={{background:'#f0f6f8'}}>
-      {['Room','Service','Guest','Live condition','Details','Manage'].map(label=><th key={label} scope="col" style={{padding:'12px 14px',whiteSpace:'nowrap',borderBottom:'1px solid #dce5e9'}}>{label}</th>)}
+      {['Room','Service','Guest','Live condition','Details'].map(label=><th key={label} scope="col" style={{padding:'12px 14px',whiteSpace:'nowrap',borderBottom:'1px solid #dce5e9'}}>{label}</th>)}
      </tr></thead>
      <tbody>{filtered.map(row=>{
       const type=reservationType(row)
       const condition=roomCondition(row)
       const guest=activeGuest(row,serviceDate)
       const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})
-      return <tr key={row.roomId} style={{borderBottom:'1px solid #e7edf0'}}>
+      return <tr key={row.roomId} tabIndex={0} role="button" aria-label={`Open ${row.roomName} room interactions`} onClick={open} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open()}}} style={{borderBottom:'1px solid #e7edf0',cursor:'pointer'}}>
        <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.roomName}</th>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{type}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
@@ -143,7 +143,6 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows}:{se
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span>Tips · {String(row.serviceType).split('-')[1]}</span>}
         </span>
        </td>
-       <td style={{padding:'8px 14px'}}><button type="button" onClick={open} aria-label={`Open all room functions for ${row.roomName}`} style={{padding:'9px 12px',border:'1px solid #bfd3df',borderRadius:10,background:'#eef6fa',color:'#24485d',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Open / Edit</button></td>
       </tr>
      })}</tbody>
     </table>
