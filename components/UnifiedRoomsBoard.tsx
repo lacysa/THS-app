@@ -145,7 +145,7 @@ function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='block
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
-export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDate?:string;initialRoomId?:string}={}){
+export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilter='all'}:{initialDate?:string;initialRoomId?:string;initialFilter?:Filter}={}){
   const [date,setDate]=useState(initialDate||todayDetroit())
   const [access,setAccess]=useState<Access|null>(null)
   const [rows,setRows]=useState<RoomRow[]>([])
@@ -155,7 +155,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId}:{initialDa
   const [inspectionRooms,setInspectionRooms]=useState<InspectionRoom[]>([])
   const [selfChecks,setSelfChecks]=useState<Record<string,SelfCheck>>({})
   const [expanded,setExpanded]=useState<Record<string,boolean>>({})
-  const [filter,setFilter]=useState<Filter>('all')
+  const [filter,setFilter]=useState<Filter>(initialFilter)
   const [loading,setLoading]=useState(true)
   const [message,setMessage]=useState('')
   const [saveState,setSaveState]=useState<SaveState>('idle')
