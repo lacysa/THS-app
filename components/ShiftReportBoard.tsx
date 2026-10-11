@@ -456,13 +456,6 @@ export default function ShiftReportBoard() {
     </div>
 
     {loading ? <div className="module-empty">Loading shift report…</div> : tab==='report' ? <div className="shift-report-flow">
-      <section className="quality-card">
-        <div className="quality-card-head"><div><CheckCircle2 size={17}/><span><strong>Housekeeping fix(s) needed</strong><small>Room Operations corrections · automatic daily summary</small></span></div></div>
-        {(auto.housekeepingFixes||[]).length ? (auto.housekeepingFixes||[]).map(f=><div key={f.id} style={{padding:'8px 0',borderBottom:'1px solid #e3eaf0'}}>
-          <strong>{f.roomName} · {f.assignedTo||'Unassigned'}</strong> <small>· {f.resolved?'Fixed':'Needs correction'}</small>
-          <div style={{fontSize:13,marginTop:4}}>{f.note}</div>
-        </div>) : <p>No housekeeping fixes reported for this date.</p>}
-      </section>
       <section className="shift-section shift-snapshot-section shift-day-section">
         <div className="shift-day-heading">
           <div><span>TODAY</span><h3>{date}</h3></div>
@@ -477,6 +470,30 @@ export default function ShiftReportBoard() {
           <div><span>Menus needed</span><strong>{summary.menusMissing.length}</strong></div>
           <div><span>Desserts tonight</span><strong>{summary.dessertsTonight}</strong></div>
         </div>
+        {(auto.housekeepingFixes||[]).length>0 && <div className="shift-today-corrections">
+          <div className="shift-today-corrections-head">
+            <div>
+              <span className="shift-today-corrections-kicker">ROOM OPERATIONS</span>
+              <h4>Housekeeping corrections</h4>
+              <p>Fixes recorded during today&apos;s room inspections</p>
+            </div>
+            <span className="shift-today-corrections-total">
+              {(auto.housekeepingFixes||[]).some(f=>!f.resolved)
+                ? `${(auto.housekeepingFixes||[]).filter(f=>!f.resolved).length} open`
+                : 'All fixed'}
+            </span>
+          </div>
+          <div className="shift-today-corrections-list">
+            {(auto.housekeepingFixes||[]).map(f=><div className="shift-today-correction" key={f.id}>
+              <div className="shift-today-correction-meta">
+                <strong>{f.roomName}</strong>
+                <span>{f.assignedTo||'Unassigned'}</span>
+                <span className={f.resolved?'shift-today-correction-status resolved':'shift-today-correction-status open'}>{f.resolved?'Fixed':'Needs correction'}</span>
+              </div>
+              <p>{f.note}</p>
+            </div>)}
+          </div>
+        </div>}
         {summary.todayStaff.length>0 && <div className="shift-staff-strip">
           {summary.todayStaff.map((person:any)=><span key={person.staffMemberId}><strong>{person.name}</strong><small>{person.roleLabel||'On site'}</small></span>)}
         </div>}
