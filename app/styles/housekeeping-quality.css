@@ -98,3 +98,66 @@ html[data-theme="dark"] .quality-category-choice.active{background:#38476c}
 html[data-theme="dark"] .quality-category-pills>span{background:#334358;color:#e6ecf6}
 html[data-theme="dark"] .quality-filter-bar button{background:#293644;color:#e5edf6;border-color:#3c4c5e}
 @media(max-width:620px){.quality-correction-summary{padding:12px}.quality-correction-editor{padding:12px}.quality-review-actions button{flex:1 1 auto}.quality-category-choice{font-size:11px}}
+
+
+/* HSK correction review: isolate category checkboxes from app-wide text-field styles. */
+.staff-page-content .quality-category-choices{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));
+ gap:8px;
+ min-width:0;
+ width:100%;
+}
+.staff-page-content .quality-category-choice{
+ display:flex;
+ flex-direction:row;
+ align-items:center;
+ gap:11px;
+ min-width:0;
+ width:100%;
+ max-width:none;
+ min-height:46px;
+ padding:11px 13px;
+ box-sizing:border-box;
+ border-radius:12px;
+ font-size:13px;
+ font-weight:600;
+ line-height:1.4;
+ text-align:left;
+ overflow-wrap:normal;
+ word-break:normal;
+}
+.staff-page-content .quality-category-choice-text{
+ display:block;
+ flex:1 1 auto;
+ min-width:0;
+ white-space:normal;
+ overflow-wrap:break-word;
+ word-break:normal;
+}
+.staff-page-content .quality-category-choice input.quality-review-checkbox[type="checkbox"]{
+ -webkit-appearance:checkbox;
+ appearance:auto;
+ width:19px!important;
+ min-width:19px!important;
+ max-width:19px!important;
+ height:19px!important;
+ min-height:19px!important;
+ max-height:19px!important;
+ flex:0 0 19px;
+ padding:0!important;
+ margin:0;
+ border-radius:4px!important;
+ box-shadow:none!important;
+ background:transparent!important;
+ accent-color:#6f78c6;
+ cursor:pointer;
+}
+.staff-page-content .quality-category-choice:focus-within{
+ outline:2px solid #7c8bc7;
+ outline-offset:2px;
+}
+@media(max-width:700px){
+ .staff-page-content .quality-category-choices{grid-template-columns:minmax(0,1fr)}
+ .staff-page-content .quality-category-choice{padding:11px 12px;min-height:48px;font-size:13px}
+}
