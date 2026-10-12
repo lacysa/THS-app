@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { roomServiceTask } from '@/lib/room-state'
+import { loadTubTaskStates } from '@/lib/ops-tub'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,13 +68,15 @@ export async function GET(req: NextRequest) {
         fullRoomCleanLimit: Number(person.full_room_clean_limit ?? 2)
       }
     }).sort((a, b) => Number(b.onSite) - Number(a.onSite) || Number(b.housekeepingEligible) - Number(a.housekeepingEligible) || a.name.localeCompare(b.name))
+    const tubStates = await loadTubTaskStates(admin,date as string)
     const rooms = (roomsResult.data || []).map((room: any) => {
       const daily: any = dailyByRoom.get(String(room.id)) || {}
       const link: any = linkedByRoom.get(String(room.id)) || {}
       const activity = String(daily.reservation_status || link.reservation_status || 'Vacant')
       const serviceType = String(daily.service_type || '')
       const condition = String(daily.room_condition || '')
-      const task = roomServiceTask({ reservationStatus: activity, serviceType, roomCondition: condition, stripHold: String(daily.strip_hold || '') })
+      const baseTask = roomServiceTask({ reservationStatus: activity, serviceType, roomCondition: condition, stripHold: String(daily.strip_hold || '') })
+      const task = baseTask === 'none' && tubStates.get(String(room.id))?.due ? 'tub' : baseTask
       const assignedTo = String(daily.assigned_to || '').trim()
       return {
         roomId: String(room.id),

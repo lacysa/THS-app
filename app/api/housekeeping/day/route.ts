@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
+import { loadTubTaskStates } from '@/lib/ops-tub'
 
 export const dynamic = 'force-dynamic'
 
@@ -198,6 +199,7 @@ export async function GET(req: NextRequest) {
       breakfastByRoom.set(roomId, booking)
     }
 
+    const tubStates = await loadTubTaskStates(admin,serviceDate)
     const rows = (rooms || []).map((room: any) => {
       const savedRow = savedByRoom.get(String(room.id)) || {}
       const breakfast = breakfastByRoom.get(String(room.id))
@@ -211,6 +213,8 @@ export async function GET(req: NextRequest) {
         roomId: room.id,
         roomName: room.name,
         sortOrder: room.sort_order,
+        tubCleanDue: Boolean(tubStates.get(String(room.id))?.due),
+        tubCleanCompleted: Boolean(tubStates.get(String(room.id))?.completed),
         reservationStatus: savedRow.reservation_status || '',
         serviceType: savedRow.service_type || '',
         requiresQualityCheck:

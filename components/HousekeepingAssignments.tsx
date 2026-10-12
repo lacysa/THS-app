@@ -11,7 +11,7 @@ type Staff = {
 type Room = {
   roomId: string; roomName: string; sortOrder: number; activity: string; serviceType: string
   condition: string; assignedTo: string; cleanOrder: number | null; complete: boolean
-  checkIssueOpen: boolean; task: 'none' | 'blocked' | 'full' | 'refresh'
+  checkIssueOpen: boolean; task: 'none' | 'blocked' | 'full' | 'refresh' | 'tub'
   needsAssignment: boolean; hasDailyRecord: boolean
 }
 type AssignmentData = {
@@ -36,7 +36,7 @@ function assigned(room: Room, name: string) {
   return names(room.assignedTo).some(value => value.toLowerCase() === name.toLowerCase())
 }
 function taskLabel(room: Room) {
-  return room.task === 'refresh' ? 'Refresh' : 'Full clean'
+  return room.task === 'refresh' ? 'Refresh' : room.task === 'tub' ? 'Tub clean only' : 'Full clean'
 }
 function timeLabel(raw: string | null) {
   return raw ? raw.slice(0, 5) : ''
@@ -86,7 +86,7 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
   const otherScheduled = staff.filter(person => person.onSite && !person.housekeepingEligible)
   const otherActive = staff.filter(person => !person.onSite && !['called_off', 'no_call_no_show', 'time_off', 'unavailable'].includes(person.scheduleState))
   const absent = staff.filter(person => ['called_off', 'no_call_no_show', 'time_off', 'unavailable'].includes(person.scheduleState))
-  const work = rooms.filter(room => room.task === 'full' || room.task === 'refresh')
+  const work = rooms.filter(room => room.task === 'full' || room.task === 'refresh' || room.task === 'tub')
   const unassigned = work.filter(room => room.needsAssignment)
   const completed = work.filter(room => room.complete)
   const counts = useMemo(() => {
@@ -204,8 +204,9 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
     const theirs = work.filter(room => assigned(room, person.name))
     const full = theirs.filter(room => room.task === 'full')
     const refreshes = theirs.filter(room => room.task === 'refresh')
+    const tubs = theirs.filter(room => room.task === 'tub')
     const overLimit = full.length > person.fullRoomCleanLimit
-    const available = work.filter(room => room.needsAssignment && room.hasDailyRecord && (room.task === 'refresh' || full.length < person.fullRoomCleanLimit))
+    const available = work.filter(room => room.needsAssignment && room.hasDailyRecord && (room.task !== 'full' || full.length < person.fullRoomCleanLimit))
     return <section key={person.id} className="hka-person">
       <div className="hka-person-head">
         <div>
@@ -214,7 +215,7 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
         </div>
         <div className="hka-person-count">
           <span className={overLimit ? 'over-limit' : ''}>{full.length}/{person.fullRoomCleanLimit} cleans</span>
-          <span>{refreshes.length} refreshes</span>
+          <span>{refreshes.length} refreshes{tubs.length?' · '+tubs.length+' tub cleans':''}</span>
           {!person.onSite && <span className="offsite">Not scheduled on site</span>}
         </div>
       </div>

@@ -54,6 +54,8 @@ type RoomRow={
   packageIds:string[]
   lateArrival:boolean
   breakfastTag:boolean
+  tubCleanDue?:boolean
+  tubCleanCompleted?:boolean
   housekeeperAttested?:boolean
   housekeeperAttestedBy?:string|null
   housekeeperAttestedName?:string|null
@@ -374,6 +376,20 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       patch(row.roomId,update,false)
       setMessage(row.roomName+' marked dirty. Cleaning and inspections must be completed again.')
     }
+  }
+
+  async function completeTubClean(row:RoomRow){
+    if(!row.tubCleanDue||refreshRoomId)return
+    setRefreshRoomId(row.roomId)
+    try{
+      const response=await fetch('/api/ops/room-details',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:row.roomId,action:'tubComplete'})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not complete tub cleaning.')
+      setRows(current=>current.map(item=>item.roomId===row.roomId?{...item,tubCleanDue:false,tubCleanCompleted:true}:item))
+      setMessage(row.roomName+' tub cleaning recorded.')
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(error:any){setMessage(error?.message||'Could not complete tub cleaning.')}
+    finally{setRefreshRoomId('')}
   }
 
   async function completeRefresh(row:RoomRow){
@@ -831,7 +847,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
             }}>
               <div className="rooms-card-title">
                 <span className="rooms-chevron">{isOpen?<ChevronDown size={18}/>:<ChevronRight size={18}/>}</span>
-                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType&&!/^OUT(?:-[A-Z]{2,4})?$/i.test(row.serviceType.trim())?` · ${row.serviceType}`:''}</small><span className="rooms-card-daily-tags">{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-out">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-tips">Tips collected · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span><span className={row.assignedTo?.trim()?'rooms-assigned-housekeeper':'rooms-assigned-housekeeper unassigned'}><UserRoundCheck size={13}/>{row.assignedTo?.trim()||'Unassigned'}</span></span>
+                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType&&!/^OUT(?:-[A-Z]{2,4})?$/i.test(row.serviceType.trim())?` · ${row.serviceType}`:''}</small><span className="rooms-card-daily-tags">{row.tubCleanDue&&<span className="rooms-daily-out">Tub clean needed</span>}{row.tubCleanCompleted&&<span className="rooms-daily-tips">Tub cleaned</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-out">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-tips">Tips collected · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span><span className={row.assignedTo?.trim()?'rooms-assigned-housekeeper':'rooms-assigned-housekeeper unassigned'}><UserRoundCheck size={13}/>{row.assignedTo?.trim()||'Unassigned'}</span></span>
               </div>
               <div className={`rooms-state-pill ${state}`}>
                 {roomWorkflowLabel(effectiveRow)}
@@ -897,6 +913,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
 
               <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
 
+              {row.tubCleanDue&&!isBlocked(row)&&<section className="rooms-section cleaning-section"><div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Tub cleaning needed</strong><small>Tub only. This does not change full-room readiness or inspection.</small></div></div><button type="button" className="ops-primary-btn rooms-primary-action" disabled={refreshRoomId===row.roomId||(!isManager(access)&&!splitAssigned(row.assignedTo).some(n=>normalize(n)===normalize(access?.name||'')))} onClick={()=>void completeTubClean(row)}><Check size={16}/>{refreshRoomId===row.roomId?'Saving tub clean…':'Mark tub cleaned'}</button></section>}
               {row.claimableRefresh&&<button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void claimRefresh(row)}><UserRoundCheck size={16}/>Claim refresh</button>}
 
               {(!isStayover(row)||isRefresh(row))&&!isArrivalOnly(row)&&<section className="rooms-section cleaning-section">

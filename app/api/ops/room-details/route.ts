@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
+import {loadTubTaskStates} from '@/lib/ops-tub'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 
 export const dynamic='force-dynamic'
@@ -11,12 +12,13 @@ export async function PATCH(req:NextRequest){
  const [opsGate,reservationGate]=await Promise.all([canUseModule('ops'),canUseModule('reservations')])
  const access=opsGate.access||reservationGate.access
  if(!access)return NextResponse.json({error:'Unauthorized'},{status:401})
- if(!opsGate.allowed&&!reservationGate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
- const caps=access.capabilities||[]
- if(access.isPreviewMode||!(access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c))))
-  return NextResponse.json({error:'Management access required'},{status:403})
  const body=await req.json().catch(()=>null)
  const {roomId,date,action}=body||{}
+ const caps=access.capabilities||[]
+ const manager=access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c))
+ const worker=action==='tubComplete'&&caps.some((c:string)=>['housekeeping','runner','hospitality_assistant'].includes(c))
+ if(!opsGate.allowed&&!reservationGate.allowed&&!worker)return NextResponse.json({error:'Forbidden'},{status:403})
+ if(access.isPreviewMode||(!manager&&!worker))return NextResponse.json({error:'Management or assigned housekeeping access required'},{status:403})
  if(!validId(roomId)||!validDate(date)||typeof action!=='string')
   return NextResponse.json({error:'Invalid room, date or action'},{status:400})
  const admin=createSupabaseAdmin()
@@ -24,6 +26,13 @@ export async function PATCH(req:NextRequest){
  if(roomError||!room)return NextResponse.json({error:'Room not found'},{status:404})
  const {data:daily,error:dayError}=await admin.from('housekeeping_daily_rooms').select('room_id,strip_hold,reservation_status').eq('room_id',roomId).eq('service_date',date).maybeSingle()
  if(dayError||!daily)return NextResponse.json({error:'Room date not scheduled'},{status:404})
+ if(!manager){
+  const {data:person}=await admin.from('staff_members').select('name').eq('auth_user_id',access.userId).eq('active',true).maybeSingle()
+  const {data:assigned}=await admin.from('housekeeping_daily_rooms').select('assigned_to').eq('service_date',date).eq('room_id',roomId).maybeSingle()
+  if(!person||!String(assigned?.assigned_to||'').split(',').some((v:string)=>v.trim().toLowerCase()===String(person.name||'').toLowerCase()))
+   return NextResponse.json({error:'This room is not assigned to you'},{status:403})
+  if(!(await loadTubTaskStates(admin,date)).get(roomId)?.due)return NextResponse.json({error:'No outstanding tub-clean task'},{status:409})
+ }
  const now=new Date().toISOString()
  const patch:Record<string,unknown>={room_id:roomId,service_date:date,updated_by:access.userId,updated_at:now}
  if(action==='times'){
