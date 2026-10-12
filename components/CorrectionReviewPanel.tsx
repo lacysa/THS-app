@@ -151,7 +151,7 @@ export default function CorrectionReviewPanel({corrections,categorySummary,onSav
               <p>Choose all applicable categories, or add a new one. The original note, room, and housekeeper are never changed.</p>
               <div className="quality-category-choices">{available.map(value=>
                 <label className={'quality-category-choice'+(selected.includes(value)?' active':'')} key={value}>
-                  <input type="checkbox" checked={selected.includes(value)} onChange={()=>toggleCategory(value)}/>{value}
+                  <input className="quality-review-checkbox" type="checkbox" checked={selected.includes(value)} onChange={()=>toggleCategory(value)}/><span className="quality-category-choice-text">{value}</span>
                 </label>)}</div>
               <div className="quality-add-category">
                 <input aria-label="New correction category" placeholder="New category, e.g. Glassware polishing" maxLength={80}
