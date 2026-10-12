@@ -185,13 +185,28 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
      const type=reservationType(row)
      const condition=roomCondition(row)
      const guest=activeGuest(row,serviceDate)
-     return <button className="ths-ops-room-row" type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})} aria-label={`Open ${row.roomName}, ${type}, ${condition}`}>
+     const service=String(row.serviceType||'').trim().toUpperCase()
+     return <button className="ths-ops-room-row ths-ops-room-card" type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})}>
       <span className="ths-ops-room-info">
-       <span className="ths-ops-room-name">{row.roomName}<span className="ths-ops-activity">{type}</span></span>
-       <span className="ths-ops-guest">{guest?.guest_name||'No active reservation'}</span>
-       <span className="ths-ops-tags">{row.assignedTo?.trim()&&<span className="ths-ops-housekeeper-tag">Housekeeper · {row.assignedTo.trim()}</span>}{hasUnassignedService(row)&&<span className="ths-ops-housekeeper-unassigned">Housekeeper · Unassigned</span>}{row.breakfastTag&&<span>Breakfast</span>}{row.lateArrival&&<span>Late arrival</span>}{row.checkIssueOpen&&<span className="alert">Inspection issue</span>}{row.roomNotes&&<span>Room note</span>}{String(row.serviceType||'').toUpperCase()==='RF'&&<span>Refresh</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span>OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span>Tips collected · {String(row.serviceType||'').trim().toUpperCase().split('-')[1]}</span>}</span>
+       <span className="ths-ops-card-top">
+        <span className="ths-ops-room-name">{row.roomName}<span className="ths-ops-activity">{type}{service==='RF'?' · RF':''}</span></span>
+        <span className="ths-ops-card-condition"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18} aria-hidden="true"/></span>
+       </span>
+       <span className="ths-ops-card-summary">
+        <span className="ths-ops-card-field"><span className="ths-ops-card-label">Guest</span><span className="ths-ops-card-value">{guest?.guest_name||'No active reservation'}</span></span>
+        <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}</span></span>
+       </span>
+       <span className="ths-ops-tags">
+        {row.breakfastTag&&<span>Breakfast</span>}
+        {row.lateArrival&&<span>Late arrival</span>}
+        {row.checkIssueOpen&&<span className="alert">Inspection issue</span>}
+        {hasUnassignedService(row)&&<span className="ths-ops-housekeeper-unassigned">Needs assignment</span>}
+        {service==='RF'&&<span>Refresh</span>}
+        {/^OUT(?:-[A-Z]{2,4})?$/i.test(service)&&<span>OUT</span>}
+        {/^OUT-([A-Z]{2,4})$/i.test(service)&&<span>Tips collected · {service.split('-')[1]}</span>}
+       </span>
+       {row.roomNotes?.trim()&&<span className="ths-ops-card-note" title={row.roomNotes}><strong>Room note</strong><span>{row.roomNotes}</span></span>}
       </span>
-      <span className="ths-ops-row-end"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18}/></span>
      </button>
     })}
     {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters. Clear search or select another category.</div>}
