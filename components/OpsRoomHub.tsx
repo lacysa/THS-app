@@ -282,7 +282,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         {data.vacancyDays>0&&<span><strong>Vacant</strong> {data.vacancyDays} consecutive day{data.vacancyDays===1?'':'s'} · condition tracked separately</span>}
         {data.tubCleanDue&&<span><strong>Tub clean</strong> Needed</span>}
         {data.serviceDetails?.tub_clean_completed_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tub cleaned</span>}
-        {data.serviceDetails?.tray_returned_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tray returned</span>
+        {data.serviceDetails?.tray_returned_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tray returned</span>}
         {daily?.breakfast_tag&&<span className="ops-hub-context-positive"><Check size={12}/> Breakfast included</span>}
         {selectedPackageNames.length>0&&<span className="ops-hub-context-package"><strong>Packages</strong> {selectedPackageNames.join(', ')}</span>}
        </div>
