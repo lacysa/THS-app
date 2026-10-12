@@ -35,7 +35,7 @@ export default function CorrectionReviewPanel({corrections,categorySummary,onSav
   const [history,setHistory]=useState<HistoryRow[]>([])
   const [historyLoading,setHistoryLoading]=useState(false)
 
-  const available=useMemo(()=>[...new Set([...DEFAULT_CATEGORIES,...categorySummary.map(c=>c.category),...corrections.flatMap(c=>c.categories)])].sort((a,b)=>a.localeCompare(b)),[corrections,categorySummary])
+  const available=useMemo(()=>[...new Set([...DEFAULT_CATEGORIES,...categorySummary.map(c=>c.category),...corrections.flatMap(c=>c.categories),...selected])].sort((a,b)=>a.localeCompare(b)),[corrections,categorySummary,selected])
   const filtered=useMemo(()=>corrections.filter(c=>
     (!category||c.categories.includes(category))&&(!unreviewedOnly||!c.reviewedAt)
   ),[corrections,category,unreviewedOnly])
