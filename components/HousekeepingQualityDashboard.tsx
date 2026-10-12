@@ -2,8 +2,9 @@
 
 import { useEffect,useMemo,useState } from 'react'
 import { AlertTriangle,BarChart3,CheckCircle2,RefreshCw,ShieldCheck,Users } from 'lucide-react'
+import CorrectionReviewPanel from '@/components/CorrectionReviewPanel'
 
-type RoomCorrection={categories:string[];id:string;serviceDate:string;roomName:string;housekeeperId:string|null;housekeeperName:string|null;assignedTo:string|null;note:string;resolved:boolean;createdAt:string}
+type RoomCorrection={categories:string[];reviewedAt:string|null;reviewedBy:string|null;id:string;serviceDate:string;roomName:string;housekeeperId:string|null;housekeeperName:string|null;assignedTo:string|null;note:string;resolved:boolean;createdAt:string}
 type Miss={itemId:string;label:string;zone:string;count:number}
 type Individual={
   housekeeperId:string
@@ -84,8 +85,9 @@ export default function HousekeepingQualityDashboard(){
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
 
-  async function load(){
-    setLoading(true);setError('')
+  async function load(silent=false){
+    if(!silent) setLoading(true)
+    setError('')
     try{
       const r=await fetch('/api/housekeeping/quality?days='+days,{cache:'no-store'})
       const d=await r.json().catch(()=>({}))
@@ -93,7 +95,7 @@ export default function HousekeepingQualityDashboard(){
       setData(d)
     }catch(e:any){
       setError(e?.message||'Could not load housekeeping quality trends.')
-    }finally{setLoading(false)}
+    }finally{if(!silent) setLoading(false)}
   }
 
   useEffect(()=>{void load()},[days])
@@ -160,34 +162,7 @@ export default function HousekeepingQualityDashboard(){
           </div>}
       </section>
 
-      <section className="quality-card">
-        <div className="quality-card-head"><div><BarChart3 size={17}/><span><strong>Recurring correction categories</strong><small>Automatically identified from fix notes; one note may contain multiple issues</small></span></div></div>
-        {(data.correctionCategoriesSummary||[]).length ? <div className="quality-miss-list">
-          {(data.correctionCategoriesSummary||[]).map((item,index)=><div className="quality-miss-row" key={item.category}>
-            <span className="rank">{index+1}</span>
-            <div><strong>{item.category}</strong><i><b style={{width:Math.max(4,item.count/Math.max(1,data.correctionCategoriesSummary[0].count)*100)+'%'}}/></i></div>
-            <strong>{item.count}</strong>
-          </div>)}
-        </div> : <div className="quality-empty-chart">No classified corrections in this date range.</div>}
-      </section>
-
-      <section className="quality-card">
-        <div className="quality-card-head">
-          <div><CheckCircle2 size={17}/><span><strong>Documented room corrections</strong><small>Fix notes from Room Operations, attributed to the assigned housekeeper. A reported issue and its resolution count as one correction.</small></span></div>
-          <strong>{data.documentedCorrections?.length||0}</strong>
-        </div>
-        {!data.documentedCorrections?.length?<div className="quality-empty-chart">No Room Operations corrections recorded in this range.</div>:
-          <div className="quality-person-bars">
-            {data.documentedCorrections.map(item=><div className="quality-person-row" key={item.id} style={{alignItems:'start',gap:12}}>
-              <div className="quality-person-name" style={{flex:'1 1 auto'}}>
-                <strong>{item.housekeeperName||('Unattributed'+(item.assignedTo?' (assigned: '+item.assignedTo+')':''))} · {item.roomName}</strong>
-                <small>{shortDate(item.serviceDate)} · {item.resolved?'Marked fixed':'Correction reported'}</small>
-                <div style={{fontSize:13,marginTop:5,overflowWrap:'anywhere'}}>{item.note}</div>
-                <small>Categories: {(item.categories||['Other / review']).join(' · ')}</small>
-              </div>
-            </div>)}
-          </div>}
-      </section>
+      <CorrectionReviewPanel corrections={data.documentedCorrections||[]} categorySummary={data.correctionCategoriesSummary||[]} onSaved={()=>load(true)}/>
 
       <section className="quality-card quality-table-card">
         <div className="quality-card-head">

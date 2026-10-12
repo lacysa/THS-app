@@ -36,6 +36,7 @@ function correctionCategories(value:string){
   const text=value.toLowerCase()
   const found=new Set<string>()
   if(/(?:water\s*spot|spotty|streak|fingerprint|smudge|cloudy).{0,45}(?:glass|cup|mirror|window)|(?:glass|cup|mirror|window).{0,45}(?:water\s*spot|spotty|streak|fingerprint|smudge|cloudy)/i.test(text))found.add('Glassware & mirrors: spots / streaks')
+  if(/(?:glass|glasses|cup|mirror|window).{0,50}(?:polish|buff)|(?:polish|buff).{0,50}(?:glass|glasses|cup|mirror|window)/i.test(text))found.add('Glassware & mirrors: polishing')
   if(/(?:missing|no|short|not enough|forgot).{0,40}(?:hanger|towel|robe|toiletr|amenit|supply)|(?:hanger|towel|robe).{0,25}missing/i.test(text))found.add('Missing amenities & supplies')
   if(/(?:water left|standing water|sink full|wet sink|water in the).{0,40}(?:sink|basin)|(?:sink|basin).{0,40}(?:water left|standing water)/i.test(text))found.add('Sink / kitchenette: water left')
   if(/(?:hair|dust|crumb|debris|dirt|dirty|trash|residue|stain|grease|sticky|not wiped|not cleaned)/i.test(text))found.add('Cleaning / surface debris')
@@ -56,6 +57,25 @@ export async function GET(req:NextRequest){
   const end=todayHotel()
   const start=addDays(end,-(days-1))
   const admin=createSupabaseAdmin()
+  const historyId=req.nextUrl.searchParams.get('history')
+  if(historyId){
+    if(!/^[a-f0-9-]{36}$/i.test(historyId)) return NextResponse.json({error:'Invalid correction ID.'},{status:400})
+    const {data:events,error:eventError}=await admin.from('housekeeping_correction_events').select('id').eq('id',historyId).eq('event_type','found').maybeSingle()
+    if(eventError) return NextResponse.json({error:eventError.message},{status:500})
+    if(!events) return NextResponse.json({error:'Correction not found.'},{status:404})
+    const {data:history,error:historyError}=await admin.from('housekeeping_correction_review_history')
+      .select('id,previous_categories,categories,previous_reviewed_at,reviewed_at,changed_by,changed_at')
+      .eq('correction_event_id',historyId).order('changed_at',{ascending:false}).limit(30)
+    if(historyError) return NextResponse.json({error:historyError.message},{status:500})
+    const ids=[...new Set((history||[]).map((row:any)=>row.changed_by).filter(Boolean))]
+    const {data:staff}=ids.length?await admin.from('staff_members').select('id,name').in('id',ids):{data:[]}
+    const names=new Map((staff||[]).map((p:any)=>[String(p.id),String(p.name||'Staff')]))
+    return NextResponse.json({history:(history||[]).map((row:any)=>({
+      id:row.id,previousCategories:row.previous_categories||[],categories:row.categories||[],
+      reviewedAt:row.reviewed_at,previousReviewedAt:row.previous_reviewed_at,
+      changedAt:row.changed_at,changedBy:names.get(String(row.changed_by))||'Former staff'
+    }))})
+  }
 
   try{
     const [{data:checks,error:checkErr},{data:discrepancies,error:discErr},{data:people,error:peopleErr},{data:items,error:itemErr},{data:corrections,error:correctionErr},{data:dailyAssignments,error:assignErr},{data:roomNames,error:roomErr}]=await Promise.all([
@@ -78,6 +98,15 @@ export async function GET(req:NextRequest){
     const error=checkErr||discErr||peopleErr||itemErr||correctionErr||assignErr||roomErr
     if(error) throw new Error(error.message)
 
+    const foundIds=(corrections||[]).filter((event:any)=>event.event_type==='found').map((event:any)=>String(event.id))
+    const {data:reviews,error:reviewError}=foundIds.length
+      ? await admin.from('housekeeping_correction_reviews')
+        .select('correction_event_id,categories,reviewed_at,reviewed_by').in('correction_event_id',foundIds)
+      : {data:[],error:null}
+    if(reviewError) throw new Error(reviewError.message)
+    const reviewById=new Map((reviews||[]).map((row:any)=>[String(row.correction_event_id),row]))
+    const reviewerNames=new Map((people||[]).map((person:any)=>[String(person.id),String(person.name||'Staff')]))
+
     // Room Operations correction history is an independent source from formal checklist inspections.
     // Count each "found" once; its matching "fixed" event is resolution, not another miss.
     const assignmentByRoomDay=new Map((dailyAssignments||[]).map((row:any)=>[
@@ -99,9 +128,12 @@ export async function GET(req:NextRequest){
         // Do not guess if there are multiple cleaners or ambiguous names.
         const matchedIds=idsByName.get(assignment.toLowerCase())||[]
         const housekeeperId=matchedIds.length===1?matchedIds[0]:null
+        const review:any=reviewById.get(String(event.id))
         return {id:String(event.id),serviceDate:String(event.service_date),roomName:roomNameById.get(String(event.room_id))||'Room',
           housekeeperId,housekeeperName:housekeeperId?assignment:null,assignedTo:assignment||null,
-          note:String(event.note||''),categories:correctionCategories(String(event.note||'')),resolved:fixedKeys.has(key),createdAt:String(event.created_at)}
+          note:String(event.note||''),categories:review?.categories?.length?review.categories:correctionCategories(String(event.note||'')),
+          reviewedAt:review?.reviewed_at||null,reviewedBy:review?.reviewed_by?reviewerNames.get(String(review.reviewed_by))||'Former staff':null,
+          resolved:fixedKeys.has(key),createdAt:String(event.created_at)}
       })
     const categoryCounts=new Map<string,number>()
     for(const entry of documentedCorrections)for(const category of entry.categories)categoryCounts.set(category,(categoryCounts.get(category)||0)+1)
@@ -210,4 +242,40 @@ export async function GET(req:NextRequest){
   }catch(error:any){
     return NextResponse.json({error:error?.message||'Could not load housekeeping quality trends.'},{status:500})
   }
+}
+
+export async function PATCH(req:NextRequest){
+  const access=await getStaffAccess()
+  if(!access) return NextResponse.json({error:'Unauthorized'},{status:401})
+  const manager=access.isAdmin||access.capabilities.some(c=>['manager','general_manager','operations_manager','owner'].includes(c))
+  if(!manager||access.isPreviewMode) return NextResponse.json({error:'Manager access required.'},{status:403})
+
+  const body=await req.json().catch(()=>null)
+  const id=String(body?.correctionId||'')
+  const action=body?.action
+  if(!/^[a-f0-9-]{36}$/i.test(id)||!['save','review'].includes(action)||!Array.isArray(body?.categories)){
+    return NextResponse.json({error:'Invalid correction review.'},{status:400})
+  }
+  const categories=[...new Set((body.categories as unknown[]).filter((v):v is string=>typeof v==='string').map(v=>v.trim()))]
+  if(categories.length<1||categories.length>8||categories.some(c=>c.length<2||c.length>80||/[\x00-\x1f<>]/.test(c))){
+    return NextResponse.json({error:'Choose 1–8 categories of 2–80 characters each.'},{status:400})
+  }
+
+  const admin=createSupabaseAdmin()
+  const [{data:correction,error:correctionError},{data:staff,error:staffError}]=await Promise.all([
+    admin.from('housekeeping_correction_events').select('id').eq('id',id).eq('event_type','found').maybeSingle(),
+    admin.from('staff_members').select('id,name').eq('auth_user_id',access.userId).eq('active',true).maybeSingle()
+  ])
+  if(correctionError||staffError) return NextResponse.json({error:correctionError?.message||staffError?.message},{status:500})
+  if(!correction) return NextResponse.json({error:'Correction not found.'},{status:404})
+  if(!staff) return NextResponse.json({error:'Your account is not linked to an active staff member.'},{status:403})
+
+  const reviewedAt=action==='review'?new Date().toISOString():null
+  const {data,error}=await admin.from('housekeeping_correction_reviews').upsert({
+    correction_event_id:id,categories,reviewed_at:reviewedAt,
+    reviewed_by:reviewedAt?staff.id:null,updated_by:staff.id,updated_at:new Date().toISOString()
+  },{onConflict:'correction_event_id'})
+    .select('correction_event_id,categories,reviewed_at').single()
+  if(error) return NextResponse.json({error:error.message},{status:500})
+  return NextResponse.json({ok:true,correctionId:id,categories:data.categories,reviewedAt:data.reviewed_at,reviewedBy:reviewedAt?staff.name:null})
 }
