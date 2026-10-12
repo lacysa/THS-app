@@ -1055,3 +1055,57 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 
 /* Readable note preview in Room Operations table; row click opens full note editor. */
 .ths-ops-note-preview{margin-top:7px;max-width:300px;padding:8px 10px;border:1px solid #d5e5ea;border-radius:9px;background:#f0f8f8;color:#35576a;font-size:12px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+
+
+/* Room Operations cards: table-equivalent detail in a readable mobile layout. */
+.ths-ops-room-row.ths-ops-room-card{
+ display:block;
+ padding:14px 16px;
+}
+.ths-ops-card-top{
+ display:flex;
+ align-items:flex-start;
+ justify-content:space-between;
+ gap:12px;
+ min-width:0;
+}
+.ths-ops-card-top .ths-ops-room-name{min-width:0;flex:1}
+.ths-ops-card-condition{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;color:#718895}
+.ths-ops-card-summary{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:8px 14px;
+ padding:7px 0 2px;
+}
+.ths-ops-card-field{display:grid;align-content:start;gap:3px;min-width:0}
+.ths-ops-card-label{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#718490}
+.ths-ops-card-value{font-size:13px;font-weight:650;color:#294556;overflow-wrap:anywhere}
+.ths-ops-room-card .ths-ops-tags{margin-top:4px}
+.ths-ops-card-note{
+ display:grid;
+ gap:4px;
+ min-width:0;
+ padding:9px 11px;
+ margin-top:3px;
+ border:1px solid #d7e6ea;
+ border-radius:10px;
+ background:linear-gradient(110deg,#eff8f8,#f5f3fc);
+ color:#35576a;
+}
+.ths-ops-card-note strong{font-size:11px;font-weight:800;color:#3a6373}
+.ths-ops-card-note>span{
+ font-size:12px;
+ line-height:1.45;
+ white-space:pre-wrap;
+ overflow-wrap:anywhere;
+ display:-webkit-box;
+ -webkit-box-orient:vertical;
+ -webkit-line-clamp:3;
+ line-clamp:3;
+ overflow:hidden;
+}
+@media(max-width:700px){
+ .ths-ops-room-row.ths-ops-room-card{padding:12px 13px}
+ .ths-ops-card-top{gap:8px}
+ .ths-ops-card-summary{gap:8px 10px}
+}
