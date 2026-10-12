@@ -5,8 +5,9 @@ import OpsActivityLog from '@/components/OpsActivityLog'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
+type ServiceDetails={expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null}
 type PackageOption={id:string;name:string;available:boolean}
-type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string}
+type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
 type View='room'|'guest'|'log'
 type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
@@ -55,6 +56,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [issueNote,setIssueNote]=useState('')
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
  const [roomOrder,setRoomOrder]=useState('')
+ const [times,setTimes]=useState({expectedArrivalTime:'',actualArrivalTime:'',lateCheckoutTime:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
  useEffect(()=>{setSections({room:true,guest:false,log:false});setActiveEditor(null);setShowDetails(false);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
@@ -63,7 +65,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   setError('')
   fetch('/api/ops/room?roomId='+encodeURIComponent(roomId)+'&date='+encodeURIComponent(date)+(reservationId?'&reservationId='+encodeURIComponent(reservationId):''),{cache:'no-store',signal:controller.signal})
    .then(async response=>{const value=await response.json();if(!response.ok)throw new Error(value.error||'Could not load room');return value as Data})
-   .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setManualPackageDraft(value.manualPackageIds||[]);setRoomOrder(value.daily?.clean_order==null?'':String(value.daily.clean_order))}})
+   .then(value=>{if(!controller.signal.aborted){setData(value);setRoomNotes(value.daily?.notes||'');setManualPackageDraft(value.manualPackageIds||[]);setRoomOrder(value.daily?.clean_order==null?'':String(value.daily.clean_order));setTimes({expectedArrivalTime:value.serviceDetails?.expected_arrival_time?.slice(0,5)||'',actualArrivalTime:value.serviceDetails?.actual_arrival_time?.slice(0,5)||'',lateCheckoutTime:value.serviceDetails?.late_checkout_time?.slice(0,5)||''})}})
    .catch(e=>{if(!controller.signal.aborted)setError(String(e.message||'Could not load room'))})
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
@@ -155,6 +157,19 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
    awaitingClean?'The room clean has not been marked complete.':
    refreshPending?'The requested refresh has not been marked complete.':''
 
+ async function saveTiming(){
+  await run('/api/ops/room-details',{roomId,date,action:'times',expectedArrivalTime:times.expectedArrivalTime||null,actualArrivalTime:times.actualArrivalTime||null,lateCheckoutTime:times.lateCheckoutTime||null},'Room timing saved')
+ }
+ async function serviceAction(action:'trayReturned'|'trayReset'|'tubRequest'|'tubComplete'|'tubReopen'){
+  await run('/api/ops/room-details',{roomId,date,action},action==='tubComplete'?'Tub cleaning recorded':action==='tubRequest'?'Tub cleaning requested':action==='tubReopen'?'Tub cleaning reopened':action==='trayReturned'?'Breakfast tray return recorded':'Tray return cleared')
+ }
+ async function advanceCondition(){
+  if(!daily||!canManage||busy||blocked||isStayover)return
+  const current=String(daily.room_condition||'').toLowerCase()
+  if(current==='dirty'||current==='vacant (dirty)')await changeCondition('Cleaning')
+  else if(current==='cleaning')await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{complete:true}},'Room queued for inspection')
+  else if(current==='ready for room check'&&!daily.inspected)setActiveEditor('inspection')
+ }
  async function changeCondition(condition:string){
   if(!daily||!canManage)return
   const patch:Record<string,unknown>={roomCondition:condition}
@@ -264,6 +279,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <div className="ops-hub-context">
         <span><strong>Activity</strong> {present(daily?.reservation_status)}</span>
         <span><strong>Inspection</strong> {daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</span>
+        {data.vacancyDays>0&&<span><strong>Vacant</strong> {data.vacancyDays} consecutive day{data.vacancyDays===1?'':'s'} · condition tracked separately</span>}
+        {data.tubCleanDue&&<span><strong>Tub clean</strong> Needed</span>}
+        {data.serviceDetails?.tub_clean_completed_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tub cleaned</span>}
+        {data.serviceDetails?.tray_returned_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tray returned</span>
         {daily?.breakfast_tag&&<span className="ops-hub-context-positive"><Check size={12}/> Breakfast included</span>}
         {selectedPackageNames.length>0&&<span className="ops-hub-context-package"><strong>Packages</strong> {selectedPackageNames.join(', ')}</span>}
        </div>
@@ -278,6 +297,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <div><span>Room note</span><p>{daily.notes}</p></div>
        {canManage&&<Pencil size={17} className="ops-hub-note-pencil"/>}
       </button>}
+      {canManage&&daily&&!blocked&&!isStayover&&/^(dirty|vacant \(dirty\)|cleaning|ready for room check)$/i.test(String(daily.room_condition||''))&&<button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void advanceCondition()}>{/dirty/i.test(String(daily.room_condition||''))?'Start cleaning':String(daily.room_condition).toLowerCase()==='cleaning'?'Finished cleaning · send to inspection':'Open room inspection'} <ChevronRight size={15}/></button>}
       <div className="ops-hub-quick-section">
        <span className="ops-hub-overline">Quick actions</span>
        <div className="ops-hub-quick-actions">
@@ -296,7 +316,21 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <button type="button" className={'ops-hub-quick-action'+(blocked?' selected warning':'')} aria-pressed={blocked} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('stripHold')}>
         <span className="ops-hub-quick-icon"><Ban size={18}/></span><span className="ops-hub-quick-name">Block room</span>{blocked&&<Check size={15} className="ops-hub-quick-check"/>}
        </button>
+       <button type="button" className={'ops-hub-quick-action'+(data.tubCleanDue?' selected':'')+(data.serviceDetails?.tub_clean_completed_at?' ops-hub-complete-card':'')} disabled={!canManage||!daily||busy||blocked} onClick={()=>void serviceAction(data.serviceDetails?.tub_clean_completed_at?'tubReopen':data.tubCleanDue?'tubComplete':'tubRequest')}>
+        <span className="ops-hub-quick-icon">🛁</span><span className="ops-hub-quick-name">Tub clean</span><small>{data.serviceDetails?.tub_clean_completed_at?'Done · reopen':data.tubCleanDue?'Needed · mark done':'Request'}</small>
+       </button>
+       <button type="button" className={'ops-hub-quick-action'+(data.serviceDetails?.tray_returned_at?' ops-hub-complete-card':'')} disabled={!canManage||!daily||busy} onClick={()=>void serviceAction(data.serviceDetails?.tray_returned_at?'trayReset':'trayReturned')}>
+        <span className="ops-hub-quick-icon"><Check size={18}/></span><span className="ops-hub-quick-name">Breakfast tray</span><small>{data.serviceDetails?.tray_returned_at?'Returned · undo':'Mark returned'}</small>
+       </button>
        </div>
+      </div>
+      <div className="ops-hub-quick-section">
+       <span className="ops-hub-overline">Room timing</span>
+       <div className="ops-hub-detail-cards">
+        {([{key:'expectedArrivalTime',label:'Expected arrival'},{key:'actualArrivalTime',label:'Actual arrival'},{key:'lateCheckoutTime',label:'Late checkout'}] as const).map(item=><label className="ops-hub-field" key={item.key}><span>{item.label}</span><input type="time" aria-label={item.label} value={times[item.key]} disabled={!canManage||!daily||busy} onChange={e=>setTimes(current=>({...current,[item.key]:e.target.value}))}/></label>)}
+       </div>
+       {canManage&&daily&&<button type="button" className="ops-hub-secondary" disabled={busy||(['expectedArrivalTime','actualArrivalTime','lateCheckoutTime'] as const).every(key=>times[key]===(data.serviceDetails?.[key==='expectedArrivalTime'?'expected_arrival_time':key==='actualArrivalTime'?'actual_arrival_time':'late_checkout_time']?.slice(0,5)||''))} onClick={()=>void saveTiming()}><Save size={15}/> Save room times</button>}
+       <small className="ops-hub-muted">Arrival and checkout times are operational notes, not changes to the PMS reservation.</small>
       </div>
       <section className="ops-hub-details-section">
        <button type="button" className="ops-hub-details-toggle" onClick={()=>setShowDetails(v=>!v)} aria-expanded={showDetails}>

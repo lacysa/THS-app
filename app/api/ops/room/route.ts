@@ -116,11 +116,36 @@ export async function GET(req:NextRequest){
  const packageOptions=(catalogResult.data||[]).map((p:any)=>({id:String(p.id),name:String(p.name),available:Boolean(p.available)}))
  const manualPackageIds=(packageResult.data||[]).filter((p:any)=>p.source==='manual').map((p:any)=>String(p.package_id))
  const importedPackageIds=(packageResult.data||[]).filter((p:any)=>p.source!=='manual').map((p:any)=>String(p.package_id))
+ // Keep service tracking separate from imported reservation dates and breakfast.
+ const [detailResult,vacancyResult,tubHistoryResult]=await Promise.all([
+  admin.from('room_ops_details').select('*').eq('room_id',roomId).eq('service_date',date).maybeSingle(),
+  admin.from('housekeeping_daily_rooms').select('service_date,reservation_status,strip_hold,room_condition').eq('room_id',roomId).lte('service_date',date).order('service_date',{ascending:false}).limit(45),
+  admin.from('room_ops_details').select('service_date').eq('room_id',roomId).not('tub_clean_completed_at','is',null).lte('service_date',date).order('service_date',{ascending:false}).limit(1)
+ ])
+ if(detailResult.error||vacancyResult.error||tubHistoryResult.error)return NextResponse.json({error:'Unable to load room service details'},{status:500})
+ const history=vacancyResult.data||[]
+ let vacancyDays=0
+ let oldestVacancyDay=''
+ let expectedDate=date
+ for(const day of history){
+  if(day.service_date!==expectedDate||String(day.reservation_status||'').toLowerCase()!=='vacant'||String(day.strip_hold||'').toLowerCase().includes('hold')||String(day.room_condition||'').toLowerCase()==='occupied')break
+  vacancyDays++
+  oldestVacancyDay=expectedDate
+  const yesterday=new Date(expectedDate+'T12:00:00Z')
+  yesterday.setUTCDate(yesterday.getUTCDate()-1)
+  expectedDate=yesterday.toISOString().slice(0,10)
+ }
+ const todayLocal=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+ const latestTubDate=String(tubHistoryResult.data?.[0]?.service_date||'')
+ const autoTubDue=date<=todayLocal&&vacancyDays>=3&&(!latestTubDate||latestTubDate<oldestVacancyDay)
+ const serviceDetails=detailResult.data||null
+ const tubCleanDue=!serviceDetails?.tub_clean_completed_at&&(Boolean(serviceDetails?.tub_clean_requested_at)||autoTubDue)
  const status=String(daily?.reservation_status||'').toLowerCase()
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
   permissions:{canManage,canInspect},staffNames,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
+  serviceDetails,autoTubDue,vacancyDays,tubCleanDue,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})

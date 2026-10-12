@@ -127,6 +127,34 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
     }
   }
 
+  async function clearPendingAssignments() {
+    if (busyRef.current || !data || data.readOnly) return
+    const pending = data.rooms.filter(room => room.assignedTo.trim() && !room.complete)
+    if (!pending.length) return
+    if (!window.confirm('Clear '+pending.length+' pending room assignment'+(pending.length===1?'':'s')+' for '+date+'? Completed rooms will keep their cleaner history.')) return
+    busyRef.current = true
+    setBusyRoom('bulk')
+    setError('')
+    setMessage('')
+    try {
+      const response = await fetch('/api/housekeeping/assignments', {
+        method: 'PATCH',
+        headers: {'content-type':'application/json'},
+        body: JSON.stringify({date,action:'clearPending'})
+      })
+      const result = await response.json().catch(()=>({}))
+      if (!response.ok) throw new Error(result.error || 'Could not clear pending assignments.')
+      setMessage(String(result.cleared||0)+' pending assignments cleared. Completed room records were preserved.')
+      refresh()
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    } catch (err:any) {
+      setError(err?.message || 'Unable to clear assignments.')
+    } finally {
+      busyRef.current = false
+      setBusyRoom('')
+    }
+  }
+
   function assignmentSelect(room: Room) {
     return <select
       aria-label={'Assign ' + room.roomName + ' to a housekeeper'}
@@ -238,6 +266,7 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
         <button type="button" className={view === 'staff' ? 'active' : ''} aria-pressed={view === 'staff'} onClick={() => setView('staff')}><UsersRound size={16}/> Scheduled staff</button>
         <button type="button" className={view === 'unassigned' ? 'active' : ''} aria-pressed={view === 'unassigned'} onClick={() => setView('unassigned')}><ClipboardList size={16}/> Rooms needing assignment {unassigned.length > 0 && <b>{unassigned.length}</b>}</button>
       </div>
+      {data && !data.readOnly && data.date === date && rooms.some(room => room.assignedTo.trim() && !room.complete) && <button type="button" className="hka-bottom-link" style={{marginLeft:'auto'}} disabled={Boolean(busyRoom)} onClick={()=>void clearPendingAssignments()}>Clear pending assignments</button>}
     </div>
     {error && <div className="hka-feedback error" role="alert">{error}</div>}
     {message && <div className="hka-feedback" role="status"><CheckCircle2 size={16}/> {message}</div>}

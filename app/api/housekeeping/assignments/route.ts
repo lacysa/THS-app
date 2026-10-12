@@ -101,3 +101,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error?.message || 'Could not load housekeeping assignments.' }, { status: 500 })
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  const access = await getStaffAccess()
+  if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const canManage = access.isAdmin || (access.capabilities || []).some(cap =>
+    ['manager', 'general_manager', 'operations_manager', 'owner'].includes(cap))
+  if (!canManage || access.isPreviewMode) return NextResponse.json({ error: 'Management access required.' }, { status: 403 })
+  const body = await req.json().catch(() => null)
+  if (!validDate(body?.date) || body?.action !== 'clearPending')
+    return NextResponse.json({ error: 'Invalid date or action.' }, { status: 400 })
+  const admin = createSupabaseAdmin()
+  // Preserve completed rooms' cleaner attribution, inspection and sign-offs.
+  const { data, error } = await admin.from('housekeeping_daily_rooms')
+    .update({ assigned_to: '', clean_order: null, updated_by: access.userId, updated_at: new Date().toISOString() })
+    .eq('service_date', body.date).eq('complete', false)
+    .not('assigned_to', 'is', null).neq('assigned_to', '')
+    .select('room_id')
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true, cleared: (data || []).length }, { headers: { 'cache-control': 'private, no-store' } })
+}
