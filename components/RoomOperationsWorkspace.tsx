@@ -9,7 +9,8 @@ import OpsRoomHub from '@/components/OpsRoomHub'
 import { NON_DESKTOP_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
-type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'
+type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'|'Vacant'
+type OpsRow=ReservationRow&{tubCleanDue?:boolean;tubCleanCompleted?:boolean}
 function reservationType(row:ReservationRow){
  const value=String(row.operationalStatus||row.status||'').toLowerCase()
  if(value.includes('out/in'))return 'Out/In'
@@ -85,7 +86,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   try{window.localStorage.setItem(isCompact?'ths-room-ops-view-mobile':'ths-room-ops-view-desktop',mode)}catch{}
  }
 
- const [liveRows,setLiveRows]=useState<ReservationRow[]>(rows)
+ const [liveRows,setLiveRows]=useState<OpsRow[]>(rows)
  useEffect(()=>{setLiveRows(rows)},[rows])
  useEffect(()=>{setDateInput(serviceDate)},[serviceDate])
  function chooseDate(date:string){
@@ -117,7 +118,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  },[serviceDate])
  const counts=useMemo(()=>{
   const count=(type:Category)=>liveRows.filter(row=>reservationType(row)===type).length
-  return {all:liveRows.length,Arrival:count('Arrival')+count('Out/In'),Stayover:count('Stayover'),Checkout:count('Checkout'),'Out/In':count('Out/In')}
+  return {all:liveRows.length,Arrival:count('Arrival')+count('Out/In'),Stayover:count('Stayover'),Checkout:count('Checkout'),'Out/In':count('Out/In'),Vacant:count('Vacant')}
  },[liveRows])
  const filtered=useMemo(()=>liveRows.filter(row=>{
   if(category!=='all'&&!(category==='Arrival'?['Arrival','Out/In'].includes(reservationType(row)):reservationType(row)===category))return false
@@ -137,7 +138,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     {isChangingDate&&<span className="ths-room-operations-date-loading" role="status">Updating rooms…</span>}
    </div>
    <div className="ths-ops-stats" aria-label="Daily room activity">
-    {(['Arrival','Stayover','Checkout','Out/In'] as const).map(type=><button key={type} type="button" aria-pressed={category===type} onClick={()=>setCategory(category===type?'all':type)}><strong>{counts[type]}</strong><span>{type==='Arrival'?'Arrivals':type==='Stayover'?'Stayovers':type==='Checkout'?'Checkouts':'Out / In'}</span></button>)}
+    {(['Arrival','Stayover','Checkout','Out/In','Vacant'] as const).map(type=><button key={type} type="button" aria-pressed={category===type} onClick={()=>setCategory(category===type?'all':type)}><strong>{counts[type]}</strong><span>{type==='Arrival'?'Arrivals':type==='Stayover'?'Stayovers':type==='Checkout'?'Checkouts':type==='Vacant'?'Vacant':'Out / In'}</span></button>)}
    </div>
    <div className="ths-ops-list-heading">
     <strong>Rooms <span>{filtered.length} of {counts.all}</span></strong>
@@ -170,6 +171,10 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
          {row.breakfastTag&&<span>Breakfast</span>}
          {row.lateArrival&&<span>Late arrival</span>}
          {row.checkIssueOpen&&<span className="alert">Inspection issue</span>}
+        {row.tubCleanDue&&<span className="alert">Tub clean needed</span>}
+        {row.tubCleanCompleted&&<span>Tub cleaned</span>}
+         {row.tubCleanDue&&<span className="alert">Tub clean needed</span>}
+         {row.tubCleanCompleted&&<span>Tub cleaned</span>}
          {row.roomNotes&&<span>Room note</span>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span>Tips · {String(row.serviceType).split('-')[1]}</span>}
         </span>
