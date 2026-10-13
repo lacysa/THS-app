@@ -15,22 +15,47 @@ export async function GET(req:NextRequest){
   if(!/^20\d{2}-\d{2}-\d{2}$/.test(start)||Number.isNaN(Date.parse(start+'T12:00:00Z')))return NextResponse.json({error:'Invalid start date'},{status:400})
   const end=addDay(start,6)
   const admin=createSupabaseAdmin()
-  const [roomsRes,linksRes,housekeepingRes]=await Promise.all([
+  const [roomsRes,linksRes,housekeepingRes,historyRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('service_date,room_id,reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').gte('service_date',start).lte('service_date',end),
-    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,late_arrival,notes').gte('service_date',start).lte('service_date',end)
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,late_arrival,notes').gte('service_date',start).lte('service_date',end),
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,room_condition').lt('service_date',start).not('room_condition','is',null).order('service_date',{ascending:false}).limit(3000)
   ])
-  if(roomsRes.error||linksRes.error||housekeepingRes.error)return NextResponse.json({error:'Could not load calendar'},{status:500})
+  if(roomsRes.error||linksRes.error||housekeepingRes.error||historyRes.error)return NextResponse.json({error:'Could not load calendar'},{status:500})
   const links=linksRes.data||[]
   const ids=[...new Set(links.flatMap((l:any)=>[l.primary_reservation_id,l.arriving_reservation_id,l.stay_reservation_id,l.departing_reservation_id]).filter(Boolean).map(String))]
   const stays=ids.length?(await admin.from('reservation_stays').select('id,guest_name,arrival_date,checkout_date').in('id',ids)):null
   if(stays?.error)return NextResponse.json({error:'Could not load guest stays'},{status:500})
   const byId=new Map((stays?.data||[]).map((s:any)=>[String(s.id),s]))
   const conditions=new Map((housekeepingRes.data||[]).map((h:any)=>[String(h.service_date)+'|'+String(h.room_id),h]))
+  // For blank calendar dates, carry the latest recorded condition forward.
+  // A condition entered on the actual date always wins. Never manufacture
+  // a clean/ready state from missing historical data.
+  const statusByDate=new Map<string,any>()
+  const lastByRoom=new Map<string,string>()
+  for(const row of [...(historyRes.data||[])].reverse()){
+    const condition=String((row as any).room_condition||'').trim()
+    if(condition)lastByRoom.set(String((row as any).room_id),condition)
+  }
+  const days=Array.from({length:7},(_,i)=>addDay(start,i))
+  for(const day of days){
+    for(const room of roomsRes.data||[]){
+      const roomId=String((room as any).id)
+      const recorded:any=conditions.get(day+'|'+roomId)
+      const direct=String(recorded?.room_condition||'').trim()
+      if(direct)lastByRoom.set(roomId,direct)
+      statusByDate.set(day+'|'+roomId,{
+        date:day,roomId,condition:direct||lastByRoom.get(roomId)||'',
+        status:String(recorded?.reservation_status||''),
+        blocked:String(recorded?.strip_hold||'').toLowerCase().includes('hold')||direct.toLowerCase()==='blocked',
+        inherited:!direct
+      })
+    }
+  }
   return NextResponse.json({
     start,
     canRemove,
-    days:Array.from({length:7},(_,i)=>addDay(start,i)),
+    days,
     rooms:(roomsRes.data||[]).map((r:any)=>({id:String(r.id),name:String(r.name)})),
     cells:links.map((l:any)=>{
       const stayId=l.stay_reservation_id||l.arriving_reservation_id||l.primary_reservation_id||l.departing_reservation_id
@@ -38,7 +63,7 @@ export async function GET(req:NextRequest){
       const h:any=conditions.get(String(l.service_date)+'|'+String(l.room_id))||{}
       return {reservationId:String(stayId||''),date:String(l.service_date),roomId:String(l.room_id),status:String(l.reservation_status||h.reservation_status||'Vacant'),guest:String(stay.guest_name||''),arrival:String(stay.arrival_date||''),departure:String(stay.checkout_date||''),blocked:String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked',condition:String(h.room_condition||''),lateArrival:Boolean(h.late_arrival)}
     }),
-    roomStatuses:(housekeepingRes.data||[]).map((h:any)=>({date:String(h.service_date),roomId:String(h.room_id),condition:String(h.room_condition||''),status:String(h.reservation_status||''),blocked:String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked'})),
+    roomStatuses:[...statusByDate.values()],
     notes:(housekeepingRes.data||[]).filter((h:any)=>String(h.notes||'').trim()).map((h:any)=>({date:String(h.service_date),roomId:String(h.room_id),text:String(h.notes).trim()})),
     holds:(housekeepingRes.data||[]).filter((h:any)=>String(h.strip_hold||'').toLowerCase().includes('hold')||String(h.room_condition||'').toLowerCase()==='blocked').map((h:any)=>({date:String(h.service_date),roomId:String(h.room_id)}))
   },{headers:{'cache-control':'private, no-store'}})
