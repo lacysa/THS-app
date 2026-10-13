@@ -97,7 +97,7 @@ export async function GET(req:NextRequest){
  const staffResult=canManage?await admin.from('staff_members').select('name,auth_user_id').eq('active',true).order('name'):null
  if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
  const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
- const mentionableStaff=(staffResult?.data||[]).filter((m:any)=>m.auth_user_id&&m.name).map((m:any)=>({name:String(m.name).trim(),userId:String(m.auth_user_id)}))
+ const mentionableStaff=(staffResult?.data||[]).filter((m:any)=>m.name).map((m:any)=>({name:String(m.name).trim(),userId:String(m.auth_user_id||'')}))
  // Keep the legacy OUT-XX envelope initial format used by Housekeeping.
  // Match the existing staff initials mapping so the same manager shows consistently.
  const managerText=[gate.access.name,gate.access.preferredName,gate.access.email].filter(Boolean).join(' ').toLowerCase()
