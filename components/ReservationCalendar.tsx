@@ -150,12 +150,13 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
               const note=notes.get(day+'|'+room.id)
               const roomStatus=roomStatuses.get(day+'|'+room.id)
               const condition=roomStatus?.condition?.trim()||''
-              const statusText=blocked?'Blocked':condition||((roomStatus?.status||'').toLowerCase()==='vacant'?'Vacant · condition unknown':'')
+              const statusText=blocked?'Blocked':condition||''
+              const compactStatus=statusText.replace(/^Vacant \((Clean|Dirty)\)$/i,'$1').replace(/^Ready for Room Check$/i,'Needs check')
               const coveredByStay=[...stays.values()].some(stay=>day>=stay.arrival&&day<stay.departure)
               return <div key={day} data-service-date={day} style={{gridColumn:dayIndex+1,gridRow:1}} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')}>
-                <button type="button" className={'ths-calendar-empty-slot'+(note&&!coveredByStay?' has-note':'')} title={[room.name,pretty(day),!coveredByStay?statusText:'',!coveredByStay?note?.text:''].filter(Boolean).join(' · ')} aria-label={['Open '+room.name+' on '+pretty(day),!coveredByStay?statusText:'',!coveredByStay?note?.text:''].filter(Boolean).join(' · ')} onClick={()=>setActiveRoom({roomId:room.id,date:day})}>
-                  {!coveredByStay&&statusText&&<span className="ths-calendar-note-text" style={{fontWeight:700}}>{statusText}</span>}
-                  {note&&!coveredByStay&&<span className="ths-calendar-note-text">{note.text}</span>}
+                <button type="button" className={'ths-calendar-empty-slot'+(note&&!coveredByStay?' has-note':'')+(statusText&&!coveredByStay?' has-status':'')} title={[room.name,pretty(day),!coveredByStay?statusText:'',!coveredByStay?note?.text:''].filter(Boolean).join(' · ')} aria-label={['Open '+room.name+' on '+pretty(day),!coveredByStay?statusText:'',!coveredByStay?note?.text:''].filter(Boolean).join(' · ')} onClick={()=>setActiveRoom({roomId:room.id,date:day})}>
+                  {!coveredByStay&&statusText&&<span className="ths-calendar-status-chip" title={statusText}>{compactStatus}</span>}
+                  {note&&!coveredByStay&&<span className="ths-calendar-note-text" title={note.text}>{note.text}</span>}
                 </button>
               </div>
             })}
