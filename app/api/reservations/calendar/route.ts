@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
+import {ymdInHotelTz} from '@/lib/time'
 
 export const dynamic='force-dynamic'
 function addDay(day:string,days:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
@@ -38,6 +39,8 @@ export async function GET(req:NextRequest){
     if(condition)lastByRoom.set(String((row as any).room_id),condition)
   }
   const days=Array.from({length:7},(_,i)=>addDay(start,i))
+  const today=ymdInHotelTz()
+  const tomorrow=addDay(today,1)
   for(const day of days){
     for(const room of roomsRes.data||[]){
       const roomId=String((room as any).id)
@@ -45,7 +48,7 @@ export async function GET(req:NextRequest){
       const direct=String(recorded?.room_condition||'').trim()
       if(direct)lastByRoom.set(roomId,direct)
       statusByDate.set(day+'|'+roomId,{
-        date:day,roomId,condition:direct||lastByRoom.get(roomId)||'',
+        date:day,roomId,condition:(day===today||day===tomorrow)?(direct||lastByRoom.get(roomId)||''):'',
         status:String(recorded?.reservation_status||''),
         blocked:String(recorded?.strip_hold||'').toLowerCase().includes('hold')||direct.toLowerCase()==='blocked',
         inherited:!direct
