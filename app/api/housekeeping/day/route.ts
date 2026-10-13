@@ -199,9 +199,14 @@ export async function GET(req: NextRequest) {
       breakfastByRoom.set(roomId, booking)
     }
 
+    const { data: deepTasks, error: deepError } = await admin.from('housekeeping_deep_clean_tasks')
+      .select('room_id,assigned_to,instructions,completed_at').eq('service_date',serviceDate)
+    if (deepError) throw new Error(deepError.message)
+    const deepByRoom = new Map((deepTasks || []).map((task:any)=>[String(task.room_id),task]))
     const tubStates = await loadTubTaskStates(admin,serviceDate)
     const rows = (rooms || []).map((room: any) => {
       const savedRow = savedByRoom.get(String(room.id)) || {}
+      const deep:any = deepByRoom.get(String(room.id))
       const breakfast = breakfastByRoom.get(String(room.id))
 
       let breakfastStatus: 'none' | 'needed' | 'received' | 'declined' = 'none'
@@ -213,6 +218,7 @@ export async function GET(req: NextRequest) {
         roomId: room.id,
         roomName: room.name,
         sortOrder: room.sort_order,
+        deepClean: deep ? { assignedTo:String(deep.assigned_to||''), instructions:String(deep.instructions||''), completed:Boolean(deep.completed_at) } : null,
         tubCleanDue: Boolean(tubStates.get(String(room.id))?.due),
         tubCleanCompleted: Boolean(tubStates.get(String(room.id))?.completed),
         reservationStatus: savedRow.reservation_status || '',
@@ -284,7 +290,8 @@ export async function GET(req: NextRequest) {
             .filter(Boolean)
           const assignedToMe=assigned.includes(String(currentPerson.name || '').trim().toLowerCase())
           // Show all stayovers for scheduling visibility; only unassigned RF rooms can be claimed.
-          return assignedToMe || Boolean(row.claimableRefresh) || String(row.reservationStatus||'').trim().toLowerCase()==='stayover'
+          const deepAssignedToMe=String(row.deepClean?.assignedTo||'').trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()
+          return assignedToMe || deepAssignedToMe || Boolean(row.claimableRefresh) || String(row.reservationStatus||'').trim().toLowerCase()==='stayover'
         })
       : rows
 
@@ -328,6 +335,7 @@ export async function GET(req: NextRequest) {
       serviceType:row.serviceType,
       notes:row.notes,
       complete:row.complete,
+      deepClean:row.deepClean,
       isMine:Boolean(currentPerson && String(row.assignedTo||'').split(',').some((name:string)=>name.trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()))
     })) : []
 
