@@ -18,7 +18,8 @@ import {
   X
 } from 'lucide-react'
 
-type DailyOverviewRow={roomId:string;roomName:string;reservationStatus:string;assignedTo:string;roomCondition:string;serviceType:string;notes:string;complete:boolean;isMine:boolean}
+type DeepCleanInfo={assignedTo:string;instructions:string;completed:boolean}
+type DailyOverviewRow={deepClean?:DeepCleanInfo|null;roomId:string;roomName:string;reservationStatus:string;assignedTo:string;roomCondition:string;serviceType:string;notes:string;complete:boolean;isMine:boolean}
 type Access={
   userId?:string|null
   name?:string|null
@@ -33,6 +34,7 @@ type Access={
 type StaffOption={id:string;name:string;roleLabel?:string;fullRoomCleanLimit?:number}
 type PackageOption={id:string;name:string;price:number|null;available:boolean}
 type RoomRow={
+  deepClean?:DeepCleanInfo|null
   roomId:string
   roomName:string
   sortOrder:number
@@ -664,7 +666,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     return state==='ready'
   }),[rows,filter,checkByRoom])
 
-  const searchedRows=useMemo(()=>filtered.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[filtered,roomSearch])
+  const searchedRows=useMemo(()=>filtered.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType} ${row.deepClean?'deep clean '+row.deepClean.assignedTo+' '+row.deepClean.instructions:''}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[filtered,roomSearch])
   const selectedRow=(initialRoomId?rows.find(row=>row.roomId===selectedRoomId):undefined)||searchedRows.find(row=>row.roomId===selectedRoomId)||searchedRows[0]
   const displayRows=(managerDisplay==='focus'||Boolean(initialRoomId))?(selectedRow?[selectedRow]:[]):searchedRows
   function focusRoom(row:RoomRow){setSelectedRoomId(row.roomId);setExpanded(current=>({...current,[row.roomId]:true}));}
@@ -696,7 +698,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       <div className="rooms-staff-overview-head"><strong>Daily room overview</strong><span>Read-only context for all rooms. Only your assigned rooms can be updated below.</span></div>
       <div className="rooms-staff-overview-scroll"><table><thead><tr><th>Room</th><th>Activity</th><th>Housekeeper</th><th>Condition</th><th>Room notes</th></tr></thead><tbody>
       {dailyOverview.map(row=><tr key={row.roomId} className={row.isMine?'is-mine':''}>
-        <th scope="row">{row.roomName}{row.isMine&&<small>Your room</small>}</th>
+        <th scope="row">{row.roomName}{row.deepClean&&<small>Deep clean {row.deepClean.completed?'complete':'needed'} · {row.deepClean.assignedTo||'Unassigned'}{row.deepClean.instructions?' · '+row.deepClean.instructions:''}</small>}{row.isMine&&<small>Your room</small>}</th>
         <td><span className="rooms-staff-daily-status">{row.reservationStatus||'—'}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-staff-out-tag">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-staff-tip-tag">Tips · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span></td>
         <td>{row.assignedTo?.trim()||'Unassigned'}</td>
         <td>{row.roomCondition||'Not recorded'}</td>
@@ -741,7 +743,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
       <div className="rooms-room-picker" role="group" aria-label="Select room">
         {searchedRows.map(row=>{const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen});return <button type="button" key={row.roomId} aria-pressed={selectedRow?.roomId===row.roomId} className={`rooms-picker-item ${state} ${selectedRow?.roomId===row.roomId?'chosen':''}`} onClick={()=>focusRoom(row)}>
-          <span className="rooms-picker-name">{row.roomName}</span>{row.lateArrival&&<span className="rooms-late-chip">Late arrival</span>}<span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span>{row.breakfastTag&&<span className="rooms-breakfast-chip">Breakfast</span>}<span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':isRefresh(row)?(row.complete?'Refresh complete':'Refresh requested'):state==='occupied'?'Occupied · no service':normalize(row.roomCondition)==='vacant (dirty)'?'Dirty · needs clean':'Needs cleaning'}</span>{row.notes?.trim()&&<span className="rooms-picker-note" title={row.notes}>Notes: {row.notes}</span>}
+          <span className="rooms-picker-name">{row.roomName}</span>{row.lateArrival&&<span className="rooms-late-chip">Late arrival</span>}<span className="rooms-picker-sub">{row.serviceType||row.reservationStatus||'Room'}{row.assignedTo?` · ${row.assignedTo}`:''}</span>{row.deepClean&&<span className="rooms-daily-out">Deep clean {row.deepClean.completed?'done':'needed'}</span>}{row.breakfastTag&&<span className="rooms-breakfast-chip">Breakfast</span>}<span className="rooms-picker-state">{state==='blocked'?'Blocked':state==='correction'?'Fix needed':state==='self'?'Self-check':state==='inspection'||state==='final'?'Inspect':state==='ready'?'Ready':isRefresh(row)?(row.complete?'Refresh complete':'Refresh requested'):state==='occupied'?'Occupied · no service':normalize(row.roomCondition)==='vacant (dirty)'?'Dirty · needs clean':'Needs cleaning'}</span>{row.notes?.trim()&&<span className="rooms-picker-note" title={row.notes}>Notes: {row.notes}</span>}
         </button>})}
       </div>
       <div className="rooms-focus-heading rooms-focus-detail-title"><strong>Room details</strong><span>Changes save without leaving this page</span></div>
@@ -778,7 +780,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
                       <td className="rooms-table-sticky">
                         <button type="button" className="rooms-table-room" onClick={()=>openRoomCard(row)}>
                           <strong>{row.roomName}</strong>
-                          <small>{row.reservationStatus||'No status'}</small>
+                          <small>{row.reservationStatus||'No status'}{row.deepClean?' · Deep clean '+(row.deepClean.completed?'complete':'needed'):''}</small>
                         </button>
                       </td>
                       <td><select aria-label="Stay status" className="rooms-table-status-select" value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(status=><option key={status} value={status}>{status||'—'}</option>)}</select><button type="button" className="rooms-table-hold" onClick={()=>patch(row.roomId,{stripHold:isBlocked(row)?'':'Hold'})}>{isBlocked(row)?'Release hold':'Block'}</button></td>
@@ -819,7 +821,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
                         </details>
                       </td>
                       <td>
-                        <input className="rooms-table-notes" value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Notes"/>
+                        {row.deepClean&&<div style={{fontSize:12,marginBottom:5}}><strong>Deep clean {row.deepClean.completed?'complete':'needed'}</strong> · {row.deepClean.assignedTo||'Unassigned'}{row.deepClean.instructions?' · '+row.deepClean.instructions:''}</div>}<input className="rooms-table-notes" value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Notes"/>
                       </td>
                     </tr>
                   })}
@@ -847,7 +849,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
             }}>
               <div className="rooms-card-title">
                 <span className="rooms-chevron">{isOpen?<ChevronDown size={18}/>:<ChevronRight size={18}/>}</span>
-                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType&&!/^OUT(?:-[A-Z]{2,4})?$/i.test(row.serviceType.trim())?` · ${row.serviceType}`:''}</small><span className="rooms-card-daily-tags">{row.tubCleanDue&&<span className="rooms-daily-out">Tub clean needed</span>}{row.tubCleanCompleted&&<span className="rooms-daily-tips">Tub cleaned</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-out">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-tips">Tips collected · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span><span className={row.assignedTo?.trim()?'rooms-assigned-housekeeper':'rooms-assigned-housekeeper unassigned'}><UserRoundCheck size={13}/>{row.assignedTo?.trim()||'Unassigned'}</span></span>
+                <span><strong>{row.roomName}</strong><small>{row.reservationStatus||'No status'}{row.serviceType&&!/^OUT(?:-[A-Z]{2,4})?$/i.test(row.serviceType.trim())?` · ${row.serviceType}`:''}</small><span className="rooms-card-daily-tags">{row.deepClean&&<span className={row.deepClean.completed?'rooms-daily-tips':'rooms-daily-out'}>Deep clean {row.deepClean.completed?'complete':'needed'}{row.deepClean.assignedTo?' · '+row.deepClean.assignedTo:''}</span>}{row.tubCleanDue&&<span className="rooms-daily-out">Tub clean needed</span>}{row.tubCleanCompleted&&<span className="rooms-daily-tips">Tub cleaned</span>}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-out">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-daily-tips">Tips collected · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span><span className={row.assignedTo?.trim()?'rooms-assigned-housekeeper':'rooms-assigned-housekeeper unassigned'}><UserRoundCheck size={13}/>{row.assignedTo?.trim()||'Unassigned'}</span></span>
               </div>
               <div className={`rooms-state-pill ${state}`}>
                 {roomWorkflowLabel(effectiveRow)}
@@ -855,6 +857,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
             </button>
 
             {!isOpen&&isManager(access)&&!isBlocked(row)&&!isStayover(row)&&<div className="rooms-dirty-action"><button type="button" className="ops-secondary-btn" disabled={normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected} onClick={()=>void markRoomDirty(row)}><AlertTriangle size={15}/>{normalize(row.roomCondition)==='vacant (dirty)'&&!row.complete&&!row.inspected?'Marked dirty':'Mark dirty · reopen clean'}</button></div>}
+            {row.deepClean&&<div className="rooms-card-note"><strong>Deep clean {row.deepClean.completed?'completed':'scheduled'}:</strong> {row.deepClean.assignedTo||'Unassigned'}{row.deepClean.instructions?' · '+row.deepClean.instructions:''}</div>}
             {!isOpen&&row.notes?.trim()&&<div className="rooms-card-note" title={row.notes}><strong>Room notes:</strong> {row.notes}</div>}
             {!isOpen&&!isBlocked(row)&&<div className="rooms-progress-summary" aria-label="Room workflow progress">
               {requiresRoomCheck(row)
