@@ -118,16 +118,17 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   const previouslyMentioned=new Set((data?.mentionableStaff||[]).filter(s=>previous.toLocaleLowerCase().includes('@'+s.name.toLocaleLowerCase())).map(s=>s.userId))
   const tagged=(data?.mentionableStaff||[]).filter(s=>s.userId&&roomNotes.toLocaleLowerCase().includes('@'+s.name.toLocaleLowerCase())&&!previouslyMentioned.has(s.userId)).map(s=>s.userId)
   const allNew=/(?:^|\s)@everyone\b/i.test(roomNotes)&&!/(?:^|\s)@everyone\b/i.test(previous)
-  if(!tagged.length&&!allNew)return
+  const todayNew=/(?:^|\s)@today\b/i.test(roomNotes)&&!/(?:^|\s)@today\b/i.test(previous)
+  if(!tagged.length&&!allNew&&!todayNew)return
   try{
-   const response=await fetch('/api/ops/mentions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomId,date,note:roomNotes,userIds:tagged,everyone:allNew})})
+   const response=await fetch('/api/ops/mentions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomId,date,note:roomNotes,userIds:tagged,everyone:allNew,today:todayNew})})
    const value=await response.json().catch(()=>({}))
    if(!response.ok)throw new Error(value.error||'Mention notification failed')
    setMessage('Room notes saved · '+value.count+' staff notification'+(value.count===1?'':'s')+' sent')
    window.dispatchEvent(new CustomEvent('ths:notifications-refresh'))
   }catch(e:any){setError('Room notes saved, but @mention delivery failed: '+String(e.message||e))}
  }
- const mentionMatches=mentionSearch===null?[]:[{name:'everyone',userId:'__everyone__'},...(data?.mentionableStaff||[])].filter(s=>s.name.toLocaleLowerCase().includes(mentionSearch.toLocaleLowerCase())).slice(0,50)
+ const mentionMatches=mentionSearch===null?[]:[{name:'everyone',userId:'__everyone__'},{name:'today',userId:'__today__'},...(data?.mentionableStaff||[])].filter(s=>s.name.toLocaleLowerCase().includes(mentionSearch.toLocaleLowerCase())).slice(0,50)
  const daily=data?.daily
  const isStayover=String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'
  const currentHousekeeper=String(daily?.assigned_to||'').trim()
