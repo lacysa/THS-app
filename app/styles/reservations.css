@@ -1109,3 +1109,11 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
  .ths-ops-card-top{gap:8px}
  .ths-ops-card-summary{gap:8px 10px}
 }
+
+/* Ops timeline: keep room status and notes readable in narrow day cells. */
+.ths-calendar-empty-slot.has-status{flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;overflow:hidden;padding:6px 7px}
+.ths-calendar-empty-slot.has-status.has-note{justify-content:center;padding:5px 7px}
+.ths-calendar-status-chip{display:block;box-sizing:border-box;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:6px;padding:3px 6px;background:#e1eff0;color:#234d59;font:700 10px/13px Arial,Helvetica,sans-serif}
+.ths-calendar-empty-slot.has-status>.ths-calendar-note-text{display:-webkit-box;max-width:100%;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:normal;word-break:normal;white-space:normal;text-overflow:ellipsis;font:600 10px/13px Arial,Helvetica,sans-serif!important}
+.ths-calendar-empty-slot.has-note:not(.has-status){align-items:flex-start;justify-content:center}
+.ths-calendar-empty-slot.has-note>.ths-calendar-note-text{overflow-wrap:normal;word-break:normal}
