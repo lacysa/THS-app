@@ -116,17 +116,18 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   if(!ok)return
   setActiveEditor(null);setMentionSearch(null)
   const previouslyMentioned=new Set((data?.mentionableStaff||[]).filter(s=>previous.toLocaleLowerCase().includes('@'+s.name.toLocaleLowerCase())).map(s=>s.userId))
-  const tagged=(data?.mentionableStaff||[]).filter(s=>roomNotes.toLocaleLowerCase().includes('@'+s.name.toLocaleLowerCase())&&!previouslyMentioned.has(s.userId)).map(s=>s.userId)
-  if(!tagged.length)return
+  const tagged=(data?.mentionableStaff||[]).filter(s=>s.userId&&roomNotes.toLocaleLowerCase().includes('@'+s.name.toLocaleLowerCase())&&!previouslyMentioned.has(s.userId)).map(s=>s.userId)
+  const allNew=/(?:^|\s)@everyone\b/i.test(roomNotes)&&!/(?:^|\s)@everyone\b/i.test(previous)
+  if(!tagged.length&&!allNew)return
   try{
-   const response=await fetch('/api/ops/mentions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomId,date,note:roomNotes,userIds:tagged})})
+   const response=await fetch('/api/ops/mentions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roomId,date,note:roomNotes,userIds:tagged,everyone:allNew})})
    const value=await response.json().catch(()=>({}))
    if(!response.ok)throw new Error(value.error||'Mention notification failed')
    setMessage('Room notes saved · '+value.count+' staff notification'+(value.count===1?'':'s')+' sent')
    window.dispatchEvent(new CustomEvent('ths:notifications-refresh'))
   }catch(e:any){setError('Room notes saved, but @mention delivery failed: '+String(e.message||e))}
  }
- const mentionMatches=mentionSearch===null?[]:(data?.mentionableStaff||[]).filter(s=>s.name.toLocaleLowerCase().includes(mentionSearch.toLocaleLowerCase())).slice(0,7)
+ const mentionMatches=mentionSearch===null?[]:[{name:'everyone',userId:'__everyone__'},...(data?.mentionableStaff||[])].filter(s=>s.name.toLocaleLowerCase().includes(mentionSearch.toLocaleLowerCase())).slice(0,50)
  const daily=data?.daily
  const isStayover=String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'
  const currentHousekeeper=String(daily?.assigned_to||'').trim()
@@ -384,7 +385,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
          return <label key={p.id}><input type="checkbox" checked={checked} disabled={busy||isImported} onChange={e=>setManualPackageDraft(current=>e.target.checked?[...new Set([...current,p.id])]:current.filter(id=>id!==p.id))}/><span>{p.name}</span>{isImported&&<small>From PMS</small>}</label>
        })}</div><button type="button" className="ops-hub-primary" disabled={busy||JSON.stringify([...manualPackageDraft].sort())===JSON.stringify([...(data.manualPackageIds||[])].sort())} onClick={()=>void savePackages()}><Save size={15}/> Save selected packages</button><small>Multiple selections allowed. Imported packages cannot be removed here.</small></>}
        {activeEditor==='clean_order'&&canManage&&<div className="ops-hub-inline-form"><input aria-label="Cleaning order" type="number" inputMode="numeric" min="1" value={roomOrder} disabled={busy} onChange={e=>setRoomOrder(e.target.value)}/><button type="button" className="ops-hub-primary" disabled={busy} onClick={()=>void run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{cleanOrder:roomOrder.trim()?Number(roomOrder):null}},'Cleaning order updated').then(ok=>{if(ok)setActiveEditor(null)})}>Save order</button></div>}
-       {activeEditor==='room_notes'&&canManage&&<div className="ops-hub-inline-form"><textarea ref={roomNoteInput} rows={3} aria-label="Room notes" value={roomNotes} disabled={busy} onChange={e=>{setRoomNotes(e.target.value);updateMentionQuery(e.target.value,e.target.selectionStart)}} onClick={e=>updateMentionQuery(roomNotes,e.currentTarget.selectionStart)} placeholder="Type @ to mention a staff member"/>{mentionSearch!==null&&<div className="ops-hub-mention-picker" role="listbox" aria-label="Mention a staff member">{mentionMatches.length?mentionMatches.map(person=><button type="button" role="option" aria-selected={false} key={person.userId} onClick={()=>selectMention(person)}>@{person.name}</button>):<span>No matching active staff account</span>}</div>}<button type="button" className="ops-hub-primary" disabled={busy||roomNotes===String(daily.notes||'')} onClick={()=>void saveRoomNotes()}><Save size={15}/>Save room notes</button></div>}
+       {activeEditor==='room_notes'&&canManage&&<div className="ops-hub-inline-form"><textarea ref={roomNoteInput} rows={3} aria-label="Room notes" value={roomNotes} disabled={busy} onChange={e=>{setRoomNotes(e.target.value);updateMentionQuery(e.target.value,e.target.selectionStart)}} onClick={e=>updateMentionQuery(roomNotes,e.currentTarget.selectionStart)} placeholder="Type @ to mention a staff member"/>{mentionSearch!==null&&<div className="ops-hub-mention-picker" role="listbox" aria-label="Mention a staff member">{mentionMatches.length?mentionMatches.map(person=><button type="button" role="option" aria-selected={false} key={person.userId||person.name} onClick={()=>selectMention(person)}>@{person.name}{!person.userId?' · no app login':''}</button>):<span>No matching active staff account</span>}</div>}<button type="button" className="ops-hub-primary" disabled={busy||roomNotes===String(daily.notes||'')} onClick={()=>void saveRoomNotes()}><Save size={15}/>Save room notes</button></div>}
        {activeEditor==='inspection'&&<div className="ops-hub-inspection-actions">
         {daily.inspected&&<p className="ops-hub-good"><Check size={16}/>Passed inspection</p>}
         {!data.inspectionEligible&&<p className="ops-hub-muted">No inspection required for this date.</p>}
