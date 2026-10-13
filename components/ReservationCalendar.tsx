@@ -6,7 +6,7 @@ import ReservationsBoard from '@/components/ReservationsBoard'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
-type Data={start:string;canRemove:boolean;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
+type Data={roomStatuses?:{date:string;roomId:string;condition:string;status:string;blocked:boolean}[];start:string;canRemove:boolean;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
 function occupied(c:Cell){return Boolean(c.guest&&c.arrival&&c.departure&&c.date>=c.arrival&&c.date<c.departure)}
@@ -109,6 +109,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
   },[data?.start,start,focusedDate,scrollMode,scrollRequest,layout])
   const cells=useMemo(()=>new Map((data?.cells||[]).map(c=>[c.date+'|'+c.roomId,c])),[data])
   const notes=useMemo(()=>new Map((data?.notes||[]).map(n=>[n.date+'|'+n.roomId,n])),[data])
+  const roomStatuses=useMemo(()=>new Map((data?.roomStatuses||[]).map(item=>[item.date+'|'+item.roomId,item])),[data])
   const holds=useMemo(()=>new Set((data?.holds||[]).map(h=>h.date+'|'+h.roomId)),[data])
   return <div className="ths-calendar">
     <div className="ths-calendar-toolbar">
@@ -147,9 +148,13 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
               const c=cells.get(day+'|'+room.id)
               const blocked=holds.has(day+'|'+room.id)||Boolean(c?.blocked)
               const note=notes.get(day+'|'+room.id)
+              const roomStatus=roomStatuses.get(day+'|'+room.id)
+              const condition=roomStatus?.condition?.trim()||''
+              const statusText=blocked?'Blocked':condition||((roomStatus?.status||'').toLowerCase()==='vacant'?'Vacant · condition unknown':'')
               const coveredByStay=[...stays.values()].some(stay=>day>=stay.arrival&&day<stay.departure)
               return <div key={day} data-service-date={day} style={{gridColumn:dayIndex+1,gridRow:1}} className={'ths-calendar-day-bg '+(blocked?'blocked':c?'imported':'unknown')}>
-                <button type="button" className={'ths-calendar-empty-slot'+(note&&!coveredByStay?' has-note':'')} title={note?.text||room.name+' · '+pretty(day)} aria-label={'Open '+room.name+' on '+pretty(day)+(note&&!coveredByStay?': '+note.text:'')} onClick={()=>setActiveRoom({roomId:room.id,date:day})}>
+                <button type="button" className={'ths-calendar-empty-slot'+(note&&!coveredByStay?' has-note':'')} title={[room.name,pretty(day),!coveredByStay?statusText:'',!coveredByStay?note?.text:''].filter(Boolean).join(' · ')} aria-label={['Open '+room.name+' on '+pretty(day),!coveredByStay?statusText:'',!coveredByStay?note?.text:''].filter(Boolean).join(' · ')} onClick={()=>setActiveRoom({roomId:room.id,date:day})}>
+                  {!coveredByStay&&statusText&&<span className="ths-calendar-note-text" style={{fontWeight:700}}>{statusText}</span>}
                   {note&&!coveredByStay&&<span className="ths-calendar-note-text">{note.text}</span>}
                 </button>
               </div>
