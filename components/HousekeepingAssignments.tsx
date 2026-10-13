@@ -19,6 +19,7 @@ type AssignmentData = {
   staffing: { scheduledOnSite: number; hasSchedule: boolean }
   readOnly: boolean
 }
+type DeepClean = {room_id:string;assigned_to:string;instructions:string;completed_at:string|null}
 type View = 'staff' | 'unassigned'
 
 function todayDetroit() {
@@ -50,6 +51,11 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [query, setQuery] = useState('')
+  const [deepCleans,setDeepCleans] = useState<DeepClean[]>([])
+  const [deepRoom,setDeepRoom] = useState('')
+  const [deepStaff,setDeepStaff] = useState('')
+  const [deepInstructions,setDeepInstructions] = useState('')
+  const [deepBusy,setDeepBusy] = useState(false)
   const [showAssigned, setShowAssigned] = useState(false)
   const [busyRoom, setBusyRoom] = useState('')
   const busyRef = useRef(false)
@@ -78,6 +84,31 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
     return () => { controller.abort(); window.removeEventListener('ths:live-data-refresh', onRefresh); window.removeEventListener('focus', onRefresh) }
   }, [date, reload])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/api/housekeeping/deep-cleans?date='+encodeURIComponent(date),{signal:controller.signal,cache:'no-store'})
+      .then(async response => {const result=await response.json();if(!response.ok)throw new Error(result.error||'Unable to load deep cleans');return result})
+      .then(result=>{if(!controller.signal.aborted)setDeepCleans(result.tasks||[])})
+      .catch(err=>{if(!controller.signal.aborted)setError(err.message)})
+    return ()=>controller.abort()
+  },[date,reload])
+  async function deepAction(action:'save'|'complete'|'remove',roomId:string,values:Record<string,unknown>={}) {
+    if(deepBusy||data?.readOnly)return
+    setDeepBusy(true);setError('');setMessage('')
+    try {
+      const response=await fetch('/api/housekeeping/deep-cleans',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId,action,...values})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Unable to save deep clean')
+      const fresh=await fetch('/api/housekeeping/deep-cleans?date='+encodeURIComponent(date),{cache:'no-store'})
+      const loaded=await fresh.json()
+      if(!fresh.ok)throw new Error(loaded.error||'Unable to refresh deep clean')
+      setDeepCleans(loaded.tasks||[])
+      if(action==='save'){setDeepRoom('');setDeepStaff('');setDeepInstructions('')}
+      setMessage(action==='save'?'Deep clean scheduled.':action==='complete'?'Deep clean updated.':'Deep clean removed.')
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(err:any){setError(err.message||'Unable to save deep clean')}
+    finally{setDeepBusy(false)}
+  }
   const rooms = data?.rooms || []
   const staff = data?.staff || []
   const onSite = staff.filter(person => person.onSite && (person.housekeepingEligible || rooms.some(room => assigned(room, person.name))))
@@ -262,6 +293,33 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
     </div>
+    <section className="hka-person" style={{padding:'18px 22px',marginBottom:20}}>
+      <div className="hka-person-head"><div><strong>Deep cleans</strong><small>Additional detailed cleaning, separate from regular room service</small></div><span className="hka-person-count">{deepCleans.filter(task=>!task.completed_at).length} open</span></div>
+      {!data?.readOnly && <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',padding:'14px 0'}}>
+        <label style={{flex:'1 1 180px'}}>Room
+          <select aria-label="Deep clean room" value={deepRoom} onChange={e=>setDeepRoom(e.target.value)}>
+            <option value="">Select room…</option>{rooms.filter(room=>!deepCleans.some(task=>task.room_id===room.roomId)).map(room=><option key={room.roomId} value={room.roomId}>{room.roomName}</option>)}
+          </select>
+        </label>
+        <label style={{flex:'1 1 180px'}}>Housekeeper
+          <select aria-label="Deep clean housekeeper" value={deepStaff} onChange={e=>setDeepStaff(e.target.value)}>
+            <option value="">Unassigned</option>{[...assignable,...otherActive.filter(person=>person.housekeepingEligible)].map(person=><option key={person.id} value={person.name}>{person.name}{person.onSite?'':' (not scheduled)'}</option>)}
+          </select>
+        </label>
+        <label style={{flex:'2 1 240px'}}>Instructions
+          <input style={{width:'100%',minHeight:40}} aria-label="Deep clean instructions" placeholder="e.g. grout, baseboards, behind furniture…" value={deepInstructions} onChange={e=>setDeepInstructions(e.target.value)}/>
+        </label>
+        <button type="button" disabled={!deepRoom||deepBusy} onClick={()=>void deepAction('save',deepRoom,{assignedTo:deepStaff,instructions:deepInstructions})}>Add deep clean</button>
+      </div>}
+      {deepCleans.length===0 ? <p className="hka-empty-line">No deep cleans scheduled for this date.</p> : <div className="hka-person-rooms">
+        {deepCleans.map(task=>{const room=rooms.find(item=>item.roomId===task.room_id);return <div className="hka-person-room" key={task.room_id} style={{gap:12,flexWrap:'wrap'}}>
+          <div style={{flex:'1 1 170px'}}><strong>{room?.roomName||'Room'} · Deep clean</strong><small>{task.completed_at?'Completed':task.assigned_to||'Unassigned'}{task.instructions?' · '+task.instructions:''}</small></div>
+          {!data?.readOnly&&!task.completed_at&&<select style={{maxWidth:180}} aria-label={'Assign deep clean '+(room?.roomName||'room')} value={task.assigned_to} disabled={deepBusy} onChange={e=>void deepAction('save',task.room_id,{assignedTo:e.target.value,instructions:task.instructions})}><option value="">Unassigned</option>{staff.filter(person=>person.housekeepingEligible).map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select>}
+          {!data?.readOnly&&<button type="button" disabled={deepBusy} onClick={()=>void deepAction('complete',task.room_id,{completed:!!task.completed_at?false:true})}>{task.completed_at?'Reopen':'Mark complete'}</button>}
+          {!data?.readOnly&&!task.completed_at&&<button type="button" disabled={deepBusy} onClick={()=>{if(window.confirm('Remove this deep clean?'))void deepAction('remove',task.room_id)}}>Remove</button>}
+        </div>})}
+      </div>}
+    </section>
     <div className="hka-controls">
       <div className="hka-toggle" role="group" aria-label="Assignment board view">
         <button type="button" className={view === 'staff' ? 'active' : ''} aria-pressed={view === 'staff'} onClick={() => setView('staff')}><UsersRound size={16}/> Scheduled staff</button>
