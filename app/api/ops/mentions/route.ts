@@ -17,19 +17,22 @@ export async function POST(req:NextRequest){
  const roomId=String(body.roomId||'')
  const date=String(body.date||'')
  const note=String(body.note||'')
+ const everyone=body.everyone===true&&/(?:^|\s)@everyone\b/i.test(note)
  const userIds=Array.isArray(body.userIds)?[...new Set(body.userIds.filter((id:unknown)=>typeof id==='string'&&isUuid(id)))].slice(0,25):[]
- if(!isUuid(roomId)||!isDate(date)||!note||note.length>6000||!userIds.length)
+ if(!isUuid(roomId)||!isDate(date)||!note||note.length>6000||(!userIds.length&&!everyone))
   return NextResponse.json({error:'Invalid mention request'},{status:400})
  const admin=createSupabaseAdmin()
  const {data:roomDay,error:roomError}=await admin.from('housekeeping_daily_rooms').select('notes').eq('service_date',date).eq('room_id',roomId).maybeSingle()
  if(roomError||!roomDay||String(roomDay.notes||'')!==note)
   return NextResponse.json({error:'Save the room note before notifying staff'},{status:409})
- const {data:staff,error:staffError}=await admin.from('staff_members').select('auth_user_id,name').eq('active',true).in('auth_user_id',userIds)
+ const staffQuery=admin.from('staff_members').select('auth_user_id,name').eq('active',true)
+ const {data:staff,error:staffError}=await (everyone?staffQuery.not('auth_user_id','is',null):staffQuery.in('auth_user_id',userIds))
  if(staffError)return NextResponse.json({error:'Unable to validate mentions'},{status:500})
- const allowed=(staff||[]).filter((member:any)=>member.auth_user_id&&note.toLocaleLowerCase().includes('@'+String(member.name||'').toLocaleLowerCase()))
+ const allowed=(staff||[]).filter((member:any)=>member.auth_user_id&&(everyone||(userIds.includes(String(member.auth_user_id))&&note.toLocaleLowerCase().includes('@'+String(member.name||'').toLocaleLowerCase()))))
  const {data:room}=await admin.from('rooms').select('name').eq('id',roomId).maybeSingle()
  if(!room)return NextResponse.json({error:'Room not found'},{status:404})
- const rows=allowed.filter((member:any)=>String(member.auth_user_id)!==access.userId).map((member:any)=>({
+ const recipients=[...new Map(allowed.map((member:any)=>[String(member.auth_user_id),member])).values()]
+ const rows=recipients.filter((member:any)=>String(member.auth_user_id)!==access.userId).map((member:any)=>({
   recipient_user_id:member.auth_user_id,notification_type:'room_mention',
   title:'Mentioned in '+room.name+' room notes',message:note.slice(0,500),
   room_id:roomId,service_date:date,created_by:access.userId
