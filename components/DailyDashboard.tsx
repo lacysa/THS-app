@@ -337,7 +337,7 @@ export default function DailyDashboard({
       value:`${roomChecksPassed.length}/${roomCheckRooms.length}`,
       sub:`${Math.max(0,roomCheckRooms.length-roomChecksPassed.length)} pending · ${roomCheckCorrections.length} correction${roomCheckCorrections.length===1?'':'s'}`,
       icon:ClipboardCheck,
-      href:'/room-checks',
+      href:'/housekeeping?filter=inspection',
       tone:roomCheckCorrections.length>0 ? 'danger' : (roomCheckRooms.length>0 && roomChecksPassed.length===roomCheckRooms.length ? 'good' : 'neutral')
     } : null,
     showMaintenance ? {
@@ -477,13 +477,13 @@ export default function DailyDashboard({
               </Link>
             )}
             {roomCheckCorrections.length>0 && (
-              <Link href="/room-checks" className="daily-attention-item tone-danger">
+              <Link href="/housekeeping?filter=correction" className="daily-attention-item tone-danger">
                 <span>{roomCheckCorrections.length}</span>
                 <div><strong>Rooms need correction</strong><small>{roomCheckCorrections.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
             )}
             {pendingChecks.length>0 && (
-              <Link href="/room-checks" className="daily-attention-item tone-info">
+              <Link href="/housekeeping?filter=inspection" className="daily-attention-item tone-info">
                 <span>{pendingChecks.length}</span>
                 <div><strong>Rooms ready for room check</strong><small>{pendingChecks.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
