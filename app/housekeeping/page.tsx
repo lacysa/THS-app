@@ -5,9 +5,11 @@ import { canUseModule } from '@/lib/access'
 
 export const dynamic='force-dynamic'
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams:Promise<{filter?:string}>}){
   const gate=await canUseModule('housekeeping')
   if(!gate.access) redirect('/login')
   if(!gate.allowed) redirect('/dashboard')
-  return <StaffShell title="Rooms"><UnifiedRoomsBoard/></StaffShell>
+  const params=await searchParams
+  const initialFilter=params?.filter==='inspection'||params?.filter==='correction' ? params.filter : undefined
+  return <StaffShell title="Rooms"><UnifiedRoomsBoard initialFilter={initialFilter}/></StaffShell>
 }
