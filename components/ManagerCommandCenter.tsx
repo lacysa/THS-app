@@ -30,9 +30,9 @@ export default function ManagerCommandCenter({today,tomorrow,rooms,tomorrowRooms
   const handoff=[...corrections.map(r=>({label:r.roomName+' · correction still open',href:roomLink(r)})),...arrivalIssues.map(r=>({label:r.roomName+' · arrival readiness',href:roomLink(r)})),...urgent.map(r=>({label:r.location+' · '+r.title,href:'/maintenance'})),...handoffNotes.filter(n=>n.note.trim()).map(n=>({label:n.department+': '+n.note,href:n.department==='laundry'?'/laundry':'/lobby'}))]
   const groups=[
     {name:'Arrival not ready',rows:arrivalIssues,href:'/housekeeping',tone:'warning',hint:'Review room condition'},
-    {name:'Corrections open',rows:corrections,href:'/room-checks',tone:'danger',hint:'Resolve and recheck'},
+    {name:'Corrections open',rows:corrections,href:'/housekeeping?filter=correction',tone:'danger',hint:'Resolve and recheck'},
     {name:'Unassigned cleans',rows:unassigned,href:'/housekeeping',tone:'warning',hint:'Assign a housekeeper'},
-    {name:'Room checks pending',rows:waitingChecks,href:'/room-checks',tone:'info',hint:'Complete inspection'},
+    {name:'Room checks pending',rows:waitingChecks,href:'/housekeeping?filter=inspection',tone:'info',hint:'Complete inspection'},
     {name:'Urgent maintenance',rows:urgent,href:'/maintenance',tone:'danger',hint:'Review open work orders'}
   ].filter(g=>g.rows.length)
   const handoffText=['THS shift handoff · '+today,...handoff.map(item=>'• '+item.label),'Tomorrow: '+tomorrowStaff.length+' scheduled on site; '+tomorrowBlocked.length+' blocked/held rooms'].join('\n')
