@@ -185,6 +185,8 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
 
   useEffect(()=>{rowsRef.current=rows},[rows])
   useEffect(()=>{dateRef.current=date},[date])
+  // Allow dashboard shortcuts to select the relevant tab, including client-side navigation.
+  useEffect(()=>{setFilter(initialFilter)},[initialFilter])
   useEffect(()=>{
     const query=window.matchMedia(NON_DESKTOP_WORKSPACE_MEDIA)
     const tablet=window.matchMedia(TABLET_WORKSPACE_MEDIA)
