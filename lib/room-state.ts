@@ -42,11 +42,12 @@ export function finalVerificationComplete(row:RoomLike){return Boolean(row.fohSi
 
 export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   if(isBlockedRoom(row))return 'blocked'
-  if(row.checkIssueOpen&&!row.readyForInspection)return 'correction'
-  // Physical occupancy outranks any earlier readiness/inspection result.
+  // Stayover is physically occupied even if a prior room check or stale condition says otherwise.
+  // Refresh service remains a task, but its live condition is still Occupied.
   if(isRefreshRoom(row))return row.complete?'occupied':'refresh'
-  if(normalizeRoomValue(row.roomCondition)==='occupied')return 'occupied'
   if(isStayoverRoom(row))return 'occupied'
+  if(row.checkIssueOpen&&!row.readyForInspection)return 'correction'
+  if(normalizeRoomValue(row.roomCondition)==='occupied')return 'occupied'
 
   // Arrival/vacant rooms can legitimately begin the day already guest-ready
   // from the prior shift. A new checkout or Out/In never inherits that state.
