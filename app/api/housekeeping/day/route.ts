@@ -3,6 +3,7 @@ import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { loadTubTaskStates } from '@/lib/ops-tub'
 import { previousVacantConditions } from '@/lib/room-condition-carry'
+import { isCheckoutAwaitingOut } from '@/lib/room-state'
 
 export const dynamic = 'force-dynamic'
 
@@ -247,7 +248,7 @@ export async function GET(req: NextRequest) {
         inspected: Boolean(savedRow.inspected),
         completedAt: savedRow.completed_at || null,
         inspectedAt: savedRow.inspected_at || null,
-        roomCondition: savedRow.room_condition || carryConditions.get(String(room.id)) || '',
+        roomCondition: isCheckoutAwaitingOut({reservationStatus:savedRow.reservation_status,serviceType:savedRow.service_type})&&!String(savedRow.strip_hold||'').toLowerCase().includes('hold')?'Occupied':savedRow.room_condition || carryConditions.get(String(room.id)) || '',
         nextShiftCondition: savedRow.next_shift_condition || '',
         notes: savedRow.notes || '',
         breakfastTag: Boolean(savedRow.breakfast_tag),
@@ -558,6 +559,19 @@ export async function PATCH(req: NextRequest) {
         dbPatch.foh_signed_at=null
         dbPatch.room_condition=nextService==='RF'?'Occupied':'Cleaning'
       }
+    }
+
+    // A checkout / Out-In still has its departing guest until the OUT action.
+    // Do not let an old cleaning or ready condition preempt confirmation.
+    if(manager && (
+      Object.prototype.hasOwnProperty.call(requested,'reservationStatus') ||
+      Object.prototype.hasOwnProperty.call(requested,'serviceType')
+    )){
+      const activity=String(requested.reservationStatus??existing.reservation_status??'')
+      const service=String(requested.serviceType??existing.service_type??'')
+      const hold=String(requested.stripHold??existing.strip_hold??'')
+      if(isCheckoutAwaitingOut({reservationStatus:activity,serviceType:service}) && !hold.toLowerCase().includes('hold'))
+        dbPatch.room_condition='Occupied'
     }
 
     // Marking OUT or OUT-initials means management confirmed the guest departed.
