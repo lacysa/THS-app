@@ -238,6 +238,55 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     }finally{setLoading(false)}
   }
   useEffect(()=>{void load()},[date])
+  useEffect(()=>{
+    let active=true
+    let refreshing=false
+    const refresh=async()=>{
+      if(refreshing||document.visibilityState!=='visible')return
+      refreshing=true
+      try{
+        const [dayResponse,checksResponse]=await Promise.all([
+          fetch('/api/housekeeping/day?date='+encodeURIComponent(date),{cache:'no-store'}),
+          canInspect(access)?fetch('/api/room-checks?date='+encodeURIComponent(date),{cache:'no-store'}):Promise.resolve(null)
+        ])
+        const day=await dayResponse.json().catch(()=>({}))
+        if(!active||!dayResponse.ok||!Array.isArray(day.rows))return
+        const nextRows=day.rows as RoomRow[]
+        setRows(previous=>{
+          const local=new Map(previous.map(row=>[row.roomId,row]))
+          const merged=nextRows.map(row=>{
+            const id=row.roomId
+            const pending=pendingPatches.current[id]||{}
+            // A background refresh must not discard a queued or in-flight edit.
+            if(saveQueues.current[id]||saveTimers.current[id])return local.get(id)||row
+            return {...row,...pending}
+          })
+          rowsRef.current=merged
+          return merged
+        })
+        if(Array.isArray(day.dailyOverview))setDailyOverview(day.dailyOverview)
+        if(checksResponse?.ok){
+          const checks=await checksResponse.json().catch(()=>({}))
+          if(active&&Array.isArray(checks.rooms))setInspectionRooms(checks.rooms)
+        }
+      }catch{/* retain currently visible room data if the network is unavailable */}
+      finally{refreshing=false}
+    }
+    const onRefresh=()=>void refresh()
+    window.addEventListener('ths:live-data-refresh',onRefresh)
+    window.addEventListener('focus',onRefresh)
+    document.addEventListener('visibilitychange',onRefresh)
+    const timer=window.setInterval(onRefresh,10000)
+    return ()=>{
+      active=false
+      window.removeEventListener('ths:live-data-refresh',onRefresh)
+      window.removeEventListener('focus',onRefresh)
+      document.removeEventListener('visibilitychange',onRefresh)
+      window.clearInterval(timer)
+    }
+  },[date,access])
+
+
 
   async function saveRoomPatch(roomId:string,update:Partial<RoomRow>){
     setSaveState('saving')
