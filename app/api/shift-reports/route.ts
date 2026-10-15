@@ -316,6 +316,7 @@ export async function POST(req: NextRequest) {
   const tomorrowNotes = String(payload?.tomorrowNotes || '')
   const generalNotes = String(payload?.generalNotes || '')
   const managementNotes = String(payload?.managementNotes || '')
+  const tonightsDessert = String(payload?.tonightsDessert ?? existing?.tonights_dessert ?? '').trim().slice(0,500)
   const authorId = (me.member as any)?.id || null
 
   const row: any = {
@@ -329,6 +330,7 @@ export async function POST(req: NextRequest) {
     tomorrow_notes: tomorrowNotes,
     general_notes: generalNotes,
     management_notes: managementNotes,
+    tonights_dessert: tonightsDessert,
     guest_notes_by: guestNotes !== String(existing?.guest_notes || '') ? (guestNotes.trim() ? authorId : null) : existing?.guest_notes_by || null,
     staff_notes_by: staffNotes !== String(existing?.staff_notes || '') ? (staffNotes.trim() ? authorId : null) : existing?.staff_notes_by || null,
     supplies_notes_by: suppliesNotes !== String(existing?.supplies_notes || '') ? (suppliesNotes.trim() ? authorId : null) : existing?.supplies_notes_by || null,
