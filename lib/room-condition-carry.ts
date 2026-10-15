@@ -22,7 +22,7 @@ export async function previousVacantConditions(admin:any, date:string, rows:any[
     if(!targets.has(id)||settled.has(id))continue
     const status=String(prior.reservation_status||'').trim().toLowerCase()
     // Never resurrect a pre-reservation condition from before an occupied stay.
-    if(!['vacant','dirty','blocked',''].includes(status)){settled.add(id);continue}
+    if(!['vacant','dirty','blocked','checkout',''].includes(status)){settled.add(id);continue}
     const value=String(prior.next_shift_condition||prior.room_condition||'').trim()
     const lower=value.toLowerCase()
     if(!value)continue
