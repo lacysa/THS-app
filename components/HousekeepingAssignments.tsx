@@ -278,12 +278,16 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
         <p>Plan the day's room services using your existing schedule and room assignments.</p>
       </div>
       <div className="hka-date-picker">
-        <CalendarDays size={17}/>
-        <button type="button" onClick={() => setDate(d => shiftDate(d, -1))} aria-label="Previous day">‹</button>
-        <input aria-label="Assignment date" type="date" value={date} onChange={event => { if (/^20\d{2}-\d{2}-\d{2}$/.test(event.target.value)) setDate(event.target.value) }}/>
-        <button type="button" onClick={() => setDate(d => shiftDate(d, 1))} aria-label="Next day">›</button>
-        <button type="button" onClick={() => setDate(todayDetroit())}>Today</button>
-        <button type="button" onClick={refresh} title="Refresh assignments" aria-label="Refresh assignments"><RefreshCw size={16}/></button>
+        <div className="hka-date-nav">
+          <CalendarDays size={17} aria-hidden="true"/>
+          <button type="button" onClick={() => setDate(d => shiftDate(d, -1))} aria-label="Previous day">‹</button>
+          <input aria-label="Assignment date" type="date" value={date} onChange={event => { if (/^20\d{2}-\d{2}-\d{2}$/.test(event.target.value)) setDate(event.target.value) }}/>
+          <button type="button" onClick={() => setDate(d => shiftDate(d, 1))} aria-label="Next day">›</button>
+        </div>
+        <div className="hka-date-actions">
+          <button type="button" onClick={() => setDate(todayDetroit())}>Today</button>
+          <button type="button" onClick={refresh} title="Refresh assignments" aria-label="Refresh assignments"><RefreshCw size={17}/></button>
+        </div>
       </div>
     </header>
 
@@ -293,21 +297,24 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
     </div>
-    <section className="hka-person" style={{padding:'18px 22px',marginBottom:20}}>
-      <div className="hka-person-head"><div><strong>Deep cleans</strong><small>Additional detailed cleaning, separate from regular room service</small></div><span className="hka-person-count">{deepCleans.filter(task=>!task.completed_at).length} open</span></div>
-      {!data?.readOnly && <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',padding:'14px 0'}}>
-        <label style={{flex:'1 1 180px'}}>Room
+    <section className="hka-person hka-deep-clean">
+      <div className="hka-person-head">
+        <div><strong>Deep cleans</strong><small>Additional detailed cleaning, separate from regular room service</small></div>
+        <span className="hka-deep-count">{deepCleans.filter(task=>!task.completed_at).length} open</span>
+      </div>
+      {!data?.readOnly && <div className="hka-deep-form">
+        <label>Room
           <select aria-label="Deep clean room" value={deepRoom} onChange={e=>setDeepRoom(e.target.value)}>
             <option value="">Select room…</option>{rooms.filter(room=>!deepCleans.some(task=>task.room_id===room.roomId)).map(room=><option key={room.roomId} value={room.roomId}>{room.roomName}</option>)}
           </select>
         </label>
-        <label style={{flex:'1 1 180px'}}>Housekeeper
+        <label>Housekeeper
           <select aria-label="Deep clean housekeeper" value={deepStaff} onChange={e=>setDeepStaff(e.target.value)}>
             <option value="">Unassigned</option>{[...assignable,...otherActive.filter(person=>person.housekeepingEligible)].map(person=><option key={person.id} value={person.name}>{person.name}{person.onSite?'':' (not scheduled)'}</option>)}
           </select>
         </label>
-        <label style={{flex:'2 1 240px'}}>Instructions
-          <input style={{width:'100%',minHeight:40}} aria-label="Deep clean instructions" placeholder="e.g. grout, baseboards, behind furniture…" value={deepInstructions} onChange={e=>setDeepInstructions(e.target.value)}/>
+        <label className="hka-deep-instructions">Instructions
+          <input aria-label="Deep clean instructions" placeholder="e.g. grout, baseboards, behind furniture…" value={deepInstructions} onChange={e=>setDeepInstructions(e.target.value)}/>
         </label>
         <button type="button" disabled={!deepRoom||deepBusy} onClick={()=>void deepAction('save',deepRoom,{assignedTo:deepStaff,instructions:deepInstructions})}>Add deep clean</button>
       </div>}
