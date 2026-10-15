@@ -3,7 +3,7 @@
 import { CalendarDays, ChevronLeft, ChevronRight, DoorOpen, Package, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { derivedLiveCondition, roomNextAction, roomWorkflowLabel } from '@/lib/room-state'
+import { derivedLiveCondition, isCheckoutAwaitingOut, roomNextAction, roomWorkflowLabel } from '@/lib/room-state'
 
 type Stay={
   id?:string
@@ -199,7 +199,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
       </div>
     </section>}
 
-    {view==='edit'&&canEdit&&<section className="reservations-edit-panel"><div className="reservations-edit-intro"><strong>Daily room overrides</strong><span>Change today’s operational room status or maintenance hold. Guest bookings and synced reservation records remain unchanged.</span></div><div className="reservations-edit-grid">{shown.map(row=><div className="reservations-edit-item" key={row.roomId}><div className="reservations-edit-room"><strong>{row.roomName}</strong><small>{row.status} · synced reservation</small></div><label>Operational status<select disabled={saving[row.roomId]} value={row.operationalStatus||row.status} onChange={e=>void editRoom(row,{operationalStatus:e.target.value})}>{['Arrival','Out/In','Checkout','Stayover','Vacant','Dirty','Blocked'].map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Room condition<select disabled={saving[row.roomId]} value={(row.operationalStatus||row.status)==='Stayover'?'Occupied':row.roomCondition||''} onChange={e=>void editRoom(row,{roomCondition:e.target.value,stripHold:e.target.value==='Blocked'?'Hold':''})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(s=><option key={s} value={s}>{s||'Not set'}</option>)}</select></label><label className="reservations-late-toggle"><input type="checkbox" checked={Boolean(row.lateArrival)} disabled={saving[row.roomId]} onChange={e=>void editRoom(row,{lateArrival:e.target.checked})}/> Late arrival</label><button className="reservations-edit-block" disabled={saving[row.roomId]} type="button" onClick={()=>void editRoom(row,{stripHold:row.stripHold?'':'Hold'})}>{row.stripHold?'Release hold':'Maintenance hold'}</button><small role="status">{saving[row.roomId]?'Saving…':feedback[row.roomId]||''}</small></div>)}</div>{shown.length===0&&<p>No synced rooms for this date.</p>}</section>}
+    {view==='edit'&&canEdit&&<section className="reservations-edit-panel"><div className="reservations-edit-intro"><strong>Daily room overrides</strong><span>Change today’s operational room status or maintenance hold. Guest bookings and synced reservation records remain unchanged.</span></div><div className="reservations-edit-grid">{shown.map(row=><div className="reservations-edit-item" key={row.roomId}><div className="reservations-edit-room"><strong>{row.roomName}</strong><small>{row.status} · synced reservation</small></div><label>Operational status<select disabled={saving[row.roomId]} value={row.operationalStatus||row.status} onChange={e=>void editRoom(row,{operationalStatus:e.target.value})}>{['Arrival','Out/In','Checkout','Stayover','Vacant','Dirty','Blocked'].map(s=><option key={s} value={s}>{s}</option>)}</select></label><label>Room condition<select disabled={saving[row.roomId]} value={(row.operationalStatus||row.status)==='Stayover'||isCheckoutAwaitingOut({reservationStatus:row.operationalStatus||row.status,serviceType:row.serviceType})?'Occupied':row.roomCondition||''} disabled={saving[row.roomId]||(row.operationalStatus||row.status)==='Stayover'||isCheckoutAwaitingOut({reservationStatus:row.operationalStatus||row.status,serviceType:row.serviceType})} onChange={e=>void editRoom(row,{roomCondition:e.target.value,stripHold:e.target.value==='Blocked'?'Hold':''})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(s=><option key={s} value={s}>{s||'Not set'}</option>)}</select></label><label className="reservations-late-toggle"><input type="checkbox" checked={Boolean(row.lateArrival)} disabled={saving[row.roomId]} onChange={e=>void editRoom(row,{lateArrival:e.target.checked})}/> Late arrival</label><button className="reservations-edit-block" disabled={saving[row.roomId]} type="button" onClick={()=>void editRoom(row,{stripHold:row.stripHold?'':'Hold'})}>{row.stripHold?'Release hold':'Maintenance hold'}</button><small role="status">{saving[row.roomId]?'Saving…':feedback[row.roomId]||''}</small></div>)}</div>{shown.length===0&&<p>No synced rooms for this date.</p>}</section>}
 
     {view==='overview'&&shown.length>0 && <section className="reservations-filter-bar" aria-label="Filter reservations by status">
       {[
@@ -234,7 +234,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
                 ? (row.staying||row.primary)
                 : null
           const dietary=cleanDiet(stay?.dietary_restrictions)
-          const outMarked=/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())
+          const outMarked=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())
           const roomState={
             reservationStatus:row.operationalStatus||status,
             stripHold:row.stripHold,
@@ -285,12 +285,12 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
 
             {isCheckoutOnly ? <div className={`reservation-checkout-only ${readyForNextArrival||outMarked?'is-ready':'is-waiting'}`}>
               <span>Checkout room</span>
-              <strong>{readyForNextArrival?'Ready for next arrival':outMarked?'Ready for turnover':'Awaiting OUT + initials'}</strong>
+              <strong>{readyForNextArrival?'Ready for next arrival':outMarked?'Ready for turnover':'Awaiting OUT'}</strong>
               <small>{readyForNextArrival
                 ? 'Clean and final-checked. No additional turnover is needed unless the room condition changes.'
                 : outMarked
                   ? `Marked ${String(row.serviceType||'').toUpperCase()} · ready for housekeeping turnover.`
-                  : 'Housekeeping must mark the room OUT and initial it before turnover begins.'}</small>
+                  : 'Management must mark the room OUT before housekeeping turnover begins.'}</small>
             </div> : stay && <div className="reservation-card-body">
               <div className="reservation-pair"><span>Guest</span><strong>{stay.guest_name||'—'}</strong></div>
               <div className="reservation-pair"><span>Stay</span><strong>{stay.arrival_date||'—'} → {stay.checkout_date||'—'}</strong></div>
