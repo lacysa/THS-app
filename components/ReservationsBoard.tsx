@@ -144,9 +144,16 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
   const [statusFilter,setStatusFilter]=useState<'All'|'Arrival'|'Stayover'|'Checkout'|'Out/In'>('All')
 
   const displayStatus=(row:Row):'Arrival'|'Stayover'|'Checkout'|'Out/In'=>{
-    if(row.arriving&&row.departing) return 'Out/In'
-    if(row.arriving) return 'Arrival'
-    if(row.departing) return 'Checkout'
+    // Staff's current operational status is authoritative for the daily board;
+    // the PMS arrival/departure links remain available separately for context.
+    const live=String(row.operationalStatus||'').trim().toLowerCase()
+    if(live==='stayover')return 'Stayover'
+    if(live==='checkout')return 'Checkout'
+    if(live==='out/in')return 'Out/In'
+    if(live==='arrival')return 'Arrival'
+    if(row.arriving&&row.departing)return 'Out/In'
+    if(row.arriving)return 'Arrival'
+    if(row.departing)return 'Checkout'
     return 'Stayover'
   }
 
