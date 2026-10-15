@@ -104,7 +104,7 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
             </div>
           </section>
 
-          <TonightsDessertDisplay serviceDate={date}/>
+          <TonightsDessertDisplay serviceDate={date} daySpecificHeading/>
 
           <section className="overview-panel tickets-panel">
             <div className="overview-section-head">
