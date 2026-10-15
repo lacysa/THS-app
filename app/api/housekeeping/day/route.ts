@@ -509,6 +509,8 @@ export async function PATCH(req: NextRequest) {
       const complete=Boolean(requested.complete)
       const status=String(existing.reservation_status||'').trim().toLowerCase()
       const service=String((requested.serviceType ?? existing.service_type)||'').trim().toUpperCase()
+      if(complete&&isCheckoutAwaitingOut({reservationStatus:requested.reservationStatus??existing.reservation_status,serviceType:service}))
+        return NextResponse.json({error:'Mark the guest OUT before completing a checkout or Out/In room.'},{status:409})
       const isRefresh=status==='stayover'&&service==='RF'
       if(isRefresh && complete && !currentPerson?.id) return NextResponse.json({error:'An active staff profile is required to complete a refresh.'},{status:403})
       const requiresQuality=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(existing.check_issue_open)
@@ -754,6 +756,10 @@ export async function POST(req: NextRequest) {
       .map(row => {
         const existing = existingByRoom.get(String(row.roomId)) || {}
         const complete = Boolean(row.complete)
+        if(complete&&isCheckoutAwaitingOut({
+          reservationStatus:assignedOnlyView?existing.reservation_status:row.reservationStatus,
+          serviceType:assignedOnlyView?(existing.service_type||row.serviceType):row.serviceType
+        }))throw new Error('Mark the guest OUT before completing a checkout or Out/In room.')
 
         if (assignedOnlyView) {
           if (
