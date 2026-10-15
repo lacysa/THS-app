@@ -545,6 +545,10 @@ export default function ShiftReportBoard() {
         <span className={`shift-status ${report?.status || 'draft'}`}>{report?.status || 'New draft'}</span>
       </div>
       <div className="shift-toolbar-right">
+        <button type="button" className="ops-secondary-btn shift-dessert-jump" onClick={()=>{
+          setTab('report')
+          window.setTimeout(()=>document.getElementById('tonights-dessert')?.scrollIntoView({behavior:'smooth',block:'start'}),0)
+        }}>Tonight&apos;s Dessert</button>
         <button type="button" className="ops-secondary-btn" onClick={load}><RefreshCw size={15}/>Refresh</button>
         <button type="button" className="ops-secondary-btn" onClick={()=>window.print()}><Printer size={15}/>Print / Save PDF</button>
         {canManage && !locked && <button type="button" className="ops-secondary-btn" onClick={()=>saveReport('save')} disabled={saving}><Save size={15}/>{saving?'Saving…':'Save Draft'}</button>}
@@ -608,7 +612,7 @@ export default function ShiftReportBoard() {
         </div>}
       </section>
 
-      <section className="shift-section full shift-tonights-dessert">
+      <section id="tonights-dessert" className="shift-section full shift-tonights-dessert">
         <div className="shift-dessert-section-head">
           <div><span className="shift-dessert-eyebrow">EVENING HANDOFF</span><h3>Tonight&apos;s Dessert</h3><p>Prepare and deliver tonight for breakfast on {auto.breakfastDate}.</p></div>
           <div className="shift-dessert-total"><strong>{summary.dessertsTonight}</strong><span>{summary.dessertsTonight===1?'room':'rooms'}</span></div>
