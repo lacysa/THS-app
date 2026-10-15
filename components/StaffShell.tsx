@@ -422,7 +422,7 @@ export default function StaffShell({
   const nestedChildrenByParent: Record<string, string[]> = {
     reservations: managementWorkspace
       ? ['ops', 'reservation_sync', 'housekeeping', 'housekeeping_assignments', 'room_checks']
-      : ['ops', 'reservation_sync', 'housekeeping'],
+      : ['ops', 'reservation_sync'],
     housekeeping: managementWorkspace ? [] : ['room_checks', 'housekeeping_quality']
   }
 
@@ -431,7 +431,7 @@ export default function StaffShell({
   )
 
   const operationRoots = operationsNav.filter(
-    item => !nestedChildKeys.has(item.module_key) && item.module_key !== 'housekeeping'
+    item => !nestedChildKeys.has(item.module_key) && (item.module_key !== 'housekeeping' || !managementWorkspace)
   )
 
   const nestedChildrenFor = (parentKey: string) =>
