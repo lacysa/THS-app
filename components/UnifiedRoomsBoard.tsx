@@ -205,8 +205,8 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     return()=>{query.removeEventListener('change',sync);tablet.removeEventListener('change',sync)}
   },[])
 
-  async function load(){
-    setLoading(true);setMessage('');setSaveState('idle');setSelfChecks({})
+  async function load(silent=false){
+    if(!silent){setLoading(true);setMessage('');setSaveState('idle');setSelfChecks({})}
     try{
       const [me,dayResponse]=await Promise.all([
         getStaffSession(),
@@ -234,59 +234,31 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         else if(checksResponse.status!==403)throw new Error(checks.error||'Could not load room inspections.')
       }else setInspectionRooms([])
     }catch(error:any){
-      setMessage(error?.message||'Could not load rooms.')
-    }finally{setLoading(false)}
+      if(!silent)setMessage(error?.message||'Could not load rooms.')
+    }finally{if(!silent)setLoading(false)}
   }
   useEffect(()=>{void load()},[date])
+  // Background synchronization uses the same proven loader as the initial
+  // view, but never resets the open interface while someone is editing.
   useEffect(()=>{
-    let active=true
     let refreshing=false
-    const refresh=async()=>{
+    const refresh=()=>{
       if(refreshing||document.visibilityState!=='visible')return
+      if(Object.keys(pendingPatches.current).length ||
+         Object.keys(saveTimers.current).length ||
+         Object.keys(saveQueues.current).length)return
       refreshing=true
-      try{
-        const [dayResponse,checksResponse]=await Promise.all([
-          fetch('/api/housekeeping/day?date='+encodeURIComponent(date),{cache:'no-store'}),
-          canInspect(access)?fetch('/api/room-checks?date='+encodeURIComponent(date),{cache:'no-store'}):Promise.resolve(null)
-        ])
-        const day=await dayResponse.json().catch(()=>({}))
-        if(!active||!dayResponse.ok||!Array.isArray(day.rows))return
-        const nextRows=day.rows as RoomRow[]
-        setRows(previous=>{
-          const local=new Map(previous.map(row=>[row.roomId,row]))
-          const merged=nextRows.map(row=>{
-            const id=row.roomId
-            const pending=pendingPatches.current[id]||{}
-            // A background refresh must not discard a queued or in-flight edit.
-            if(saveQueues.current[id]||saveTimers.current[id])return local.get(id)||row
-            return {...row,...pending}
-          })
-          rowsRef.current=merged
-          return merged
-        })
-        if(Array.isArray(day.dailyOverview))setDailyOverview(day.dailyOverview)
-        if(checksResponse?.ok){
-          const checks=await checksResponse.json().catch(()=>({}))
-          if(active&&Array.isArray(checks.rooms))setInspectionRooms(checks.rooms)
-        }
-      }catch{/* retain currently visible room data if the network is unavailable */}
-      finally{refreshing=false}
+      void load(true).finally(()=>{refreshing=false})
     }
-    const onRefresh=()=>void refresh()
-    window.addEventListener('ths:live-data-refresh',onRefresh)
-    window.addEventListener('focus',onRefresh)
-    document.addEventListener('visibilitychange',onRefresh)
-    const timer=window.setInterval(onRefresh,10000)
+    window.addEventListener('ths:live-data-refresh',refresh)
+    window.addEventListener('focus',refresh)
+    const timer=window.setInterval(refresh,10000)
     return ()=>{
-      active=false
-      window.removeEventListener('ths:live-data-refresh',onRefresh)
-      window.removeEventListener('focus',onRefresh)
-      document.removeEventListener('visibilitychange',onRefresh)
+      window.removeEventListener('ths:live-data-refresh',refresh)
+      window.removeEventListener('focus',refresh)
       window.clearInterval(timer)
     }
-  },[date,access])
-
-
+  },[date])
 
   async function saveRoomPatch(roomId:string,update:Partial<RoomRow>){
     setSaveState('saving')
