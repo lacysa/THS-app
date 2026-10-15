@@ -703,7 +703,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         <th scope="row">{row.roomName}{row.deepClean&&<small>Deep clean {row.deepClean.completed?'complete':'needed'} · {row.deepClean.assignedTo||'Unassigned'}{row.deepClean.instructions?' · '+row.deepClean.instructions:''}</small>}{row.isMine&&<small>Your room</small>}</th>
         <td><span className="rooms-staff-daily-status">{row.reservationStatus||'—'}{/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-staff-out-tag">OUT</span>}{/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span className="rooms-staff-tip-tag">Tips · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}</span></td>
         <td>{row.assignedTo?.trim()||'Unassigned'}</td>
-        <td>{row.roomCondition||'Not recorded'}</td>
+        <td>{derivedLiveCondition(row)||'Not recorded'}</td>
         <td className="rooms-staff-overview-note">{row.notes?.trim()||'—'}</td>
       </tr>)}
       {!dailyOverview.length&&!loading&&<tr><td colSpan={5}>No rooms scheduled for this date.</td></tr>}
@@ -812,7 +812,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
                           <small>{roomWorkflowLabel({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</small>
                         </button>
                       </td>
-                      <td><select aria-label="Room condition" className="rooms-table-status-select" value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value,...(e.target.value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
+                      <td><select aria-label="Room condition" className="rooms-table-status-select" value={isStayover(row)?'Occupied':row.roomCondition||''} disabled={isStayover(row)} onChange={e=>patch(row.roomId,{roomCondition:e.target.value,...(e.target.value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
                       <td>
                         <details className="rooms-table-packages">
                           <summary>{selectedPackages.length?selectedPackages.join(', '):'Select packages'}</summary>
