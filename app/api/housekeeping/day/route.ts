@@ -3,7 +3,7 @@ import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { loadTubTaskStates } from '@/lib/ops-tub'
 import { previousVacantConditions } from '@/lib/room-condition-carry'
-import { isCheckoutAwaitingOut } from '@/lib/room-state'
+import { isCheckoutAwaitingOut, isStayoverRoom } from '@/lib/room-state'
 
 export const dynamic = 'force-dynamic'
 
@@ -248,7 +248,7 @@ export async function GET(req: NextRequest) {
         inspected: Boolean(savedRow.inspected),
         completedAt: savedRow.completed_at || null,
         inspectedAt: savedRow.inspected_at || null,
-        roomCondition: isCheckoutAwaitingOut({reservationStatus:savedRow.reservation_status,serviceType:savedRow.service_type})&&!String(savedRow.strip_hold||'').toLowerCase().includes('hold')?'Occupied':savedRow.room_condition || carryConditions.get(String(room.id)) || '',
+        roomCondition: (isStayoverRoom({reservationStatus:savedRow.reservation_status})||isCheckoutAwaitingOut({reservationStatus:savedRow.reservation_status,serviceType:savedRow.service_type}))&&!String(savedRow.strip_hold||'').toLowerCase().includes('hold')?'Occupied':savedRow.room_condition || carryConditions.get(String(room.id)) || '',
         nextShiftCondition: savedRow.next_shift_condition || '',
         notes: savedRow.notes || '',
         breakfastTag: Boolean(savedRow.breakfast_tag),
@@ -587,6 +587,17 @@ export async function PATCH(req: NextRequest) {
       dbPatch.inspected=false
     }
 
+    // Persist occupancy for a stayover or a checkout awaiting management OUT.
+    // A maintenance hold still takes precedence over normal occupancy.
+    {
+      const activity=String(requested.reservationStatus??existing.reservation_status??'')
+      const service=String(requested.serviceType??existing.service_type??'')
+      const hold=String(requested.stripHold??existing.strip_hold??'')
+      if(!hold.toLowerCase().includes('hold')&&activity.toLowerCase()!=='blocked'&&
+          (isStayoverRoom({reservationStatus:activity})||isCheckoutAwaitingOut({reservationStatus:activity,serviceType:service})))
+        dbPatch.room_condition='Occupied'
+    }
+
     const { error:updateError } = await admin
       .from('housekeeping_daily_rooms')
       .update(dbPatch)
@@ -847,7 +858,10 @@ export async function POST(req: NextRequest) {
           inspected,
           completed_at: complete ? (existing.completed_at || row.completedAt || now) : null,
           inspected_at: inspected ? (existing.inspected_at || row.inspectedAt || now) : null,
-          room_condition: cleanText(row.roomCondition),
+          room_condition: (!String(row.stripHold||'').toLowerCase().includes('hold') &&
+            (isStayoverRoom({reservationStatus:row.reservationStatus}) ||
+              isCheckoutAwaitingOut({reservationStatus:row.reservationStatus,serviceType:row.serviceType})))
+                ? 'Occupied' : cleanText(row.roomCondition),
           next_shift_condition: cleanText(row.nextShiftCondition),
           notes: cleanText(row.notes),
           breakfast_tag: Boolean(row.breakfastTag),
