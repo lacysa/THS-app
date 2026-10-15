@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useState,useTransition} from 'react'
 import {useRouter} from 'next/navigation'
 import Link from 'next/link'
-import { roomServiceTask } from '@/lib/room-state'
+import { derivedLiveCondition, roomServiceTask } from '@/lib/room-state'
 import {CalendarDays,ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
 import type ReservationsBoard from '@/components/ReservationsBoard'
 import OpsRoomHub from '@/components/OpsRoomHub'
@@ -20,8 +20,21 @@ function reservationType(row:ReservationRow){
  return row.operationalStatus||row.status||'Vacant'
 }
 function roomCondition(row:ReservationRow){
- const value=String(row.roomCondition||'').trim()
- return value||((row.complete&&row.inspected)?'Ready':'Not confirmed')
+ // Live condition is a derived fact, not an indication that someone manually
+ // confirmed the status. A missing condition never overrides an active stay.
+ const status=reservationType(row)
+ const derived=derivedLiveCondition({
+  reservationStatus:status,
+  serviceType:row.serviceType,
+  stripHold:row.stripHold,
+  roomCondition:row.roomCondition,
+  complete:row.complete,
+  inspected:row.inspected,
+  checkIssueOpen:row.checkIssueOpen,
+  haSignedBy:row.haChecked?'ha':null,
+  fohSignedBy:row.fohChecked?'foh':null
+ })
+ return derived||'Not recorded'
 }
 function activeGuest(row:ReservationRow,day:string){
  const options=[row.arriving,row.staying,row.primary]
