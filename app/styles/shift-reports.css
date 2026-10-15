@@ -1136,3 +1136,131 @@ html[data-theme="dark"] .shift-dessert-room-chips button{background:#344c60;colo
 html[data-theme="dark"] .shift-dessert-room-chips button.is-selected{background:#416c8c;color:#fff;border-color:#9dc2de}
 html[data-theme="dark"] .shift-dessert-saved-row{background:#283849;border-color:#42586b}
 @media(max-width:600px){.shift-dessert-saved-row{align-items:flex-start;flex-direction:column}.ths-tonights-dessert-group{grid-template-columns:1fr;gap:3px}}
+
+/* Dessert editor layout, deliberately scoped so global module/card typography cannot flatten the rows. */
+#tonights-dessert .shift-dessert-section-head{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding-bottom:17px;margin:0 0 20px;border-bottom:1px solid #d9e3eb
+}
+#tonights-dessert .shift-dessert-section-head h3{font-size:19px!important;line-height:1.25!important;margin:5px 0 4px!important;font-weight:800!important}
+#tonights-dessert .shift-dessert-section-head p{font-size:12px;line-height:1.45}
+#tonights-dessert .shift-dessert-workspace{
+  display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,370px),1fr))!important;
+  gap:20px!important;align-items:start!important;min-width:0;width:100%
+}
+#tonights-dessert .shift-dessert-compose,
+#tonights-dessert .shift-dessert-saved-list{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  gap:16px!important;min-width:0!important;min-height:100%;
+  padding:20px!important;margin:0!important;border:1px solid #d5e2eb!important;
+  background:rgba(255,255,255,.75)!important;border-radius:16px!important;
+  box-shadow:0 3px 14px rgba(50,76,105,.035)
+}
+#tonights-dessert .shift-dessert-pane-title{
+  display:flex!important;justify-content:space-between!important;align-items:baseline!important;
+  flex-wrap:wrap;gap:4px 10px;padding-bottom:10px;border-bottom:1px solid #e4ebf1
+}
+#tonights-dessert .shift-dessert-pane-title h4{
+  margin:0!important;font-size:14px!important;font-weight:800!important;line-height:1.3!important;color:#263e54!important
+}
+#tonights-dessert .shift-dessert-pane-title>span{font-size:11px!important;color:#6f7f8d!important;line-height:1.3}
+#tonights-dessert .shift-dessert-input{display:grid!important;gap:8px!important;font-size:12px!important;line-height:1.3;font-weight:750!important}
+#tonights-dessert .shift-dessert-input>input{
+  display:block!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;
+  min-height:44px!important;border:1px solid #c4d5e2!important;border-radius:10px!important;
+  background:#fff!important;color:#263c50!important;padding:11px 13px!important;
+  font-size:13px!important;font-weight:500!important;box-shadow:none!important
+}
+#tonights-dessert .shift-dessert-input>input:focus{outline:2px solid #91bad4!important;outline-offset:2px!important}
+#tonights-dessert .shift-dessert-room-list{display:grid!important;gap:9px!important;margin:0!important}
+#tonights-dessert .shift-dessert-room-list>strong{font-size:12px!important;color:#263e54!important;line-height:1.4!important}
+#tonights-dessert .shift-dessert-hint{font-size:11px!important;color:#687d90!important;line-height:1.4!important;margin:0!important;max-width:56ch}
+#tonights-dessert .shift-dessert-room-chips{
+  display:flex!important;flex-wrap:wrap!important;align-items:center!important;
+  gap:8px!important;width:100%;padding:0!important;margin:0!important
+}
+#tonights-dessert .shift-dessert-room-chips>button{
+  display:inline-flex!important;flex:0 0 auto!important;align-items:center!important;
+  justify-content:flex-start!important;gap:7px!important;
+  padding:9px 12px!important;min-height:40px!important;max-width:100%!important;
+  appearance:none!important;border:1px solid #c3d6e4!important;border-radius:999px!important;
+  background:#f0f5f9!important;color:#36566f!important;
+  font-size:12px!important;font-weight:650!important;line-height:1.25!important;
+  cursor:pointer!important;white-space:normal!important;box-shadow:none!important
+}
+#tonights-dessert .shift-dessert-chip-check{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 15px!important;width:15px!important;height:15px!important;
+  border:1px solid #8cabc1!important;border-radius:5px!important;
+  background:white!important;color:#fff!important;font-size:11px!important;line-height:1!important
+}
+#tonights-dessert .shift-dessert-room-chips>button.is-selected{
+  background:#d9ebf5!important;border-color:#6a9cbd!important;color:#174967!important;
+  box-shadow:inset 0 0 0 1px #6a9cbd!important
+}
+#tonights-dessert .shift-dessert-room-chips>button.is-selected .shift-dessert-chip-check{
+  background:#396f93!important;border-color:#396f93!important;color:white!important
+}
+#tonights-dessert .shift-dessert-room-chips>button:disabled{cursor:default!important;opacity:.6!important}
+#tonights-dessert .shift-dessert-form-actions{
+  display:flex!important;align-items:center!important;flex-wrap:wrap!important;
+  gap:8px!important;margin:0!important
+}
+#tonights-dessert .shift-dessert-form-actions>button{min-height:40px!important;padding:9px 16px!important;border-radius:10px!important;font-size:12px!important;font-weight:750!important}
+#tonights-dessert .shift-dessert-save-help{font-size:11px!important;line-height:1.4!important;color:#708195!important}
+#tonights-dessert .shift-dessert-saved-row{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  flex-wrap:wrap!important;gap:12px!important;min-width:0!important;
+  padding:14px!important;margin:0!important;border:1px solid #d9e4ec!important;
+  border-radius:12px!important;background:#f8fafc!important
+}
+#tonights-dessert .shift-dessert-saved-content{
+  display:flex!important;flex:1 1 190px!important;flex-direction:column!important;
+  align-items:flex-start!important;gap:5px!important;min-width:0!important
+}
+#tonights-dessert .shift-dessert-saved-content>strong{
+  display:block!important;max-width:100%!important;font-size:14px!important;
+  font-weight:800!important;color:#233d53!important;line-height:1.3!important;
+  overflow-wrap:anywhere!important
+}
+#tonights-dessert .shift-dessert-saved-content>span{
+  display:block!important;max-width:100%!important;font-size:12px!important;
+  color:#58718a!important;line-height:1.45!important;overflow-wrap:anywhere!important
+}
+#tonights-dessert .shift-dessert-saved-content>small{
+  display:block!important;font-size:10px!important;color:#667f94!important;line-height:1.4!important
+}
+#tonights-dessert .shift-dessert-saved-actions{
+  display:flex!important;flex:0 0 auto!important;align-items:center!important;
+  gap:7px!important;margin:0!important
+}
+#tonights-dessert .shift-dessert-saved-actions>button{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:34px!important;padding:6px 12px!important;margin:0!important;
+  border-radius:9px!important;font-size:11px!important;font-weight:700!important;
+  box-shadow:none!important
+}
+#tonights-dessert .shift-dessert-empty{
+  margin:0!important;padding:18px!important;border:1px dashed #d0dfeb!important;
+  border-radius:11px!important;color:#6a7b8a!important;font-size:12px!important;line-height:1.5!important
+}
+#tonights-dessert .shift-dessert-unassigned{margin:0!important;font-size:11px!important;line-height:1.5!important}
+html[data-theme="dark"] #tonights-dessert .shift-dessert-compose,
+html[data-theme="dark"] #tonights-dessert .shift-dessert-saved-list{background:#202f3e!important;border-color:#415569!important}
+html[data-theme="dark"] #tonights-dessert .shift-dessert-saved-row{background:#25384a!important;border-color:#445b70!important}
+html[data-theme="dark"] #tonights-dessert .shift-dessert-saved-content>strong,
+html[data-theme="dark"] #tonights-dessert .shift-dessert-pane-title h4,
+html[data-theme="dark"] #tonights-dessert .shift-dessert-room-list>strong{color:#e7f0f8!important}
+html[data-theme="dark"] #tonights-dessert .shift-dessert-saved-content>span,
+html[data-theme="dark"] #tonights-dessert .shift-dessert-hint{color:#b6cfe0!important}
+html[data-theme="dark"] #tonights-dessert .shift-dessert-room-chips>button{background:#2a465c!important;color:#e2eef7!important;border-color:#5f7b91!important}
+html[data-theme="dark"] #tonights-dessert .shift-dessert-room-chips>button.is-selected{background:#3c6886!important;color:#fff!important;border-color:#a5c4d8!important}
+@media(max-width:700px){
+  #tonights-dessert .shift-dessert-workspace{grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+  #tonights-dessert .shift-dessert-compose,
+  #tonights-dessert .shift-dessert-saved-list{padding:15px!important;gap:14px!important;border-radius:13px!important}
+  #tonights-dessert .shift-dessert-section-head{padding-bottom:12px;margin-bottom:14px}
+  #tonights-dessert .shift-dessert-saved-row{align-items:flex-start!important}
+  #tonights-dessert .shift-dessert-saved-actions{width:100%!important}
+  #tonights-dessert .shift-dessert-saved-actions>button{flex:1 1 0!important}
+}
