@@ -71,6 +71,18 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
  },[roomId,date,reservationId,reload])
+ // Keep an open room popup consistent with edits made on other boards. Never
+ // replace an in-progress note, edit form, or unsaved action with a poll.
+ useEffect(()=>{
+  const handle=(event:Event)=>{
+   const eventDate=(event as CustomEvent<{date?:string}>).detail?.date
+   if(eventDate&&eventDate!==date)return
+   if(!busy&&!activeEditor&&document.visibilityState==='visible')refresh()
+  }
+  window.addEventListener('ths:live-data-refresh',handle)
+  return()=>window.removeEventListener('ths:live-data-refresh',handle)
+ },[date,busy,activeEditor,refresh])
+
  useEffect(()=>{
   const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()}
   document.addEventListener('keydown',key)
