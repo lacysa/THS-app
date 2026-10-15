@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import BookingMenuNote from '@/components/BookingMenuNote'
+import TonightsDessertDisplay from '@/components/TonightsDessertDisplay'
 
 export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
   const [date,setDate] = useState(initialDate)
@@ -151,6 +152,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
 
           <div className="card fd-breakfast-card">
             <h2>Breakfast schedule</h2>
+            <TonightsDessertDisplay serviceDate={date}/>
             <div className="timeline fd-breakfast-list">
               {data.bookings.length===0 && <div className="muted">No breakfast bookings for this date.</div>}
               {data.bookings.map((b:any)=>(
