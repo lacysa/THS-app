@@ -2,7 +2,7 @@
 
 import {useEffect,useState} from 'react'
 
-type DessertInfo={reportDate:string;breakfastDate:string;dessert:string}
+type DessertInfo={reportDate:string;breakfastDate:string;dessert:string;desserts?:{id:string;name:string;rooms:{roomId:string;roomName:string}[];allRooms:boolean}[];unassignedRooms?:{roomId:string;roomName:string}[]}
 
 /** One small, read-only dessert note; does not interact with breakfast forms. */
 export default function TonightsDessertDisplay({serviceDate}:{serviceDate:string}){
@@ -43,6 +43,15 @@ export default function TonightsDessertDisplay({serviceDate}:{serviceDate:string
       <strong>Tonight&apos;s Dessert</strong>
       {info&&<small>For breakfast {info.breakfastDate}</small>}
     </div>
-    <p>{error?'Dessert information unavailable':!info?'Loading dessert…':info.dessert||'Not entered in Shift Report yet'}</p>
+    {error?<p>Dessert information unavailable</p>:!info?<p>Loading dessert…</p>
+      :info.desserts?.length
+        ?<div className="ths-tonights-dessert-groups">
+          {info.desserts.map(dessert=><div className="ths-tonights-dessert-group" key={dessert.id}>
+            <strong>{dessert.name}</strong>
+            <span>{dessert.rooms.length?dessert.rooms.map(room=>room.roomName).join(', '):'No eligible rooms assigned'}</span>
+          </div>)}
+          {Boolean(info.unassignedRooms?.length)&&<p className="ths-tonights-dessert-missing">Still unassigned: {info.unassignedRooms?.map(room=>room.roomName).join(', ')}</p>}
+        </div>
+        :<p>{info.dessert||'Not entered in Shift Report yet'}</p>}
   </section>
 }
