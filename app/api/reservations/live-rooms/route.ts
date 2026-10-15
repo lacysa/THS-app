@@ -3,6 +3,7 @@ import { canUseModule } from '@/lib/access'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { loadTubTaskStates } from '@/lib/ops-tub'
 import { previousVacantConditions } from '@/lib/room-condition-carry'
+import { isCheckoutAwaitingOut } from '@/lib/room-state'
 
 export const dynamic='force-dynamic'
 export async function GET(req:NextRequest){
@@ -23,7 +24,7 @@ export async function GET(req:NextRequest){
  return NextResponse.json({rooms:(result.data||[]).map((r:any)=>({
   roomId:String(r.room_id),assignedTo:String(r.assigned_to||''),roomNotes:String(r.notes||''),breakfastTag:Boolean(r.breakfast_tag),operationalStatus:String(r.reservation_status||''),
   stripHold:String(r.strip_hold||''),lateArrival:Boolean(r.late_arrival),serviceType:String(r.service_type||''),
-  roomCondition:String(r.room_condition||carryConditions.get(String(r.room_id))||''),complete:Boolean(r.complete),
+  roomCondition:isCheckoutAwaitingOut({reservationStatus:r.reservation_status,serviceType:r.service_type})&&!String(r.strip_hold||'').toLowerCase().includes('hold')?'Occupied':String(r.room_condition||carryConditions.get(String(r.room_id))||''),complete:Boolean(r.complete),
   inspected:Boolean(r.inspected),housekeeperAttested:Boolean(r.housekeeper_attested_by),
   haChecked:Boolean(r.ha_signed_by),fohChecked:Boolean(r.foh_signed_by),
   checkIssueOpen:Boolean(r.check_issue_open),tubCleanDue:Boolean(tubStates.get(String(r.room_id))?.due),tubCleanCompleted:Boolean(tubStates.get(String(r.room_id))?.completed)
