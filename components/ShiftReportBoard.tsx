@@ -39,6 +39,32 @@ type Report = {
   }
 }
 
+type HandoffCategory = 'urgent' | 'followUp' | 'guestRequest' | 'informational' | 'completed'
+type HandoffItem = {key:string;title:string;detail:string;category:HandoffCategory}
+
+const handoffCategories:{id:HandoffCategory;label:string}[] = [
+  {id:'urgent',label:'Urgent'},
+  {id:'followUp',label:'Follow-up'},
+  {id:'guestRequest',label:'Guest requests'},
+  {id:'informational',label:'Operational updates'},
+  {id:'completed',label:'Completed work'}
+]
+
+// Classification changes presentation only. Original notes and work-order statuses are
+// never rewritten, and ambiguous messages remain informational rather than becoming
+// invented tasks. Explicit outstanding work takes precedence over completed milestones.
+function classifyHandoffDetail(detail:string):HandoffCategory {
+  const text=detail.toLowerCase().replace(/\s+/g,' ').trim()
+  if (/\b(?:urgent|asap|emergency|immediate(?:ly)?|safety hazard|flood(?:ing)?|no heat|no hot water)\b/.test(text)
+      && !/\b(?:not urgent|non-urgent|no emergency)\b/.test(text)) return 'urgent'
+  if (/\b(?:still needs?|needs? (?:to be|repair|cleaning|attention)|pending|awaiting|outstanding|follow[- ]?up|not ready|dirty|blocked|on hold|in progress|open item|item.{0,18}open|repair needed)\b/.test(text)) return 'followUp'
+  if (/\b(?:asked for|guest (?:asked|requested)|requested (?:clean|fresh|extra|new|additional)|special request|guest request|would like)\b/.test(text)) return 'guestRequest'
+  if (/\b(?:no rf requested|no refresh requested|no service requested|declined (?:an? )?(?:rf|refresh)|did not request (?:rf|refresh))\b/.test(text)) return 'informational'
+  if (/\b(?:completed?|finished|inspected|cleaned|collected|resolved|fixed|provided|delivered|sent|restocked|received|done)\b/.test(text)) return 'completed'
+  if (/\b(?:open|hold|needs?|requires?|repair|schedule|waiting|due)\b/.test(text)) return 'followUp'
+  return 'informational'
+}
+
 function todayDetroit() {
   return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 }
@@ -296,13 +322,18 @@ export default function ShiftReportBoard() {
   },[auto.housekeeping,handoffRoomNotes])
 
   const actionItems = useMemo(()=>{
-    const items:{key:string;title:string;detail:string}[]=[]
+    const items:HandoffItem[]=[]
 
     for (const room of roomHandoff) {
-      items.push({
-        key:`room-${room.roomId}`,
-        title:room.roomName,
-        detail:room.details.join(' · ')
+      // Categorize each room update separately so a completed clean never hides
+      // an unrelated outstanding issue for the same room.
+      room.details.forEach((detail,index)=>{
+        items.push({
+          key:`room-${room.roomId}-${index}`,
+          title:room.roomName,
+          detail,
+          category:classifyHandoffDetail(detail)
+        })
       })
     }
 
@@ -310,7 +341,8 @@ export default function ShiftReportBoard() {
       items.push({
         key:'breakfast-missing',
         title:'Breakfast',
-        detail:`${summary.menusMissing.length} missing menu${summary.menusMissing.length===1?'':'s'}: ${summary.menusMissing.map((r:any)=>r.roomName).join(', ')}`
+        detail:`${summary.menusMissing.length} missing menu${summary.menusMissing.length===1?'':'s'}: ${summary.menusMissing.map((r:any)=>r.roomName).join(', ')}`,
+        category:'followUp'
       })
     }
 
@@ -318,12 +350,21 @@ export default function ShiftReportBoard() {
       items.push({
         key:`maintenance-${item.id}`,
         title:String(item.roomName||item.area||'Property'),
-        detail:`${String(item.title||'Maintenance item')} · ${String(item.status||'open').replace('_',' ')}`
+        detail:`${String(item.title||'Maintenance item')} · ${String(item.status||'open').replace('_',' ')}`,
+        category:String(item.priority||'').toLowerCase()==='urgent'?'urgent':'followUp'
       })
     }
 
     return items
   },[roomHandoff,summary.menusMissing,summary.maintenanceOpen])
+  const handoffGroups = useMemo(()=>handoffCategories.map(group=>({
+    ...group,
+    items:actionItems.filter(item=>item.category===group.id)
+  })).filter(group=>group.items.length>0),[actionItems])
+  const printableHandoffGroups = handoffGroups.map(group=>({
+    ...group,
+    items:group.items.filter(item=>item.key!=='breakfast-missing')
+  })).filter(group=>group.items.length>0)
 
   function textarea(key:keyof typeof draft,label:string,placeholder:string,authorKey?:keyof NonNullable<Report['note_authors']>) {
     const section=String(authorKey||key.replace('Notes','')).toLowerCase()
@@ -398,15 +439,18 @@ export default function ShiftReportBoard() {
         {summary.todayStaff.length>0 && <p className="shift-print-narrative"><strong>On site</strong> {summary.todayStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
-      {actionItems.filter(item=>item.key!=='breakfast-missing').length>0 && <section className="shift-print-section shift-print-attention">
+      {printableHandoffGroups.length>0 && <section className="shift-print-section shift-print-attention">
         <div className="shift-print-section-title">
-          <h3>ATTN · Action required</h3><span>For the next shift</span>
+          <h3>Shift Highlights &amp; Handoff</h3><span>Management overview</span>
         </div>
-        <div className="shift-print-action-rows">
-          {actionItems.filter(item=>item.key!=='breakfast-missing').map(item=><div key={`print-action-${item.key}`} className="shift-print-action-row">
-            <strong>{item.title}</strong><span>{item.detail}</span>
-          </div>)}
-        </div>
+        {printableHandoffGroups.map(group=><div key={`print-group-${group.id}`} className={`shift-print-handoff-group is-${group.id}`}>
+          <div className="shift-handoff-group-label"><strong>{group.label}</strong><span>{group.items.length}</span></div>
+          <div className="shift-print-action-rows">
+            {group.items.map(item=><div key={`print-action-${item.key}`} className="shift-print-action-row">
+              <strong>{item.title}</strong><span>{item.detail}</span>
+            </div>)}
+          </div>
+        </div>)}
       </section>}
 
       {(auto.housekeepingFixes||[]).length>0 && <section className="shift-print-section shift-print-corrections">
@@ -558,13 +602,19 @@ export default function ShiftReportBoard() {
       </section>
 
       <section className="shift-section shift-action-section">
-        <h3>Action Required / Handoff</h3>
-        {actionItems.length ? <div className="shift-action-list">
-          {actionItems.map(item=><div className="shift-action-item" key={item.key}>
-            <strong>{item.title}</strong>
-            <span>{item.detail}</span>
+        <h3>Shift Highlights &amp; Handoff</h3>
+        <p className="shift-handoff-description">Key updates, requests, follow-ups, and completed work, organized automatically for the next shift.</p>
+        {handoffGroups.length ? <div className="shift-handoff-groups">
+          {handoffGroups.map(group=><div className={`shift-handoff-group is-${group.id}`} key={group.id}>
+            <div className="shift-handoff-group-label"><strong>{group.label}</strong><span>{group.items.length}</span></div>
+            <div className="shift-action-list">
+              {group.items.map(item=><div className="shift-action-item" key={item.key}>
+                <strong>{item.title}</strong>
+                <span>{item.detail}</span>
+              </div>)}
+            </div>
           </div>)}
-        </div> : <div className="shift-muted">No exceptions or open handoff items.</div>}
+        </div> : <div className="shift-muted">No shift highlights recorded yet.</div>}
       </section>
 
       <section className="shift-section">
