@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, FileText, Printer, RefreshCw, Save } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import {normalizeDessertEntries,resolveDessertAssignments,type DessertEntry} from '@/lib/shift-desserts'
 
 type AutoData = {
   breakfastDate:string
@@ -23,6 +24,7 @@ type Report = {
   shift:string
   status:'draft'|'finalized'
   tonights_dessert?:string
+  dessert_assignments?:DessertEntry[]
   guest_notes:string
   staff_notes:string
   supplies_notes:string
@@ -97,6 +99,11 @@ export default function ShiftReportBoard() {
   const [noteText,setNoteText] = useState('')
   const [includeNote,setIncludeNote] = useState(true)
   const [draft,setDraft] = useState({guestNotes:'',staffNotes:'',suppliesNotes:'',tomorrowNotes:'',generalNotes:'',managementNotes:'',tonightsDessert:''})
+  const [dessertEntries,setDessertEntries]=useState<DessertEntry[]>([])
+  const [dessertName,setDessertName]=useState('')
+  const [dessertRoomIds,setDessertRoomIds]=useState<string[]>([])
+  const [editingDessertId,setEditingDessertId]=useState('')
+  const [dessertSaving,setDessertSaving]=useState(false)
 
 
   type StaffNote={section:string;staff_member_id:string;content:string;name:string;initials:string}
@@ -189,6 +196,10 @@ export default function ShiftReportBoard() {
       if (!reportRes.ok) throw new Error(rd.error || 'Could not load shift report.')
       if (!notesRes.ok) throw new Error(nd.error || 'Could not load room notes.')
       setReport(rd.report || null)
+      setDessertEntries(normalizeDessertEntries(rd.report?.dessert_assignments,rd.report?.tonights_dessert))
+      setDessertName('')
+      setDessertRoomIds([])
+      setEditingDessertId('')
       setAuto(rd.auto || {breakfastDate:'',housekeeping:[],breakfast:[],maintenance:[],roomNotes:[],todayStaff:[],tomorrowStaff:[],tomorrowHousekeeping:[],tomorrowDessertRooms:[]})
       setCanManage(Boolean(rd.access?.canManageReport))
       setCurrentStaffName(rd.access?.currentStaffName || 'Staff')
@@ -206,7 +217,57 @@ export default function ShiftReportBoard() {
 
   useEffect(()=>{ void load() },[date,shift])
 
+  const dessertDetails=resolveDessertAssignments(dessertEntries,(auto.tomorrowDessertRooms||[]).map((room:any)=>({
+    roomId:String(room.roomId),roomName:String(room.roomName)
+  })))
+  const allocatedDessertRooms=new Set(dessertDetails.flatMap(item=>item.rooms.map(r=>r.roomId)))
+  const dessertUnassigned=(auto.tomorrowDessertRooms||[]).filter((room:any)=>!allocatedDessertRooms.has(String(room.roomId)))
   const locked = report?.status === 'finalized'
+  function selectDessertForEdit(entry:DessertEntry){
+    setDessertName(entry.name)
+    setDessertRoomIds([...entry.roomIds])
+    setEditingDessertId(entry.id)
+    document.getElementById('tonights-dessert')?.scrollIntoView({behavior:'smooth',block:'start'})
+  }
+  async function persistDesserts(entries:DessertEntry[]){
+    if(!canManage||locked||dessertSaving)return
+    setDessertSaving(true)
+    try{
+      const response=await fetch('/api/shift-reports/desserts',{
+        method:'PUT',headers:{'content-type':'application/json'},
+        body:JSON.stringify({date,shift,entries})
+      })
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not save dessert assignments.')
+      setDessertEntries(result.entries||[])
+      setReport(previous=>previous?{...previous,dessert_assignments:result.entries}:previous)
+      setDessertName('')
+      setDessertRoomIds([])
+      setEditingDessertId('')
+      setMessage('Dessert assignments saved. Front Desk and Daily Overview will show the updated list.')
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(error:any){setMessage(String(error?.message||'Could not save dessert assignments.'))}
+    finally{setDessertSaving(false)}
+  }
+  async function saveDessertAssignment(){
+    const name=dessertName.trim()
+    if(!name){setMessage('Enter a dessert name before saving.');return}
+    const current=dessertEntries.filter(entry=>entry.id!==editingDessertId)
+    // A room with a specific dessert is moved away from any earlier specific
+    // dessert. An unselected (all-rooms) dessert remains the fallback.
+    const selected=new Set(dessertRoomIds)
+    const withoutConflicts=current.map(entry=>{
+      if(!entry.roomIds.length)return entry
+      return {...entry,roomIds:entry.roomIds.filter(id=>!selected.has(id))}
+    }).filter(entry=>entry.roomIds.length>0||!current.find(v=>v.id===entry.id)?.roomIds.length)
+    const next:DessertEntry={id:editingDessertId||crypto.randomUUID(),name,roomIds:[...selected]}
+    // Only the most recent all-rooms entry is used as the default.
+    const entries=next.roomIds.length===0?withoutConflicts.filter(e=>e.roomIds.length>0):withoutConflicts
+    await persistDesserts([...entries,next])
+  }
+  async function deleteDessert(id:string){
+    await persistDesserts(dessertEntries.filter(entry=>entry.id!==id))
+  }
 
   async function saveReport(action:'save'|'finalize'|'reopen'='save') {
     if (!canManage) return
@@ -444,8 +505,10 @@ export default function ShiftReportBoard() {
         <div className="shift-print-section-title">
           <h3>Tonight&apos;s Dessert</h3><span>{summary.dessertsTonight} {summary.dessertsTonight===1?'room':'rooms'} · breakfast {auto.breakfastDate}</span>
         </div>
-        <p className="shift-print-narrative"><strong>Dessert:</strong> {draft.tonightsDessert.trim()||'Not recorded'}</p>
-        <p className="shift-print-narrative"><strong>Deliver tonight to:</strong> {summary.dessertRooms.length?summary.dessertRooms.map((room:any)=>room.roomName).join(', '):'No desserts scheduled'}</p>
+        {dessertDetails.length
+          ? dessertDetails.map(entry=><p key={entry.id} className="shift-print-narrative"><strong>{entry.name}</strong> · {entry.rooms.length} {entry.rooms.length===1?'room':'rooms'}: {entry.rooms.length?entry.rooms.map(room=>room.roomName).join(', '):'No eligible rooms assigned'}</p>)
+          : <p className="shift-print-narrative">Dessert not recorded.</p>}
+        {dessertUnassigned.length>0&&<p className="shift-print-narrative"><strong>No dessert assigned:</strong> {dessertUnassigned.map((room:any)=>room.roomName).join(', ')}</p>}
       </section>
 
       {printableHandoffGroups.length>0 && <section className="shift-print-section shift-print-attention">
@@ -617,15 +680,36 @@ export default function ShiftReportBoard() {
           <div><span className="shift-dessert-eyebrow">EVENING HANDOFF</span><h3>Tonight&apos;s Dessert</h3><p>Prepare and deliver tonight for breakfast on {auto.breakfastDate}.</p></div>
           <div className="shift-dessert-total"><strong>{summary.dessertsTonight}</strong><span>{summary.dessertsTonight===1?'room':'rooms'}</span></div>
         </div>
-        <label className="shift-dessert-input">Dessert being served
-          <input type="text" maxLength={500} value={draft.tonightsDessert} disabled={!canManage||locked} onChange={event=>setDraft(current=>({...current,tonightsDessert:event.target.value}))} placeholder="e.g., Chocolate mousse" aria-label="Tonight's dessert being served"/>
-        </label>
-        <div className="shift-dessert-room-list">
-          <strong>Rooms to receive dessert tonight</strong>
-          {summary.dessertRooms.length
-            ? <div className="shift-dessert-room-chips">{summary.dessertRooms.map((room:any)=><span key={room.roomId}>{room.roomName}</span>)}</div>
-            : <p>No desserts scheduled.</p>}
+        <div className="shift-dessert-editor">
+          <label className="shift-dessert-input">Dessert being served
+            <input type="text" maxLength={500} value={dessertName} disabled={!canManage||locked||dessertSaving} onChange={event=>setDessertName(event.target.value)} placeholder="e.g., Flourless chocolate cake" aria-label="Dessert being served"/>
+          </label>
+          <div className="shift-dessert-room-list">
+            <strong>Select the rooms for this dessert</strong>
+            <p className="shift-dessert-hint">Leave every room unselected to serve this dessert to all eligible rooms. Specific room selections override the all-rooms default.</p>
+            {summary.dessertRooms.length
+              ? <div className="shift-dessert-room-chips" role="group" aria-label="Choose dessert rooms">{summary.dessertRooms.map((room:any)=>{
+                const selected=dessertRoomIds.includes(String(room.roomId))
+                return <button type="button" key={room.roomId} aria-pressed={selected} className={selected?'is-selected':''} disabled={!canManage||locked||dessertSaving} onClick={()=>setDessertRoomIds(current=>selected?current.filter(id=>id!==String(room.roomId)):[...current,String(room.roomId)])}>{selected?'✓ ':''}{room.roomName}</button>
+              })}</div>
+              : <p>No dessert rooms scheduled.</p>}
+          </div>
+          {canManage&&!locked&&<div className="shift-dessert-form-actions">
+            <button type="button" className="ops-primary-btn" disabled={dessertSaving||!dessertName.trim()} onClick={()=>void saveDessertAssignment()}>{dessertSaving?'Saving…':editingDessertId?'Update dessert':'Save dessert / add another'}</button>
+            {editingDessertId&&<button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>{setDessertName('');setDessertRoomIds([]);setEditingDessertId('')}}>Cancel edit</button>}
+          </div>}
         </div>
+        {dessertDetails.length>0&&<div className="shift-dessert-saved-list">
+          <strong>Saved desserts</strong>
+          {dessertDetails.map(entry=><div key={entry.id} className="shift-dessert-saved-row">
+            <div><strong>{entry.name}</strong><span>{entry.rooms.length?entry.rooms.map(room=>room.roomName).join(', '):'No eligible rooms assigned'}{entry.allRooms?' · Default for all other rooms':''}</span></div>
+            {canManage&&!locked&&<div className="shift-dessert-saved-actions">
+              <button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>selectDessertForEdit(entry)}>Edit</button>
+              <button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>void deleteDessert(entry.id)}>Remove</button>
+            </div>}
+          </div>)}
+        </div>}
+        {dessertUnassigned.length>0&&<p className="shift-dessert-unassigned">No dessert assigned yet: {dessertUnassigned.map((room:any)=>room.roomName).join(', ')}</p>}
       </section>
 
       <section className="shift-section shift-action-section">
