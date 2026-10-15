@@ -937,3 +937,130 @@ html[data-theme="dark"] .shift-today-correction-status.open{color:#f0bd96}
     visibility:visible!important;
   }
 }
+
+/* Shift Highlights & Handoff: one categorization shared by on-screen and PDF views. */
+.shift-handoff-description {
+  margin:4px 0 12px;
+  color:var(--ths-muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.shift-handoff-groups {display:grid;gap:11px}
+.shift-handoff-group {
+  padding:9px 12px 5px;
+  border:1px solid var(--ths-line);
+  border-left:3px solid #7997aa;
+  border-radius:9px;
+  background:rgba(115,149,177,.035);
+  min-width:0;
+}
+.shift-handoff-group.is-urgent {border-left-color:#b95865;background:rgba(185,88,101,.055)}
+.shift-handoff-group.is-followUp {border-left-color:#b08751;background:rgba(176,135,81,.052)}
+.shift-handoff-group.is-guestRequest {border-left-color:#8282b0;background:rgba(130,130,176,.05)}
+.shift-handoff-group.is-completed {border-left-color:#668d78;background:rgba(102,141,120,.05)}
+.shift-handoff-group-label {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  margin-bottom:3px;
+  font-size:11px;
+  line-height:1.4;
+  color:var(--ths-muted);
+}
+.shift-handoff-group-label strong {
+  color:inherit;
+  font-weight:800;
+}
+.shift-handoff-group-label span {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:19px;
+  min-height:19px;
+  padding:1px 5px;
+  border:1px solid var(--ths-line);
+  border-radius:20px;
+  font-size:10px;
+  font-weight:700;
+}
+.shift-handoff-group.is-urgent .shift-handoff-group-label{color:#aa4553}
+.shift-handoff-group.is-followUp .shift-handoff-group-label{color:#8e6836}
+.shift-handoff-group.is-guestRequest .shift-handoff-group-label{color:#706fa0}
+.shift-handoff-group.is-completed .shift-handoff-group-label{color:#4c7b63}
+.shift-handoff-group .shift-action-item {grid-template-columns:150px minmax(0,1fr);padding:7px 0}
+.shift-handoff-group .shift-action-item span {white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:560px) {
+  .shift-handoff-group .shift-action-item {grid-template-columns:1fr;gap:3px}
+}
+html[data-theme="dark"] .shift-handoff-group {background:rgba(121,151,170,.09)}
+html[data-theme="dark"] .shift-handoff-group.is-urgent {background:rgba(185,88,101,.1)}
+html[data-theme="dark"] .shift-handoff-group.is-followUp {background:rgba(176,135,81,.1)}
+html[data-theme="dark"] .shift-handoff-group.is-guestRequest {background:rgba(130,130,176,.1)}
+html[data-theme="dark"] .shift-handoff-group.is-completed {background:rgba(102,141,120,.1)}
+html[data-theme="dark"] .shift-handoff-group .shift-handoff-group-label {color:var(--ths-muted)}
+
+@media print {
+  .shift-print-document .shift-print-handoff-group {
+    display:block!important;
+    margin:0 0 5px!important;
+    padding:0!important;
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+  }
+  .shift-print-document .shift-handoff-group-label {
+    display:flex!important;
+    align-items:center!important;
+    gap:6px!important;
+    margin:5px 0 0!important;
+    padding:3px 6px!important;
+    border-left:3px solid #7997aa!important;
+    background:#f2f5f8!important;
+    color:#445c70!important;
+    font-size:8pt!important;
+    line-height:1.2!important;
+    break-after:avoid!important;
+    page-break-after:avoid!important;
+  }
+  .shift-print-document .shift-handoff-group-label strong {color:inherit!important;font-weight:850!important}
+  .shift-print-document .shift-handoff-group-label span {
+    min-width:15px!important;
+    min-height:15px!important;
+    padding:0 4px!important;
+    border:1px solid #d5dfe7!important;
+    border-radius:20px!important;
+    color:inherit!important;
+    background:#fff!important;
+    font-size:7pt!important;
+  }
+  .shift-print-document .shift-print-handoff-group.is-urgent .shift-handoff-group-label {
+    border-left-color:#b95865!important;
+    color:#8f4150!important;
+    background:#fcf2f3!important;
+  }
+  .shift-print-document .shift-print-handoff-group.is-followUp .shift-handoff-group-label {
+    border-left-color:#b08751!important;
+    color:#805e38!important;
+    background:#faf5ee!important;
+  }
+  .shift-print-document .shift-print-handoff-group.is-guestRequest .shift-handoff-group-label {
+    border-left-color:#8282b0!important;
+    color:#64668f!important;
+    background:#f5f4fa!important;
+  }
+  .shift-print-document .shift-print-handoff-group.is-completed .shift-handoff-group-label {
+    border-left-color:#668d78!important;
+    color:#47735b!important;
+    background:#f1f7f3!important;
+  }
+  .shift-print-document .shift-print-handoff-group .shift-print-action-row {
+    grid-template-columns:100px minmax(0,1fr)!important;
+    padding:4px 4px!important;
+    font-size:9pt!important;
+    line-height:1.3!important;
+  }
+  .shift-print-document .shift-print-handoff-group .shift-print-action-row span {
+    white-space:pre-wrap!important;
+    overflow-wrap:anywhere!important;
+  }
+}
