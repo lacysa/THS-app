@@ -677,39 +677,60 @@ export default function ShiftReportBoard() {
 
       <section id="tonights-dessert" className="shift-section full shift-tonights-dessert">
         <div className="shift-dessert-section-head">
-          <div><span className="shift-dessert-eyebrow">EVENING HANDOFF</span><h3>Tonight&apos;s Dessert</h3><p>Prepare and deliver tonight for breakfast on {auto.breakfastDate}.</p></div>
+          <div>
+            <span className="shift-dessert-eyebrow">EVENING HANDOFF</span>
+            <h3>Tonight&apos;s Dessert</h3>
+            <p>Prepare tonight for breakfast on {auto.breakfastDate}.</p>
+          </div>
           <div className="shift-dessert-total"><strong>{summary.dessertsTonight}</strong><span>{summary.dessertsTonight===1?'room':'rooms'}</span></div>
         </div>
-        <div className="shift-dessert-editor">
-          <label className="shift-dessert-input">Dessert being served
-            <input type="text" maxLength={500} value={dessertName} disabled={!canManage||locked||dessertSaving} onChange={event=>setDessertName(event.target.value)} placeholder="e.g., Flourless chocolate cake" aria-label="Dessert being served"/>
-          </label>
-          <div className="shift-dessert-room-list">
-            <strong>Select the rooms for this dessert</strong>
-            <p className="shift-dessert-hint">Leave every room unselected to serve this dessert to all eligible rooms. Specific room selections override the all-rooms default.</p>
-            {summary.dessertRooms.length
-              ? <div className="shift-dessert-room-chips" role="group" aria-label="Choose dessert rooms">{summary.dessertRooms.map((room:any)=>{
-                const selected=dessertRoomIds.includes(String(room.roomId))
-                return <button type="button" key={room.roomId} aria-pressed={selected} className={selected?'is-selected':''} disabled={!canManage||locked||dessertSaving} onClick={()=>setDessertRoomIds(current=>selected?current.filter(id=>id!==String(room.roomId)):[...current,String(room.roomId)])}>{selected?'✓ ':''}{room.roomName}</button>
-              })}</div>
-              : <p>No dessert rooms scheduled.</p>}
-          </div>
-          {canManage&&!locked&&<div className="shift-dessert-form-actions">
-            <button type="button" className="ops-primary-btn" disabled={dessertSaving||!dessertName.trim()} onClick={()=>void saveDessertAssignment()}>{dessertSaving?'Saving…':editingDessertId?'Update dessert':'Save dessert / add another'}</button>
-            {editingDessertId&&<button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>{setDessertName('');setDessertRoomIds([]);setEditingDessertId('')}}>Cancel edit</button>}
-          </div>}
-        </div>
-        {dessertDetails.length>0&&<div className="shift-dessert-saved-list">
-          <strong>Saved desserts</strong>
-          {dessertDetails.map(entry=><div key={entry.id} className="shift-dessert-saved-row">
-            <div><strong>{entry.name}</strong><span>{entry.rooms.length?entry.rooms.map(room=>room.roomName).join(', '):'No eligible rooms assigned'}{entry.allRooms?' · Default for all other rooms':''}</span></div>
-            {canManage&&!locked&&<div className="shift-dessert-saved-actions">
-              <button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>selectDessertForEdit(entry)}>Edit</button>
-              <button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>void deleteDessert(entry.id)}>Remove</button>
+        <div className="shift-dessert-workspace">
+          <div className="shift-dessert-compose">
+            <div className="shift-dessert-pane-title">
+              <h4>{editingDessertId?'Edit dessert':'Add a dessert'}</h4>
+              <span>{editingDessertId?'Update the name or rooms':'Choose who receives it'}</span>
+            </div>
+            <label className="shift-dessert-input">Dessert being served
+              <input type="text" maxLength={500} value={dessertName} disabled={!canManage||locked||dessertSaving} onChange={event=>setDessertName(event.target.value)} placeholder="e.g., Flourless chocolate torte" aria-label="Dessert being served"/>
+            </label>
+            <div className="shift-dessert-room-list">
+              <strong>Assign to rooms</strong>
+              <p className="shift-dessert-hint">Choose specific rooms, or leave all unchecked to serve every eligible room.</p>
+              {summary.dessertRooms.length
+                ? <div className="shift-dessert-room-chips" role="group" aria-label="Choose dessert rooms">{summary.dessertRooms.map((room:any)=>{
+                  const selected=dessertRoomIds.includes(String(room.roomId))
+                  return <button type="button" key={room.roomId} aria-pressed={selected} className={selected?'is-selected':''} disabled={!canManage||locked||dessertSaving} onClick={()=>setDessertRoomIds(current=>selected?current.filter(id=>id!==String(room.roomId)):[...current,String(room.roomId)])}>
+                    <span aria-hidden="true" className="shift-dessert-chip-check">{selected?'✓':''}</span>
+                    <span>{room.roomName}</span>
+                  </button>
+                })}</div>
+                : <p>No dessert rooms scheduled.</p>}
+            </div>
+            {canManage&&!locked&&<div className="shift-dessert-form-actions">
+              <button type="button" className="ops-primary-btn" disabled={dessertSaving||!dessertName.trim()} onClick={()=>void saveDessertAssignment()}>{dessertSaving?'Saving…':editingDessertId?'Update dessert':'Save dessert'}</button>
+              {editingDessertId&&<button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>{setDessertName('');setDessertRoomIds([]);setEditingDessertId('')}}>Cancel edit</button>}
+              {!editingDessertId&&<span className="shift-dessert-save-help">Save, then add another dessert if needed.</span>}
             </div>}
-          </div>)}
-        </div>}
-        {dessertUnassigned.length>0&&<p className="shift-dessert-unassigned">No dessert assigned yet: {dessertUnassigned.map((room:any)=>room.roomName).join(', ')}</p>}
+          </div>
+          <div className="shift-dessert-saved-list">
+            <div className="shift-dessert-pane-title">
+              <h4>Saved desserts</h4>
+              <span>{dessertDetails.length} {dessertDetails.length===1?'dessert':'desserts'}</span>
+            </div>
+            {dessertDetails.length?dessertDetails.map(entry=><div key={entry.id} className="shift-dessert-saved-row">
+              <div className="shift-dessert-saved-content">
+                <strong>{entry.name}</strong>
+                <span>{entry.rooms.length?entry.rooms.map(room=>room.roomName).join(' · '):'No eligible rooms assigned'}</span>
+                {entry.allRooms&&<small>Default for unassigned rooms</small>}
+              </div>
+              {canManage&&!locked&&<div className="shift-dessert-saved-actions">
+                <button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>selectDessertForEdit(entry)}>Edit</button>
+                <button type="button" className="ops-secondary-btn" disabled={dessertSaving} onClick={()=>void deleteDessert(entry.id)}>Remove</button>
+              </div>}
+            </div>):<p className="shift-dessert-empty">No desserts saved yet. Add your first dessert using the form.</p>}
+            {dessertUnassigned.length>0&&<p className="shift-dessert-unassigned">Still unassigned: {dessertUnassigned.map((room:any)=>room.roomName).join(', ')}</p>}
+          </div>
+        </div>
       </section>
 
       <section className="shift-section shift-action-section">
