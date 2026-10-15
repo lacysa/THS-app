@@ -1064,3 +1064,36 @@ html[data-theme="dark"] .shift-handoff-group .shift-handoff-group-label {color:v
     overflow-wrap:anywhere!important;
   }
 }
+
+/* Evening dessert handoff; supplementary UI only, no breakfast form changes. */
+.shift-tonights-dessert{border-color:#cddce5;background:linear-gradient(120deg,#f5f8fb,#f7f4fd)}
+.shift-dessert-section-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:14px}
+.shift-dessert-section-head h3{margin:2px 0 4px;color:var(--ths-text)}
+.shift-dessert-section-head p{margin:0;color:var(--ths-muted);font-size:12px}
+.shift-dessert-eyebrow{color:#61758b;font-size:10px;font-weight:800;letter-spacing:.1em}
+.shift-dessert-total{flex:none;display:flex;align-items:baseline;gap:5px;color:#3d6686}
+.shift-dessert-total strong{font-size:26px;line-height:1;font-weight:800}
+.shift-dessert-total span{font-size:11px}
+.shift-dessert-input{display:grid;gap:6px;color:var(--ths-text);font-size:12px;font-weight:750}
+.shift-dessert-input input{width:100%;padding:10px 12px;border:1px solid var(--ths-line);border-radius:9px;background:var(--ths-paper);color:var(--ths-text);font:inherit;font-weight:500}
+.shift-dessert-input input:disabled{opacity:.75}
+.shift-dessert-room-list{display:grid;gap:7px;margin-top:14px;font-size:12px}
+.shift-dessert-room-list>p{margin:0;color:var(--ths-muted)}
+.shift-dessert-room-chips{display:flex;flex-wrap:wrap;gap:6px}
+.shift-dessert-room-chips>span{padding:5px 9px;border-radius:7px;background:#e5eff5;color:#345b76;font-size:11px;font-weight:650}
+.ths-tonights-dessert-display{display:grid;gap:6px;padding:11px 13px;border:1px solid #cfdee7;border-radius:10px;background:#f3f7fa;color:#2f526c}
+.ths-tonights-dessert-display-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ths-tonights-dessert-display-heading strong{font-size:13px;font-weight:800}
+.ths-tonights-dessert-display-heading small{font-size:10px;color:#607d91}
+.ths-tonights-dessert-display p{margin:0;font-size:12px;line-height:1.4;color:#324e64;white-space:pre-wrap;overflow-wrap:anywhere}
+.front-desk-page .ths-tonights-dessert-display{margin:0 0 12px}
+.breakfast-overview-page .ths-tonights-dessert-display{margin-bottom:14px}
+html[data-theme="dark"] .shift-tonights-dessert,html[data-theme="dark"] .ths-tonights-dessert-display{background:#253240;border-color:#40586a;color:#e0eaf1}
+html[data-theme="dark"] .ths-tonights-dessert-display p,html[data-theme="dark"] .ths-tonights-dessert-display-heading small{color:#c4d7e6}
+html[data-theme="dark"] .shift-dessert-room-chips>span{background:#34495b;color:#d0e4f0}
+@media(max-width:570px){.shift-dessert-section-head{align-items:flex-start}.shift-dessert-total strong{font-size:22px}}
+@media print{
+ .shift-print-document .shift-print-dessert{break-inside:avoid-page!important;page-break-inside:avoid!important}
+ .shift-print-document .shift-print-dessert p{font-size:9pt!important;line-height:1.3!important;margin:4px 0!important}
+ .breakfast-overview-page .ths-tonights-dessert-display{background:#f3f7fa!important;color:#2f526c!important;print-color-adjust:exact;-webkit-print-color-adjust:exact;break-inside:avoid-page}
+}
