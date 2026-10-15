@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import TonightsDessertDisplay from '@/components/TonightsDessertDisplay'
 
 function splitDietary(value:string) {
   return String(value || '').split(',').map(x=>x.trim()).filter(Boolean)
@@ -102,6 +103,8 @@ export default function BreakfastOverview({initialDate}:{initialDate:string}) {
               {breakfastCounts.length===0 ? <span className="muted">No submitted menus yet.</span> : breakfastCounts.map(([label,count])=><span className="summary-chip" key={label}>{label}: {count}</span>)}
             </div>
           </section>
+
+          <TonightsDessertDisplay serviceDate={date}/>
 
           <section className="overview-panel tickets-panel">
             <div className="overview-section-head">
