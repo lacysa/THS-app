@@ -333,6 +333,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       const existing=saveTimers.current[roomId]
       if(existing)clearTimeout(existing)
       saveTimers.current[roomId]=setTimeout(()=>{
+        delete saveTimers.current[roomId]
         const pending=pendingPatches.current[roomId]||{}
         delete pendingPatches.current[roomId]
         const previous=saveQueues.current[roomId]||Promise.resolve(true)
