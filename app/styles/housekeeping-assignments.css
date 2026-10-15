@@ -71,3 +71,55 @@
 }
 html[data-theme="dark"] .hka-toggle button.active{background:#285b51;color:#e5fff3}
 html[data-theme="dark"] .hka-person-head{background:linear-gradient(120deg,rgba(48,105,89,.26),transparent)}
+
+
+/* Assignment-only mobile alignment: no breakfast, room-board, or shared shell changes. */
+.hka-workspace{width:100%;max-width:1260px;min-width:0}
+.hka-header>div{min-width:0}
+.hka-date-picker{max-width:100%;min-width:0;gap:10px}
+.hka-date-nav,.hka-date-actions{display:flex;align-items:center;gap:7px;min-width:0}
+.hka-date-nav input{box-sizing:border-box;width:150px;min-width:0;max-width:150px;min-height:40px;font-size:14px;text-align:center}
+.hka-date-picker button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:40px;min-height:40px;padding:8px 10px}
+.hka-date-actions button:last-child{width:40px}
+
+.hka-deep-clean{padding:18px 22px;margin-bottom:20px;min-width:0}
+.hka-deep-clean>.hka-person-head{align-items:flex-start;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.hka-deep-clean>.hka-person-head>div{flex:1 1 auto;min-width:0}
+.hka-deep-clean>.hka-person-head small{line-height:1.5}
+.hka-deep-count{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  padding:7px 11px;border-radius:999px;background:#e2f3ec;color:#315e4d;
+  font-size:12px;font-weight:800;white-space:nowrap}
+.hka-deep-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:end;margin-bottom:14px}
+.hka-deep-form>label{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:13px;font-weight:750;line-height:1.35}
+.hka-deep-form .hka-deep-instructions{grid-column:1 / -1}
+.hka-deep-form select,.hka-deep-form input{box-sizing:border-box;display:block;width:100%;max-width:100%;min-width:0;min-height:44px;
+  padding:10px 12px;border:1px solid var(--line,#cddde5);border-radius:11px;
+  background:var(--card,#fff);color:var(--text,#233947);font-size:14px}
+.hka-deep-form>button{justify-self:start;min-height:42px;padding:10px 16px;border:0;border-radius:11px;
+  background:#263d4e;color:#fff;font-size:13px;font-weight:750;cursor:pointer}
+.hka-deep-form>button:disabled{opacity:.5;cursor:not-allowed}
+.hka-deep-clean .hka-person-room select{min-width:0}
+
+@media(max-width:620px){
+  .hka-workspace{padding-left:0;padding-right:0}
+  .hka-header{min-width:0}
+  .hka-date-picker{display:grid;grid-template-columns:minmax(0,1fr);width:100%;gap:8px;padding:10px}
+  .hka-date-nav{display:grid;grid-template-columns:18px 40px minmax(0,1fr) 40px;gap:8px;width:100%}
+  .hka-date-nav>svg{justify-self:center}
+  .hka-date-nav input{width:100%;max-width:none;min-width:0;min-height:44px;padding:6px 4px;font-size:16px}
+  .hka-date-actions{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;width:100%}
+  .hka-date-picker button{min-height:44px;min-width:0;border-radius:10px}
+  .hka-date-actions button{background:rgba(106,144,156,.08);border:1px solid var(--line,#dce5e9)}
+  .hka-date-actions button:last-child{width:44px}
+  .hka-deep-clean{padding:15px;margin-bottom:17px}
+  .hka-deep-clean>.hka-person-head{gap:10px;padding:12px;margin-bottom:15px}
+  .hka-deep-clean>.hka-person-head strong{font-size:17px}
+  .hka-deep-count{font-size:12px;padding:7px 10px}
+  .hka-deep-form{grid-template-columns:minmax(0,1fr);gap:13px}
+  .hka-deep-form .hka-deep-instructions{grid-column:auto}
+  .hka-deep-form select,.hka-deep-form input{font-size:16px}
+  .hka-deep-form>button{justify-self:stretch;min-height:44px}
+  .hka-deep-clean .hka-person-rooms{padding:0}
+  .hka-deep-clean .hka-person-room{align-items:stretch}
+  .hka-deep-clean .hka-person-room select{width:100%;max-width:100%!important;font-size:16px;min-height:44px}
+}
