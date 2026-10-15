@@ -4,7 +4,7 @@ import { getStaffSession } from '@/lib/client/staff-session'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 import { useEffect,useMemo,useRef,useState } from 'react'
-import { derivedLiveCondition, finalVerificationComplete, requiresHousekeeperSelfCheck, roomNextAction, roomWorkflowLabel, roomWorkflowState } from '@/lib/room-state'
+import { derivedLiveCondition, isCheckoutAwaitingOut, finalVerificationComplete, requiresHousekeeperSelfCheck, roomNextAction, roomWorkflowLabel, roomWorkflowState } from '@/lib/room-state'
 import {
   AlertTriangle,
   BedDouble,
@@ -354,6 +354,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   async function toggleComplete(row:RoomRow){
     if(isBlocked(row)){setMessage('Blocked / held rooms are awareness-only and are not part of the cleaning workflow.');return}
     const next=!row.complete
+    if(next&&isCheckoutAwaitingOut(row)){setMessage('Mark the guest OUT before completing the room clean.');return}
     const update:Partial<RoomRow>={
       complete:next,
       readyForInspection:next&&requiresRoomCheck(row),
@@ -368,6 +369,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
 
   async function markRoomDirty(row:RoomRow){
     if(!isManager(access)||isBlocked(row))return
+    if(isCheckoutAwaitingOut(row)){setMessage('Mark the guest OUT before marking this checkout room dirty.');return}
     const update:Partial<RoomRow>={
       roomCondition:'Vacant (Dirty)',complete:false,readyForInspection:false,inspected:false,
       inspectedAt:null,completedAt:null,
@@ -812,7 +814,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
                           <small>{roomWorkflowLabel({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</small>
                         </button>
                       </td>
-                      <td><select aria-label="Room condition" className="rooms-table-status-select" value={isStayover(row)?'Occupied':row.roomCondition||''} disabled={isStayover(row)} onChange={e=>patch(row.roomId,{roomCondition:e.target.value,...(e.target.value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
+                      <td><select aria-label="Room condition" className="rooms-table-status-select" value={isStayover(row)||isCheckoutAwaitingOut(row)?'Occupied':row.roomCondition||''} disabled={isStayover(row)||isCheckoutAwaitingOut(row)} onChange={e=>patch(row.roomId,{roomCondition:e.target.value,...(e.target.value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
                       <td>
                         <details className="rooms-table-packages">
                           <summary>{selectedPackages.length?selectedPackages.join(', '):'Select packages'}</summary>
@@ -879,7 +881,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
                   <div><span>Reservation</span><strong>{row.reservationStatus||'Not set'}</strong></div>
                   <div><span>Live condition</span><strong>{derivedLiveCondition(effectiveRow)||'—'}</strong></div>
                 </div>
-                <label className="rooms-late-toggle"><input type="checkbox" checked={Boolean(row.lateArrival)} onChange={e=>patch(row.roomId,{lateArrival:e.target.checked})}/> Late arrival</label><div className="rooms-manager-status-tools"><label>Stay status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(status=><option key={status} value={status}>{status||'—'}</option>)}</select></label><label>Room condition<select value={row.roomCondition||''} onChange={e=>patch(row.roomId,{roomCondition:e.target.value,...(e.target.value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select></label><button type="button" className={isBlocked(row)?'rooms-unblock-action':'rooms-block-action'} onClick={()=>patch(row.roomId,{stripHold:isBlocked(row)?'':'Hold'})}>{isBlocked(row)?'Release maintenance hold':'Block for maintenance'}</button></div>
+                <label className="rooms-late-toggle"><input type="checkbox" checked={Boolean(row.lateArrival)} onChange={e=>patch(row.roomId,{lateArrival:e.target.checked})}/> Late arrival</label><div className="rooms-manager-status-tools"><label>Stay status<select value={row.reservationStatus||''} onChange={e=>patch(row.roomId,{reservationStatus:e.target.value})}>{reservationOptions.map(status=><option key={status} value={status}>{status||'—'}</option>)}</select></label><label>Room condition<select value={isStayover(row)||isCheckoutAwaitingOut(row)?'Occupied':row.roomCondition||''} disabled={isStayover(row)||isCheckoutAwaitingOut(row)} onChange={e=>patch(row.roomId,{roomCondition:e.target.value,...(e.target.value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select></label><button type="button" className={isBlocked(row)?'rooms-unblock-action':'rooms-block-action'} onClick={()=>patch(row.roomId,{stripHold:isBlocked(row)?'':'Hold'})}>{isBlocked(row)?'Release maintenance hold':'Block for maintenance'}</button></div>
 <div className="rooms-manager-grid">
                   <label>Assign cleaner<select value={assigned[0]||''} onChange={e=>assignStaff(row,e.target.value)}><option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select></label>
                   <label>Cleaning order<input type="number" min="1" inputMode="numeric" value={row.cleanOrder??''} onChange={e=>patch(row.roomId,{cleanOrder:e.target.value?Number(e.target.value):null})}/></label>
