@@ -21,7 +21,7 @@ function reservationType(row:ReservationRow){
 }
 function roomOutLabel(row:ReservationRow){
  const match=/^OUT(?:-([A-Z]{2,4}))?$/i.exec(String(row.serviceType||'').trim())
- return match?'OUT'+(match[1]?' · '+match[1].toUpperCase():''):''
+ return match?'OUT'+(match[1]?'·'+match[1].toUpperCase():''):''
 }
 function roomCondition(row:ReservationRow){
  // Live condition is a derived fact, not an indication that someone manually
@@ -178,7 +178,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
       const guest=activeGuest(row,serviceDate)
       const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})
       return <tr key={row.roomId} tabIndex={0} role="button" aria-label={`Open ${row.roomName} room interactions`} onClick={open} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open()}}} style={{borderBottom:'1px solid #e7edf0',cursor:'pointer'}}>
-       <th scope="row" className={roomOutLabel(row)?'ths-ops-room-out-cell':''} style={{padding:'12px 14px',whiteSpace:'nowrap'}}><span className="ths-ops-room-name-with-out"><span>{row.roomName}</span>{roomOutLabel(row)&&<span className="ths-ops-room-out-flag" title={roomOutLabel(row).includes(' · ')?'Guest departed · OUT initials recorded':'Guest departed · room marked OUT'} aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</span>}</span></th>
+       <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}><span className="ths-ops-room-name-with-out">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; tip collection initials shown if available" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}</span></th>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{type}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.assignedTo?.trim()||'—'}</td>
@@ -211,7 +211,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
      return <button className="ths-ops-room-row ths-ops-room-card" type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})}>
       <span className="ths-ops-room-info">
        <span className="ths-ops-card-top">
-        <span className="ths-ops-room-name">{row.roomName}{roomOutLabel(row)&&<span className="ths-ops-room-out-flag" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</span>}<span className="ths-ops-activity">{type}{service==='RF'?' · RF':''}</span></span>
+        <span className="ths-ops-room-name">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; initials if recorded" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}<span className="ths-ops-activity">{type}{service==='RF'?' · RF':''}</span></span>
         <span className="ths-ops-card-condition"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18} aria-hidden="true"/></span>
        </span>
        <span className="ths-ops-card-summary">
