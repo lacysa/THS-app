@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react'
 import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,Pencil,Save,SlidersHorizontal,Wallet,X} from 'lucide-react'
 import OpsActivityLog from '@/components/OpsActivityLog'
+import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
@@ -130,6 +131,16 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  }
  const mentionMatches=mentionSearch===null?[]:[{name:'everyone',userId:'__everyone__'},{name:'today',userId:'__today__'},...(data?.mentionableStaff||[])].filter(s=>s.name.toLocaleLowerCase().includes(mentionSearch.toLocaleLowerCase())).slice(0,50)
  const daily=data?.daily
+ const liveCondition=daily?derivedLiveCondition({
+  reservationStatus:daily.reservation_status,
+  serviceType:daily.service_type,
+  stripHold:daily.strip_hold,
+  roomCondition:daily.room_condition,
+  complete:daily.complete,
+  readyForInspection:daily.ready_for_inspection,
+  inspected:daily.inspected,
+  checkIssueOpen:daily.check_issue_open
+ }):'Not recorded'
  const isStayover=String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'
  const currentHousekeeper=String(daily?.assigned_to||'').trim()
  const cleanerDisplay=currentHousekeeper||'Unassigned'
@@ -262,14 +273,14 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
     {data&&<>
      <section className="ops-hub-accordion">
       <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.room} onClick={()=>toggleSection('room')}>
-       <span><SlidersHorizontal size={17}/><strong>Room & checks</strong><small>{present(daily?.room_condition)} · {currentHousekeeper||'Housekeeper unassigned'}</small></span>
+       <span><SlidersHorizontal size={17}/><strong>Room & checks</strong><small>{present(liveCondition)} · {currentHousekeeper||'Housekeeper unassigned'}</small></span>
        <ChevronDown size={19} className={sections.room?'expanded':''}/>
       </button>
       {sections.room&&<div className="ops-hub-accordion-inner">
       <div className="ops-hub-priority">
        <div className="ops-hub-primary-cards">
-       <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
-        <span>Condition</span><span className="ops-hub-action-value"><strong>{present(daily?.room_condition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+       <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy||isStayover||isCheckoutAwaitingOut({reservationStatus:daily?.reservation_status,serviceType:daily?.service_type})} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
+        <span>Condition</span><span className="ops-hub-action-value"><strong>{present(liveCondition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
        <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='housekeeper'?null:'housekeeper')}>
         <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{cleanerDisplay}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
