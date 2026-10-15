@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { loadTubTaskStates } from '@/lib/ops-tub'
+import { previousVacantConditions } from '@/lib/room-condition-carry'
 
 export const dynamic = 'force-dynamic'
 
@@ -170,6 +171,7 @@ export async function GET(req: NextRequest) {
     const onsiteIds = new Set(onsiteStaffOptions.map((person:any)=>String(person.id)))
     const staffOptions = [...onsiteStaffOptions, ...allStaffOptions.filter((person:any)=>!onsiteIds.has(String(person.id)) && !(scheduleRows||[]).some((r:any)=>String(r.staff_member_id)===String(person.id) && ['called_off','no_call_no_show','time_off','unavailable'].includes(String(r.work_mode))))]
 
+    const carryConditions=await previousVacantConditions(admin,serviceDate,saved||[])
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
 
@@ -245,7 +247,7 @@ export async function GET(req: NextRequest) {
         inspected: Boolean(savedRow.inspected),
         completedAt: savedRow.completed_at || null,
         inspectedAt: savedRow.inspected_at || null,
-        roomCondition: savedRow.room_condition || '',
+        roomCondition: savedRow.room_condition || carryConditions.get(String(room.id)) || '',
         nextShiftCondition: savedRow.next_shift_condition || '',
         notes: savedRow.notes || '',
         breakfastTag: Boolean(savedRow.breakfast_tag),
