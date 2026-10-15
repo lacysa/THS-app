@@ -152,7 +152,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         const staffCondition=String(current.room_condition||'').trim()
         const outConfirmed=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(current.service_type||'').trim())
         const awaitingOut=['Checkout','Out/In'].includes(status)&&!outConfirmed
-        const carryCondition=noReservation&&!staffCondition?last:''
+        const carryCondition=noReservation&&!staffCondition&&!outConfirmed?last:''
         const condition=awaitingOut?'Occupied':staffCondition||carryCondition
         const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'
         hsk.push({
@@ -177,7 +177,11 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         (status==='Vacant'?lastConditionByRoom.get(String(room.id))||'':'')).trim()
       const carriedOccupied=status==='Vacant'&&liveCondition.toLowerCase()==='occupied'&&
         lastConditionByRoom.get(String(room.id))==='Occupied'&&!confirmedOut
-      if(confirmedOut)lastConditionByRoom.delete(String(room.id))
+      if(confirmedOut){
+        if(liveCondition && !['occupied','ready for room check','final check','cleaning'].includes(liveCondition.toLowerCase()))
+          lastConditionByRoom.set(String(room.id),liveCondition)
+        else lastConditionByRoom.delete(String(room.id))
+      }
       else if(awaitingOut||carriedOccupied||(liveCondition&& !['occupied','ready for room check','final check','cleaning'].includes(liveCondition.toLowerCase())))
         lastConditionByRoom.set(String(room.id),liveCondition)
       else if(status!=='Vacant')lastConditionByRoom.delete(String(room.id))
