@@ -91,15 +91,29 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   if(manualTagResult.error)throw new Error(manualTagResult.error.message)
   const manualTags=new Map((manualTagResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),Boolean(row.breakfast_tag_override)]))
 
-  const dirtyResult=await admin.from('housekeeping_daily_rooms')
-    .select('service_date,room_id,room_condition')
-    .gte('service_date',previousDay(start))
+  // Load the latest prior physical condition for each room, plus any staff
+  // override already recorded for a day being rebuilt. Never import an older
+  // reservation's workflow status into a reservation-free day.
+  const carryResult=await admin.from('housekeeping_daily_rooms')
+    .select('service_date,room_id,reservation_status,room_condition,next_shift_condition,strip_hold')
     .lt('service_date',end)
-    .eq('room_condition','Vacant (Dirty)')
-  if(dirtyResult.error) throw new Error(dirtyResult.error.message)
-  const dirtyCarry=new Set(
-    (dirtyResult.data||[]).map((row:any)=>addDay(String(row.service_date))+'|'+String(row.room_id))
-  )
+    .order('service_date',{ascending:false})
+    .limit(10000)
+  if(carryResult.error)throw new Error(carryResult.error.message)
+  const priorByDay=new Map((carryResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
+  const currentResult=await admin.from('housekeeping_daily_rooms')
+    .select('service_date,room_id,room_condition,reservation_status,service_type')
+    .gte('service_date',start).lte('service_date',end)
+  if(currentResult.error)throw new Error(currentResult.error.message)
+  const currentByDay=new Map((currentResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
+  const lastConditionByRoom=new Map<string,string>()
+  for(const row of [...(carryResult.data||[])].reverse()){
+    if(String(row.service_date)>=start)continue
+    const condition=String(row.next_shift_condition||row.room_condition||'').trim()
+    // A previous guest's Occupied status must not leak into a vacant date.
+    if(condition && !['occupied','ready for room check','final check','cleaning'].includes(condition.toLowerCase()))
+      lastConditionByRoom.set(String(row.room_id),condition)
+  }
 
   for(const date of eachDate(start,end)){
     for(const room of rooms){
@@ -126,18 +140,35 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
       })
 
       if(!blocked.has(date+'|'+room.id)){
-        const carryDirty=dirtyCarry.has(date+'|'+room.id)
+        const roomKey=date+'|'+room.id
+        const current:any=currentByDay.get(roomKey)||{}
+        const last=lastConditionByRoom.get(String(room.id))||''
+        const noReservation=status==='Vacant'
+        const staffCondition=String(current.room_condition||'').trim()
+        const carryCondition=noReservation&&!staffCondition?last:''
+        const condition=staffCondition||carryCondition
+        const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'
         hsk.push({
           service_date:date,
           room_id:room.id,
-          reservation_status:carryDirty && status==='Vacant' ? 'Dirty' : status,
+          reservation_status:carryDirty ? 'Dirty' : status,
           breakfast_tag: manualTags.has(date+'|'+room.id)
             ? manualTags.get(date+'|'+room.id)
             : Boolean(arriving||staying) && (breakfastIncluded((arriving||staying)?.rate_plan) || morningBreakfastIncluded((arriving||staying)?.innkeeper_notes,addDay(date))),
-          ...(carryDirty ? {service_type:'OUT'} : {}),
+          ...(carryCondition ? {room_condition:carryCondition} : {}),
+          ...(carryDirty && !String(current.service_type||'').trim() ? {service_type:'OUT'} : {}),
           updated_at:new Date().toISOString()
         })
       }
+      // A date can be rebuilt repeatedly. Only today's verified physical
+      // condition may seed tomorrow; reservation arrivals/checkout take
+      // precedence over the carry-forward display.
+      const current:any=currentByDay.get(date+'|'+room.id)||{}
+      const liveCondition=String(current.next_shift_condition||current.room_condition||
+        (status==='Vacant'?lastConditionByRoom.get(String(room.id))||'':'')).trim()
+      if(liveCondition && !['occupied','ready for room check','final check','cleaning'].includes(liveCondition.toLowerCase()))
+        lastConditionByRoom.set(String(room.id),liveCondition)
+      else if(status!=='Vacant')lastConditionByRoom.delete(String(room.id))
     }
   }
 
