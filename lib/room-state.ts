@@ -16,6 +16,11 @@ export type RoomLike={
 export type RoomWorkflowState='blocked'|'refresh'|'cleaning'|'self'|'inspection'|'correction'|'final'|'ready'|'occupied'
 
 export function normalizeRoomValue(value:unknown){return String(value||'').trim().toLowerCase()}
+export function isCheckoutAwaitingOut(row:RoomLike){
+  const activity=normalizeRoomValue(row.reservationStatus)
+  const outConfirmed=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())
+  return (activity==='checkout'||activity==='out/in')&&!outConfirmed
+}
 export function isStayoverRoom(row:RoomLike){return normalizeRoomValue(row.reservationStatus)==='stayover'}
 export function isRefreshRoom(row:RoomLike){return isStayoverRoom(row)&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
 export function isBlockedRoom(row:RoomLike){return normalizeRoomValue(row.reservationStatus)==='blocked'||normalizeRoomValue(row.stripHold).includes('hold')}
@@ -46,8 +51,11 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   // Refresh service remains a task, but its live condition is still Occupied.
   if(isRefreshRoom(row))return row.complete?'occupied':'refresh'
   if(isStayoverRoom(row))return 'occupied'
+  // Checkout and Out/In remain physically occupied until management marks OUT.
+  // Never advance them to cleaning, inspection, or ready merely due to the date.
+  if(isCheckoutAwaitingOut(row))return 'occupied'
   if(row.checkIssueOpen&&!row.readyForInspection)return 'correction'
-  if(normalizeRoomValue(row.roomCondition)==='occupied')return 'occupied'
+  if(normalizeRoomValue(row.roomCondition)==='occupied' && !(['checkout','out/in'].includes(normalizeRoomValue(row.reservationStatus)) && /^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())))return 'occupied'
 
   // Arrival/vacant rooms can legitimately begin the day already guest-ready
   // from the prior shift. A new checkout or Out/In never inherits that state.
@@ -87,7 +95,7 @@ export function roomNextAction(row:RoomLike){
   if(state==='blocked')return 'No action required'
   if(state==='correction')return 'Correct flagged items'
   if(state==='refresh')return 'Complete refresh'
-  if(state==='occupied')return isRefreshRoom(row)&&row.complete?'Refresh completed':'No service requested'
+  if(state==='occupied')return isCheckoutAwaitingOut(row)?'Await OUT confirmation':isRefreshRoom(row)&&row.complete?'Refresh completed':'No service requested'
   if(state==='self')return 'Complete self-check'
   if(state==='cleaning')return 'Finish room clean'
   if(state==='inspection')return 'Perform room check'
