@@ -102,7 +102,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   if(carryResult.error)throw new Error(carryResult.error.message)
   const priorByDay=new Map((carryResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
   const currentResult=await admin.from('housekeeping_daily_rooms')
-    .select('service_date,room_id,room_condition,reservation_status,service_type')
+    .select('service_date,room_id,room_condition,reservation_status,service_type,strip_hold')
     .gte('service_date',start).lte('service_date',end)
   if(currentResult.error)throw new Error(currentResult.error.message)
   const currentByDay=new Map((currentResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
@@ -151,7 +151,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         const noReservation=status==='Vacant'
         const staffCondition=String(current.room_condition||'').trim()
         const outConfirmed=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(current.service_type||'').trim())
-        const awaitingOut=['Checkout','Out/In'].includes(status)&&!outConfirmed
+        const awaitingOut=['Checkout','Out/In'].includes(status)&&!outConfirmed&&!String(current.strip_hold||'').toLowerCase().includes('hold')
         const carryCondition=noReservation&&!staffCondition&&!outConfirmed?last:''
         const condition=awaitingOut?'Occupied':staffCondition||carryCondition
         const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'
