@@ -102,7 +102,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   if(carryResult.error)throw new Error(carryResult.error.message)
   const priorByDay=new Map((carryResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
   const currentResult=await admin.from('housekeeping_daily_rooms')
-    .select('service_date,room_id,room_condition,reservation_status,service_type,strip_hold')
+    .select('service_date,room_id,room_condition,reservation_status,service_type,strip_hold,updated_by')
     .gte('service_date',start).lte('service_date',end)
   if(currentResult.error)throw new Error(currentResult.error.message)
   const currentByDay=new Map((currentResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
@@ -148,21 +148,29 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         const roomKey=date+'|'+room.id
         const current:any=currentByDay.get(roomKey)||{}
         const last=lastConditionByRoom.get(String(room.id))||''
-        const noReservation=status==='Vacant'
+        // A manager may correct a PMS Arrival to Stayover for an already
+        // occupied room. Preserve that explicit staff override; do not rewrite
+        // the imported reservation itself.
+        const staffStayoverOverride=Boolean(current.updated_by)&&
+          String(current.reservation_status||'').trim().toLowerCase()==='stayover'&&status==='Arrival'
+        const effectiveStatus=staffStayoverOverride?'Stayover':status
+        const noReservation=effectiveStatus==='Vacant'
         const staffCondition=String(current.room_condition||'').trim()
         const outConfirmed=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(current.service_type||'').trim())
-        const awaitingOut=['Checkout','Out/In'].includes(status)&&!outConfirmed&&!String(current.strip_hold||'').toLowerCase().includes('hold')
+        const onHold=String(current.strip_hold||'').toLowerCase().includes('hold')
+        const awaitingOut=['Checkout','Out/In'].includes(effectiveStatus)&&!outConfirmed&&!onHold
+        const stayoverOccupied=effectiveStatus==='Stayover'&&!onHold
         const carryCondition=noReservation&&!staffCondition&&!outConfirmed?last:''
-        const condition=awaitingOut?'Occupied':staffCondition||carryCondition
+        const condition=awaitingOut||stayoverOccupied?'Occupied':staffCondition||carryCondition
         const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'
         hsk.push({
           service_date:date,
           room_id:room.id,
-          reservation_status:carryDirty ? 'Dirty' : status,
+          reservation_status:carryDirty ? 'Dirty' : effectiveStatus,
           breakfast_tag: manualTags.has(date+'|'+room.id)
             ? manualTags.get(date+'|'+room.id)
             : Boolean(arriving||staying) && (breakfastIncluded((arriving||staying)?.rate_plan) || morningBreakfastIncluded((arriving||staying)?.innkeeper_notes,addDay(date))),
-          ...(awaitingOut ? {room_condition:'Occupied'} : carryCondition ? {room_condition:carryCondition} : {}),
+          ...(awaitingOut||stayoverOccupied ? {room_condition:'Occupied'} : carryCondition ? {room_condition:carryCondition} : {}),
           ...(carryDirty && !String(current.service_type||'').trim() ? {service_type:'OUT'} : {}),
           updated_at:new Date().toISOString()
         })
