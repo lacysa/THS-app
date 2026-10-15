@@ -1097,3 +1097,9 @@ html[data-theme="dark"] .shift-dessert-room-chips>span{background:#34495b;color:
  .shift-print-document .shift-print-dessert p{font-size:9pt!important;line-height:1.3!important;margin:4px 0!important}
  .breakfast-overview-page .ths-tonights-dessert-display{background:#f3f7fa!important;color:#2f526c!important;print-color-adjust:exact;-webkit-print-color-adjust:exact;break-inside:avoid-page}
 }
+
+/* Fast access for the evening dessert entry in the Shift Report toolbar. */
+.shift-dessert-jump{border-color:#9bb2c4!important;background:#e8f1f7!important;color:#315b78!important;font-weight:800!important}
+.shift-dessert-jump:hover{background:#daeaf5!important}
+#tonights-dessert{scroll-margin-top:168px}
+html[data-theme="dark"] .shift-dessert-jump{border-color:#5b788f!important;background:#2a455b!important;color:#e1edf7!important}
