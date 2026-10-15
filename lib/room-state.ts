@@ -13,7 +13,7 @@ export type RoomLike={
   roomCondition?:string|null
 }
 
-export type RoomWorkflowState='blocked'|'refresh'|'cleaning'|'self'|'inspection'|'correction'|'final'|'ready'|'occupied'
+export type RoomWorkflowState='blocked'|'refresh'|'cleaning'|'self'|'inspection'|'correction'|'final'|'ready'|'occupied'|'unknown'
 
 export function normalizeRoomValue(value:unknown){return String(value||'').trim().toLowerCase()}
 export function isCheckoutAwaitingOut(row:RoomLike){
@@ -62,6 +62,9 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   const reservation=normalizeRoomValue(row.reservationStatus)
   const condition=normalizeRoomValue(row.roomCondition)
   const service=String(row.serviceType||'').trim().toUpperCase()
+  // A vacant room without any recorded condition is unknown, not automatically
+  // being cleaned. Keep this consistent across all room-status views.
+  if(reservation==='vacant'&&!condition&&!service.startsWith('OUT')&&!row.complete)return 'unknown'
   if(['arrival','vacant'].includes(reservation)&&['ready','ready for guest','vacant (clean)'].includes(condition)&&!service.startsWith('OUT'))return 'ready'
   // Arrival-only rooms need a room check, never an assumed full clean.
   if(reservation==='arrival'&&!service.startsWith('OUT')){
@@ -80,6 +83,7 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
 export function roomWorkflowLabel(row:RoomLike){
   const state=roomWorkflowState(row)
   if(state==='blocked')return 'Blocked'
+  if(state==='unknown')return 'Not recorded'
   if(state==='correction')return 'Needs correction'
   if(state==='refresh')return 'Refresh'
   if(state==='occupied')return isRefreshRoom(row)&&row.complete?'Refresh complete':'Occupied'
@@ -93,6 +97,7 @@ export function roomWorkflowLabel(row:RoomLike){
 export function roomNextAction(row:RoomLike){
   const state=roomWorkflowState(row)
   if(state==='blocked')return 'No action required'
+  if(state==='unknown')return 'Confirm room condition'
   if(state==='correction')return 'Correct flagged items'
   if(state==='refresh')return 'Complete refresh'
   if(state==='occupied')return isCheckoutAwaitingOut(row)?'Await OUT confirmation':isRefreshRoom(row)&&row.complete?'Refresh completed':'No service requested'
@@ -107,6 +112,7 @@ export function derivedLiveCondition(row:RoomLike){
   const state=roomWorkflowState(row)
   const reservation=normalizeRoomValue(row.reservationStatus)
   if(state==='blocked')return 'Blocked'
+  if(state==='unknown')return 'Not recorded'
   if(state==='correction')return 'Needs Correction'
   if(state==='refresh'||state==='occupied')return 'Occupied'
   if(state==='self'||state==='cleaning')return normalizeRoomValue(row.roomCondition)==='vacant (dirty)'?'Vacant (Dirty)':'Cleaning'
