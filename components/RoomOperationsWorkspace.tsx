@@ -10,7 +10,7 @@ import { NON_DESKTOP_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'|'Vacant'
-type OpsRow=ReservationRow&{tubCleanDue?:boolean;tubCleanCompleted?:boolean;tubAssignedTo?:string}
+type OpsRow=ReservationRow&{cleanOrder?:number|null;tubCleanDue?:boolean;tubCleanCompleted?:boolean;tubAssignedTo?:string}
 function reservationType(row:ReservationRow){
  const value=String(row.operationalStatus||row.status||'').toLowerCase()
  if(value.includes('out/in'))return 'Out/In'
@@ -123,7 +123,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     const result=await response.json()
     if(active&&Array.isArray(result.rooms)){
      setLiveRows(previous=>{
-      const updates=new Map<string,Partial<ReservationRow>>(result.rooms.map((room:ReservationRow)=>[room.roomId,room]))
+      const updates=new Map<string,Partial<OpsRow>>(result.rooms.map((room:OpsRow)=>[room.roomId,room]))
       return previous.map(row=>({...row,...(updates.get(row.roomId)||{})}))
      })
     }
@@ -181,7 +181,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}><span className="ths-ops-room-name-with-out">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; tip collection initials shown if available" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}</span></th>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{type}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
-       <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.assignedTo?.trim()||'—'}</td>
+       <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.assignedTo?.trim()||'—'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</td>
        <td style={{padding:'12px 14px'}}><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span></td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
@@ -214,7 +214,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        </span>
        <span className="ths-ops-card-summary">
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Guest</span><span className="ths-ops-card-value">{guest?.guest_name||'No active reservation'}</span></span>
-        <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}</span></span>
+        <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</span></span>
        </span>
        <span className="ths-ops-tags">
         {row.breakfastTag&&<span>Breakfast</span>}
