@@ -21,6 +21,10 @@ export async function GET(req:NextRequest){
  try{carryConditions=await previousVacantConditions(admin,date,result.data||[])}catch{return NextResponse.json({error:'Could not load room condition history'},{status:500})}
  let tubStates:Awaited<ReturnType<typeof loadTubTaskStates>>
  try{tubStates=await loadTubTaskStates(admin,date)}catch{return NextResponse.json({error:'Could not refresh tub service tasks'},{status:500})}
+ // Match the arrival times saved from the Room Ops popup without changing the reservation data.
+ const arrivalTimesResult=await admin.from('room_ops_details').select('room_id,expected_arrival_time').eq('service_date',date)
+ if(arrivalTimesResult.error)return NextResponse.json({error:'Could not load expected arrival times'},{status:500})
+ const expectedTimes=new Map<string,string>((arrivalTimesResult.data||[]).map((item:any)=>[String(item.room_id),String(item.expected_arrival_time||'')]))
  return NextResponse.json({rooms:(result.data||[]).map((r:any)=>({
   roomId:String(r.room_id),expectedArrivalTime:expectedTimes.get(String(r.room_id))||'',assignedTo:String(r.assigned_to||''),cleanOrder:r.clean_order==null?null:Number(r.clean_order),roomNotes:String(r.notes||''),breakfastTag:Boolean(r.breakfast_tag),operationalStatus:String(r.reservation_status||''),
   stripHold:String(r.strip_hold||''),lateArrival:Boolean(r.late_arrival),serviceType:String(r.service_type||''),
