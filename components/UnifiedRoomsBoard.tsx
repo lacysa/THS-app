@@ -132,8 +132,10 @@ function managerInitials(access:Access|null){
   return raw.slice(0,2).toUpperCase()
 }
 function canUseAdvancedRoomsViews(access:Access|null){
-  // Advanced Focus/Table workspace is reserved to Sarah's authenticated account.
-  return access?.userId==='316f638d-bd3a-4c6b-9ff3-47ff437a2390'
+  // Focus/Table presentation is enabled for Sarah and David only.
+  // This controls visibility of layouts, not editing or inspection permissions.
+  return access?.userId==='316f638d-bd3a-4c6b-9ff3-47ff437a2390' ||
+    access?.userId==='3958daa4-4b73-49e9-a974-13a274adac33'
 }
 function isManager(access:Access|null){
   if(!access)return false
