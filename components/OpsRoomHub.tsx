@@ -6,7 +6,7 @@ import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
-type ServiceDetails={expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
+type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
 type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
 type View='room'|'guest'|'log'
@@ -184,6 +184,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
 
  async function saveTiming(){
   await run('/api/ops/room-details',{roomId,date,action:'times',expectedArrivalTime:times.expectedArrivalTime||null,actualArrivalTime:times.actualArrivalTime||null,lateCheckoutTime:times.lateCheckoutTime||null},'Room timing saved')
+ }
+ async function toggleLateCheckout(){
+  await run('/api/ops/room-details',{roomId,date,action:'lateCheckoutTag',enabled:!Boolean(data?.serviceDetails?.late_checkout)},'Late checkout updated')
  }
  async function serviceAction(action:'trayReturned'|'trayReset'|'tubRequest'|'tubComplete'|'tubReopen'){
   await run('/api/ops/room-details',{roomId,date,action},action==='tubComplete'?'Tub cleaning recorded':action==='tubRequest'?'Tub cleaning requested':action==='tubReopen'?'Tub cleaning reopened':action==='trayReturned'?'Breakfast tray return recorded':'Tray return cleared')
@@ -454,20 +457,21 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>Room notes{daily?.notes?.trim()?' · Added':''}</button>}
         {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>Packages{selectedPackageNames.length?' · '+selectedPackageNames.length:''}</button>}
         {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>Service · {daily?.service_type||'None'}</button>}
-        {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setShowDetails(v=>!v)}>Times & order</button>}
        </div>
       </div>
-      <div className="ops-hub-quick-section ops-hub-timing" style={{display:showDetails?undefined:"none"}}>
-       <span className="ops-hub-overline">Arrival & checkout times</span>
-       <div className="ops-hub-detail-cards">
-        {([{key:'expectedArrivalTime',label:'Expected arrival'},{key:'actualArrivalTime',label:'Actual arrival'},{key:'lateCheckoutTime',label:'Late checkout'}] as const).map(item=><label className="ops-hub-field" key={item.key}><span>{item.label}</span><input type="time" aria-label={item.label} value={times[item.key]} disabled={!canManage||!daily||busy} onChange={e=>setTimes(current=>({...current,[item.key]:e.target.value}))}/></label>)}
-       </div>
-       {canManage&&daily&&<button type="button" className="ops-hub-secondary" disabled={busy||(['expectedArrivalTime','actualArrivalTime','lateCheckoutTime'] as const).every(key=>times[key]===(data.serviceDetails?.[key==='expectedArrivalTime'?'expected_arrival_time':key==='actualArrivalTime'?'actual_arrival_time':'late_checkout_time']?.slice(0,5)||''))} onClick={()=>void saveTiming()}><Save size={15}/> Save room times</button>}
-       <small className="ops-hub-muted">Arrival and checkout times are operational notes, not changes to the PMS reservation.</small>
+      <div className="ops-hub-quick-section" style={{display:'flex',gap:9,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
+       <label style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap',fontSize:12,fontWeight:700,color:'#365f6d'}}>
+        Expected arrival
+        <input type="time" aria-label="Expected arrival" value={times.expectedArrivalTime} disabled={!canManage||!daily||busy} onChange={e=>setTimes(current=>({...current,expectedArrivalTime:e.target.value}))} style={{width:142,maxWidth:'100%',border:'1px solid #d6e4e8',padding:'7px 8px',borderRadius:9,background:'#fff',color:'#233d49'}}/>
+       </label>
+       {canManage&&daily&&<button type="button" className="ops-hub-secondary" disabled={busy||times.expectedArrivalTime===(data.serviceDetails?.expected_arrival_time?.slice(0,5)||'')} onClick={()=>void saveTiming()} style={{padding:'7px 11px'}}><Save size={14}/> Save</button>}
+       <button type="button" disabled={!canManage||!daily||busy} onClick={()=>void toggleLateCheckout()} aria-pressed={Boolean(data.serviceDetails?.late_checkout)} className={'ops-hub-secondary'+(data.serviceDetails?.late_checkout?' selected':'')} style={{padding:'7px 11px',borderColor:data.serviceDetails?.late_checkout?'#71afa0':undefined,background:data.serviceDetails?.late_checkout?'#e4f5ee':undefined}}>
+        {data.serviceDetails?.late_checkout&&<Check size={14}/>} Late checkout
+       </button>
       </div>
       <section className="ops-hub-details-section">
        <button type="button" className="ops-hub-details-toggle" onClick={()=>setShowDetails(v=>!v)} aria-expanded={showDetails}>
-        <span><SlidersHorizontal size={18}/> {showDetails?"Hide additional details":"Timing, service & more details"}</span>
+        <span><SlidersHorizontal size={18}/> {showDetails?"Hide additional details":"Additional room details"}</span>
         <ChevronDown size={18} className={showDetails?'expanded':''}/>
        </button>
        {showDetails&&<div ref={roomDetailsRef} className="ops-hub-details-inner">
