@@ -28,8 +28,15 @@ export async function PATCH(req:NextRequest){
  if(dayError||!daily)return NextResponse.json({error:'Room date not scheduled'},{status:404})
  if(!manager){
   const {data:person}=await admin.from('staff_members').select('name').eq('auth_user_id',access.userId).eq('active',true).maybeSingle()
-  const {data:assigned}=await admin.from('housekeeping_daily_rooms').select('assigned_to').eq('service_date',date).eq('room_id',roomId).maybeSingle()
-  if(!person||!String(assigned?.assigned_to||'').split(',').some((v:string)=>v.trim().toLowerCase()===String(person.name||'').toLowerCase()))
+  const [assignedResult,tubResult]=await Promise.all([
+   admin.from('housekeeping_daily_rooms').select('assigned_to').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
+   admin.from('room_ops_details').select('tub_clean_assigned_to').eq('service_date',date).eq('room_id',roomId).maybeSingle()
+  ])
+  if(assignedResult.error||tubResult.error)return NextResponse.json({error:'Could not verify tub assignment'},{status:500})
+  const tubAssignee=String(tubResult.data?.tub_clean_assigned_to||'').trim().toLowerCase()
+  const workerName=String(person?.name||'').trim().toLowerCase()
+  const legacyAssigned=String(assignedResult.data?.assigned_to||'').split(',').some((v:string)=>v.trim().toLowerCase()===workerName)
+  if(!workerName||(tubAssignee?tubAssignee!==workerName:!legacyAssigned))
    return NextResponse.json({error:'This room is not assigned to you'},{status:403})
   if(!(await loadTubTaskStates(admin,date)).get(roomId)?.due)return NextResponse.json({error:'No outstanding tub-clean task'},{status:409})
  }
@@ -45,12 +52,24 @@ export async function PATCH(req:NextRequest){
   patch.tray_returned_at=now
  }else if(action==='trayReset'){
   patch.tray_returned_at=null
+ }else if(action==='tubAssign'){
+  if(!manager)return NextResponse.json({error:'Management access required'},{status:403})
+  const name=body.assignedTo
+  if(typeof name!=='string'||name.length>120)return NextResponse.json({error:'Invalid housekeeper'},{status:400})
+  const trimmed=name.trim()
+  if(trimmed){
+   const {data:staff,error:staffError}=await admin.from('staff_members').select('id').eq('name',trimmed).eq('active',true).maybeSingle()
+   if(staffError||!staff)return NextResponse.json({error:'Choose an active staff member'},{status:400})
+  }
+  if(!(await loadTubTaskStates(admin,date)).get(roomId)?.due)return NextResponse.json({error:'No outstanding tub-clean task'},{status:409})
+  patch.tub_clean_assigned_to=trimmed
  }else if(action==='tubRequest'){
   if(String(daily.strip_hold||'').toLowerCase().includes('hold')||String(daily.reservation_status||'').toLowerCase()==='blocked')
    return NextResponse.json({error:'A blocked room cannot be assigned a tub-clean task'},{status:400})
   patch.tub_clean_requested_at=now
   patch.tub_clean_completed_at=null
   patch.tub_clean_completed_by=null
+  patch.tub_clean_assigned_to=''
  }else if(action==='tubComplete'){
   patch.tub_clean_completed_at=now
   patch.tub_clean_completed_by=access.userId
