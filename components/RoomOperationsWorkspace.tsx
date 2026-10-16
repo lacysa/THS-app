@@ -190,8 +190,6 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
          {row.checkIssueOpen&&<span className="alert">Inspection issue</span>}
         {row.tubCleanDue&&<span className="alert">Tub clean needed</span>}
         {row.tubCleanCompleted&&<span>Tub cleaned</span>}
-         {row.tubCleanDue&&<span className="alert">Tub clean needed</span>}
-         {row.tubCleanCompleted&&<span>Tub cleaned</span>}
          {row.roomNotes&&<span>Room note</span>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span>Tips · {String(row.serviceType).split('-')[1]}</span>}
         </span>
