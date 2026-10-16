@@ -122,7 +122,7 @@ export function derivedLiveCondition(row:RoomLike){
   if(state==='final')return 'Final Check'
   if(state==='ready'){
     if(['checkout','vacant','dirty'].includes(reservation))return 'Vacant (Clean)'
-    return 'Ready for Guest'
+    return 'Room Ready'
   }
   return row.roomCondition||''
 }
