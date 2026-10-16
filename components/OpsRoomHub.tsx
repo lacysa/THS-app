@@ -6,11 +6,11 @@ import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
-type ServiceDetails={expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null}
+type ServiceDetails={expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
 type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
 type View='room'|'guest'|'log'
-type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|null
+type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|'tub_assignee'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
 const activities=['Arrival','Stayover','Checkout','Out/In','Vacant','Dirty','Blocked']
 function present(value:unknown){return String(value??'').trim()||'Not recorded'}
@@ -188,6 +188,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  async function serviceAction(action:'trayReturned'|'trayReset'|'tubRequest'|'tubComplete'|'tubReopen'){
   await run('/api/ops/room-details',{roomId,date,action},action==='tubComplete'?'Tub cleaning recorded':action==='tubRequest'?'Tub cleaning requested':action==='tubReopen'?'Tub cleaning reopened':action==='trayReturned'?'Breakfast tray return recorded':'Tray return cleared')
  }
+ async function assignTubOnly(name:string){
+  if(!data?.tubCleanDue||!canManage)return
+  if(await run('/api/ops/room-details',{roomId,date,action:'tubAssign',assignedTo:name},name?'Tub-only clean assigned to '+name:'Tub-only assignment cleared'))setActiveEditor(null)
+ }
  async function advanceCondition(){
   if(!daily||!canManage||busy||blocked||isStayover)return
   const current=String(daily.room_condition||'').toLowerCase()
@@ -305,7 +309,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         <span><strong>Activity</strong> {present(daily?.reservation_status)}</span>
         <span><strong>Inspection</strong> {daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</span>
         {data.vacancyDays>0&&<span><strong>Vacant</strong> {data.vacancyDays} consecutive day{data.vacancyDays===1?'':'s'} · condition tracked separately</span>}
-        {data.tubCleanDue&&<span><strong>Tub clean</strong> Needed</span>}
+        {data.tubCleanDue&&<span><strong>Tub clean</strong> {data.serviceDetails?.tub_clean_assigned_to?'Assigned to '+data.serviceDetails.tub_clean_assigned_to:'Needs assignment'}</span>}
         {data.serviceDetails?.tub_clean_completed_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tub cleaned</span>}
         {data.serviceDetails?.tray_returned_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tray returned</span>}
         {daily?.breakfast_tag&&<span className="ops-hub-context-positive"><Check size={12}/> Breakfast included</span>}
@@ -341,8 +345,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <button type="button" className={'ops-hub-quick-action'+(blocked?' selected warning':'')} aria-pressed={blocked} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('stripHold')}>
         <span className="ops-hub-quick-icon"><Ban size={18}/></span><span className="ops-hub-quick-name">Block room</span>{blocked&&<Check size={15} className="ops-hub-quick-check"/>}
        </button>
-       <button type="button" className={'ops-hub-quick-action'+(data.tubCleanDue?' selected':'')+(data.serviceDetails?.tub_clean_completed_at?' ops-hub-complete-card':'')} disabled={!canManage||!daily||busy||blocked} onClick={()=>void serviceAction(data.serviceDetails?.tub_clean_completed_at?'tubReopen':data.tubCleanDue?'tubComplete':'tubRequest')}>
-        <span className="ops-hub-quick-icon">🛁</span><span className="ops-hub-quick-name">Tub clean</span><small>{data.serviceDetails?.tub_clean_completed_at?'Done · reopen':data.tubCleanDue?'Needed · mark done':'Request'}</small>
+       <button type="button" className={'ops-hub-quick-action'+(data.tubCleanDue?' selected':'')+(data.serviceDetails?.tub_clean_completed_at?' ops-hub-complete-card':'')} disabled={!canManage||!daily||busy||blocked} onClick={()=>data.tubCleanDue?setActiveEditor(v=>v==='tub_assignee'?null:'tub_assignee'):void serviceAction(data.serviceDetails?.tub_clean_completed_at?'tubReopen':'tubRequest')}>
+        <span className="ops-hub-quick-icon">🛁</span><span className="ops-hub-quick-name">Tub clean</span><small>{data.serviceDetails?.tub_clean_completed_at?'Done · reopen':data.tubCleanDue?(data.serviceDetails?.tub_clean_assigned_to?'Tub only · '+data.serviceDetails.tub_clean_assigned_to:'Assign tub only'):'Request'}</small>
        </button>
        <button type="button" className={'ops-hub-quick-action'+(data.serviceDetails?.tray_returned_at?' ops-hub-complete-card':'')} disabled={!canManage||!daily||busy} onClick={()=>void serviceAction(data.serviceDetails?.tray_returned_at?'trayReset':'trayReturned')}>
         <span className="ops-hub-quick-icon"><Check size={18}/></span><span className="ops-hub-quick-name">Breakfast tray</span><small>{data.serviceDetails?.tray_returned_at?'Returned · undo':'Mark returned'}</small>
@@ -389,9 +393,14 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        </div>}
       </section>
       {activeEditor&&daily&&<section className="ops-hub-quick-editor" aria-label="Room card editor">
-       <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',inspection:'Room inspection',service:'Choose service',out:'OUT status',tip_envelope:'Tip envelope collection',packages:'Room packages',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
+       <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',tub_assignee:'Assign tub-only cleaning',inspection:'Room inspection',service:'Choose service',out:'OUT status',tip_envelope:'Tip envelope collection',packages:'Room packages',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
        {activeEditor==='condition'&&canManage&&<div className="ops-hub-choices">{conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}</div>}
        {activeEditor==='activity'&&canManage&&<><div className="ops-hub-choices">{activities.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.reservation_status===value} className={daily.reservation_status===value?'is-current':''} onClick={()=>void changeActivity(value)}><span>{value}</span>{daily.reservation_status===value&&<Check size={16}/>}</button>)}</div><small>Operational status only; the PMS booking is unchanged.</small></>}
+       {activeEditor==='tub_assignee'&&canManage&&data.tubCleanDue&&<div className="ops-hub-inline-form">
+        <p className="ops-hub-muted">Choose the person responsible for the tub only. This does not change the assigned room cleaner, completion history, inspection, or full-clean counts.</p>
+        <div className="ops-hub-choices">{['',...(data.staffNames||[])].map(name=><button type="button" key={name||'tub-unassigned'} disabled={busy} aria-pressed={(data.serviceDetails?.tub_clean_assigned_to||'')===name} className={(data.serviceDetails?.tub_clean_assigned_to||'')===name?'is-current':''} onClick={()=>void assignTubOnly(name)}><span>{name||'Unassigned'}</span>{(data.serviceDetails?.tub_clean_assigned_to||'')===name&&<Check size={16}/>}</button>)}</div>
+        <button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void serviceAction('tubComplete')}><Check size={15}/> Mark tub cleaned</button>
+       </div>}
        {activeEditor==='housekeeper'&&canManage&&<><div className="ops-hub-choices">{['',...(data.staffNames||[])].map(value=><button type="button" key={value||'unassigned'} disabled={busy} aria-pressed={(daily.assigned_to||'')===value} className={(daily.assigned_to||'')===value?'is-current':''} onClick={()=>void assignHousekeeper(value)}><span>{value||'Unassigned'}</span>{(daily.assigned_to||'')===value&&<Check size={16}/>}</button>)}</div>{isStayover&&<small>Historical cleaner and date are retained. Assigning staff does not mark a clean complete.</small>}</>}
        {activeEditor==='out'&&canManage&&<div className="ops-hub-inline-form">
         <p className="ops-hub-muted">{envelopeCollected?'Envelope collection is currently recorded under '+envelopeInitials+'. Clearing OUT will also remove its collected indicator.':'The room is marked OUT. You can clear it if this was a mistake.'}</p>
