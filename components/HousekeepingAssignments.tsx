@@ -14,8 +14,9 @@ type Room = {
   checkIssueOpen: boolean; task: 'none' | 'blocked' | 'full' | 'refresh' | 'tub'
   needsAssignment: boolean; hasDailyRecord: boolean
 }
+type TubTask = {roomId:string;roomName:string;assignedTo:string;due:boolean}
 type AssignmentData = {
-  date: string; rooms: Room[]; staff: Staff[]
+  date: string; rooms: Room[]; staff: Staff[]; tubTasks:TubTask[]
   staffing: { scheduledOnSite: number; hasSchedule: boolean }
   readOnly: boolean
 }
@@ -56,6 +57,7 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
   const [deepStaff,setDeepStaff] = useState('')
   const [deepInstructions,setDeepInstructions] = useState('')
   const [deepBusy,setDeepBusy] = useState(false)
+  const [tubBusy,setTubBusy] = useState('')
   const [showAssigned, setShowAssigned] = useState(false)
   const [busyRoom, setBusyRoom] = useState('')
   const busyRef = useRef(false)
@@ -108,6 +110,19 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
       window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
     }catch(err:any){setError(err.message||'Unable to save deep clean')}
     finally{setDeepBusy(false)}
+  }
+  async function assignTub(task:TubTask,name:string){
+    if(tubBusy||data?.readOnly)return
+    setTubBusy(task.roomId);setError('')
+    try{
+      const response=await fetch('/api/ops/room-details',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:task.roomId,action:'tubAssign',assignedTo:name})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not assign tub clean.')
+      setData(current=>current?{...current,tubTasks:(current.tubTasks||[]).map(item=>item.roomId===task.roomId?{...item,assignedTo:name}:item)}:current)
+      setMessage(name?task.roomName+' tub-only task assigned to '+name+'.':task.roomName+' tub-only task unassigned.')
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(err:any){setError(err.message||'Unable to assign tub clean.')}
+    finally{setTubBusy('')}
   }
   const rooms = data?.rooms || []
   const staff = data?.staff || []
@@ -297,6 +312,22 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
     </div>
+    <section className="hka-person hka-deep-clean" aria-label="Tub-only assignments">
+      <div className="hka-person-head">
+        <div><strong>Tub-only cleaning</strong><small>Independent of full-room cleaning, refreshes, and room-check sign-offs</small></div>
+        <span className="hka-deep-count">{(data?.tubTasks||[]).length} open</span>
+      </div>
+      {(data?.tubTasks||[]).length===0?<p className="hka-empty-line">No tub-only work is due for this date.</p>:
+       <div className="hka-person-rooms">{(data?.tubTasks||[]).map(task=>
+        <div className="hka-person-room" key={task.roomId} style={{gap:12,flexWrap:'wrap'}}>
+          <div style={{flex:'1 1 170px'}}><strong>{task.roomName} · Tub only</strong><small>{task.assignedTo?'Assigned to '+task.assignedTo:'Needs tub-only assignment'}</small></div>
+          <select aria-label={'Assign tub-only cleaning for '+task.roomName} value={task.assignedTo} disabled={data?.readOnly||Boolean(tubBusy)} onChange={e=>void assignTub(task,e.target.value)} style={{maxWidth:220}}>
+            <option value="">Unassigned</option>
+            {task.assignedTo&&!staff.some(person=>person.name===task.assignedTo)&&<option value={task.assignedTo}>{task.assignedTo} (existing)</option>}
+            {staff.filter(person=>person.housekeepingEligible).map(person=><option key={person.id} value={person.name}>{person.name}{person.onSite?'':' (not scheduled)'}</option>)}
+          </select>
+        </div>)}</div>}
+    </section>
     <section className="hka-person hka-deep-clean">
       <div className="hka-person-head">
         <div><strong>Deep cleans</strong><small>Additional detailed cleaning, separate from regular room service</small></div>
