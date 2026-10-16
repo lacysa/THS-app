@@ -223,6 +223,7 @@ export async function GET(req: NextRequest) {
         sortOrder: room.sort_order,
         deepClean: deep ? { assignedTo:String(deep.assigned_to||''), instructions:String(deep.instructions||''), completed:Boolean(deep.completed_at) } : null,
         tubCleanDue: Boolean(tubStates.get(String(room.id))?.due),
+        tubAssignedTo: String(tubStates.get(String(room.id))?.assignedTo||''),
         tubCleanCompleted: Boolean(tubStates.get(String(room.id))?.completed),
         reservationStatus: savedRow.reservation_status || '',
         serviceType: savedRow.service_type || '',
@@ -294,7 +295,8 @@ export async function GET(req: NextRequest) {
           const assignedToMe=assigned.includes(String(currentPerson.name || '').trim().toLowerCase())
           // Show all stayovers for scheduling visibility; only unassigned RF rooms can be claimed.
           const deepAssignedToMe=String(row.deepClean?.assignedTo||'').trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()
-          return assignedToMe || deepAssignedToMe || Boolean(row.claimableRefresh) || String(row.reservationStatus||'').trim().toLowerCase()==='stayover'
+          const tubAssignedToMe=Boolean(row.tubCleanDue)&&String(row.tubAssignedTo||'').trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()
+          return assignedToMe || deepAssignedToMe || tubAssignedToMe || Boolean(row.claimableRefresh) || String(row.reservationStatus||'').trim().toLowerCase()==='stayover'
         })
       : rows
 
