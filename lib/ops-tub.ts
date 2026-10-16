@@ -5,7 +5,7 @@ export async function loadTubTaskStates(admin:ReturnType<typeof createSupabaseAd
  const from=begin.toISOString().slice(0,10)
  const [daysResult,detailsResult]=await Promise.all([
   admin.from('housekeeping_daily_rooms').select('room_id,service_date,reservation_status,strip_hold,room_condition').gte('service_date',from).lte('service_date',date).order('service_date',{ascending:false}),
-  admin.from('room_ops_details').select('room_id,service_date,tub_clean_requested_at,tub_clean_completed_at').gte('service_date',from).lte('service_date',date).order('service_date',{ascending:false})
+  admin.from('room_ops_details').select('room_id,service_date,tub_clean_requested_at,tub_clean_completed_at,tub_clean_assigned_to').gte('service_date',from).lte('service_date',date).order('service_date',{ascending:false})
  ])
  if(daysResult.error||detailsResult.error)throw new Error(daysResult.error?.message||detailsResult.error?.message||'Tub clean data unavailable')
  const grouped=new Map<string,typeof daysResult.data>()
@@ -13,7 +13,7 @@ export async function loadTubTaskStates(admin:ReturnType<typeof createSupabaseAd
  const details=new Map<string,typeof detailsResult.data>()
  for(const item of detailsResult.data||[]){const id=String(item.room_id);details.set(id,[...(details.get(id)||[]),item])}
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
- const result=new Map<string,{due:boolean;completed:boolean;vacantDays:number;autoDue:boolean}>()
+ const result=new Map<string,{due:boolean;completed:boolean;vacantDays:number;autoDue:boolean;assignedTo:string}>()
  for(const [id,rows] of grouped){
   let vacantDays=0,oldest='',expected=date
   for(const day of rows||[]){
@@ -27,7 +27,7 @@ export async function loadTubTaskStates(admin:ReturnType<typeof createSupabaseAd
   const lastDone=records.find(v=>Boolean(v.tub_clean_completed_at))
   const autoDue=date<=today&&vacantDays>=3&&(!lastDone||lastDone.service_date<oldest)
   const completed=Boolean(current?.tub_clean_completed_at)
-  result.set(id,{due:!completed&&(Boolean(current?.tub_clean_requested_at)||autoDue),completed,vacantDays,autoDue})
+  result.set(id,{due:!completed&&(Boolean(current?.tub_clean_requested_at)||autoDue),completed,vacantDays,autoDue,assignedTo:String(current?.tub_clean_assigned_to||'')})
  }
  return result
 }
