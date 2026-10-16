@@ -43,7 +43,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [busy,setBusy]=useState(false)
  const [reload,setReload]=useState(0)
  const [sections,setSections]=useState<Record<View,boolean>>({room:true,guest:false,log:false})
- const toggleSection=(key:View)=>setSections(current=>({...current,[key]:!current[key]}))
+ const toggleSection=(key:View)=>{setSections({room:key==='room',guest:key==='guest',log:key==='log'});setActiveEditor(null)}
  const [activeEditor,setActiveEditor]=useState<Editor>(null)
  const [showDetails,setShowDetails]=useState(false)
  const roomDetailsRef=useRef<HTMLDivElement|null>(null)
@@ -287,6 +287,11 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
     {error&&<p className="ops-hub-error" role="alert">{error}</p>}
     {message&&!loading&&<p className="ops-hub-success" role="status"><Check size={16}/>{message}</p>}
     {data&&<>
+     <nav aria-label="Room workspace sections" style={{display:'flex',gap:8,padding:'8px 2px 14px',flexWrap:'wrap'}}>
+      {([{key:'room',label:'Room & actions'},{key:'guest',label:'Guest details'},{key:'log',label:'Activity history'}] as const).filter(item=>item.key!=='guest'||Boolean(data.stay)).map(item=>
+       <button key={item.key} type="button" aria-current={sections[item.key]?'page':undefined} onClick={()=>toggleSection(item.key)} style={{flex:'1 1 145px',borderRadius:12,padding:'12px 10px',border:sections[item.key]?'2px solid #598f99':'1px solid #d9e5e8',background:sections[item.key]?'#e0f2f1':'#fff',color:'#253f4d',fontWeight:700,cursor:'pointer'}}>{item.label}</button>
+      )}
+     </nav>
      <section className="ops-hub-accordion">
       <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.room} onClick={()=>toggleSection('room')}>
        <span><SlidersHorizontal size={17}/><strong>Room & checks</strong><small>{present(liveCondition)} · {currentHousekeeper||'Housekeeper unassigned'}</small></span>
