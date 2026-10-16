@@ -48,6 +48,10 @@ export async function PATCH(req:NextRequest){
   patch.expected_arrival_time=body.expectedArrivalTime
   patch.actual_arrival_time=body.actualArrivalTime
   patch.late_checkout_time=body.lateCheckoutTime
+ }else if(action==='lateCheckoutTag'){
+  if(!manager)return NextResponse.json({error:'Management access required'},{status:403})
+  if(typeof body.enabled!=='boolean')return NextResponse.json({error:'Invalid late checkout value'},{status:400})
+  patch.late_checkout=body.enabled
  }else if(action==='trayReturned'){
   patch.tray_returned_at=now
  }else if(action==='trayReset'){
