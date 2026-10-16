@@ -75,7 +75,10 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   if(stayResult.error) throw new Error(stayResult.error.message)
   const stays=stayResult.data||[]
   const links:any[]=[]
-  const hsk:any[]=[]
+  // Reservation Sync owns booking links and derived breakfast eligibility, not
+  // manually managed room conditions, service progress, OUT initials or notes.
+  const newRoomDays:any[]=[]
+  const existingRoomDayUpdates:{date:string;roomId:string;patch:Record<string,unknown>}[]=[]
 
   const blockedResult=await admin.from('housekeeping_daily_rooms')
     .select('service_date,room_id,reservation_status')
@@ -101,11 +104,18 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
     .limit(10000)
   if(carryResult.error)throw new Error(carryResult.error.message)
   const priorByDay=new Map((carryResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
-  const currentResult=await admin.from('housekeeping_daily_rooms')
-    .select('service_date,room_id,room_condition,reservation_status,service_type,strip_hold,updated_by')
-    .gte('service_date',start).lte('service_date',end)
+  const [currentResult,previousLinksResult]=await Promise.all([
+    admin.from('housekeeping_daily_rooms')
+      .select('service_date,room_id,room_condition,reservation_status,service_type,strip_hold,updated_by,breakfast_tag')
+      .gte('service_date',start).lte('service_date',end),
+    admin.from('reservation_daily_links')
+      .select('service_date,room_id,reservation_status')
+      .gte('service_date',start).lte('service_date',end)
+  ])
   if(currentResult.error)throw new Error(currentResult.error.message)
+  if(previousLinksResult.error)throw new Error(previousLinksResult.error.message)
   const currentByDay=new Map((currentResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
+  const previousLinksByDay=new Map((previousLinksResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),String(row.reservation_status||'')]))
   const lastConditionByRoom=new Map<string,string>()
   for(const row of [...(carryResult.data||[])].reverse()){
     if(String(row.service_date)>=start)continue
@@ -148,32 +158,51 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         const roomKey=date+'|'+room.id
         const current:any=currentByDay.get(roomKey)||{}
         const last=lastConditionByRoom.get(String(room.id))||''
-        // A manager may correct a PMS Arrival to Stayover for an already
-        // occupied room. Preserve that explicit staff override; do not rewrite
-        // the imported reservation itself.
-        const staffStayoverOverride=Boolean(current.updated_by)&&
-          String(current.reservation_status||'').trim().toLowerCase()==='stayover'&&status==='Arrival'
-        const effectiveStatus=staffStayoverOverride?'Stayover':status
+        // Determine whether staff changed the operational activity since the
+        // previous sync. Reservation links are PMS-owned; the daily activity can
+        // be manually corrected independently (e.g. Arrival -> Stayover).
+        const priorImportedStatus=previousLinksByDay.get(roomKey)
+        const recordedStatus=String(current.reservation_status||'').trim()
+        const staffActivityOverride=Boolean(recordedStatus)&&(
+          priorImportedStatus!==undefined
+            ? recordedStatus.toLowerCase()!==priorImportedStatus.trim().toLowerCase()
+            : Boolean(current.updated_by)
+        )
+        const effectiveStatus=staffActivityOverride?recordedStatus:status
         const noReservation=effectiveStatus==='Vacant'
         const staffCondition=String(current.room_condition||'').trim()
         const outConfirmed=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(current.service_type||'').trim())
         const onHold=String(current.strip_hold||'').toLowerCase().includes('hold')
-        const awaitingOut=['Checkout','Out/In'].includes(effectiveStatus)&&!outConfirmed&&!onHold
-        const stayoverOccupied=effectiveStatus==='Stayover'&&!onHold
+        const awaitingOut=['checkout','out/in'].includes(effectiveStatus.toLowerCase())&&!outConfirmed&&!onHold
+        const stayoverOccupied=effectiveStatus.toLowerCase()==='stayover'&&!onHold
         const carryCondition=noReservation&&!staffCondition&&!outConfirmed?last:''
         const condition=awaitingOut||stayoverOccupied?'Occupied':staffCondition||carryCondition
         const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'
-        hsk.push({
-          service_date:date,
-          room_id:room.id,
-          reservation_status:carryDirty ? 'Dirty' : effectiveStatus,
-          breakfast_tag: manualTags.has(date+'|'+room.id)
-            ? manualTags.get(date+'|'+room.id)
-            : Boolean(arriving||staying) && (breakfastIncluded((arriving||staying)?.rate_plan) || morningBreakfastIncluded((arriving||staying)?.innkeeper_notes,addDay(date))),
-          ...(awaitingOut||stayoverOccupied ? {room_condition:'Occupied'} : carryCondition ? {room_condition:carryCondition} : {}),
-          ...(carryDirty && !String(current.service_type||'').trim() ? {service_type:'OUT'} : {}),
-          updated_at:new Date().toISOString()
-        })
+        const nextStatus=carryDirty?'Dirty':effectiveStatus
+        const nextBreakfast=manualTags.has(roomKey)
+          ? Boolean(manualTags.get(roomKey))
+          : Boolean(arriving||staying) && (breakfastIncluded((arriving||staying)?.rate_plan) || morningBreakfastIncluded((arriving||staying)?.innkeeper_notes,addDay(date)))
+        if(currentByDay.has(roomKey)){
+          // Never UPSERT a partial daily row on conflict: omitted columns can
+          // reset independently recorded operational state to NULL/defaults.
+          // Only patch fields owned by this import; preserve ALL room condition,
+          // cleaning, inspection, notes, assignments, tip and service fields.
+          const patch:Record<string,unknown>={}
+          if(recordedStatus!==nextStatus)patch.reservation_status=nextStatus
+          if(Boolean(current.breakfast_tag)!==nextBreakfast)patch.breakfast_tag=nextBreakfast
+          if(Object.keys(patch).length){
+            patch.updated_at=new Date().toISOString()
+            existingRoomDayUpdates.push({date,roomId:String(room.id),patch})
+          }
+        }else{
+          newRoomDays.push({
+            service_date:date,room_id:room.id,reservation_status:nextStatus,
+            breakfast_tag:nextBreakfast,
+            ...(awaitingOut||stayoverOccupied ? {room_condition:'Occupied'} : carryCondition ? {room_condition:carryCondition} : {}),
+            ...(carryDirty ? {service_type:'OUT'} : {}),
+            updated_at:new Date().toISOString()
+          })
+        }
       }
       // A date can be rebuilt repeatedly. Only today's verified physical
       // condition may seed tomorrow; reservation arrivals/checkout take
@@ -200,9 +229,23 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
     const result=await admin.from('reservation_daily_links').upsert(links,{onConflict:'service_date,room_id'})
     if(result.error) throw new Error(result.error.message)
   }
-  if(hsk.length){
-    const result=await admin.from('housekeeping_daily_rooms').upsert(hsk,{onConflict:'service_date,room_id'})
-    if(result.error) throw new Error(result.error.message)
+  if(newRoomDays.length){
+    // Insert new dates only. If a staff member created the row while sync was
+    // running, ignore the conflict rather than overwrite their work.
+    const result=await admin.from('housekeeping_daily_rooms')
+      .upsert(newRoomDays,{onConflict:'service_date,room_id',ignoreDuplicates:true})
+    if(result.error)throw new Error(result.error.message)
+  }
+  // Existing days get narrow updates only; do not upsert the entire record.
+  // Batch a limited number concurrently to avoid overloading Supabase.
+  for(let i=0;i<existingRoomDayUpdates.length;i+=10){
+    const results=await Promise.all(existingRoomDayUpdates.slice(i,i+10).map(async ({date,roomId,patch})=>{
+      const result=await admin.from('housekeeping_daily_rooms')
+        .update(patch).eq('service_date',date).eq('room_id',roomId)
+      return result.error
+    }))
+    const failed=results.find(Boolean)
+    if(failed)throw new Error(failed.message)
   }
 }
 
