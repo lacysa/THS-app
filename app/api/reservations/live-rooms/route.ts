@@ -27,6 +27,6 @@ export async function GET(req:NextRequest){
   roomCondition:(isStayoverRoom({reservationStatus:r.reservation_status})||isCheckoutAwaitingOut({reservationStatus:r.reservation_status,serviceType:r.service_type}))&&!String(r.strip_hold||'').toLowerCase().includes('hold')?'Occupied':String(r.room_condition||carryConditions.get(String(r.room_id))||''),complete:Boolean(r.complete),
   inspected:Boolean(r.inspected),housekeeperAttested:Boolean(r.housekeeper_attested_by),
   haChecked:Boolean(r.ha_signed_by),fohChecked:Boolean(r.foh_signed_by),
-  checkIssueOpen:Boolean(r.check_issue_open),tubCleanDue:Boolean(tubStates.get(String(r.room_id))?.due),tubCleanCompleted:Boolean(tubStates.get(String(r.room_id))?.completed)
+  checkIssueOpen:Boolean(r.check_issue_open),tubCleanDue:Boolean(tubStates.get(String(r.room_id))?.due),tubAssignedTo:String(tubStates.get(String(r.room_id))?.assignedTo||''),tubCleanCompleted:Boolean(tubStates.get(String(r.room_id))?.completed)
  }))},{headers:{'cache-control':'private, no-store'}})
 }
