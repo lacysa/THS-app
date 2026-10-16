@@ -277,7 +277,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  }
 
  return <div className="ops-hub-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
-  <section className="ops-hub-sheet" role="dialog" aria-modal="true" aria-label="Room operations hub">
+  <section className="ops-hub-sheet ops-hub-compact" role="dialog" aria-modal="true" aria-label="Room operations hub">
    <header className="ops-hub-head">
     <div><small>Ops · {dateLabel(date)}</small><h2>{data?.room.name||'Room operations'}</h2><span>{data?.stay?.guest_name||'No reservation'}{data?.stay?.reservation_number?' · #'+data.stay.reservation_number:''}</span></div>
     <button type="button" aria-label="Close room operations" onClick={onClose}><X size={20}/></button>
@@ -287,18 +287,45 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
     {error&&<p className="ops-hub-error" role="alert">{error}</p>}
     {message&&!loading&&<p className="ops-hub-success" role="status"><Check size={16}/>{message}</p>}
     {data&&<>
+     <style>{`
+      .ops-hub-compact .ops-hub-content{padding-top:10px}
+      .ops-hub-compact .ops-hub-accordion{border:0;background:transparent;box-shadow:none}
+      .ops-hub-compact .ops-hub-accordion-inner{padding:4px 0 12px}
+      .ops-hub-compact .ops-hub-priority{padding:10px 12px;border-radius:13px}
+      .ops-hub-compact .ops-hub-subheading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;font-size:13px;color:#2c5261}
+      .ops-hub-compact .ops-hub-subheading small{font-size:11px;color:#66818a}
+      .ops-hub-compact .ops-hub-primary-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .ops-hub-compact .ops-hub-primary-tile{min-height:54px!important;padding:9px 11px!important;border-radius:10px!important}
+      .ops-hub-compact .ops-hub-primary-tile>span:first-child{font-size:10px}
+      .ops-hub-compact .ops-hub-primary-tile strong{font-size:13px!important}
+      .ops-hub-compact .ops-hub-primary-tile small{font-size:10px}
+      .ops-hub-compact .ops-hub-context{margin-top:8px;gap:6px}
+      .ops-hub-compact .ops-hub-context>span{font-size:11px}
+      .ops-hub-compact .ops-hub-quick-actions{display:flex;flex-wrap:wrap;gap:7px}
+      .ops-hub-compact .ops-hub-quick-action{width:auto!important;flex:1 1 96px;min-width:88px;max-width:150px;min-height:45px!important;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:5px;padding:8px!important;border-radius:10px!important}
+      .ops-hub-compact .ops-hub-quick-icon{display:flex;align-items:center;margin:0!important}
+      .ops-hub-compact .ops-hub-quick-icon svg{width:15px;height:15px}
+      .ops-hub-compact .ops-hub-quick-name{font-size:11px!important}
+      .ops-hub-compact .ops-hub-quick-action small{display:none}
+      .ops-hub-compact .ops-hub-quick-section{margin-top:12px}
+      .ops-hub-compact .ops-hub-quick-editor{margin:10px 0;padding:12px;border-radius:12px}
+      .ops-hub-compact .ops-hub-choices{display:flex;flex-wrap:wrap;gap:6px}
+      .ops-hub-compact .ops-hub-choices button{width:auto;min-width:fit-content;padding:8px 11px}
+      .ops-hub-compact .ops-hub-inspection-actions{padding:10px 12px!important;margin:8px 0!important}
+      .ops-hub-compact .ops-hub-details-section{margin-top:9px}
+      .ops-hub-compact .ops-hub-prominent-note{padding:10px 12px}
+      @media(max-width:540px){.ops-hub-compact .ops-hub-primary-cards{grid-template-columns:1fr}.ops-hub-compact .ops-hub-quick-action{flex-basis:100px}}
+     `}</style>
      <nav aria-label="Room workspace sections" style={{display:'flex',gap:8,padding:'8px 2px 14px',flexWrap:'wrap'}}>
-      {([{key:'room',label:'Room & actions'},{key:'guest',label:'Guest details'},{key:'log',label:'Activity history'}] as const).filter(item=>item.key!=='guest'||Boolean(data.stay)).map(item=>
+      {([{key:'room',label:'Room & tasks'},{key:'guest',label:'Guest & stay'},{key:'log',label:'History'}] as const).filter(item=>item.key!=='guest'||Boolean(data.stay)).map(item=>
        <button key={item.key} type="button" aria-current={sections[item.key]?'page':undefined} onClick={()=>toggleSection(item.key)} style={{flex:'1 1 145px',borderRadius:12,padding:'12px 10px',border:sections[item.key]?'2px solid #598f99':'1px solid #d9e5e8',background:sections[item.key]?'#e0f2f1':'#fff',color:'#253f4d',fontWeight:700,cursor:'pointer'}}>{item.label}</button>
       )}
      </nav>
      <section className="ops-hub-accordion">
-      <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.room} onClick={()=>toggleSection('room')}>
-       <span><SlidersHorizontal size={17}/><strong>Room & checks</strong><small>{present(liveCondition)} · {currentHousekeeper||'Housekeeper unassigned'}</small></span>
-       <ChevronDown size={19} className={sections.room?'expanded':''}/>
-      </button>
+
       {sections.room&&<div className="ops-hub-accordion-inner">
       <div className="ops-hub-priority">
+       <div className="ops-hub-subheading"><strong>Room readiness</strong><small>Tap a value to change it</small></div>
        <div className="ops-hub-primary-cards">
        <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy||isStayover||isCheckoutAwaitingOut({reservationStatus:daily?.reservation_status,serviceType:daily?.service_type})} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
         <span>Condition</span><span className="ops-hub-action-value"><strong>{present(liveCondition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
@@ -384,7 +411,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
       </button>}
       {canManage&&daily&&!blocked&&!isStayover&&/^(dirty|vacant \(dirty\)|cleaning|ready for room check)$/i.test(String(daily.room_condition||''))&&<button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void advanceCondition()}>{/dirty/i.test(String(daily.room_condition||''))?'Start cleaning':String(daily.room_condition).toLowerCase()==='cleaning'?'Finished cleaning · send to inspection':'Open room inspection'} <ChevronRight size={15}/></button>}
       <div className="ops-hub-quick-section">
-       <span className="ops-hub-overline">Quick actions</span>
+       <span className="ops-hub-overline">Services & quick actions</span>
        <div className="ops-hub-quick-actions">
        <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(markedOut?' ops-hub-complete-card':'')+(activeEditor==='out'?' is-selected':'')} disabled={!canManage||!daily||busy||(blocked&&!markedOut)||((isStayover||serviceCode==='RF')&&!markedOut)} onClick={()=>markedOut?setActiveEditor(v=>v==='out'?null:'out'):void markOut()} aria-label={markedOut?'Room marked OUT; tap to manage OUT':'Mark room OUT'}>
         <span className="ops-hub-quick-icon"><DoorOpen size={18}/></span><span className="ops-hub-quick-name">OUT</span><small>{markedOut?'Marked':'Mark room'}</small>{markedOut&&<Check size={14} className="ops-hub-quick-check"/>}
@@ -409,8 +436,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        </button>
        </div>
       </div>
-      <div className="ops-hub-quick-section">
-       <span className="ops-hub-overline">Room timing</span>
+      <div className="ops-hub-quick-section ops-hub-timing" style={{display:showDetails?undefined:"none"}}>
+       <span className="ops-hub-overline">Arrival & checkout times</span>
        <div className="ops-hub-detail-cards">
         {([{key:'expectedArrivalTime',label:'Expected arrival'},{key:'actualArrivalTime',label:'Actual arrival'},{key:'lateCheckoutTime',label:'Late checkout'}] as const).map(item=><label className="ops-hub-field" key={item.key}><span>{item.label}</span><input type="time" aria-label={item.label} value={times[item.key]} disabled={!canManage||!daily||busy} onChange={e=>setTimes(current=>({...current,[item.key]:e.target.value}))}/></label>)}
        </div>
@@ -419,7 +446,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
       </div>
       <section className="ops-hub-details-section">
        <button type="button" className="ops-hub-details-toggle" onClick={()=>setShowDetails(v=>!v)} aria-expanded={showDetails}>
-        <span><SlidersHorizontal size={18}/> More room details</span>
+        <span><SlidersHorizontal size={18}/> {showDetails?"Hide additional details":"Timing, service & more details"}</span>
         <ChevronDown size={18} className={showDetails?'expanded':''}/>
        </button>
        {showDetails&&<div ref={roomDetailsRef} className="ops-hub-details-inner">
@@ -452,10 +479,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
      </div>}
      </section>
      {data.stay&&<section className="ops-hub-accordion">
-      <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.guest} onClick={()=>toggleSection('guest')}>
-       <span><DoorOpen size={17}/><strong>Guest & reservation</strong><small>{data.stay.guest_name||'Guest'} · Arrival {data.stay.arrival_date||'Not recorded'}</small></span>
-       <ChevronDown size={19} className={sections.guest?'expanded':''}/>
-      </button>
+
       {sections.guest&&<div className="ops-hub-accordion-inner ops-hub-guest">
       <div className="ops-hub-kpis">
        <div className="ops-hub-field"><span>Arrival</span><strong>{present(data.stay.arrival_date)}</strong></div>
@@ -482,10 +506,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
       </div>}
      </section>}
      <section className="ops-hub-accordion">
-      <button type="button" className="ops-hub-accordion-toggle" aria-expanded={sections.log} onClick={()=>toggleSection('log')}>
-       <span><Clock3 size={17}/><strong>Room activity</strong><small>Assignments, inspections, corrections and notes</small></span>
-       <ChevronDown size={19} className={sections.log?'expanded':''}/>
-      </button>
+
       {sections.log&&<div className="ops-hub-accordion-inner"><OpsActivityLog serviceDate={date} roomId={roomId} compact/></div>}
      </section>
     </>}
