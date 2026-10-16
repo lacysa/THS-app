@@ -70,6 +70,23 @@ async function loadPackages(admin:any){
   return packageResult.data||[]
 }
 
+// Read every room day in a long PMS report. Supabase/PostgREST responses can
+// be capped at 1,000 rows even when a calendar spans many more room-days.
+async function loadDateRangeRows(admin:any,table:string,columns:string,start:string,end:string){
+  const rows:any[]=[]
+  for(let offset=0;offset<20000;offset+=500){
+    const result=await admin.from(table).select(columns)
+      .gte('service_date',start).lte('service_date',end)
+      .order('service_date',{ascending:true}).order('room_id',{ascending:true})
+      .range(offset,offset+499)
+    if(result.error)throw new Error(result.error.message)
+    const page=result.data||[]
+    rows.push(...page)
+    if(page.length<500)return rows
+  }
+  throw new Error('The reservation report contains more room-days than the sync safety limit.')
+}
+
 async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   const stayResult=await admin.from('reservation_stays').select('*').eq('active',true).lte('arrival_date',end).gte('checkout_date',start)
   if(stayResult.error) throw new Error(stayResult.error.message)
@@ -104,18 +121,14 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
     .limit(10000)
   if(carryResult.error)throw new Error(carryResult.error.message)
   const priorByDay=new Map((carryResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
-  const [currentResult,previousLinksResult]=await Promise.all([
-    admin.from('housekeeping_daily_rooms')
-      .select('service_date,room_id,room_condition,reservation_status,service_type,strip_hold,updated_by,breakfast_tag')
-      .gte('service_date',start).lte('service_date',end),
-    admin.from('reservation_daily_links')
-      .select('service_date,room_id,reservation_status')
-      .gte('service_date',start).lte('service_date',end)
+  const [currentRows,previousLinkRows]=await Promise.all([
+    loadDateRangeRows(admin,'housekeeping_daily_rooms',
+      'service_date,room_id,room_condition,reservation_status,service_type,strip_hold,updated_by,breakfast_tag',start,end),
+    loadDateRangeRows(admin,'reservation_daily_links',
+      'service_date,room_id,reservation_status',start,end)
   ])
-  if(currentResult.error)throw new Error(currentResult.error.message)
-  if(previousLinksResult.error)throw new Error(previousLinksResult.error.message)
-  const currentByDay=new Map((currentResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
-  const previousLinksByDay=new Map((previousLinksResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),String(row.reservation_status||'')]))
+  const currentByDay=new Map(currentRows.map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
+  const previousLinksByDay=new Map(previousLinkRows.map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),String(row.reservation_status||'')]))
   const lastConditionByRoom=new Map<string,string>()
   for(const row of [...(carryResult.data||[])].reverse()){
     if(String(row.service_date)>=start)continue
@@ -229,11 +242,11 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
     const result=await admin.from('reservation_daily_links').upsert(links,{onConflict:'service_date,room_id'})
     if(result.error) throw new Error(result.error.message)
   }
-  if(newRoomDays.length){
-    // Insert new dates only. If a staff member created the row while sync was
-    // running, ignore the conflict rather than overwrite their work.
+  // Insert new dates only. If a staff member created a room day during sync,
+  // ignore the conflict rather than overwrite their operational changes.
+  for(let i=0;i<newRoomDays.length;i+=250){
     const result=await admin.from('housekeeping_daily_rooms')
-      .upsert(newRoomDays,{onConflict:'service_date,room_id',ignoreDuplicates:true})
+      .upsert(newRoomDays.slice(i,i+250),{onConflict:'service_date,room_id',ignoreDuplicates:true})
     if(result.error)throw new Error(result.error.message)
   }
   // Existing days get narrow updates only; do not upsert the entire record.
