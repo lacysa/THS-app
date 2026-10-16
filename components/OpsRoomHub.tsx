@@ -1,6 +1,6 @@
 'use client'
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,Pencil,Save,SlidersHorizontal,Wallet,X} from 'lucide-react'
+import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,Pencil,Save,Wallet,X} from 'lucide-react'
 import OpsActivityLog from '@/components/OpsActivityLog'
 import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
@@ -45,11 +45,6 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [sections,setSections]=useState<Record<View,boolean>>({room:true,guest:false,log:false})
  const toggleSection=(key:View)=>{setSections({room:key==='room',guest:key==='guest',log:key==='log'});setActiveEditor(null)}
  const [activeEditor,setActiveEditor]=useState<Editor>(null)
- const [showDetails,setShowDetails]=useState(false)
- const roomDetailsRef=useRef<HTMLDivElement|null>(null)
- useEffect(()=>{
-  if(showDetails)roomDetailsRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
- },[showDetails])
  const [roomNotes,setRoomNotes]=useState('')
  const [mentionSearch,setMentionSearch]=useState<string|null>(null)
  const roomNoteInput=useRef<HTMLTextAreaElement|null>(null)
@@ -59,7 +54,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [roomOrder,setRoomOrder]=useState('')
  const [times,setTimes]=useState({expectedArrivalTime:'',actualArrivalTime:'',lateCheckoutTime:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
- useEffect(()=>{setSections({room:true,guest:false,log:false});setActiveEditor(null);setShowDetails(false);setMessage('')},[roomId,date,reservationId])
+ useEffect(()=>{setSections({room:true,guest:false,log:false});setActiveEditor(null);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
   const controller=new AbortController()
   if(!data)setLoading(true)
@@ -319,7 +314,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
       .ops-hub-compact .ops-hub-choices{display:flex;flex-wrap:wrap;gap:6px}
       .ops-hub-compact .ops-hub-choices button{width:auto;min-width:fit-content;padding:8px 11px}
       .ops-hub-compact .ops-hub-inspection-actions{padding:10px 12px!important;margin:8px 0!important}
-      .ops-hub-compact .ops-hub-details-section{margin-top:9px}
+      .ops-hub-compact .ops-hub-context-control{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+      .ops-hub-compact .ops-hub-context-control:disabled{cursor:default;opacity:1}
+      .ops-hub-compact .ops-hub-context-control:not(:disabled):focus-visible{outline:2px solid #598f99;outline-offset:3px;border-radius:3px}
       .ops-hub-compact .ops-hub-prominent-note{padding:10px 12px}
       @media(max-width:540px){.ops-hub-compact .ops-hub-primary-cards{grid-template-columns:1fr}.ops-hub-compact .ops-hub-quick-action{flex-basis:100px}}
      `}</style>
@@ -350,13 +347,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        </div>
        </div>
        <div className="ops-hub-context">
-        <span><strong>Activity</strong> {present(daily?.reservation_status)}</span>
+        <span><button type="button" className="ops-hub-context-control" disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='activity'?null:'activity')} aria-label={'Edit activity, currently '+present(daily?.reservation_status)}><strong>Activity</strong> {present(daily?.reservation_status)}{canManage&&daily&&<Pencil size={12}/>}</button></span>
         <span><strong>Inspection</strong> {daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</span>
         {data.vacancyDays>0&&<span><strong>Vacant</strong> {data.vacancyDays} consecutive day{data.vacancyDays===1?'':'s'} · condition tracked separately</span>}
         {data.tubCleanDue&&<span><strong>Tub clean</strong> {data.serviceDetails?.tub_clean_assigned_to?'Assigned to '+data.serviceDetails.tub_clean_assigned_to:'Needs assignment'}</span>}
         {data.serviceDetails?.tub_clean_completed_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tub cleaned</span>}
         {data.serviceDetails?.tray_returned_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tray returned</span>}
-        {daily?.breakfast_tag&&<span className="ops-hub-context-positive"><Check size={12}/> Breakfast included</span>}
+        <span className={daily?.breakfast_tag?'ops-hub-context-positive':''}><button type="button" className="ops-hub-context-control" disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('breakfastTag')} aria-pressed={Boolean(daily?.breakfast_tag)} aria-label={daily?.breakfast_tag?'Remove breakfast tag':'Add breakfast tag'}>{daily?.breakfast_tag&&<Check size={12}/>} Breakfast {daily?.breakfast_tag?'included':'not tagged'}{canManage&&daily&&<Pencil size={12}/>}</button></span>
         {selectedPackageNames.length>0&&<span className="ops-hub-context-package"><strong>Packages</strong> {selectedPackageNames.join(', ')}</span>}
        </div>
       </div>
@@ -469,35 +466,6 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         {data.serviceDetails?.late_checkout&&<Check size={14}/>} Late checkout
        </button>
       </div>
-      <section className="ops-hub-details-section">
-       <button type="button" className="ops-hub-details-toggle" onClick={()=>setShowDetails(v=>!v)} aria-expanded={showDetails}>
-        <span><SlidersHorizontal size={18}/> {showDetails?"Hide additional details":"Additional room details"}</span>
-        <ChevronDown size={18} className={showDetails?'expanded':''}/>
-       </button>
-       {showDetails&&<div ref={roomDetailsRef} className="ops-hub-details-inner">
-        <div className="ops-hub-detail-cards">
-       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='activity'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='activity'?null:'activity')}>
-        <span>Activity</span><span className="ops-hub-action-value"><strong>{present(daily?.reservation_status)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-       </button>
-       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='inspection'?' is-selected':'')} disabled={!daily||busy} onClick={()=>setActiveEditor(v=>v==='inspection'?null:'inspection')}>
-        <span>Inspection</span><span className="ops-hub-action-value"><strong>{daily?.inspected?'Passed':daily?.check_issue_open?'Issue open':data.inspectionEligible?'Pending':'Not required'}</strong>{daily&&<ChevronDown size={16}/>}</span>
-       </button>
-       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='service'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>
-        <span>Service</span><span className="ops-hub-action-value"><strong>{serviceCode==='RF'&&daily?.complete?'RF complete'+(refreshInitials?'-'+refreshInitials:''):markedOut?'OUT':daily?.service_type||'No service'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-       </button>
-       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='packages'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>
-        <span>Packages</span><span className="ops-hub-action-value"><strong>{[...new Set([...(data.importedPackageIds||[]),...(data.manualPackageIds||[])])].map(id=>data.packageOptions.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'None selected'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-       </button>
-
-       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='room_notes'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>
-        <span>Room notes</span><span className="ops-hub-action-value"><strong>{daily?.notes?.trim()||'No notes'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-       </button>
-        </div>
-        <div className="ops-hub-extra-tags">
-         <button type="button" aria-pressed={Boolean(daily?.breakfast_tag)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('breakfastTag')} className={daily?.breakfast_tag?'selected':''}>{daily?.breakfast_tag&&<Check size={15}/>} Breakfast {daily?.breakfast_tag?'included':'tag'}</button>
-        </div>
-       </div>}
-      </section>
       {!daily&&<p className="ops-hub-muted">No operational record exists for this date. Management controls become available once the room day is scheduled.</p>}
      </div>}
      </section>
