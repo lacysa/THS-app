@@ -10,7 +10,7 @@ import { NON_DESKTOP_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'|'Vacant'
-type OpsRow=ReservationRow&{cleanOrder?:number|null;tubCleanDue?:boolean;tubCleanCompleted?:boolean;tubAssignedTo?:string}
+type OpsRow=ReservationRow&{expectedArrivalTime?:string|null;cleanOrder?:number|null;tubCleanDue?:boolean;tubCleanCompleted?:boolean;tubAssignedTo?:string}
 function reservationType(row:ReservationRow){
  const value=String(row.operationalStatus||row.status||'').toLowerCase()
  if(value.includes('out/in'))return 'Out/In'
@@ -47,6 +47,38 @@ function activeGuest(row:ReservationRow,day:string){
   const s=stay as {arrival_date?:string|null;checkout_date?:string|null}
   return Boolean(s.arrival_date&&s.checkout_date&&day>=s.arrival_date&&day<s.checkout_date)
  })||null
+}
+// Normalize imported, manager-entered and note-based times into the same display format.
+function parseArrivalClock(raw?:string|null):string|null{
+ const value=String(raw||'').trim()
+ const match=/^(\\d{1,2})(?::(\\d{2}))?(?::\\d{2})?\\s*(a\\.?m\\.?|p\\.?m\\.?)?$/i.exec(value)
+ if(!match)return null
+ let hour=Number(match[1])
+ const minute=Number(match[2]||0)
+ const period=String(match[3]||'').replace(/\\./g,'').toLowerCase()
+ if(minute>59||hour>23||hour<0||((period==='am'||period==='pm')&&(hour<1||hour>12)))return null
+ if(period)hour=hour%12+(period==='pm'?12:0)
+ const displayHour=hour%12||12
+ return displayHour+(minute?':'+String(minute).padStart(2,'0'):'')+(hour>=12?'pm':'am')
+}
+function arrivalNoteTime(guest:ReturnType<typeof activeGuest>):string|null{
+ if(!guest)return null
+ // Only use a time explicitly associated with arriving/check-in, not meal or activity times.
+ const notes=[guest.innkeeper_notes,guest.guest_comments]
+ for(const note of notes){
+  const text=String(note||'')
+  const match=/(?:\\b(?:arrival|arriving|check[ -]?in|eta|expected arrival)\\b)(?:\\s+(?:time|around|approximately|approx\\.?|about|is|at|by))?\\s*[:=–-]?\\s*(\\d{1,2}(?::\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?)/i.exec(text)
+  if(match){
+   const time=parseArrivalClock(match[1])
+   if(time)return time
+  }
+ }
+ return null
+}
+function arrivalServiceLabel(type:string,row:OpsRow,guest:ReturnType<typeof activeGuest>){
+ if(type!=='Arrival'&&type!=='Out/In')return type
+ const time=arrivalNoteTime(guest)||parseArrivalClock(row.expectedArrivalTime)||parseArrivalClock(guest?.check_in_time)||'4pm'
+ return type+' ('+time+')'
 }
 function shiftDate(day:string,days:number){
  const date=new Date(day+'T12:00:00Z')
@@ -185,7 +217,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
       const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})
       return <tr key={row.roomId} tabIndex={0} role="button" aria-label={`Open ${row.roomName} room interactions`} onClick={open} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open()}}} style={{borderBottom:'1px solid #e7edf0',cursor:'pointer'}}>
        <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}><span className="ths-ops-room-name-with-out">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; tip collection initials shown if available" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}</span></th>
-       <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{type}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
+       <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{arrivalServiceLabel(type,row,guest)}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.assignedTo?.trim()||'—'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</td>
        <td style={{padding:'12px 14px'}}><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span></td>
@@ -215,7 +247,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
      return <button className="ths-ops-room-row ths-ops-room-card" type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})}>
       <span className="ths-ops-room-info">
        <span className="ths-ops-card-top">
-        <span className="ths-ops-room-name">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; initials if recorded" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}<span className="ths-ops-activity">{type}{service==='RF'?' · RF':''}</span></span>
+        <span className="ths-ops-room-name">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; initials if recorded" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}<span className="ths-ops-activity">{arrivalServiceLabel(type,row,guest)}{service==='RF'?' · RF':''}</span></span>
         <span className="ths-ops-card-condition"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18} aria-hidden="true"/></span>
        </span>
        <span className="ths-ops-card-summary">
