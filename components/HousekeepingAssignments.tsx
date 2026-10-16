@@ -126,8 +126,8 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
   }
   const rooms = data?.rooms || []
   const staff = data?.staff || []
-  const onSite = staff.filter(person => person.onSite && (person.housekeepingEligible || rooms.some(room => assigned(room, person.name))))
-  const offSite = staff.filter(person => !person.onSite && rooms.some(room => assigned(room, person.name)))
+  const onSite = staff.filter(person => person.onSite && (person.housekeepingEligible || (rooms.some(room => assigned(room, person.name)) || (data?.tubTasks||[]).some(t=>t.assignedTo.toLowerCase()===person.name.toLowerCase()))))
+  const offSite = staff.filter(person => !person.onSite && (rooms.some(room => assigned(room, person.name)) || (data?.tubTasks||[]).some(t=>t.assignedTo.toLowerCase()===person.name.toLowerCase())))
   const assignable = staff.filter(person => person.onSite && person.housekeepingEligible)
   const otherScheduled = staff.filter(person => person.onSite && !person.housekeepingEligible)
   const otherActive = staff.filter(person => !person.onSite && !['called_off', 'no_call_no_show', 'time_off', 'unavailable'].includes(person.scheduleState))
@@ -250,7 +250,7 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
     const theirs = work.filter(room => assigned(room, person.name))
     const full = theirs.filter(room => room.task === 'full')
     const refreshes = theirs.filter(room => room.task === 'refresh')
-    const tubs = theirs.filter(room => room.task === 'tub')
+    const tubs = (data?.tubTasks||[]).filter(t=>t.assignedTo.toLowerCase()===person.name.toLowerCase())
     const overLimit = full.length > person.fullRoomCleanLimit
     const available = work.filter(room => room.needsAssignment && room.hasDailyRecord && (room.task !== 'full' || full.length < person.fullRoomCleanLimit))
     return <section key={person.id} className="hka-person">
@@ -266,10 +266,13 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
         </div>
       </div>
       <div className="hka-person-rooms">
-        {theirs.length ? theirs.map(room => <div className="hka-person-room" key={room.roomId}>
+        {theirs.length||tubs.length ? <>{theirs.map(room => <div className="hka-person-room" key={room.roomId}>
           <div><strong>{room.roomName}</strong><small>{taskLabel(room)}{room.complete ? ' · Complete' : ''}</small></div>
           <button type="button" disabled={Boolean(data?.readOnly) || Boolean(busyRoom)} onClick={() => { if (names(room.assignedTo).length > 1 && !window.confirm('This room has multiple assigned people. Clear all assignments for ' + room.roomName + '?')) return; void saveAssignment(room, '') }} aria-label={'Clear assignment for ' + room.roomName}>{names(room.assignedTo).length > 1 ? 'Clear all' : 'Unassign'}</button>
-        </div>) : <p className="hka-empty-line">No rooms assigned yet.</p>}
+        </div>)}{tubs.map(task=><div className="hka-person-room" key={'tub-'+task.roomId}>
+          <div><strong>{task.roomName}</strong><small>Tub clean only</small></div>
+          <button type="button" disabled={Boolean(data?.readOnly)||Boolean(tubBusy)} onClick={()=>void assignTub(task,'')}>Unassign tub</button>
+        </div>)}</> : <p className="hka-empty-line">No rooms assigned yet.</p>}
       </div>
       {person.onSite && available.length > 0 && <label className="hka-add">
         <span>Assign another room</span>
