@@ -224,6 +224,7 @@ export async function GET(req: NextRequest) {
         deepClean: deep ? { assignedTo:String(deep.assigned_to||''), instructions:String(deep.instructions||''), completed:Boolean(deep.completed_at) } : null,
         tubCleanDue: Boolean(tubStates.get(String(room.id))?.due),
         tubAssignedTo: String(tubStates.get(String(room.id))?.assignedTo||''),
+        tubIsMine: Boolean(currentPerson && tubStates.get(String(room.id))?.due && String(tubStates.get(String(room.id))?.assignedTo||'').trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()),
         tubCleanCompleted: Boolean(tubStates.get(String(room.id))?.completed),
         reservationStatus: savedRow.reservation_status || '',
         serviceType: savedRow.service_type || '',
