@@ -22,7 +22,7 @@ export async function GET(req:NextRequest){
  let tubStates:Awaited<ReturnType<typeof loadTubTaskStates>>
  try{tubStates=await loadTubTaskStates(admin,date)}catch{return NextResponse.json({error:'Could not refresh tub service tasks'},{status:500})}
  return NextResponse.json({rooms:(result.data||[]).map((r:any)=>({
-  roomId:String(r.room_id),assignedTo:String(r.assigned_to||''),cleanOrder:r.clean_order==null?null:Number(r.clean_order),roomNotes:String(r.notes||''),breakfastTag:Boolean(r.breakfast_tag),operationalStatus:String(r.reservation_status||''),
+  roomId:String(r.room_id),expectedArrivalTime:expectedTimes.get(String(r.room_id))||'',assignedTo:String(r.assigned_to||''),cleanOrder:r.clean_order==null?null:Number(r.clean_order),roomNotes:String(r.notes||''),breakfastTag:Boolean(r.breakfast_tag),operationalStatus:String(r.reservation_status||''),
   stripHold:String(r.strip_hold||''),lateArrival:Boolean(r.late_arrival),serviceType:String(r.service_type||''),
   roomCondition:(isStayoverRoom({reservationStatus:r.reservation_status})||isCheckoutAwaitingOut({reservationStatus:r.reservation_status,serviceType:r.service_type}))&&!String(r.strip_hold||'').toLowerCase().includes('hold')?'Occupied':String(r.room_condition||carryConditions.get(String(r.room_id))||''),complete:Boolean(r.complete),
   inspected:Boolean(r.inspected),housekeeperAttested:Boolean(r.housekeeper_attested_by),
