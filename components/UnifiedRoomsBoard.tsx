@@ -58,6 +58,7 @@ type RoomRow={
   breakfastTag:boolean
   tubCleanDue?:boolean
   tubAssignedTo?:string
+  tubIsMine?:boolean
   tubCleanCompleted?:boolean
   housekeeperAttested?:boolean
   housekeeperAttestedBy?:string|null
@@ -943,7 +944,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
 
               <label className="rooms-notes">Housekeeping notes<textarea value={row.notes||''} onChange={e=>patch(row.roomId,{notes:e.target.value})} placeholder="Room-specific housekeeping notes…"/></label>
 
-              {row.tubCleanDue&&!isBlocked(row)&&<section className="rooms-section cleaning-section"><div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Tub cleaning needed</strong><small>{row.tubAssignedTo?'Assigned to '+row.tubAssignedTo+' · ':''}Tub only. This does not change full-room readiness or inspection.</small></div></div><button type="button" className="ops-primary-btn rooms-primary-action" disabled={refreshRoomId===row.roomId||(!isManager(access)&&!(row.tubAssignedTo?normalize(row.tubAssignedTo)===normalize(access?.name||''):splitAssigned(row.assignedTo).some(n=>normalize(n)===normalize(access?.name||''))))} onClick={()=>void completeTubClean(row)}><Check size={16}/>{refreshRoomId===row.roomId?'Saving tub clean…':'Mark tub cleaned'}</button></section>}
+              {row.tubCleanDue&&!isBlocked(row)&&<section className="rooms-section cleaning-section"><div className="rooms-section-heading"><BedDouble size={17}/><div><strong>Tub cleaning needed</strong><small>{row.tubAssignedTo?'Assigned to '+row.tubAssignedTo+' · ':''}Tub only. This does not change full-room readiness or inspection.</small></div></div><button type="button" className="ops-primary-btn rooms-primary-action" disabled={refreshRoomId===row.roomId||(!isManager(access)&&!(row.tubAssignedTo?row.tubIsMine:splitAssigned(row.assignedTo).some(n=>normalize(n)===normalize(access?.name||''))))} onClick={()=>void completeTubClean(row)}><Check size={16}/>{refreshRoomId===row.roomId?'Saving tub clean…':'Mark tub cleaned'}</button></section>}
               {row.claimableRefresh&&<button type="button" className="ops-primary-btn rooms-primary-action" onClick={()=>void claimRefresh(row)}><UserRoundCheck size={16}/>Claim refresh</button>}
 
               {(!isStayover(row)||isRefresh(row))&&!isArrivalOnly(row)&&(viewMode!=='assigned'||splitAssigned(row.assignedTo).some(n=>normalize(n)===normalize(access?.name||'')))&&<section className="rooms-section cleaning-section">
