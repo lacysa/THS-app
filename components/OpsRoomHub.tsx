@@ -342,7 +342,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
           : data.lastAssigned&&<small className="ops-hub-last-assigned">Previously assigned: {data.lastAssigned.name} · {shortDate(data.lastAssigned.date)}</small>}
         </button>
         {canManage&&daily&&currentHousekeeper&&<button type="button" aria-label="Change cleaning order" title="Change cleaning order" disabled={busy} onClick={()=>setActiveEditor(v=>v==='clean_order'?null:'clean_order')} style={{position:'absolute',right:7,top:9,zIndex:1,borderRadius:8,border:'1px solid #d0dfe3',padding:'6px 8px',fontSize:11,fontWeight:700,background:activeEditor==='clean_order'?'#dceeed':'#fff',color:'#325967'}}>
-         {daily.clean_order==null?'Order':<><span style={{fontSize:9}}>#</span>{daily.clean_order}</>}
+         {daily.clean_order==null?'Order':daily.clean_order}
         </button>}
        </div>
        </div>
