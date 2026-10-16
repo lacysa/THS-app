@@ -55,7 +55,9 @@ export function roomWorkflowState(row:RoomLike):RoomWorkflowState{
   // Never advance them to cleaning, inspection, or ready merely due to the date.
   if(isCheckoutAwaitingOut(row))return 'occupied'
   if(row.checkIssueOpen&&!row.readyForInspection)return 'correction'
-  // A manager-confirmed Occupied condition wins after OUT too: an Out/In room can be reoccupied by the arriving guest.\n  // Retain OUT initials as the departure/tip audit record, not a permanent vacancy override.\n  if(normalizeRoomValue(row.roomCondition)==='occupied')return 'occupied'
+  // An explicitly recorded Occupied condition wins for a reoccupied Out/In room.
+  // Keep OUT initials in service_type as the departure and tip audit record.
+  if(normalizeRoomValue(row.roomCondition)==='occupied')return 'occupied'
 
   // Arrival/vacant rooms can legitimately begin the day already guest-ready
   // from the prior shift. A new checkout or Out/In never inherits that state.
