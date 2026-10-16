@@ -214,6 +214,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
   else if(blocked)patch.stripHold=''
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Operational activity updated'))setActiveEditor(null)
  }
+ async function setCleaningOrder(order:number|null){
+  if(!daily||!canManage||busy)return
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{cleanOrder:order}},order===null?'Cleaning order cleared':'Cleaning order set to '+order))setActiveEditor(null)
+ }
  async function assignHousekeeper(name:string){
   if(!daily||!canManage)return
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{assignedTo:name}},name?'Housekeeper assigned':'Assignment cleared'))setActiveEditor(null)
@@ -330,12 +334,17 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy||isStayover||isCheckoutAwaitingOut({reservationStatus:daily?.reservation_status,serviceType:daily?.service_type})} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
         <span>Condition</span><span className="ops-hub-action-value"><strong>{present(liveCondition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-       <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='housekeeper'?null:'housekeeper')}>
-        <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{cleanerDisplay}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-        {isStayover
-         ? <small className="ops-hub-last-assigned">{data.lastCleaned?`Last completed clean: ${data.lastCleaned.name||'Cleaner unknown'} · ${shortDate(data.lastCleaned.date)}`:'Last completed clean not recorded'}</small>
-         : data.lastAssigned&&<small className="ops-hub-last-assigned">Previously assigned: {data.lastAssigned.name} · {shortDate(data.lastAssigned.date)}</small>}
-       </button>
+       <div className="ops-hub-housekeeper-slot" style={{position:'relative',minWidth:0}}>
+        <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='housekeeper'?' is-selected':'')} style={{width:'100%',paddingRight:65}} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='housekeeper'?null:'housekeeper')}>
+         <span>Housekeeper</span><span className="ops-hub-action-value"><strong>{cleanerDisplay}{currentHousekeeper&&daily?.clean_order!=null&&<sup style={{fontSize:'0.75em',marginLeft:1,verticalAlign:'super'}}>{daily.clean_order}</sup>}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
+         {isStayover
+          ? <small className="ops-hub-last-assigned">{data.lastCleaned?`Last completed clean: ${data.lastCleaned.name||'Cleaner unknown'} · ${shortDate(data.lastCleaned.date)}`:'Last completed clean not recorded'}</small>
+          : data.lastAssigned&&<small className="ops-hub-last-assigned">Previously assigned: {data.lastAssigned.name} · {shortDate(data.lastAssigned.date)}</small>}
+        </button>
+        {canManage&&daily&&currentHousekeeper&&<button type="button" aria-label="Change cleaning order" title="Change cleaning order" disabled={busy} onClick={()=>setActiveEditor(v=>v==='clean_order'?null:'clean_order')} style={{position:'absolute',right:7,top:9,zIndex:1,borderRadius:8,border:'1px solid #d0dfe3',padding:'6px 8px',fontSize:11,fontWeight:700,background:activeEditor==='clean_order'?'#dceeed':'#fff',color:'#325967'}}>
+         {daily.clean_order==null?'Order':<><span style={{fontSize:9}}>#</span>{daily.clean_order}</>}
+        </button>}
+       </div>
        </div>
        <div className="ops-hub-context">
         <span><strong>Activity</strong> {present(daily?.reservation_status)}</span>
@@ -388,7 +397,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
          const checked=isImported||manualPackageDraft.includes(p.id)
          return <label key={p.id}><input type="checkbox" checked={checked} disabled={busy||isImported} onChange={e=>setManualPackageDraft(current=>e.target.checked?[...new Set([...current,p.id])]:current.filter(id=>id!==p.id))}/><span>{p.name}</span>{isImported&&<small>From PMS</small>}</label>
        })}</div><button type="button" className="ops-hub-primary" disabled={busy||JSON.stringify([...manualPackageDraft].sort())===JSON.stringify([...(data.manualPackageIds||[])].sort())} onClick={()=>void savePackages()}><Save size={15}/> Save selected packages</button><small>Multiple selections allowed. Imported packages cannot be removed here.</small></>}
-       {activeEditor==='clean_order'&&canManage&&<div className="ops-hub-inline-form"><input aria-label="Cleaning order" type="number" inputMode="numeric" min="1" value={roomOrder} disabled={busy} onChange={e=>setRoomOrder(e.target.value)}/><button type="button" className="ops-hub-primary" disabled={busy} onClick={()=>void run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{cleanOrder:roomOrder.trim()?Number(roomOrder):null}},'Cleaning order updated').then(ok=>{if(ok)setActiveEditor(null)})}>Save order</button></div>}
+        {activeEditor==='clean_order'&&canManage&&<div className="ops-hub-inline-form" aria-label="Set cleaning order">
+         <small className="ops-hub-muted">Choose this room's cleaning order for {currentHousekeeper||'the assigned housekeeper'}. Saves immediately.</small>
+         <div className="ops-hub-choices" role="group" aria-label="Cleaning sequence">
+          {[1,2,3,4,5,6,7,8].map(n=><button type="button" key={n} disabled={busy} aria-pressed={daily.clean_order===n} className={daily.clean_order===n?'is-current':''} onClick={()=>void setCleaningOrder(n)}>{n}</button>)}
+          <button type="button" disabled={busy||daily.clean_order==null} onClick={()=>void setCleaningOrder(null)}>Clear</button>
+         </div>
+        </div>}
        {activeEditor==='room_notes'&&canManage&&<div className="ops-hub-inline-form"><textarea ref={roomNoteInput} rows={3} aria-label="Room notes" value={roomNotes} disabled={busy} onChange={e=>{setRoomNotes(e.target.value);updateMentionQuery(e.target.value,e.target.selectionStart)}} onClick={e=>updateMentionQuery(roomNotes,e.currentTarget.selectionStart)} placeholder="Type @ to mention a staff member"/>{mentionSearch!==null&&<div className="ops-hub-mention-picker" role="listbox" aria-label="Mention a staff member">{mentionMatches.length?mentionMatches.map(person=><button type="button" role="option" aria-selected={false} key={person.userId||person.name} onClick={()=>selectMention(person)}>@{person.name}{!person.userId?' · no app login':''}</button>):<span>No matching active staff account</span>}</div>}<button type="button" className="ops-hub-primary" disabled={busy||roomNotes===String(daily.notes||'')} onClick={()=>void saveRoomNotes()}><Save size={15}/>Save room notes</button></div>}
        {activeEditor==='inspection'&&<div className="ops-hub-inspection-actions">
         {daily.inspected&&<p className="ops-hub-good"><Check size={16}/>Passed inspection</p>}
@@ -469,9 +484,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
        <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='packages'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>
         <span>Packages</span><span className="ops-hub-action-value"><strong>{[...new Set([...(data.importedPackageIds||[]),...(data.manualPackageIds||[])])].map(id=>data.packageOptions.find(p=>p.id===id)?.name).filter(Boolean).join(', ')||'None selected'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
-       <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='clean_order'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='clean_order'?null:'clean_order')}>
-        <span>Clean order</span><span className="ops-hub-action-value"><strong>{daily?.clean_order??'Not assigned'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
-       </button>
+
        <button type="button" className={'ops-hub-detail-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='room_notes'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>
         <span>Room notes</span><span className="ops-hub-action-value"><strong>{daily?.notes?.trim()||'No notes'}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
