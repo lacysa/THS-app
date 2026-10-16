@@ -435,6 +435,12 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
         <span className="ops-hub-quick-icon"><Check size={18}/></span><span className="ops-hub-quick-name">Breakfast tray</span><small>{data.serviceDetails?.tray_returned_at?'Returned · undo':'Mark returned'}</small>
        </button>
        </div>
+       <div className="ops-hub-secondary-actions" aria-label="Additional room actions" style={{display:'flex',gap:7,flexWrap:'wrap',marginTop:9}}>
+        {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>Room notes{daily?.notes?.trim()?' · Added':''}</button>}
+        {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>Packages{selectedPackageNames.length?' · '+selectedPackageNames.length:''}</button>}
+        {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>Service · {daily?.service_type||'None'}</button>}
+        {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setShowDetails(v=>!v)}>Times & order</button>}
+       </div>
       </div>
       <div className="ops-hub-quick-section ops-hub-timing" style={{display:showDetails?undefined:"none"}}>
        <span className="ops-hub-overline">Arrival & checkout times</span>
