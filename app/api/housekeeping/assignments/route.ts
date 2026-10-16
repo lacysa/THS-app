@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       const serviceType = String(daily.service_type || '')
       const condition = String(daily.room_condition || '')
       const baseTask = roomServiceTask({ reservationStatus: activity, serviceType, roomCondition: condition, stripHold: String(daily.strip_hold || '') })
-      const task = baseTask === 'none' && tubStates.get(String(room.id))?.due ? 'tub' : baseTask
+      const task = baseTask // Tub-only work is tracked independently, even when full cleaning is also required.
       const assignedTo = String(daily.assigned_to || '').trim()
       return {
         roomId: String(room.id),
@@ -92,8 +92,9 @@ export async function GET(req: NextRequest) {
         hasDailyRecord: dailyByRoom.has(String(room.id))
       }
     })
+    const tubTasks=(roomsResult.data||[]).filter((room:any)=>tubStates.get(String(room.id))?.due).map((room:any)=>({roomId:String(room.id),roomName:String(room.name||''),assignedTo:String(tubStates.get(String(room.id))?.assignedTo||''),due:true}))
     return NextResponse.json({
-      date, rooms, staff,
+      date, rooms, staff, tubTasks,
       staffing: {
         scheduledOnSite: staff.filter(s => s.onSite).length,
         hasSchedule: (scheduleResult.data || []).length > 0
