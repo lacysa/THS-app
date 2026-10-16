@@ -76,6 +76,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  const [dateInput,setDateInput]=useState(serviceDate)
  const [selected,setSelected]=useState<{roomId:string;reservationId?:string}|null>(null)
  const [category,setCategory]=useState<Category>('all')
+ const [showFilters,setShowFilters]=useState(false)
  const [query,setQuery]=useState('')
  const [conditionsOnly,setConditionsOnly]=useState(false)
  const [displayMode,setDisplayMode]=useState<'table'|'cards'>('cards')
@@ -154,9 +155,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     </div>
     {isChangingDate&&<span className="ths-room-operations-date-loading" role="status">Updating rooms…</span>}
    </div>
-   <div className="ths-ops-stats" aria-label="Daily room activity">
-    {(['Arrival','Stayover','Checkout','Out/In','Vacant'] as const).map(type=><button key={type} type="button" aria-pressed={category===type} onClick={()=>setCategory(category===type?'all':type)}><strong>{counts[type]}</strong><span>{type==='Arrival'?'Arrivals':type==='Stayover'?'Stayovers':type==='Checkout'?'Checkouts':type==='Vacant'?'Vacant':'Out / In'}</span></button>)}
+   <div style={{display:'flex',justifyContent:'flex-end',margin:'10px 0 6px'}}>
+    <button type="button" aria-expanded={showFilters} aria-controls="room-operations-filters" onClick={()=>setShowFilters(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'8px 12px',border:'1px solid #d7e5e9',borderRadius:10,background:showFilters||category!=='all'?'#e0f2ef':'#fff',color:'#315a67',fontWeight:700,fontSize:12,cursor:'pointer'}}>
+     <SlidersHorizontal size={15}/> Filter{category!=='all'?' · '+(category==='Arrival'?'Arrivals':category):''}
+    </button>
    </div>
+   {showFilters&&<div id="room-operations-filters" className="ths-ops-stats" aria-label="Filter by daily room activity">
+    {(['Arrival','Stayover','Checkout','Out/In','Vacant'] as const).map(type=><button key={type} type="button" aria-pressed={category===type} onClick={()=>setCategory(category===type?'all':type)}><strong>{counts[type]}</strong><span>{type==='Arrival'?'Arrivals':type==='Stayover'?'Stayovers':type==='Checkout'?'Checkouts':type==='Vacant'?'Vacant':'Out / In'}</span></button>)}
+   </div>}
    <div className="ths-ops-list-heading">
     <strong>Rooms <span>{filtered.length} of {counts.all}</span></strong>
     <div role="group" aria-label="Room display" style={{display:'flex',gap:6,marginLeft:'auto'}}>
