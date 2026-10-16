@@ -10,7 +10,7 @@ import { NON_DESKTOP_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'|'Vacant'
-type OpsRow=ReservationRow&{tubCleanDue?:boolean;tubCleanCompleted?:boolean}
+type OpsRow=ReservationRow&{tubCleanDue?:boolean;tubCleanCompleted?:boolean;tubAssignedTo?:string}
 function reservationType(row:ReservationRow){
  const value=String(row.operationalStatus||row.status||'').toLowerCase()
  if(value.includes('out/in'))return 'Out/In'
@@ -188,7 +188,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
          {row.breakfastTag&&<span>Breakfast</span>}
          {row.lateArrival&&<span>Late arrival</span>}
          {row.checkIssueOpen&&<span className="alert">Inspection issue</span>}
-        {row.tubCleanDue&&<span className="alert">Tub clean needed</span>}
+        {row.tubCleanDue&&<span className="alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</span>}
         {row.tubCleanCompleted&&<span>Tub cleaned</span>}
          {row.roomNotes&&<span>Room note</span>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span>Tips · {String(row.serviceType).split('-')[1]}</span>}
@@ -221,6 +221,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         {row.lateArrival&&<span>Late arrival</span>}
         {row.checkIssueOpen&&<span className="alert">Inspection issue</span>}
         {hasUnassignedService(row)&&<span className="ths-ops-housekeeper-unassigned">Needs assignment</span>}
+        {row.tubCleanDue&&<span className="alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:' · Unassigned'}</span>}
         {service==='RF'&&<span>Refresh</span>}
         {/^OUT(?:-[A-Z]{2,4})?$/i.test(service)&&<span>OUT</span>}
         {/^OUT-([A-Z]{2,4})$/i.test(service)&&<span>Tips collected · {service.split('-')[1]}</span>}
