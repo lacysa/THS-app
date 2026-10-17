@@ -30,16 +30,18 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const admin=createSupabaseAdmin()
 
   const priorDate=previousDate(serviceDate)
-  const [roomsRes,linksRes,housekeepingRes,priorHousekeepingRes]=await Promise.all([
+  const [roomsRes,linksRes,housekeepingRes,priorHousekeepingRes,opsDetailsRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate),
     admin.from('housekeeping_daily_rooms').select('room_id,assigned_to,clean_order,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag').eq('service_date',serviceDate),
-    admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',priorDate)
+    admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',priorDate),
+     admin.from('room_ops_details').select('room_id,expected_arrival_time').eq('service_date',serviceDate)
   ])
 
   const rooms=roomsRes.data||[]
   const links=linksRes.data||[]
   const housekeeping=housekeepingRes.data||[]
+   const expectedTimes=new Map<string,string>((opsDetailsRes.data||[]).map((item:any)=>[String(item.room_id),String(item.expected_arrival_time||'')]))
   const housekeepingByRoom=new Map<string,any>(
     housekeeping.map((row:any)=>[String(row.room_id||''),row])
   )
@@ -55,7 +57,9 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   let stays:any[]=[]
   if(ids.length){
     const result=await admin.from('reservation_stays').select('*').in('id',ids)
-    stays=result.data||[]
+    const overridesResult=await admin.from('reservation_staff_overrides').select('reservation_id,fields').in('reservation_id',ids)
+     const editedCheckIns=new Set<string>((overridesResult.data||[]).filter((item:any)=>Object.prototype.hasOwnProperty.call(item.fields||{},'check_in_time')).map((item:any)=>String(item.reservation_id)))
+     stays=(result.data||[]).map((stay:any)=>({...stay,checkInTimeManuallyEdited:editedCheckIns.has(String(stay.id))}))
   }
   const stayById=new Map<string,any>(stays.map((stay:any)=>[String(stay.id),stay]))
 
@@ -71,6 +75,7 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
     const inheritedReady=!currentCondition&&priorEos==='Vacant (Clean)'
     return {
       roomId,
+      expectedArrivalTime:expectedTimes.get(roomId)||'',
       roomName:roomNameById.get(roomId)||'Room',
       status:String(link.reservation_status||current.reservation_status||'Vacant'),
       primary:link.primary_reservation_id?stayById.get(String(link.primary_reservation_id))||null:null,

@@ -15,6 +15,7 @@ type Stay={
   arrival_date?:string|null
   checkout_date?:string|null
   check_in_time?:string|null
+  checkInTimeManuallyEdited?:boolean
   products_raw?:string|null
   dietary_restrictions?:string|null
   guest_comments?:string|null

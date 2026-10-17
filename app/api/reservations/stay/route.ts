@@ -3,6 +3,16 @@ import {getStaffAccess,canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 export const dynamic='force-dynamic'
 const fields=['guest_name','guest_phone','door_code','arrival_date','checkout_date','occupancy','rate_plan','check_in_time','products_raw','dietary_restrictions','reason_for_visit','guest_comments','innkeeper_notes'] as const
+function arrivalTime24(value:string):string|null{
+  const match=/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(am|pm)?$/i.exec(value.trim().replace(/\./g,''))
+  if(!match)return null
+  let hour=Number(match[1])
+  const minute=Number(match[2]||0)
+  const period=String(match[3]||'').toLowerCase()
+  if(minute>59||hour>23||hour<0||(period&&(hour<1||hour>12)))return null
+  if(period)hour=hour%12+(period==='pm'?12:0)
+  return String(hour).padStart(2,'0')+':'+String(minute).padStart(2,'0')
+}
 
 export async function GET(req:NextRequest){
  const [opsGate,reservationGate]=await Promise.all([canUseModule('ops'),canUseModule('reservations')])
@@ -58,6 +68,25 @@ export async function PATCH(req:NextRequest){
    reservation_id:body.id,fields:{...(oldOverride?.fields||{}),...patch},updated_by:access.userId,updated_at:new Date().toISOString()
  },{onConflict:'reservation_id'})
  if(overrideError)return NextResponse.json({error:'Saved reservation, but could not protect edits from reimport: '+overrideError.message},{status:500})
+  // Editing guest check-in updates that reservation's operational arrival time too.
+  // Existing housekeeping, breakfast, and other room service values are left intact.
+  if('check_in_time' in patch){
+    const rawTime=String(data.check_in_time||'').trim()
+    const time=arrivalTime24(rawTime)
+    if(time||!rawTime){
+      const {data:arrivalLink,error:linkError}=await admin.from('reservation_daily_links')
+        .select('room_id,service_date').eq('arriving_reservation_id',body.id)
+        .eq('service_date',data.arrival_date).eq('room_id',data.room_id).maybeSingle()
+      if(linkError)return NextResponse.json({error:'Guest time saved, but could not verify linked arrival: '+linkError.message},{status:500})
+      if(arrivalLink){
+        const {error:timeError}=await admin.from('room_ops_details').upsert({
+          room_id:arrivalLink.room_id,service_date:arrivalLink.service_date,
+          expected_arrival_time:time,updated_by:access.userId,updated_at:new Date().toISOString()
+        },{onConflict:'room_id,service_date'})
+        if(timeError)return NextResponse.json({error:'Guest time saved, but Room Operations could not be updated: '+timeError.message},{status:500})
+      }
+    }
+  }
 
  // Reconcile only breakfast eligibility on linked room nights, never modify
  // menus/orders, cleaning state, blocking, or manually overridden tags.

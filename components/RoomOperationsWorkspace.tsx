@@ -77,7 +77,12 @@ function arrivalNoteTime(guest:ReturnType<typeof activeGuest>):string|null{
 }
 function arrivalServiceLabel(type:string,row:OpsRow,guest:ReturnType<typeof activeGuest>){
  if(type!=='Arrival'&&type!=='Out/In')return type
- const time=arrivalNoteTime(guest)||parseArrivalClock(row.expectedArrivalTime)||parseArrivalClock(guest?.check_in_time)||'4pm'
+ const expected=parseArrivalClock(row.expectedArrivalTime)
+ const checkIn=parseArrivalClock(guest?.check_in_time)
+ // Arrival notes override all, explicit room times override imported booking times,
+ // and a manager-edited guest time beats an old default 4pm.
+ const staffCheckIn=guest?.checkInTimeManuallyEdited?checkIn:null
+ const time=arrivalNoteTime(guest)||(staffCheckIn&&(!expected||expected==='4pm')?staffCheckIn:null)||expected||checkIn||'4pm'
  return type+' ('+time+')'
 }
 function shiftDate(day:string,days:number){
@@ -157,7 +162,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     if(active&&Array.isArray(result.rooms)){
      setLiveRows(previous=>{
       const updates=new Map<string,Partial<OpsRow>>(result.rooms.map((room:OpsRow)=>[room.roomId,room]))
-      return previous.map(row=>({...row,...(updates.get(row.roomId)||{})}))
+      // Guest edits are stored separately from room state. Merge them without remounting the table or popup.
+      const latestStays=new Map<string,NonNullable<OpsRow['arriving']>>(
+       (Array.isArray(result.stays)?result.stays:[]).map((stay:NonNullable<OpsRow['arriving']>)=>[String(stay.id||''),stay])
+      )
+      const updateStay=(stay:OpsRow['arriving'])=>stay&&latestStays.has(String(stay.id||''))?{...stay,...latestStays.get(String(stay.id||''))}:stay
+      return previous.map(row=>({...row,...(updates.get(row.roomId)||{}),
+       primary:updateStay(row.primary),arriving:updateStay(row.arriving),staying:updateStay(row.staying),departing:updateStay(row.departing)
+      }))
      })
     }
    }catch{}
