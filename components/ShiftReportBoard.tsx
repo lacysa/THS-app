@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Bold, CheckCircle2, FileText, List, Printer, RefreshCw, Save, Underline } from 'lucide-react'
+import { Bold, CheckCircle2, Eye, FileText, List, Printer, RefreshCw, Save, Underline } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import {normalizeDessertEntries,resolveDessertAssignments,type DessertEntry} from '@/lib/shift-desserts'
 
@@ -114,9 +114,17 @@ function FormattedNote({value}:{value:string}){
 }
 function NoteEditor({label,value,onChange,disabled,placeholder}:{label:string;value:string;onChange:(value:string)=>void;disabled:boolean;placeholder:string}){
  const input=useRef<HTMLTextAreaElement>(null)
+ const lastSelection=useRef({start:0,end:0})
+ const [showPreview,setShowPreview]=useState(false)
+ function rememberSelection(){
+  const el=input.current
+  if(el)lastSelection.current={start:el.selectionStart,end:el.selectionEnd}
+ }
  function apply(kind:'bold'|'underline'|'bullets'){
   const el=input.current;if(!el||disabled)return
-  const start=el.selectionStart,end=el.selectionEnd
+  // Tapping a toolbar icon on mobile can blur the textarea; retain its actual selection.
+  const start=Math.min(lastSelection.current.start,value.length)
+  const end=Math.min(lastSelection.current.end,value.length)
   let result=value,selStart=start,selEnd=end
   if(kind==='bullets'){
    const first=value.lastIndexOf('\n',Math.max(0,start-1))+1
@@ -130,18 +138,26 @@ function NoteEditor({label,value,onChange,disabled,placeholder}:{label:string;va
    result=value.slice(0,start)+mark+value.slice(start,end)+mark+value.slice(end)
    selStart=start+mark.length;selEnd=end+mark.length
   }
+  lastSelection.current={start:selStart,end:selEnd}
   onChange(result)
-  requestAnimationFrame(()=>{if(!input.current)return;input.current.focus({preventScroll:true});input.current.setSelectionRange(selStart,selEnd)})
+  requestAnimationFrame(()=>{
+   if(!input.current)return
+   input.current.focus({preventScroll:true})
+   input.current.setSelectionRange(selStart,selEnd)
+  })
  }
  return <div className="shift-rich-editor">
   <div className="shift-rich-toolbar" role="toolbar" aria-label={label+' formatting'}>
-   <button type="button" disabled={disabled} aria-label="Bold selected words" title="Bold" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('bold')}><Bold size={15}/> Bold</button>
-   <button type="button" disabled={disabled} aria-label="Underline selected words" title="Underline" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('underline')}><Underline size={15}/> Underline</button>
-   <button type="button" disabled={disabled} aria-label="Add or remove bullets" title="Bullets" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('bullets')}><List size={15}/> Bullets</button>
+   <span className="shift-rich-toolbar-label" aria-hidden="true">Format</span>
+   <div className="shift-rich-tools" role="group" aria-label="Text formatting">
+    <button type="button" disabled={disabled} aria-label="Bold selected words" title="Bold" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('bold')}><Bold size={17}/></button>
+    <button type="button" disabled={disabled} aria-label="Underline selected words" title="Underline" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('underline')}><Underline size={17}/></button>
+    <button type="button" disabled={disabled} aria-label="Add or remove bullets" title="Bullets" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('bullets')}><List size={17}/></button>
+   </div>
+   <button type="button" className="shift-rich-preview-toggle" aria-pressed={showPreview} aria-label={showPreview?'Hide formatted preview':'Show formatted preview'} title={showPreview?'Hide preview':'Preview formatting'} disabled={!value.trim()} onClick={()=>setShowPreview(v=>!v)}><Eye size={16}/><span>{showPreview?'Hide':'Preview'}</span></button>
   </div>
-  <textarea ref={input} aria-label={label} rows={4} value={value} disabled={disabled} placeholder={placeholder} onChange={e=>onChange(e.target.value)}/>
-  <small className="shift-rich-hint">Select words or lines and tap a formatting button. Your formatting appears in the preview and printed report.</small>
-  {value.trim()&&<div className="shift-rich-preview"><span>Formatted preview</span><FormattedNote value={value}/></div>}
+  <textarea ref={input} aria-label={label} rows={3} value={value} disabled={disabled} placeholder={placeholder} onChange={e=>{onChange(e.target.value);rememberSelection()}} onSelect={rememberSelection} onKeyUp={rememberSelection} onClick={rememberSelection}/>
+  {showPreview&&value.trim()&&<div className="shift-rich-preview"><span>Formatted preview</span><FormattedNote value={value}/></div>}
  </div>
 }
 
