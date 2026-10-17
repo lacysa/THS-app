@@ -49,25 +49,27 @@ function activeGuest(row:ReservationRow,day:string){
  })||null
 }
 // Normalize imported, manager-entered and note-based times into the same display format.
+// Read saved room times (Postgres TIME, e.g. "14:00:00") and staff/PMS times
+// (e.g. "2:00 PM") without falling back to 4pm for valid values.
 function parseArrivalClock(raw?:string|null):string|null{
  const value=String(raw||'').trim()
- const match=/^(\\d{1,2})(?::(\\d{2}))?(?::\\d{2})?\\s*(a\\.?m\\.?|p\\.?m\\.?)?$/i.exec(value)
+ const match=/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(a\.?m\.?|p\.?m\.?)?$/i.exec(value)
  if(!match)return null
  let hour=Number(match[1])
  const minute=Number(match[2]||0)
- const period=String(match[3]||'').replace(/\\./g,'').toLowerCase()
- if(minute>59||hour>23||hour<0||((period==='am'||period==='pm')&&(hour<1||hour>12)))return null
+ const period=String(match[3]||'').replace(/\./g,'').toLowerCase()
+ if(minute>59||hour>23||hour<0||(period&&(hour<1||hour>12)))return null
  if(period)hour=hour%12+(period==='pm'?12:0)
  const displayHour=hour%12||12
  return displayHour+(minute?':'+String(minute).padStart(2,'0'):'')+(hour>=12?'pm':'am')
 }
 function arrivalNoteTime(guest:ReturnType<typeof activeGuest>):string|null{
  if(!guest)return null
- // Only use a time explicitly associated with arriving/check-in, not meal or activity times.
+ // Only use a time explicitly tied to arrival/check-in, not meal or activity times.
  const notes=[guest.innkeeper_notes,guest.guest_comments]
  for(const note of notes){
   const text=String(note||'')
-  const match=/(?:\\b(?:arrival|arriving|check[ -]?in|eta|expected arrival)\\b)(?:\\s+(?:time|around|approximately|approx\\.?|about|is|at|by))?\\s*[:=–-]?\\s*(\\d{1,2}(?::\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?)/i.exec(text)
+  const match=/\b(?:arrival|arriving|check[ -]?in|eta|expected arrival)\b(?:\s+(?:time|around|approximately|approx\.?|about|is|at|by))?\s*[:=–-]?\s*(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)/i.exec(text)
   if(match){
    const time=parseArrivalClock(match[1])
    if(time)return time
