@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, FileText, Printer, RefreshCw, Save } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Bold, CheckCircle2, FileText, List, Printer, RefreshCw, Save, Underline } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import {normalizeDessertEntries,resolveDessertAssignments,type DessertEntry} from '@/lib/shift-desserts'
 
@@ -39,6 +39,7 @@ type Report = {
     tomorrow?:{id:string;name:string;initials:string}|null
     general?:{id:string;name:string;initials:string}|null
     management?:{id:string;name:string;initials:string}|null
+    maintenance?:{id:string;name:string;initials:string}|null
   }
 }
 
@@ -79,6 +80,71 @@ function initials(value:string) {
   return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase()
 }
 
+
+// Restrict saved formatting to plain-text markers: **bold**, __underlined__, and
+// "- " bullets. Render with React text nodes; never inject user-supplied HTML.
+function formattedInline(value:string,prefix:string,depth=0):ReactNode[]{
+ if(depth>5)return [value]
+ const result:ReactNode[]=[]
+ const pattern=/(\*\*(.+?)\*\*|__(.+?)__)/g
+ let match:RegExpExecArray|null,last=0,index=0
+ while((match=pattern.exec(value))!==null){
+  if(match.index>last)result.push(value.slice(last,match.index))
+  const inside=formattedInline(match[2]||match[3],prefix+index,depth+1)
+  result.push(match[2]?<strong key={prefix+'b'+index}>{inside}</strong>:<u key={prefix+'u'+index}>{inside}</u>)
+  last=pattern.lastIndex;index++
+ }
+ if(last<value.length)result.push(value.slice(last))
+ return result
+}
+function FormattedNote({value}:{value:string}){
+ const lines=String(value||'').split(/\r?\n/)
+ const blocks:ReactNode[]=[]
+ for(let i=0;i<lines.length;){
+  if(/^\s*[-*•]\s+/.test(lines[i])){
+   const children:ReactNode[]=[]
+   while(i<lines.length&&/^\s*[-*•]\s+/.test(lines[i])){
+    children.push(<li key={i}>{formattedInline(lines[i].replace(/^\s*[-*•]\s+/,''),'li'+i)}</li>);i++
+   }
+   blocks.push(<ul key={'ul'+i}>{children}</ul>)
+  }else if(lines[i].trim()){blocks.push(<p key={i}>{formattedInline(lines[i],'p'+i)}</p>);i++}
+  else{blocks.push(<div key={i} className="shift-note-blank" aria-hidden="true"/>);i++}
+ }
+ return <div className="shift-formatted-note">{blocks}</div>
+}
+function NoteEditor({label,value,onChange,disabled,placeholder}:{label:string;value:string;onChange:(value:string)=>void;disabled:boolean;placeholder:string}){
+ const input=useRef<HTMLTextAreaElement>(null)
+ function apply(kind:'bold'|'underline'|'bullets'){
+  const el=input.current;if(!el||disabled)return
+  const start=el.selectionStart,end=el.selectionEnd
+  let result=value,selStart=start,selEnd=end
+  if(kind==='bullets'){
+   const first=value.lastIndexOf('\n',Math.max(0,start-1))+1
+   const pos=value.indexOf('\n',end),last=pos<0?value.length:pos
+   const lines=value.slice(first,last).split('\n')
+   const remove=lines.every(line=>/^\s*-\s/.test(line))
+   const text=lines.map(line=>remove?line.replace(/^(\s*)-\s/,'$1'):'- '+line).join('\n')
+   result=value.slice(0,first)+text+value.slice(last);selStart=first;selEnd=first+text.length
+  }else{
+   const mark=kind==='bold'?'**':'__'
+   result=value.slice(0,start)+mark+value.slice(start,end)+mark+value.slice(end)
+   selStart=start+mark.length;selEnd=end+mark.length
+  }
+  onChange(result)
+  requestAnimationFrame(()=>{if(!input.current)return;input.current.focus({preventScroll:true});input.current.setSelectionRange(selStart,selEnd)})
+ }
+ return <div className="shift-rich-editor">
+  <div className="shift-rich-toolbar" role="toolbar" aria-label={label+' formatting'}>
+   <button type="button" disabled={disabled} aria-label="Bold selected words" title="Bold" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('bold')}><Bold size={15}/> Bold</button>
+   <button type="button" disabled={disabled} aria-label="Underline selected words" title="Underline" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('underline')}><Underline size={15}/> Underline</button>
+   <button type="button" disabled={disabled} aria-label="Add or remove bullets" title="Bullets" onMouseDown={e=>e.preventDefault()} onClick={()=>apply('bullets')}><List size={15}/> Bullets</button>
+  </div>
+  <textarea ref={input} aria-label={label} rows={4} value={value} disabled={disabled} placeholder={placeholder} onChange={e=>onChange(e.target.value)}/>
+  <small className="shift-rich-hint">Select words or lines and tap a formatting button. Your formatting appears in the preview and printed report.</small>
+  {value.trim()&&<div className="shift-rich-preview"><span>Formatted preview</span><FormattedNote value={value}/></div>}
+ </div>
+}
+
 export default function ShiftReportBoard() {
   const [printMounted,setPrintMounted] = useState(false)
   useEffect(()=>{setPrintMounted(true)},[])
@@ -98,7 +164,7 @@ export default function ShiftReportBoard() {
   const [noteType,setNoteType] = useState<'daily'|'persistent'>('daily')
   const [noteText,setNoteText] = useState('')
   const [includeNote,setIncludeNote] = useState(true)
-  const [draft,setDraft] = useState({guestNotes:'',staffNotes:'',suppliesNotes:'',tomorrowNotes:'',generalNotes:'',managementNotes:'',tonightsDessert:''})
+  const [draft,setDraft] = useState({guestNotes:'',staffNotes:'',suppliesNotes:'',tomorrowNotes:'',generalNotes:'',managementNotes:'',maintenanceNotes:'',tonightsDessert:''})
   const [dessertEntries,setDessertEntries]=useState<DessertEntry[]>([])
   const [dessertName,setDessertName]=useState('')
   const [dessertRoomIds,setDessertRoomIds]=useState<string[]>([])
@@ -116,7 +182,7 @@ export default function ShiftReportBoard() {
   const pendingNotesRef=useRef(new Set<string>())
   const saveTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null)
   const loadTokenRef=useRef(0)
-  const noteSections=['guest','staff','supplies','tomorrow','general','management']
+  const noteSections=['guest','staff','supplies','tomorrow','general','maintenance','management']
   const localKey=(id:string,part:string)=>'ths-shift-draft:'+id+':'+date+':'+shift+':'+part
   async function savePersonalNotes() {
     if(!myStaffId||!pendingNotesRef.current.size)return
@@ -206,7 +272,7 @@ export default function ShiftReportBoard() {
       const r = rd.report || {}
       setDraft({
         guestNotes:r.guest_notes || '', staffNotes:r.staff_notes || '', suppliesNotes:r.supplies_notes || '',
-        tomorrowNotes:r.tomorrow_notes || '', generalNotes:r.general_notes || '', managementNotes:r.management_notes || '',
+        tomorrowNotes:r.tomorrow_notes || '', generalNotes:r.general_notes || '', managementNotes:r.management_notes || '', maintenanceNotes:'',
         tonightsDessert:r.tonights_dessert || ''
       })
       setRooms(nd.rooms || [])
@@ -433,18 +499,18 @@ export default function ShiftReportBoard() {
     const section=String(authorKey||key.replace('Notes','')).toLowerCase()
     const prior=draft[key]||''
     const other=staffNotes.filter(e=>e.section===section&&e.staff_member_id!==myStaffId&&e.content.trim())
-    return <label>{label}
-      {prior&&<div style={{whiteSpace:'pre-wrap',marginBottom:8}}><strong>{report?.note_authors?.[authorKey||'staff']?.initials||'Previous'}:</strong> {prior}</div>}
-      {other.map(e=><div key={e.staff_member_id} style={{whiteSpace:'pre-wrap',marginBottom:8}}><strong>{e.initials}:</strong> {e.content}</div>)}
+    return <div className="shift-note-entry"><strong className="shift-note-entry-label">{label}</strong>
+      {prior&&<div className="shift-note-prior"><strong>{report?.note_authors?.[authorKey||'staff']?.initials||'Previous'}:</strong><FormattedNote value={prior}/></div>}
+      {other.map(e=><div className="shift-note-prior" key={e.staff_member_id}><strong>{e.initials}:</strong><FormattedNote value={e.content}/></div>)}
       {notesReady&&myStaffId&&<div><span className="shift-note-author">{initials(currentStaffName)} · Your note</span>
-        <textarea value={myNotes[section]||''} onChange={e=>editPersonalNote(section,e.target.value)} disabled={locked||(section==='management'&&!canManage)} placeholder={placeholder}/>
+        <NoteEditor label={label} value={myNotes[section]||''} onChange={value=>editPersonalNote(section,value)} disabled={locked||(section==='management'&&!canManage)} placeholder={placeholder}/>
       </div>}
-    </label>
+    </div>
   }
 
   function authoredText(value:string,authorKey:keyof NonNullable<Report['note_authors']>) {
     const author=report?.note_authors?.[authorKey]
-    return <>{author && <strong className="shift-note-prefix">{author.initials}: </strong>}{value}</>
+    return <>{author && <strong className="shift-note-prefix">{author.initials}: </strong>}<FormattedNote value={value}/></>
   }
 
   // Include the individually autosaved notes from every account in the printable handoff.
@@ -457,11 +523,11 @@ export default function ShiftReportBoard() {
     return <section className="shift-print-section shift-print-note-section">
       <div className="shift-print-section-title"><h3>{title}</h3></div>
       <div className="shift-print-note-list">
-        {legacy.trim()&&<p className="shift-print-note"><span className="shift-print-note-body">{authoredText(legacy,authorKey)}</span></p>}
-        {other.map(n=><p className="shift-print-note" key={`print-note-${section}-${n.staff_member_id}`}>
-          <strong>{n.initials||initials(n.name)}:</strong> <span className="shift-print-note-body">{n.content}</span>
-        </p>)}
-        {mine&&<p className="shift-print-note"><strong>{initials(currentStaffName)}:</strong> <span className="shift-print-note-body">{mine}</span></p>}
+        {legacy.trim()&&<div className="shift-print-note"><div className="shift-print-note-body">{authoredText(legacy,authorKey)}</div></div>}
+        {other.map(n=><div className="shift-print-note" key={`print-note-${section}-${n.staff_member_id}`}>
+          <strong>{n.initials||initials(n.name)}:</strong> <div className="shift-print-note-body"><FormattedNote value={n.content}/></div>
+        </div>)}
+        {mine&&<div className="shift-print-note"><strong>{initials(currentStaffName)}:</strong> <div className="shift-print-note-body"><FormattedNote value={mine}/></div></div>}
       </div>
     </section>
   }
@@ -543,6 +609,16 @@ export default function ShiftReportBoard() {
         </div>
       </section>}
 
+      <section className="shift-print-section shift-print-maintenance">
+        <div className="shift-print-section-title"><h3>Maintenance Handled Today</h3><span>{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).length} completed</span></div>
+        {summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).length
+        ? <div className="shift-print-list">{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).map((m:any)=><div className="shift-print-row" key={m.id}>
+           <strong>{m.roomName||m.area||'Property'}</strong>
+           <span>{m.title}{m.completedByName?' · Completed by '+m.completedByName:''}</span>
+          </div>)}</div>
+        : <p className="shift-print-narrative">No completed maintenance work orders recorded today.</p>}
+      </section>
+      {printNotes('maintenance','Additional maintenance notes','', 'maintenance')}
       <section className="shift-print-section shift-print-breakfast">
         <div className="shift-print-section-title">
           <h3>Breakfast outlook</h3><span>{auto.breakfastDate}</span>
@@ -749,6 +825,19 @@ export default function ShiftReportBoard() {
         </div> : <div className="shift-muted">No shift highlights recorded yet.</div>}
       </section>
 
+      <section className="shift-section full shift-maintenance-today">
+        <div className="shift-maintenance-header"><div><h3>Maintenance Handled Today</h3><p>Items completed on {date}; unfinished repairs remain in the handoff.</p></div>
+         <span className="shift-maintenance-count">{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).length} completed</span>
+        </div>
+        {summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).length
+        ? <div className="shift-maintenance-list">{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).map((m:any)=><div className="shift-maintenance-item" key={m.id}>
+           <strong>{m.roomName||m.area||'Property'}</strong>
+           <div><b>{m.title}</b>{m.description&&<p>{m.description}</p>}</div>
+           <span>{m.completedByName?'Completed by '+m.completedByName:'Completed'}</span>
+          </div>)}</div>
+        : <p className="shift-muted">No completed maintenance work orders recorded for this date.</p>}
+        <div className="shift-maintenance-extra">{textarea('maintenanceNotes','Additional maintenance handled','Record work handled outside a ticket, including location and resolution.','maintenance')}</div>
+      </section>
       <section className="shift-section">
         <h3>Breakfast · {auto.breakfastDate}</h3>
         <div className="shift-breakfast-overview">

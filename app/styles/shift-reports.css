@@ -1264,3 +1264,46 @@ html[data-theme="dark"] #tonights-dessert .shift-dessert-room-chips>button.is-se
   #tonights-dessert .shift-dessert-saved-actions{width:100%!important}
   #tonights-dessert .shift-dessert-saved-actions>button{flex:1 1 0!important}
 }
+
+
+/* Shift notes: secure lightweight formatting, visible in the editor and PDF. */
+.shift-note-entry{display:grid;gap:8px;min-width:0}
+.shift-note-entry-label{font-size:12px;color:var(--ths-text)}
+.shift-note-author{margin-left:0}
+.shift-note-prior{display:grid;gap:5px;padding:9px 11px;border:1px solid var(--ths-line);border-radius:9px;background:rgba(117,151,170,.06);font-size:12px}
+.shift-rich-editor{border:1px solid #cbd9e2;border-radius:11px;overflow:hidden;background:var(--ths-paper);min-width:0}
+.shift-rich-toolbar{display:flex;gap:6px;flex-wrap:wrap;padding:7px 9px;background:rgba(114,150,170,.08);border-bottom:1px solid var(--ths-line)}
+.shift-rich-toolbar button{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:7px 10px;border:1px solid #c8d7e1;border-radius:8px;background:var(--ths-paper);font:inherit;font-size:11px;font-weight:750;color:var(--ths-text);cursor:pointer}
+.shift-rich-toolbar button:disabled{opacity:.5;cursor:not-allowed}
+.shift-rich-editor textarea{display:block;width:100%;padding:12px;min-height:110px;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:var(--ths-text);font-size:13px;line-height:1.5;resize:vertical}
+.shift-rich-editor textarea:focus{outline:2px solid #6896ac;outline-offset:-2px}
+.shift-rich-hint{display:block;padding:0 11px 9px;color:var(--ths-muted);font-size:10px;line-height:1.4}
+.shift-rich-preview{padding:10px 12px;border-top:1px dashed #c3d5df;background:rgba(114,150,170,.06);font-size:12px}
+.shift-rich-preview>span{display:block;margin-bottom:6px;text-transform:uppercase;font-weight:800;font-size:10px;letter-spacing:.06em;color:var(--ths-muted)}
+.shift-formatted-note{white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+.shift-formatted-note p{margin:0 0 4px;white-space:pre-wrap}
+.shift-formatted-note p:last-child{margin-bottom:0}
+.shift-formatted-note ul{margin:3px 0 6px!important;padding-left:21px!important;list-style:disc outside!important}
+.shift-formatted-note li{display:list-item!important;list-style:disc outside!important;margin:2px 0!important;padding:0!important;white-space:pre-wrap}
+.shift-formatted-note strong{font-weight:850}
+.shift-formatted-note u{text-underline-offset:2px}
+.shift-note-blank{height:7px}
+.shift-maintenance-today{background:linear-gradient(110deg,rgba(125,165,171,.08),transparent 70%),var(--ths-paper)}
+.shift-maintenance-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.shift-maintenance-header h3{margin:0 0 4px}
+.shift-maintenance-header p{margin:0;color:var(--ths-muted);font-size:11px}
+.shift-maintenance-count{padding:6px 9px;border-radius:999px;background:#e4f1e9;color:#426e56;font-size:11px;font-weight:800}
+.shift-maintenance-list{border-top:1px solid var(--ths-line)}
+.shift-maintenance-item{display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--ths-line);font-size:12px;align-items:start}
+.shift-maintenance-item p{margin:3px 0 0;color:var(--ths-muted);white-space:pre-wrap}
+.shift-maintenance-item>span{font-size:11px;color:var(--ths-muted)}
+.shift-maintenance-extra{padding-top:12px;margin-top:14px;border-top:1px solid var(--ths-line)}
+@media(max-width:600px){.shift-maintenance-item{grid-template-columns:1fr;gap:3px}.shift-rich-toolbar button{flex:1 1 auto;justify-content:center}}
+@media print{
+ .shift-print-document .shift-formatted-note{font-size:inherit!important;line-height:1.3!important;white-space:normal!important}
+ .shift-print-document .shift-formatted-note p{margin:0 0 2px!important;white-space:pre-wrap!important}
+ .shift-print-document .shift-formatted-note ul{margin:3px 0 5px!important;padding-left:19px!important;list-style:disc outside!important}
+ .shift-print-document .shift-formatted-note li{display:list-item!important;list-style:disc outside!important;margin:1px 0!important;padding:0!important}
+ .shift-print-document .shift-formatted-note u{text-decoration:underline!important}
+ .shift-print-document .shift-print-note-body{display:block!important;white-space:normal!important}
+}
