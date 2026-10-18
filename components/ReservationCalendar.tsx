@@ -155,16 +155,19 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
           if(v.includes('block'))return '#e1e5ed'
           return '#edf2f5'
         }
-        // Keep the whole reservation one color, using the room's current
-        // operational condition rather than a distracting daily patchwork.
+        // Room condition belongs to the reservation arriving or staying over
+        // on the operations date, never a past departure or an unrelated future
+        // booking in the same room. OUT/IN applies to the arriving guest only.
         const isCheckedOut=(bar:typeof bars[number])=>Boolean(data.checkedOutIds?.includes(bar.reservationId))
+        const operationsCell=cells.get(serviceDate+'|'+room.id)
+        const isCurrentArrivalOrStayover=(bar:typeof bars[number])=>{
+          if(isCheckedOut(bar)||!operationsCell||operationsCell.reservationId!==bar.reservationId)return false
+          if(!(bar.arrival<=serviceDate&&serviceDate<bar.departure))return false
+          return /^(arrival|stayover|out[\\/ -]?in)$/i.test(operationsCell.status.trim())
+        }
         const stayBackground=(bar:typeof bars[number])=>{
-          if(isCheckedOut(bar))return '#e4e7ed'
-          const today=serviceDate
-          const current=roomStatuses.get(today+'|'+room.id)
-          const fallback=roomStatuses.get(bar.date+'|'+room.id)
-          const state=current||fallback
-          return conditionColor(state?.condition||bar.condition||'',Boolean(state?.blocked))
+          const state=roomStatuses.get(serviceDate+'|'+room.id)
+          return conditionColor(state?.condition||operationsCell?.condition||'',Boolean(state?.blocked||operationsCell?.blocked))
         }
         return <div className="ths-calendar-row" key={room.id} style={{display:'contents'}}>
           <div className="ths-calendar-room">{room.name}</div>
@@ -185,7 +188,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
                 </button>
               </div>
             })}
-            {bars.map(bar=><button key={bar.reservationId} type="button" className={"ths-calendar-stay ths-calendar-stay-condition"+(isCheckedOut(bar)?" ths-calendar-checked-out":"")} style={{gridColumn:`${bar.first+1} / ${bar.last+2}`,background:stayBackground(bar)}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(isCheckedOut(bar)?' · Checked out':'')+(data.canRemove?' · Hold to remove':'')}
+            {bars.map(bar=><button key={bar.reservationId} type="button" className={"ths-calendar-stay"+(isCurrentArrivalOrStayover(bar)?" ths-calendar-stay-condition":"")+(isCheckedOut(bar)?" ths-calendar-stay-condition ths-calendar-checked-out":"")} style={{gridColumn:`${bar.first+1} / ${bar.last+2}`,...(isCurrentArrivalOrStayover(bar)?{background:stayBackground(bar)}:{})}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(isCheckedOut(bar)?' · Checked out':'')+(data.canRemove?' · Hold to remove':'')}
               onPointerDown={event=>{
                 if(!data.canRemove||event.button!==0)return
                 stopLongPress();suppressNextTap.current=false
