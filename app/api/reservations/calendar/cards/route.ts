@@ -17,6 +17,10 @@ export async function GET(req:NextRequest){
   const [opsGate,reservationGate]=await Promise.all([canUseModule('ops'),canUseModule('reservations')])
   if(!opsGate.access&&!reservationGate.access)return NextResponse.json({error:'Unauthorized'},{status:401})
   if(!opsGate.allowed&&!reservationGate.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
+  const access=reservationGate.allowed?reservationGate.access:opsGate.access
+  const canEdit=Boolean(access&&!access.isPreviewMode&&(access.isAdmin||access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap))))
+  const housekeepingGate=canEdit?await canUseModule('housekeeping'):null
+  const canManageRooms=Boolean(canEdit&&housekeepingGate?.allowed)
 
   const date=req.nextUrl.searchParams.get('date')||''
   if(!validDate(date))return NextResponse.json({error:'Invalid date'},{status:400})
@@ -25,7 +29,7 @@ export async function GET(req:NextRequest){
   const [roomsResult,linksResult,dailyResult,priorResult]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('room_id,reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').eq('service_date',date),
-    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag').eq('service_date',date),
+    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag,assigned_to,clean_order').eq('service_date',date),
     admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',previousDate(date))
   ])
   if(roomsResult.error||linksResult.error||dailyResult.error||priorResult.error){
@@ -66,6 +70,8 @@ export async function GET(req:NextRequest){
       status:String(link.reservation_status||now.reservation_status||'Vacant'),
       primary,arriving,staying,departing,
       serviceType:String(now.service_type||''),
+      assignedTo:String(now.assigned_to||''),
+      cleanOrder:now.clean_order==null?null:Number(now.clean_order),
       operationalStatus:String(now.reservation_status||link.reservation_status||'Vacant'),
       stripHold:String(now.strip_hold||''),
       roomNotes:String(now.notes||''),
@@ -82,5 +88,5 @@ export async function GET(req:NextRequest){
     }]
   })
 
-  return NextResponse.json({date,rows},{headers:{'cache-control':'private, no-store'}})
+  return NextResponse.json({date,rows,canManageRooms},{headers:{'cache-control':'private, no-store'}})
 }
