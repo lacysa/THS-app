@@ -28,7 +28,7 @@ export async function GET(req:NextRequest){
  if(!dateOk(start)||!dateOk(end)||end<start||(roomId&&!uuidPattern.test(roomId)))return NextResponse.json({error:'Invalid log filter'},{status:400})
  const admin=createSupabaseAdmin()
  const eventBase=admin.from('ops_activity_log').select('id,room_id,service_date,event_type,message,status,source,actor_user_id,actor_name,created_at').gte('service_date',start).lte('service_date',end).order('created_at',{ascending:false}).limit(160)
- const dailyBase=admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,assigned_to,complete,completed_at,inspected,inspected_at,service_type,notes').gte('service_date',start).lte('service_date',end)
+ const dailyBase=admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,assigned_to,complete,completed_at,inspected,inspected_at,service_type,notes,updated_at,updated_by').gte('service_date',start).lte('service_date',end)
  const correctionBase=admin.from('housekeeping_correction_events').select('id,service_date,room_id,event_type,note,actor_id,created_at').gte('service_date',start).lte('service_date',end).order('created_at',{ascending:false}).limit(60)
  const notesBase=admin.from('room_notes').select('id,room_id,service_date,note,note_type,resolved,created_by,created_at').gte('service_date',start).lte('service_date',end).order('created_at',{ascending:false}).limit(60)
  const openBase=admin.from('ops_activity_log').select('id,room_id,service_date,event_type,message,status,source,actor_user_id,actor_name,created_at').eq('status','open').order('created_at',{ascending:false}).limit(60)
@@ -91,6 +91,19 @@ export async function GET(req:NextRequest){
   list.push({id:'roomnote:'+r.id,roomId:String(r.room_id),roomName:byRoom.get(String(r.room_id))||'Room',
    serviceDate:String(r.service_date),eventType:'room_note',message:String(r.note||'').slice(0,700),
    status:r.resolved?'done':'recorded',at:String(r.created_at),actor:byUser.get(String(r.created_by))||'Staff',source:'room_notes'})
+ }
+ // The Rooms / Housekeeping note editor saves to housekeeping_daily_rooms.notes,
+ // not room_notes. Include the live note as a clearly labelled snapshot in History,
+ // without misclassifying it as a failed inspection or inventing an edit timestamp.
+ for(const row of (daily.data||[]) as any[]){
+  const note=String(row.notes||'').trim()
+  if(!note)continue
+  const rid=String(row.room_id),day=String(row.service_date)
+  if(list.some(item=>item.roomId===rid&&item.serviceDate===day&&item.eventType==='room_note'&&item.message.trim()===note))continue
+  list.push({id:'daily-room-note:'+rid+':'+day,roomId:rid,roomName:byRoom.get(rid)||'Room',serviceDate:day,
+   eventType:'room_note',message:note,status:'recorded',
+   at:String(row.updated_at||day+'T12:00:00Z'),actor:byUser.get(String(row.updated_by))||'Room team',
+   source:'daily_room_note'})
  }
  list.sort((a,b)=>((a.status==='open'?1:0)!==(b.status==='open'?1:0)?(a.status==='open'?-1:1):b.at.localeCompare(a.at)))
  return NextResponse.json({items:list.slice(0,180),rooms:rooms.map((r:any)=>({id:String(r.id),name:String(r.name)}))},{headers:{'cache-control':'private, no-store'}})
