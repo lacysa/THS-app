@@ -134,6 +134,8 @@ export async function POST(req:NextRequest){
       if(personError||roomError)throw new Error(personError?.message||roomError?.message)
       if(!person)return NextResponse.json({error:'Active staff profile required.'},{status:403})
       if(!room)return NextResponse.json({error:'Room not on the daily board.'},{status:404})
+      const manager=ctx.access.isAdmin||ctx.access.capabilities.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c))
+      if(failed&&room.inspected&&!manager)return NextResponse.json({error:'Only management may overturn a passed inspection.'},{status:403})
       const status=String(room.reservation_status||'').trim().toLowerCase()
       const service=String(room.service_type||'').trim().toUpperCase()
       if(status==='blocked'||status==='stayover'||String(room.strip_hold||'').toLowerCase().includes('hold')||service==='RF')return NextResponse.json({error:'Room is not eligible for inspection.'},{status:400})
