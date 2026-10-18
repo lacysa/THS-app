@@ -1,11 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import BookingMenuNote from '@/components/BookingMenuNote'
 import TonightsDessertDisplay from '@/components/TonightsDessertDisplay'
 
 export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
-  const [date,setDate] = useState(initialDate)
+  const params=useSearchParams()
+  const targetRoom=params.get('roomId')||''
+  const requestedDate=params.get('date')||''
+  const [date,setDate] = useState(/^20\d{2}-\d{2}-\d{2}$/.test(requestedDate)?requestedDate:initialDate)
   const [data,setData] = useState<any>(null)
   const [loading,setLoading] = useState(true)
   const [editing,setEditing] = useState<any>(null)
@@ -28,6 +32,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
   }
 
   useEffect(()=>{ load() },[date])
+  useEffect(()=>{if(!loading&&targetRoom){document.querySelector<HTMLElement>('[data-breakfast-room="'+targetRoom+'"]')?.scrollIntoView({block:'center',behavior:'smooth'})}},[loading,targetRoom,date])
 
   async function saveEdit() {
     setError('')
@@ -156,7 +161,7 @@ export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
             <div className="timeline fd-breakfast-list">
               {data.bookings.length===0 && <div className="muted">No breakfast bookings for this date.</div>}
               {data.bookings.map((b:any)=>(
-                <div className={`fd-breakfast-pill ${b.status==='declined'?'is-declined':b.menu_submitted?'is-received':'is-missing'}`} id={`booking-${b.id}`} key={b.id}>
+                <div data-breakfast-room={String(b.rooms?.id||"")} style={targetRoom===String(b.rooms?.id||"")?{outline:"3px solid #6b81ca",outlineOffset:3,background:"#ecf1ff"}:undefined} className={`fd-breakfast-pill ${b.status==='declined'?'is-declined':b.menu_submitted?'is-received':'is-missing'}`} id={`booking-${b.id}`} key={b.id}>
                   <div className="fd-breakfast-pill-main">
                     <div className="fd-breakfast-pill-room">
                       <strong>{b.rooms?.name}</strong>
