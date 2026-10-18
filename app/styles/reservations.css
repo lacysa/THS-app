@@ -1155,3 +1155,15 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 .ths-calendar-stay-condition strong,
 .ths-calendar-stay-condition small{color:#264556!important}
 .ths-calendar-stay-condition:hover{border-color:#7a9aaa!important;filter:brightness(.98)}
+
+/* Recorded historical checkouts remain visually distinct from live room conditions. */
+.ths-calendar-stay-condition.ths-calendar-checked-out{
+  background:#e4e7ed!important;
+  border-color:#bac1ce!important;
+  border-left-color:#8792a5!important;
+  color:#4c5769!important;
+}
+.ths-calendar-checked-out .ths-calendar-stay-text>strong,
+.ths-calendar-checked-out .ths-calendar-stay-text>small{
+  color:#4c5769!important;
+}
