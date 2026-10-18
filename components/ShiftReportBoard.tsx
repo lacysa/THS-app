@@ -8,7 +8,8 @@ import {normalizeDessertEntries,resolveDessertAssignments,type DessertEntry} fro
 type AutoData = {
   breakfastDate:string
   housekeeping:any[]
-  housekeepingFixes?:{id:string;roomName:string;note:string;resolved:boolean;assignedTo:string}[]
+  housekeepingFixes?:{id:string;roomName:string;note:string;resolved:boolean;assignedTo:string;fixNote?:string}[]
+  housekeepingObservations?:{roomId:string;roomName:string;note:string;lastUpdatedBy:string}[]
   breakfast:any[]
   maintenance:any[]
   roomNotes:any[]
@@ -621,6 +622,17 @@ export default function ShiftReportBoard() {
               <span className={`shift-print-fix-status ${f.resolved?'resolved':'open'}`}>{f.resolved?'Fixed':'Needs correction'}</span>
             </div>
             <p>{f.note}</p>
+            {f.fixNote&&<p><strong>Fix recorded:</strong> {f.fixNote}</p>}
+          </div>)}
+        </div>
+      </section>}
+
+      {(auto.housekeepingObservations||[]).length>0&&<section className="shift-print-section shift-print-room-notes">
+        <div className="shift-print-section-title"><h3>Housekeeping &amp; Hospitality room notes</h3><span>{(auto.housekeepingObservations||[]).length} room notes</span></div>
+        <div className="shift-print-list">
+          {(auto.housekeepingObservations||[]).map(item=><div className="shift-print-row" key={'staff-note-'+item.roomId}>
+            <strong>{item.roomName}</strong><span style={{whiteSpace:'pre-wrap'}}>{item.note}</span>
+            {item.lastUpdatedBy&&<small>Room record last updated by {item.lastUpdatedBy}</small>}
           </div>)}
         </div>
       </section>}
@@ -759,6 +771,25 @@ export default function ShiftReportBoard() {
                 <span className={f.resolved?'shift-today-correction-status resolved':'shift-today-correction-status open'}>{f.resolved?'Fixed':'Needs correction'}</span>
               </div>
               <p>{f.note}</p>
+            {f.fixNote&&<p><strong>Fix recorded:</strong> {f.fixNote}</p>}
+            </div>)}
+          </div>
+        </div>}
+        {(auto.housekeepingObservations||[]).length>0&&<div className="shift-today-corrections">
+          <div className="shift-today-corrections-head">
+            <div><span className="shift-today-corrections-kicker">ROOM OPERATIONS</span>
+              <h4>Housekeeping &amp; Hospitality room notes</h4>
+              <p>Today's room observations, including Hospitality Assistant notes. These are not automatically failed inspections.</p>
+            </div>
+            <span className="shift-today-corrections-total">{(auto.housekeepingObservations||[]).length} notes</span>
+          </div>
+          <div className="shift-today-corrections-list">
+            {(auto.housekeepingObservations||[]).map(item=><div key={'staff-note-'+item.roomId} className="shift-today-correction">
+              <div className="shift-today-correction-meta"><strong>{item.roomName}</strong>
+                <span>Room note</span>
+                {item.lastUpdatedBy&&<span>Room record last updated by {item.lastUpdatedBy}</span>}
+              </div>
+              <p style={{whiteSpace:'pre-wrap'}}>{item.note}</p>
             </div>)}
           </div>
         </div>}
