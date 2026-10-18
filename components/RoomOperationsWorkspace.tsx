@@ -261,6 +261,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
      <tbody>{filtered.map(row=>{
       const type=reservationType(row)
       const condition=roomCondition(row)
+      const tone=conditionTone(condition)
       const guest=activeGuest(row,serviceDate)
       const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})
       const navigate=(event:React.MouseEvent,view:'room'|'log',action?:string,editor?:'room_notes'|'packages'|'inspection'|'tub_assignee')=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view,action,editor})}
@@ -299,11 +300,11 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
      const condition=roomCondition(row)
      const guest=activeGuest(row,serviceDate)
      const service=String(row.serviceType||'').trim().toUpperCase()
-     return <button className="ths-ops-room-row ths-ops-room-card" type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})}>
+     return <button className={`ths-ops-room-row ths-ops-room-card tone-${tone}`} type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})}>
       <span className="ths-ops-room-info">
        <span className="ths-ops-card-top">
         <span className="ths-ops-room-name">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; initials if recorded" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}<span className="ths-ops-activity">{arrivalServiceLabel(type,row,guest)}{service==='RF'?' · RF':''}</span></span>
-        <span className="ths-ops-card-condition"><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span><ChevronRight size={18} aria-hidden="true"/></span>
+        <span className="ths-ops-card-condition"><span className={`ths-ops-condition ${tone}`}>{condition}</span><ChevronRight size={18} aria-hidden="true"/></span>
        </span>
        <span className="ths-ops-card-summary">
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Guest</span><span className="ths-ops-card-value">{guest?.guest_name||'No active reservation'}</span></span>
