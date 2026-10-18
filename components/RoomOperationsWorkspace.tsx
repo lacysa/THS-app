@@ -248,12 +248,12 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}><span className="ths-ops-room-name-with-out">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; tip collection initials shown if available" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}</span></th>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{arrivalServiceLabel(type,row,guest)}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
-       <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.assignedTo?.trim()||'—'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</td>
+       <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}><button type="button" className="ths-ops-assignment-action" onClick={history('assignment_changed')} title="View staff assignment history">{row.assignedTo?.trim()||'—'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</button></td>
        <td style={{padding:'12px 14px'}}><button type="button" className={`ths-ops-condition ths-ops-pill-action ${conditionTone(condition)}`} onClick={history("condition_changed")} title="View room condition history">{condition}</button></td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
          {row.breakfastTag&&<button type="button" className="ths-tag-service ths-ops-pill-action" onClick={breakfast}>Breakfast</button>}
-         {row.lateArrival&&<button type="button" className="ths-tag-arrival ths-ops-pill-action" onClick={editor("room_notes")}>Late arrival</button>}
+         {row.lateArrival&&<button type="button" className="ths-tag-arrival ths-ops-pill-action" onClick={(event)=>{event.stopPropagation();navigate(event,"room")}}>Late arrival</button>}
          {row.checkIssueOpen&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={history("issue_reported")}>Inspection issue</button>}
         {row.tubCleanDue&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</button>}
         {row.tubCleanCompleted&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub cleaned</button>}
