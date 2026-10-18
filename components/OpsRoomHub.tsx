@@ -8,7 +8,7 @@ type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
 type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
-type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
+type Data={correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
 type View='room'|'guest'|'log'
 type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|'tub_assignee'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
@@ -224,7 +224,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{assignedTo:name}},name?'Housekeeper assigned':'Assignment cleared'))setActiveEditor(null)
  }
  async function inspect(decision:'pass'|'fail'|'fixed'){
-  if(decision==='fail'&&!issueNote.trim()){setError('Describe the housekeeping issue before failing the inspection.');return}
+  if((decision==='fail'||decision==='fixed')&&!issueNote.trim()){setError(decision==='fixed'?'Describe what was fixed before marking the correction complete.':'Describe the housekeeping issue before failing the inspection.');return}
   await run('/api/room-checks',{date,roomId,decision,note:issueNote.trim()},decision==='pass'?'Inspection passed':decision==='fixed'?'Correction marked ready for reinspection':'Issue reported to housekeeping')
  }
  async function saveGuestField(field:EditableGuestField,value:string){
@@ -365,13 +365,21 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         <strong>Room inspection</strong>
         <small>{daily.inspected?'Passed':daily.check_issue_open?'Correction required':data.inspectionReady?'Ready for check':'Awaiting completion'}</small>
        </div>
+       {(data.correctionHistory||[]).length>0&&<div style={{marginBottom:10,padding:'9px 11px',background:'#fff',border:'1px solid #dce6e9',borderRadius:10}}>
+        <strong style={{fontSize:12}}>Correction notes</strong>
+        {(data.correctionHistory||[]).slice(0,6).map(item=><div key={item.id} style={{marginTop:7,fontSize:12,lineHeight:1.4}}>
+         <strong>{item.type==='fixed'?'Fix recorded':item.type==='found'?'Issue found':item.type.replaceAll('_',' ')}</strong>
+         <span style={{color:'#657785',marginLeft:6}}>{new Date(item.at).toLocaleString('en-US',{timeZone:'America/Detroit',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
+         <div style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{item.note}</div>
+        </div>)}
+       </div>}
        {canManage&&daily.inspected&&!daily.check_issue_open&&<div style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap',marginBottom:9}}>
         <span className="ops-hub-good">{approval?.signed?'Management signed · '+(approval.initials||'✓'):'Awaiting management sign-off'}</span>
         {!approval?.signed&&<button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void approveInspection()}>Sign off · {data.managerInitials||'Management'}</button>}
        </div>}
        {canInspect? <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
         {daily.check_issue_open&&!data.inspectionReady
-         ? <button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void inspect('fixed')}><Check size={16}/> Mark correction fixed</button>
+         ? <button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>setActiveEditor('inspection')}><Check size={16}/> Enter fix notes</button>
          : <>
            <button type="button" className="ops-hub-primary" disabled={busy||Boolean(daily.inspected)||!data.inspectionReady} onClick={()=>void inspect('pass')}><Check size={16}/> {daily.inspected?'Inspection passed':'Pass inspection'}</button>
            <button type="button" className="ops-hub-secondary" disabled={busy||(!canManage&&(Boolean(daily.inspected)||!data.inspectionReady))} onClick={()=>setActiveEditor(v=>v==='inspection'?null:'inspection')}><AlertTriangle size={16}/> Fail inspection</button>
@@ -416,7 +424,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         {daily.inspected&&<p className="ops-hub-good"><Check size={16}/>Passed inspection</p>}
         {!data.inspectionEligible&&<p className="ops-hub-muted">No inspection required for this date.</p>}
         {data.inspectionEligible&&canInspect&&(daily.check_issue_open&&!data.inspectionReady
-         ? <><p className="ops-hub-muted">Correction still open.</p><button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void inspect('fixed')}>Mark correction fixed</button></>
+         ? <><p className="ops-hub-muted">Correction still open. Document exactly what was corrected.</p><label className="ops-hub-label">Fix notes<textarea rows={3} value={issueNote} disabled={busy} onChange={e=>setIssueNote(e.target.value)} placeholder="Describe the cleaning or repair completed"/></label><button type="button" className="ops-hub-secondary" disabled={busy||!issueNote.trim()} onClick={()=>void inspect('fixed')}>Save fix notes & mark corrected</button></>
          : <><button type="button" className="ops-hub-primary" disabled={busy||Boolean(daily.inspected)} onClick={()=>void inspect('pass')}><Check size={16}/>{daily.inspected?'Already passed':'Pass inspection'}</button><label className="ops-hub-label">Found an issue?<textarea rows={2} value={issueNote} disabled={busy} onChange={e=>setIssueNote(e.target.value)} placeholder="Describe what needs correction"/></label><button type="button" className="ops-hub-secondary" disabled={busy||!issueNote.trim()} onClick={()=>void inspect('fail')}><AlertTriangle size={16}/> Flag issue</button></>)}
         {data.inspectionEligible&&!canInspect&&<p className="ops-hub-muted">Room-check permission required.</p>}
        </div>}
