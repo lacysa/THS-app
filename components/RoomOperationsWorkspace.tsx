@@ -237,13 +237,13 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <td style={{padding:'12px 14px'}}><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span></td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
-         {row.breakfastTag&&<span>Breakfast</span>}
-         {row.lateArrival&&<span>Late arrival</span>}
-         {row.checkIssueOpen&&<span className="alert">Inspection issue</span>}
-        {row.tubCleanDue&&<span className="alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</span>}
-        {row.tubCleanCompleted&&<span>Tub cleaned</span>}
-         {row.roomNotes&&<span>Room note</span>}
-         {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span>Tips · {String(row.serviceType).split('-')[1]}</span>}
+         {row.breakfastTag&&<span className="ths-tag-service">Breakfast</span>}
+         {row.lateArrival&&<span className="ths-tag-arrival">Late arrival</span>}
+         {row.checkIssueOpen&&<span className="alert ths-tag-alert">Inspection issue</span>}
+        {row.tubCleanDue&&<span className="alert ths-tag-alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</span>}
+        {row.tubCleanCompleted&&<span className="ths-tag-complete">Tub cleaned</span>}
+         {row.roomNotes&&<span className="ths-tag-note">Room note</span>}
+         {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span className="ths-tag-complete">Tips · {String(row.serviceType).split('-')[1]}</span>}
         </span>
         {row.roomNotes?.trim()&&<div className="ths-ops-note-preview" title={row.roomNotes} aria-label={'Room note: '+row.roomNotes}>{row.roomNotes}</div>}
        </td>
@@ -269,14 +269,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</span></span>
        </span>
        <span className="ths-ops-tags">
-        {row.breakfastTag&&<span>Breakfast</span>}
-        {row.lateArrival&&<span>Late arrival</span>}
-        {row.checkIssueOpen&&<span className="alert">Inspection issue</span>}
+        {row.breakfastTag&&<span className="ths-tag-service">Breakfast</span>}
+        {row.lateArrival&&<span className="ths-tag-arrival">Late arrival</span>}
+        {row.checkIssueOpen&&<span className="alert ths-tag-alert">Inspection issue</span>}
         {hasUnassignedService(row)&&<span className="ths-ops-housekeeper-unassigned">Needs assignment</span>}
-        {row.tubCleanDue&&<span className="alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:' · Unassigned'}</span>}
-        {service==='RF'&&<span>Refresh</span>}
-        {/^OUT(?:-[A-Z]{2,4})?$/i.test(service)&&<span>OUT</span>}
-        {/^OUT-([A-Z]{2,4})$/i.test(service)&&<span>Tips collected · {service.split('-')[1]}</span>}
+        {row.tubCleanDue&&<span className="alert ths-tag-alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:' · Unassigned'}</span>}
+        {service==='RF'&&<span className="ths-tag-refresh">Refresh</span>}
+        {/^OUT(?:-[A-Z]{2,4})?$/i.test(service)&&<span className="ths-tag-complete">OUT</span>}
+        {/^OUT-([A-Z]{2,4})$/i.test(service)&&<span className="ths-tag-complete">Tips collected · {service.split('-')[1]}</span>}
        </span>
        {row.roomNotes?.trim()&&<span className="ths-ops-card-note" title={row.roomNotes}><strong>Room note</strong><span>{row.roomNotes}</span></span>}
       </span>
