@@ -150,13 +150,13 @@ export async function POST(req:NextRequest){
       if(qualityError)throw new Error(qualityError.message)
       const passedCondition=['checkout','vacant','dirty'].includes(status)?'Vacant (Clean)':status==='arrival'&&room.room_condition==='Occupied'?'Occupied':'Ready'
       const patch=failed?{
-        complete:false,ready_for_inspection:false,inspected:false,completed_at:null,inspected_at:null,
+        complete:false,ready_for_inspection:false,inspected:false,completed_at:null,inspected_at:null,inspection_signed_by:null,inspection_signed_at:null,
         room_condition:'Cleaning',check_issue_open:true,check_issue_note:note,
         check_issue_by:person.id,check_issue_at:now,ha_signed_by:null,ha_signed_at:null,
         foh_signed_by:null,foh_signed_at:null,updated_at:now
       }:{
         check_issue_open:false,check_issue_note:null,inspected:true,inspected_by:ctx.access.userId,
-        inspected_at:now,ready_for_inspection:false,room_condition:passedCondition,
+        inspected_at:now,ready_for_inspection:false,room_condition:passedCondition,inspection_signed_by:null,inspection_signed_at:null,
         ha_signed_by:person.id,ha_signed_at:now,updated_at:now
       }
       const {error:updateError}=await admin.from('housekeeping_daily_rooms').update(patch).eq('service_date',date).eq('room_id',roomId)
