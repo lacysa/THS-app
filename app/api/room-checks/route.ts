@@ -105,6 +105,7 @@ export async function POST(req:NextRequest){
   if(body?.decision==='fixed'){
     const date=String(body.date||''),roomId=String(body.roomId||''),note=String(body.note||'').trim()
     if(!validDate(date)||!roomId)return NextResponse.json({error:'Invalid correction update.'},{status:400})
+    if(!note)return NextResponse.json({error:'Describe how the correction was fixed before marking it complete.'},{status:400})
     const admin=createSupabaseAdmin()
     const [{data:person,error:personError},{data:room,error:roomError}]=await Promise.all([
       admin.from('staff_members').select('id,name').eq('auth_user_id',ctx.access.userId).eq('active',true).maybeSingle(),
@@ -114,7 +115,7 @@ export async function POST(req:NextRequest){
     if(!person)return NextResponse.json({error:'Active staff account required.'},{status:403})
     if(!room?.check_issue_open)return NextResponse.json({error:'No open correction for this room.'},{status:409})
     const now=new Date().toISOString()
-    const {error:eventError}=await admin.from('housekeeping_correction_events').insert({service_date:date,room_id:roomId,actor_id:person.id,event_type:'fixed',note:note||'Correction completed',created_at:now})
+    const {error:eventError}=await admin.from('housekeeping_correction_events').insert({service_date:date,room_id:roomId,actor_id:person.id,event_type:'fixed',note,created_at:now})
     if(eventError)return NextResponse.json({error:eventError.message},{status:500})
     const {error:updateError}=await admin.from('housekeeping_daily_rooms').update({complete:true,ready_for_inspection:true,room_condition:'Ready for Room Check',updated_at:now}).eq('service_date',date).eq('room_id',roomId)
     if(updateError)return NextResponse.json({error:updateError.message},{status:500})
