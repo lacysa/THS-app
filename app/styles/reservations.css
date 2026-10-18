@@ -1184,3 +1184,24 @@ button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
 .ths-ops-note-action{display:block;width:100%;text-align:left;cursor:pointer;font:inherit}
 .ths-ops-assignment-action{border:0;background:none;color:inherit;cursor:pointer;font:inherit;text-align:left;padding:0}
 .ths-ops-assignment-action:hover{text-decoration:underline}
+
+/* Restore compact status-pill proportions; retain click targets and colors. */
+.ths-ops-full-table .ths-ops-tags{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.ths-ops-full-table .ths-ops-tags>.ths-ops-pill-action{
+  display:inline-flex!important;align-items:center;justify-content:center;
+  flex:0 0 auto!important;width:auto!important;min-width:0!important;
+  min-height:0!important;height:auto!important;
+  padding:3px 8px!important;margin:0!important;
+  border-radius:999px!important;
+  font:700 10px/1.25 Arial,Helvetica,sans-serif!important;
+  letter-spacing:0!important;text-transform:none!important;
+  box-shadow:none!important;white-space:nowrap;cursor:pointer;
+}
+.ths-ops-full-table button.ths-ops-condition{
+  display:inline-flex!important;width:auto!important;min-width:0!important;
+  min-height:0!important;height:auto!important;padding:4px 9px!important;
+  margin:0!important;border-radius:999px!important;
+  font:750 11px/1.25 Arial,Helvetica,sans-serif!important;
+  box-shadow:none!important;white-space:nowrap;
+}
+.ths-ops-full-table .ths-ops-note-action{padding:5px 7px;font-size:11px;line-height:1.35}
