@@ -141,6 +141,32 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
           const last=data.days.findLastIndex(day=>day>=c.arrival&&day<c.departure)
           return {...c,first,last}
         }).filter(c=>c.first>=0&&c.last>=c.first)
+        // Color each booked date from its own saved room condition. A single
+        // multi-night reservation may pass through several different conditions.
+        const conditionColor=(value:string,blocked:boolean)=>{
+          if(blocked)return '#e1e5ed'
+          const v=value.toLowerCase().trim()
+          if(!v)return '#edf2f5' // no room-condition data; not assumed ready
+          if(v.includes('dirty'))return '#f7deda'
+          if(v.includes('cleaning')||v.includes('in progress'))return '#fff0c8'
+          if(v.includes('check')||v.includes('inspect'))return '#eee4f8'
+          if(v.includes('ready')||v.includes('clean'))return '#d7efe4'
+          if(v.includes('occupied'))return '#e1ecfa'
+          if(v.includes('block'))return '#e1e5ed'
+          return '#edf2f5'
+        }
+        const stayBackground=(bar:typeof bars[number])=>{
+          const visible=data.days.slice(bar.first,bar.last+1)
+          const segments=visible.flatMap((day,index)=>{
+            const state=roomStatuses.get(day+'|'+room.id)
+            const blocked=holds.has(day+'|'+room.id)||Boolean(state?.blocked)
+            const fill=conditionColor(state?.condition||'',blocked)
+            const left=(index/visible.length*100).toFixed(4)
+            const right=((index+1)/visible.length*100).toFixed(4)
+            return [fill+' '+left+'%',fill+' '+right+'%']
+          })
+          return 'linear-gradient(to right, '+segments.join(', ')+')'
+        }
         return <div className="ths-calendar-row" key={room.id} style={{display:'contents'}}>
           <div className="ths-calendar-room">{room.name}</div>
           <div className="ths-calendar-band">
@@ -160,7 +186,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
                 </button>
               </div>
             })}
-            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(data.canRemove?' · Hold to remove':'')}
+            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay ths-calendar-stay-condition" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`,backgroundImage:stayBackground(bar)}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(data.canRemove?' · Hold to remove':'')}
               onPointerDown={event=>{
                 if(!data.canRemove||event.button!==0)return
                 stopLongPress();suppressNextTap.current=false
