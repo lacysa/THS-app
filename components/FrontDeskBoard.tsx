@@ -1,15 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import BookingMenuNote from '@/components/BookingMenuNote'
 import TonightsDessertDisplay from '@/components/TonightsDessertDisplay'
 
 export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
-  const params=useSearchParams()
-  const targetRoom=params.get('roomId')||''
-  const requestedDate=params.get('date')||''
-  const [date,setDate] = useState(/^20\d{2}-\d{2}-\d{2}$/.test(requestedDate)?requestedDate:initialDate)
+  const [targetRoom,setTargetRoom]=useState('')
+  const [date,setDate] = useState(initialDate)
+  useEffect(()=>{
+   const params=new URLSearchParams(window.location.search)
+   setTargetRoom(params.get('roomId')||'')
+   const requestedDate=params.get('date')||''
+   if(/^20\d{2}-\d{2}-\d{2}$/.test(requestedDate))setDate(requestedDate)
+  },[])
   const [data,setData] = useState<any>(null)
   const [loading,setLoading] = useState(true)
   const [editing,setEditing] = useState<any>(null)
