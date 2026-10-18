@@ -1167,3 +1167,11 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 .ths-calendar-checked-out .ths-calendar-stay-text>small{
   color:#4c5769!important;
 }
+
+/* Expandable action filters shared by room History and the Ops activity log. */
+.ops-activity-action-bar{display:flex;align-items:center;gap:8px;margin:9px 0;flex-wrap:wrap}
+.ops-activity-action-toggle,.ops-activity-action-clear{border:1px solid #bcd2df;border-radius:10px;background:#eff6f9;color:#345b72;padding:9px 12px;font:700 12px/1.3 Arial,sans-serif;cursor:pointer}
+.ops-activity-action-toggle[aria-expanded="true"]{background:#dcecf5;border-color:#8fb4ce}
+.ops-activity-action-options{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1px solid #d8e4eb;border-radius:12px;background:#f8fbfd;margin-bottom:10px}
+.ops-activity-action-options button{border:1px solid #d3e0e8;border-radius:9px;background:white;color:#466378;padding:7px 10px;font:700 11px/1.25 Arial,sans-serif;cursor:pointer}
+.ops-activity-action-options button[aria-pressed="true"]{background:#dcecf5;border-color:#89b6cf;color:#27516e}
