@@ -163,7 +163,8 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
         const isCurrentArrivalOrStayover=(bar:typeof bars[number])=>{
           if(isCheckedOut(bar)||!operationsCell||operationsCell.reservationId!==bar.reservationId)return false
           if(!(bar.arrival<=serviceDate&&serviceDate<bar.departure))return false
-          return /^(arrival|stayover|out[\\/ -]?in)$/i.test(operationsCell.status.trim())
+          const status=operationsCell.status.toLowerCase().replace(/[^a-z]/g,'')
+          return status==='arrival'||status==='stayover'||status==='outin'
         }
         const stayBackground=(bar:typeof bars[number])=>{
           const state=roomStatuses.get(serviceDate+'|'+room.id)
