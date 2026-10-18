@@ -242,7 +242,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
       const navigate=(event:React.MouseEvent,view:'room'|'log',action?:string,editor?:'room_notes'|'packages'|'inspection'|'tub_assignee')=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view,action,editor})}
       const history=(action:string)=>(event:React.MouseEvent)=>navigate(event,'log',action)
       const editor=(name:'room_notes'|'packages'|'inspection'|'tub_assignee')=>(event:React.MouseEvent)=>navigate(event,'room',undefined,name)
-      const breakfast=(event:React.MouseEvent)=>{event.stopPropagation();router.push('/front-desk?date='+encodeURIComponent(serviceDate)+'&roomId='+encodeURIComponent(row.roomId))}
+      const breakfast=(event:React.MouseEvent)=>{event.stopPropagation();router.push('/front-desk?date='+encodeURIComponent(shiftDate(serviceDate,1))+'&roomId='+encodeURIComponent(row.roomId))}
 
       return <tr key={row.roomId} tabIndex={0} role="button" aria-label={`Open ${row.roomName} room interactions`} onClick={open} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open()}}} style={{borderBottom:'1px solid #e7edf0',cursor:'pointer'}}>
        <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}><span className="ths-ops-room-name-with-out">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; tip collection initials shown if available" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}</span></th>
