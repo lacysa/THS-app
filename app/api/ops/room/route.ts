@@ -143,9 +143,12 @@ export async function GET(req:NextRequest){
  const status=String(daily?.reservation_status||'').toLowerCase()
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
+ const correctionsResult=await admin.from('housekeeping_correction_events').select('id,event_type,note,created_at').eq('service_date',date).eq('room_id',roomId).order('created_at',{ascending:false}).limit(12)
+ if(correctionsResult.error)return NextResponse.json({error:'Unable to load correction notes'},{status:500})
+ const correctionHistory=(correctionsResult.data||[]).map((item:any)=>({id:String(item.id),type:String(item.event_type),note:String(item.note||''),at:String(item.created_at)}))
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
   permissions:{canManage,canInspect},staffNames,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
-  serviceDetails,autoTubDue,vacancyDays,tubCleanDue,
+  serviceDetails,autoTubDue,vacancyDays,tubCleanDue,correctionHistory,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
