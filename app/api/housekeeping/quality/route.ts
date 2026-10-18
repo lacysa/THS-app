@@ -89,15 +89,26 @@ export async function GET(req:NextRequest){
         .select('id,service_date,room_id,housekeeper_id,inspector_id,item_id,inspection_check_id,detected_at,corrected_at')
         .gte('service_date',start)
         .lte('service_date',end),
-      admin.from('staff_members').select('id,name').eq('active',true),
+      admin.from('staff_members').select('id,name,auth_user_id,job_title').eq('active',true),
       admin.from('room_check_items').select('id,zone,label').eq('active',true),
       admin.from('housekeeping_correction_events').select('id,service_date,room_id,event_type,note,created_at').gte('service_date',start).lte('service_date',end).order('created_at',{ascending:false}).limit(1000),
-      admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to').gte('service_date',start).lte('service_date',end),
+      admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,updated_by').gte('service_date',start).lte('service_date',end),
       admin.from('rooms').select('id,name')
     ])
     const error=checkErr||discErr||peopleErr||itemErr||correctionErr||assignErr||roomErr
     if(error) throw new Error(error.message)
 
+    // Daily room notes are where Hospitality Assistants and housekeepers
+    // record observations; preserve them independently of formal correction
+    // counts and never treat a note as a failed inspection by itself.
+    const roomNameMap=new Map((roomNames||[]).map((room:any)=>[String(room.id),String(room.name)]))
+    const staffByUser=new Map((people||[]).filter((person:any)=>person.auth_user_id)
+      .map((person:any)=>[String(person.auth_user_id),String(person.name)]))
+    const roomTeamNotes=(dailyAssignments||[]).filter((row:any)=>String(row.notes||'').trim())
+      .map((row:any)=>({id:String(row.room_id)+':'+String(row.service_date),serviceDate:String(row.service_date),
+       roomName:roomNameMap.get(String(row.room_id))||'Room',note:String(row.notes).trim(),
+       recordUpdatedBy:staffByUser.get(String(row.updated_by||''))||''}))
+      .sort((a,b)=>b.serviceDate.localeCompare(a.serviceDate)||a.roomName.localeCompare(b.roomName))
     const foundIds=(corrections||[]).filter((event:any)=>event.event_type==='found').map((event:any)=>String(event.id))
     const {data:reviews,error:reviewError}=foundIds.length
       ? await admin.from('housekeeping_correction_reviews')
@@ -237,6 +248,7 @@ export async function GET(req:NextRequest){
       individuals,
       commonMisses,
       documentedCorrections,
+      roomTeamNotes,
       correctionCategoriesSummary
     })
   }catch(error:any){
