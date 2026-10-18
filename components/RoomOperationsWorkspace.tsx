@@ -110,7 +110,7 @@ function conditionTone(condition:string){
  if(/occupied/.test(value))return 'occupied'
  return 'neutral'
 }
-export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canManageRooms}:{serviceDate:string;todayDate:string;rows:ReservationRow[];canEdit:boolean;canManageRooms:boolean}){
+export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canManageRooms,embeddedCards=false}:{serviceDate:string;todayDate:string;rows:ReservationRow[];canEdit?:boolean;canManageRooms:boolean;embeddedCards?:boolean}){
  const router=useRouter()
  const [isChangingDate,startDateTransition]=useTransition()
  const [dateInput,setDateInput]=useState(serviceDate)
@@ -120,8 +120,10 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  const [query,setQuery]=useState('')
  const [conditionsOnly,setConditionsOnly]=useState(false)
  const [displayMode,setDisplayMode]=useState<'table'|'cards'>('cards')
+ const effectiveDisplayMode=embeddedCards?'cards':displayMode
  const [isCompact,setIsCompact]=useState(false)
  useEffect(()=>{
+  if(embeddedCards)return
   const media=window.matchMedia(NON_DESKTOP_WORKSPACE_MEDIA)
   const sync=()=>{
    const compact=media.matches
@@ -138,7 +140,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   sync()
   media.addEventListener('change',sync)
   return()=>media.removeEventListener('change',sync)
- },[])
+ },[embeddedCards])
  function chooseDisplayMode(mode:'table'|'cards'){
   setDisplayMode(mode)
   try{window.localStorage.setItem(isCompact?'ths-room-ops-view-mobile':'ths-room-ops-view-desktop',mode)}catch{}
@@ -244,6 +246,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   return !query.trim()||[row.roomName,guest,row.roomNotes||'',row.assignedTo||'',...(correctionNotes[row.roomId]||[]).map(note=>note.note)].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
  }),[liveRows,category,conditionsOnly,query,serviceDate,correctionNotes])
  return <div className={'ths-unified-operations ths-operations-simplified'+(isChangingDate?' is-date-loading':'')}>
+   {!embeddedCards&&<>
    <div className="ths-calendar-date ths-room-operations-date" aria-label="Choose room operations date">
     <CalendarDays size={18} aria-hidden="true"/>
     <input aria-label="Room operations date" type="date" value={dateInput} disabled={isChangingDate} onChange={event=>chooseDate(event.target.value)}/>
@@ -272,7 +275,8 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     {canManageRooms&&<Link className="ths-ops-assignments-link" href={'/housekeeping/assignments?date='+encodeURIComponent(serviceDate)}>Staff assignments</Link>}
    </div>
    <label className="ths-ops-search"><Search size={18}/><input aria-label="Find room or guest" placeholder="Find room or guest" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button type="button" aria-label="Clear search" onClick={()=>setQuery('')}><X size={16}/></button>}</label>
-   {displayMode==='table'&&<div className="ths-ops-table-scroll" style={{overflowX:'auto',width:'100%',WebkitOverflowScrolling:'touch',borderRadius:16,border:'1px solid #dce5e9',background:'white'}}>
+   </>}
+   {effectiveDisplayMode==='table'&&<div className="ths-ops-table-scroll" style={{overflowX:'auto',width:'100%',WebkitOverflowScrolling:'touch',borderRadius:16,border:'1px solid #dce5e9',background:'white'}}>
     <table className="ths-ops-full-table" style={{width:'100%',borderCollapse:'collapse',minWidth:910,textAlign:'left',fontSize:14}}>
      <thead><tr style={{background:'#f0f6f8'}}>
       {['Room','Service','Guest','Housekeeper','Live condition','Details'].map(label=><th key={label} scope="col" style={{padding:'12px 14px',whiteSpace:'nowrap',borderBottom:'1px solid #dce5e9'}}>{label}</th>)}
@@ -319,7 +323,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
    </div>}
    {inspectionError&&<p role="alert" style={{color:"#9a4646",fontSize:12}}>{inspectionError}</p>}
    {correctionNotesError&&<p role="alert" style={{color:'#9a4646',fontSize:12}}>Correction notes could not be loaded. Refresh Room Operations to try again.</p>}
-   {displayMode==='cards'&&<div className="ths-ops-room-list">
+   {effectiveDisplayMode==='cards'&&<div className="ths-ops-room-list">
     {filtered.map(row=>{
      const type=reservationType(row)
      const condition=roomCondition(row)
