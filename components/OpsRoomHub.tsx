@@ -35,16 +35,16 @@ function GuestCard({label,value,field,canEdit,busy,onSave,large=false}:{label:st
   </div>}
  </div>
 }
-export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:{roomId:string;date:string;reservationId?:string;onClose:()=>void;onUpdate?:()=>void}){
+export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,initialView='room',initialAction='all',initialEditor=null}:{roomId:string;date:string;reservationId?:string;onClose:()=>void;onUpdate?:()=>void;initialView?:View;initialAction?:string;initialEditor?:Editor}){
  const [data,setData]=useState<Data|null>(null)
  const [error,setError]=useState('')
  const [message,setMessage]=useState('')
  const [loading,setLoading]=useState(true)
  const [busy,setBusy]=useState(false)
  const [reload,setReload]=useState(0)
- const [sections,setSections]=useState<Record<View,boolean>>({room:true,guest:false,log:false})
+ const [sections,setSections]=useState<Record<View,boolean>>({room:initialView==='room',guest:initialView==='guest',log:initialView==='log'})
  const toggleSection=(key:View)=>{setSections({room:key==='room',guest:key==='guest',log:key==='log'});setActiveEditor(null)}
- const [activeEditor,setActiveEditor]=useState<Editor>(null)
+ const [activeEditor,setActiveEditor]=useState<Editor>(initialEditor)
  const [roomNotes,setRoomNotes]=useState('')
  const [mentionSearch,setMentionSearch]=useState<string|null>(null)
  const roomNoteInput=useRef<HTMLTextAreaElement|null>(null)
@@ -54,7 +54,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
  const [roomOrder,setRoomOrder]=useState('')
  const [times,setTimes]=useState({expectedArrivalTime:'',actualArrivalTime:'',lateCheckoutTime:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
- useEffect(()=>{setSections({room:true,guest:false,log:false});setActiveEditor(null);setMessage('')},[roomId,date,reservationId])
+ useEffect(()=>{setSections({room:initialView==='room',guest:initialView==='guest',log:initialView==='log'});setActiveEditor(initialEditor);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
   const controller=new AbortController()
   if(!data)setLoading(true)
@@ -498,7 +498,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate}:
      </section>}
      <section className="ops-hub-accordion">
 
-      {sections.log&&<div className="ops-hub-accordion-inner"><OpsActivityLog serviceDate={date} roomId={roomId} compact/></div>}
+      {sections.log&&<div className="ops-hub-accordion-inner"><OpsActivityLog serviceDate={date} roomId={roomId} compact initialAction={initialAction}/></div>}
      </section>
     </>}
    </div>
