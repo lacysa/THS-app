@@ -365,6 +365,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         <strong>Room inspection</strong>
         <small>{daily.inspected?'Passed':daily.check_issue_open?'Correction required':data.inspectionReady?'Ready for check':'Awaiting completion'}</small>
        </div>
+       {Boolean(daily.notes?.trim())&&<div style={{marginBottom:10,padding:'9px 11px',background:'#f8fafd',border:'1px solid #dce6e9',borderRadius:10}}>
+        <strong style={{fontSize:12}}>Housekeeping / Hospitality room note</strong>
+        <div style={{fontSize:12,marginTop:5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{daily.notes}</div>
+       </div>}
        {(data.correctionHistory||[]).length>0&&<div style={{marginBottom:10,padding:'9px 11px',background:'#fff',border:'1px solid #dce6e9',borderRadius:10}}>
         <strong style={{fontSize:12}}>Correction notes</strong>
         {(data.correctionHistory||[]).slice(0,6).map(item=><div key={item.id} style={{marginTop:7,fontSize:12,lineHeight:1.4}}>
