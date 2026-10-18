@@ -2,7 +2,8 @@
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
 import {CalendarDays,ChevronLeft,ChevronRight,LayoutGrid,Rows3,RefreshCw,Trash2} from 'lucide-react'
 import OpsRoomHub from '@/components/OpsRoomHub'
-import ReservationsBoard from '@/components/ReservationsBoard'
+import type ReservationsBoard from '@/components/ReservationsBoard'
+import RoomOperationsWorkspace from '@/components/RoomOperationsWorkspace'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
@@ -23,6 +24,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
   const [reload,setReload]=useState(0)
   const [layout,setLayout]=useState<'grid'|'cards'>('grid')
   const [cardRows,setCardRows]=useState<ReservationRow[]>([])
+  const [canManageCards,setCanManageCards]=useState(false)
   const [cardsForDate,setCardsForDate]=useState('')
   const [cardsLoading,setCardsLoading]=useState(false)
   const [cardsError,setCardsError]=useState('')
@@ -79,9 +81,9 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
       .then(async response=>{
         const result=await response.json()
         if(!response.ok)throw new Error(result.error||'Could not load reservation cards')
-        return result as {date:string;rows:ReservationRow[]}
+        return result as {date:string;rows:ReservationRow[];canManageRooms:boolean}
       })
-      .then(result=>{if(active){setCardRows(result.rows||[]);setCardsForDate(result.date)}})
+      .then(result=>{if(active){setCardRows(result.rows||[]);setCardsForDate(result.date);setCanManageCards(Boolean(result.canManageRooms))}})
       .catch(error=>{if(active){setCardsForDate('');setCardsError(String(error?.message||error))}})
       .finally(()=>{if(active)setCardsLoading(false)})
     return()=>{active=false;controller.abort()}
@@ -226,17 +228,13 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
       {cardsLoading&&<div className="ths-ops-empty" role="status">Loading reservation cards…</div>}
       {cardsError&&<div className="ths-ops-empty" role="alert">{cardsError}</div>}
       {!cardsLoading&&!cardsError&&cardsForDate===focusedDate&&(cardRows.length?
-        <ReservationsBoard
+        <RoomOperationsWorkspace
           key={focusedDate}
           serviceDate={focusedDate}
+          todayDate={serviceDate}
           rows={cardRows}
-          view="overview"
-          hideViewSwitch
-          onManageRoom={roomId=>{
-            const row=cardRows.find(item=>item.roomId===roomId)
-            const stay=row?.arriving||row?.staying||row?.primary||row?.departing
-            setActiveRoom({roomId,date:focusedDate,reservationId:stay?.id||undefined})
-          }}
+          canManageRooms={canManageCards}
+          embeddedCards
         />:<div className="ths-ops-empty">No imported guest reservations for this date. Use Timeline to view available room slots and holds.</div>)}
     </section>}
     {activeRoom&&<OpsRoomHub key={activeRoom.roomId+'|'+activeRoom.date+'|'+(activeRoom.reservationId||'')} roomId={activeRoom.roomId} date={activeRoom.date} reservationId={activeRoom.reservationId} onClose={()=>setActiveRoom(null)} onUpdate={()=>setReload(n=>n+1)}/>}
