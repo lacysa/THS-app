@@ -143,12 +143,57 @@ export async function GET(req:NextRequest){
  const status=String(daily?.reservation_status||'').toLowerCase()
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
- const correctionsResult=await admin.from('housekeeping_correction_events').select('id,event_type,note,created_at').eq('service_date',date).eq('room_id',roomId).order('created_at',{ascending:false}).limit(12)
- if(correctionsResult.error)return NextResponse.json({error:'Unable to load correction notes'},{status:500})
+ // Show all notes associated with a room inspection where people actually
+ // work: daily HA/housekeeping notes, historical edits, formal issues/fixes,
+ // and written checklist notes from past inspection attempts.
+ const [correctionsResult,noteEventsResult,inspectionChecksResult,checkItemsResult]=await Promise.all([
+  admin.from('housekeeping_correction_events').select('id,event_type,note,created_at').eq('service_date',date).eq('room_id',roomId).order('created_at',{ascending:false}).limit(40),
+  admin.from('ops_activity_log').select('id,event_type,message,created_at,actor_user_id,actor_name')
+   .eq('service_date',date).eq('room_id',roomId).in('event_type',['room_note','room_note_cleared'])
+   .order('created_at',{ascending:false}).limit(40),
+  admin.from('housekeeping_quality_checks').select('id,stage,submitted_at').eq('service_date',date).eq('room_id',roomId)
+   .in('stage',['inspection','recheck']).order('submitted_at',{ascending:false}).limit(30),
+  admin.from('room_check_items').select('id,label')
+ ])
+ if(correctionsResult.error||noteEventsResult.error||inspectionChecksResult.error||checkItemsResult.error)
+  return NextResponse.json({error:'Unable to load room inspection notes'},{status:500})
  const correctionHistory=(correctionsResult.data||[]).map((item:any)=>({id:String(item.id),type:String(item.event_type),note:String(item.note||''),at:String(item.created_at)}))
+ const nameByItem=new Map((checkItemsResult.data||[]).map((item:any)=>[String(item.id),String(item.label||'Checklist item')]))
+ const inspectedCheckIds=(inspectionChecksResult.data||[]).map((check:any)=>String(check.id))
+ const [snapshotResult,latestResult]=await Promise.all([
+  inspectedCheckIds.length
+   ? admin.from('housekeeping_quality_check_items').select('check_id,item_id,note,checked_at').in('check_id',inspectedCheckIds)
+   : Promise.resolve({data:[],error:null}),
+  admin.from('room_check_results').select('item_id,note,checked_at').eq('service_date',date).eq('room_id',roomId)
+ ])
+ if(snapshotResult.error||latestResult.error)return NextResponse.json({error:'Unable to load checklist notes'},{status:500})
+ const byCheck=new Map((inspectionChecksResult.data||[]).map((check:any)=>[String(check.id),check]))
+ const checklistNotes=(snapshotResult.data||[]).filter((item:any)=>String(item.note||'').trim())
+  .map((item:any)=>{const check:any=byCheck.get(String(item.check_id));return {
+   id:String(item.check_id)+':'+String(item.item_id),label:nameByItem.get(String(item.item_id))||'Checklist item',
+   note:String(item.note),stage:String(check?.stage||'inspection'),
+   at:String(item.checked_at||check?.submitted_at||'')}})
+ // Older or incomplete checklist drafts may not yet have a submitted snapshot.
+ for(const item of latestResult.data||[]){
+  if(!String(item.note||'').trim())continue
+  const duplicate=checklistNotes.some(note=>note.label===(nameByItem.get(String(item.item_id))||'Checklist item')&&note.note===String(item.note))
+  if(!duplicate)checklistNotes.push({id:'draft:'+String(item.item_id),label:nameByItem.get(String(item.item_id))||'Checklist item',
+   note:String(item.note),stage:'draft',at:String(item.checked_at||'')})
+ }
+ checklistNotes.sort((a,b)=>b.at.localeCompare(a.at))
+ const authorIds=[...new Set((noteEventsResult.data||[]).map((event:any)=>String(event.actor_user_id||'')).filter(Boolean))]
+ const staffResult=authorIds.length
+  ? await admin.from('staff_members').select('auth_user_id,name').in('auth_user_id',authorIds)
+  : {data:[],error:null}
+ if(staffResult.error)return NextResponse.json({error:'Unable to identify room note authors'},{status:500})
+ const nameByUser=new Map((staffResult.data||[]).map((member:any)=>[String(member.auth_user_id),String(member.name)]))
+ const roomNoteHistory=(noteEventsResult.data||[]).map((event:any)=>({
+  id:String(event.id),note:String(event.message||''),type:String(event.event_type),
+  at:String(event.created_at),author:String(nameByUser.get(String(event.actor_user_id))||event.actor_name||'Room team')
+ }))
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
   permissions:{canManage,canInspect},staffNames,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
-  serviceDetails,autoTubDue,vacancyDays,tubCleanDue,correctionHistory,
+  serviceDetails,autoTubDue,vacancyDays,tubCleanDue,correctionHistory,roomNoteHistory,checklistNotes,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
  },{headers:{'cache-control':'private, no-store'}})
