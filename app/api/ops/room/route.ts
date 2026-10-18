@@ -182,11 +182,11 @@ export async function GET(req:NextRequest){
  }
  checklistNotes.sort((a,b)=>b.at.localeCompare(a.at))
  const authorIds=[...new Set((noteEventsResult.data||[]).map((event:any)=>String(event.actor_user_id||'')).filter(Boolean))]
- const staffResult=authorIds.length
+ const noteAuthorsResult=authorIds.length
   ? await admin.from('staff_members').select('auth_user_id,name').in('auth_user_id',authorIds)
   : {data:[],error:null}
- if(staffResult.error)return NextResponse.json({error:'Unable to identify room note authors'},{status:500})
- const nameByUser=new Map((staffResult.data||[]).map((member:any)=>[String(member.auth_user_id),String(member.name)]))
+ if(noteAuthorsResult.error)return NextResponse.json({error:'Unable to identify room note authors'},{status:500})
+ const nameByUser=new Map((noteAuthorsResult.data||[]).map((member:any)=>[String(member.auth_user_id),String(member.name)]))
  const roomNoteHistory=(noteEventsResult.data||[]).map((event:any)=>({
   id:String(event.id),note:String(event.message||''),type:String(event.event_type),
   at:String(event.created_at),author:String(nameByUser.get(String(event.actor_user_id))||event.actor_name||'Room team')
