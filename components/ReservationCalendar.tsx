@@ -2,8 +2,7 @@
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
 import {CalendarDays,ChevronLeft,ChevronRight,LayoutGrid,Rows3,RefreshCw,Trash2} from 'lucide-react'
 import OpsRoomHub from '@/components/OpsRoomHub'
-import type ReservationsBoard from '@/components/ReservationsBoard'
-import RoomOperationsWorkspace from '@/components/RoomOperationsWorkspace'
+import ReservationsBoard from '@/components/ReservationsBoard'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
@@ -20,7 +19,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
   const [data,setData]=useState<Data|null>(null)
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
-  const [activeRoom,setActiveRoom]=useState<{roomId:string;date:string;reservationId?:string}|null>(null)
+  const [activeRoom,setActiveRoom]=useState<{roomId:string;date:string;reservationId?:string;editor?:'inspection'}|null>(null)
   const [reload,setReload]=useState(0)
   const [layout,setLayout]=useState<'grid'|'cards'>('grid')
   const [cardRows,setCardRows]=useState<ReservationRow[]>([])
@@ -228,16 +227,22 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
       {cardsLoading&&<div className="ths-ops-empty" role="status">Loading reservation cards…</div>}
       {cardsError&&<div className="ths-ops-empty" role="alert">{cardsError}</div>}
       {!cardsLoading&&!cardsError&&cardsForDate===focusedDate&&(cardRows.length?
-        <RoomOperationsWorkspace
+        <ReservationsBoard
           key={focusedDate}
           serviceDate={focusedDate}
-          todayDate={serviceDate}
           rows={cardRows}
+          view="overview"
+          hideViewSwitch
+          opsDayCards
           canManageRooms={canManageCards}
-          embeddedCards
+          onManageRoom={(roomId,editor)=>{
+            const row=cardRows.find(item=>item.roomId===roomId)
+            const stay=row?.arriving||row?.staying||row?.primary||row?.departing
+            setActiveRoom({roomId,date:focusedDate,reservationId:stay?.id||undefined,editor})
+          }}
         />:<div className="ths-ops-empty">No imported guest reservations for this date. Use Timeline to view available room slots and holds.</div>)}
     </section>}
-    {activeRoom&&<OpsRoomHub key={activeRoom.roomId+'|'+activeRoom.date+'|'+(activeRoom.reservationId||'')} roomId={activeRoom.roomId} date={activeRoom.date} reservationId={activeRoom.reservationId} onClose={()=>setActiveRoom(null)} onUpdate={()=>setReload(n=>n+1)}/>}
+    {activeRoom&&<OpsRoomHub key={activeRoom.roomId+'|'+activeRoom.date+'|'+(activeRoom.reservationId||'')+'|'+(activeRoom.editor||'')} roomId={activeRoom.roomId} date={activeRoom.date} reservationId={activeRoom.reservationId} initialEditor={activeRoom.editor||null} onClose={()=>setActiveRoom(null)} onUpdate={()=>setReload(n=>n+1)}/>}
     {removeTarget&&<div className="ths-calendar-remove-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget&&!removeBusy)setRemoveTarget(null)}}>
       <section className="ths-calendar-remove-dialog" role="dialog" aria-modal="true" aria-labelledby="ths-calendar-remove-title">
         <div className="ths-calendar-remove-title"><span className="ths-calendar-remove-icon"><Trash2 size={21}/></span><div><small>Manager action</small><h3 id="ths-calendar-remove-title">Remove reservation?</h3></div></div>
