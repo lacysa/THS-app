@@ -33,20 +33,29 @@ export async function GET(req:NextRequest){
   if(!validDate(date))return NextResponse.json({error:'Invalid date'},{status:400})
 
   const admin=createSupabaseAdmin()
-  const [{data:rooms,error:rErr},{data:daily,error:dErr},{data:items,error:iErr},{data:results,error:resErr},{data:people,error:pErr},{data:quality,error:qErr}]=await Promise.all([
+  const [{data:rooms,error:rErr},{data:daily,error:dErr},{data:items,error:iErr},{data:results,error:resErr},{data:people,error:pErr},{data:quality,error:qErr},{data:corrections,error:cErr}]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('housekeeping_daily_rooms').select('*').eq('service_date',date),
     admin.from('room_check_items').select('*').eq('active',true).order('sort_order'),
     admin.from('room_check_results').select('*').eq('service_date',date),
     admin.from('staff_members').select('id,name').eq('active',true),
-    admin.from('housekeeping_quality_checks').select('id,room_id,stage,status,submitted_at,housekeeper_id,actor_id').eq('service_date',date).in('stage',['inspection','recheck']).order('submitted_at',{ascending:false})
+    admin.from('housekeeping_quality_checks').select('id,room_id,stage,status,submitted_at,housekeeper_id,actor_id').eq('service_date',date).in('stage',['inspection','recheck']).order('submitted_at',{ascending:false}),
+    admin.from('housekeeping_correction_events').select('id,room_id,event_type,note,created_at').eq('service_date',date).order('created_at',{ascending:false})
   ])
-  const error=rErr||dErr||iErr||resErr||pErr||qErr
+  const error=rErr||dErr||iErr||resErr||pErr||qErr||cErr
   if(error)return NextResponse.json({error:error.message},{status:500})
 
   const roomMap=new Map((rooms||[]).map((r:any)=>[String(r.id),r]))
   const resultMap=new Map((results||[]).map((r:any)=>[`${r.room_id}:${r.item_id}`,r]))
   const personMap=new Map((people||[]).map((p:any)=>[String(p.id),String(p.name||'Staff')]))
+  const correctionNotesByRoom=new Map<string,{id:string;type:string;note:string;at:string}[]>()
+  for(const event of corrections||[]){
+   const item=event as any
+   const key=String(item.room_id)
+   const entries=correctionNotesByRoom.get(key)||[]
+   entries.push({id:String(item.id),type:String(item.event_type),note:String(item.note||''),at:String(item.created_at)})
+   correctionNotesByRoom.set(key,entries)
+  }
   const latestQualityByRoom=new Map<string,any>()
   for(const check of quality||[]){
     const key=String((check as any).room_id||'')
@@ -79,6 +88,7 @@ export async function GET(req:NextRequest){
         readyForInspection:Boolean(r.ready_for_inspection) || !activeHskService,
         issueOpen:Boolean(r.check_issue_open),
         issueNote:r.check_issue_note||'',
+        correctionHistory:correctionNotesByRoom.get(String(r.room_id))||[],
         inspected:Boolean(r.inspected),
         housekeeperName:r.housekeeper_attested_by?personMap.get(String(r.housekeeper_attested_by))||'Housekeeper':null,
         latestInspection:latest?{
