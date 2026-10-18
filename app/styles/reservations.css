@@ -1117,3 +1117,41 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 .ths-calendar-empty-slot.has-status>.ths-calendar-note-text{display:-webkit-box;max-width:100%;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:normal;word-break:normal;white-space:normal;text-overflow:ellipsis;font:600 10px/13px Arial,Helvetica,sans-serif!important}
 .ths-calendar-empty-slot.has-note:not(.has-status){align-items:flex-start;justify-content:center}
 .ths-calendar-empty-slot.has-note>.ths-calendar-note-text{overflow-wrap:normal;word-break:normal}
+
+
+/* Operational colors: the same meanings in the Room Operations table and cards. */
+.ths-ops-tags > .ths-tag-service{
+  background:#e4f1f6!important;color:#326479!important;border:1px solid #bfdce7!important;
+}
+.ths-ops-tags > .ths-tag-arrival{
+  background:#f1e6fc!important;color:#704e97!important;border:1px solid #d9c2ee!important;
+}
+.ths-ops-tags > .ths-tag-note{
+  background:#fff1cd!important;color:#795b19!important;border:1px solid #e9d398!important;
+}
+.ths-ops-tags > .ths-tag-complete{
+  background:#e2f3ea!important;color:#28664e!important;border:1px solid #b7dec9!important;
+}
+.ths-ops-tags > .ths-tag-refresh{
+  background:#e5edf9!important;color:#3b618c!important;border:1px solid #c4d6ee!important;
+}
+.ths-ops-tags > .ths-tag-alert{
+  background:#fae5e2!important;color:#9a4646!important;border:1px solid #efbcb7!important;
+}
+.ths-ops-card-note{
+  border-color:#e9d398!important;
+  background:#fff8e7!important;
+  color:#795b19!important;
+}
+/* Stay bars retain their single reservation interaction, but each day segment
+   uses that date's condition. Inline gradients supply the daily fills. */
+.ths-calendar-stay-condition{
+  background-color:#edf2f5;
+  border-color:#bdcbd4!important;
+  border-left-color:#64859c!important;
+  color:#264556!important;
+}
+.ths-calendar-stay-condition .ths-calendar-stay-text,
+.ths-calendar-stay-condition strong,
+.ths-calendar-stay-condition small{color:#264556!important}
+.ths-calendar-stay-condition:hover{border-color:#7a9aaa!important;filter:brightness(.98)}
