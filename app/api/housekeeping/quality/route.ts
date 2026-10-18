@@ -129,12 +129,20 @@ export async function GET(req:NextRequest){
       const key=String((person as any).name||'').trim().toLowerCase()
       idsByName.set(key,[...(idsByName.get(key)||[]),String((person as any).id)])
     }
-    const fixedKeys=new Set((corrections||[]).filter((event:any)=>event.event_type==='fixed')
-      .map((event:any)=>[event.service_date,event.room_id,String(event.note||'').trim()].join('|')))
+    const resolvedCorrectionIds=new Set<string>()
+    const pendingByRoomDay=new Map<string,string[]>()
+    // A fix description is different from the original inspection complaint.
+    // Resolve each most-recent outstanding correction by room and date, not
+    // by matching the two note strings.
+    for(const event of [...(corrections||[])].reverse()){
+      const key=String(event.service_date)+'|'+String(event.room_id)
+      const pending=pendingByRoomDay.get(key)||[]
+      if(event.event_type==='found'){pending.push(String(event.id));pendingByRoomDay.set(key,pending)}
+      else if(event.event_type==='fixed'&&pending.length){resolvedCorrectionIds.add(pending.pop()!)}
+    }
     const documentedCorrections=(corrections||[])
       .filter((event:any)=>event.event_type==='found')
       .map((event:any)=>{
-        const key=[event.service_date,event.room_id,String(event.note||'').trim()].join('|')
         const assignment=assignmentByRoomDay.get(String(event.service_date)+'|'+String(event.room_id))||''
         // Do not guess if there are multiple cleaners or ambiguous names.
         const matchedIds=idsByName.get(assignment.toLowerCase())||[]
@@ -144,7 +152,7 @@ export async function GET(req:NextRequest){
           housekeeperId,housekeeperName:housekeeperId?assignment:null,assignedTo:assignment||null,
           note:String(event.note||''),categories:review?.categories?.length?review.categories:correctionCategories(String(event.note||'')),
           reviewedAt:review?.reviewed_at||null,reviewedBy:review?.reviewed_by?reviewerNames.get(String(review.reviewed_by))||'Former staff':null,
-          resolved:fixedKeys.has(key),createdAt:String(event.created_at)}
+          resolved:resolvedCorrectionIds.has(String(event.id)),createdAt:String(event.created_at)}
       })
     const categoryCounts=new Map<string,number>()
     for(const entry of documentedCorrections)for(const category of entry.categories)categoryCounts.set(category,(categoryCounts.get(category)||0)+1)
