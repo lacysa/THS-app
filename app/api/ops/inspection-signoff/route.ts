@@ -25,7 +25,7 @@ export async function GET(req:NextRequest){
  const staff=ids.length?await admin.from('staff_members').select('name,auth_user_id').in('auth_user_id',ids):{data:[],error:null}
  if(staff.error)return NextResponse.json({error:'Could not load signers'},{status:500})
  const names=new Map((staff.data||[]).map((s:any)=>[String(s.auth_user_id),String(s.name||'')]))
- const initials=(name:string)=>{const p=name.trim().split(/\s+/).filter(Boolean);return p.length>=2?(p[0][0]+p[p.length-1][0]).toUpperCase():name.slice(0,2).toUpperCase()}
+ const initials=(name:string)=>{const n=name.trim().toLowerCase();if(n==='sarah'||n.includes('sarah lacy'))return 'SL';if(n==='david')return 'DH';if(n==='brittany')return 'BH';const p=name.trim().split(/\s+/).filter(Boolean);return p.length>=2?(p[0][0]+p[p.length-1][0]).toUpperCase():name.slice(0,2).toUpperCase()}
  const rooms=Object.fromEntries((data||[]).map((r:any)=>[String(r.room_id),{inspected:Boolean(r.inspected),signed:Boolean(r.inspection_signed_by),initials:r.inspection_signed_by?initials(names.get(String(r.inspection_signed_by))||'')||'✓':'',at:r.inspection_signed_at}]))
  return NextResponse.json({rooms,canSign:auth.manager},{headers:{'cache-control':'private, no-store'}})
 }
