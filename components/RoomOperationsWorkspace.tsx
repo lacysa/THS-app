@@ -144,6 +144,30 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  }
 
  const [packageCounts,setPackageCounts]=useState<Record<string,number>>({})
+ const [inspectionSigns,setInspectionSigns]=useState<Record<string,{inspected:boolean;signed:boolean;initials:string}>>({})
+ const [inspectionSigning,setInspectionSigning]=useState<string|null>(null)
+ const [inspectionError,setInspectionError]=useState('')
+ useEffect(()=>{
+  let active=true
+  const load=()=>fetch('/api/ops/inspection-signoff?date='+encodeURIComponent(serviceDate),{cache:'no-store'})
+   .then(r=>r.ok?r.json():Promise.reject()).then(v=>{if(active)setInspectionSigns(v.rooms||{})}).catch(()=>{})
+  void load()
+  window.addEventListener('ths:live-data-refresh',load)
+  return()=>{active=false;window.removeEventListener('ths:live-data-refresh',load)}
+ },[serviceDate])
+ async function signInspection(event:React.MouseEvent|React.KeyboardEvent,roomId:string){
+  event.stopPropagation()
+  if(inspectionSigning)return
+  setInspectionSigning(roomId);setInspectionError('')
+  try{
+   const response=await fetch('/api/ops/inspection-signoff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date:serviceDate,roomId})})
+   const body=await response.json()
+   if(!response.ok)throw new Error(body.error||'Could not sign off')
+   window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+  }catch(error:any){setInspectionError(String(error?.message||error))}
+  finally{setInspectionSigning(null)}
+ }
+
  const [liveRows,setLiveRows]=useState<OpsRow[]>(rows)
  useEffect(()=>{setLiveRows(rows)},[rows])
  useEffect(()=>{
@@ -268,6 +292,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     </table>
     {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters.</div>}
    </div>}
+   {inspectionError&&<p role="alert" style={{color:"#9a4646",fontSize:12}}>{inspectionError}</p>}
    {displayMode==='cards'&&<div className="ths-ops-room-list">
     {filtered.map(row=>{
      const type=reservationType(row)
@@ -285,6 +310,8 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</span></span>
        </span>
        <span className="ths-ops-tags">
+        {row.inspected&&!row.checkIssueOpen&&<span className="ths-tag-complete">Inspection passed{inspectionSigns[row.roomId]?.signed?' · '+inspectionSigns[row.roomId].initials:''}</span>}
+        {row.inspected&&!row.checkIssueOpen&&!inspectionSigns[row.roomId]?.signed&&canManageRooms&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Sign off inspection for '+row.roomName} onClick={event=>void signInspection(event,row.roomId)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();void signInspection(event,row.roomId)}}}>{inspectionSigning===row.roomId?'Signing…':'Sign off'}</span>}
         {row.breakfastTag&&<span className="ths-tag-service">Breakfast</span>}
         {row.lateArrival&&<span className="ths-tag-arrival">Late arrival</span>}
         {row.checkIssueOpen&&<span className="alert ths-tag-alert">Inspection issue</span>}
