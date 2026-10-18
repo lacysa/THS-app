@@ -88,6 +88,7 @@ type InspectionRoom={
   readyForInspection:boolean
   issueOpen:boolean
   issueNote:string
+  correctionHistory?:Array<{id:string;type:string;note:string;at:string}>
   inspected:boolean
   housekeeperName?:string|null
   latestInspection?:{stage:string;status:string;submittedAt:string;inspectorName:string}|null
@@ -963,10 +964,17 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
               {canInspect(access)&&inspection&&requiresRoomCheck(row)&&<section className="rooms-section inspection-section">
                 <div className="rooms-section-heading"><ShieldCheck size={17}/><div><strong>Inspection</strong><small>One decision per room, no checklist.</small></div></div>
                 {inspectionErrors[row.roomId]&&<div role="alert" className="rooms-warning-line"><AlertTriangle size={16}/>{inspectionErrors[row.roomId]}</div>}
+                {Boolean(inspection.correctionHistory?.length)&&<div className="rooms-info-callout" style={{display:'grid',gap:7}}>
+                 <strong>Inspection issues &amp; fixes</strong>
+                 {inspection.correctionHistory?.slice(0,12).map(event=><div key={event.id} style={{display:'grid',gap:2,fontSize:12,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>
+                   <strong>{event.type==='found'?'Issue found':event.type==='fixed'?'Fix recorded':event.type.replaceAll('_',' ')}</strong>
+                   <span>{event.note}</span>
+                 </div>)}
+                </div>}
                 {inspection.issueOpen&&!inspection.readyForInspection&&<div className="rooms-inspection-decision">
                   <div className="rooms-info-callout issue"><strong>Correction requested</strong><span>{inspection.issueNote||row.checkIssueNote||'See room notes.'}</span></div>
                   <label className="rooms-notes">Work performed (separate from original issue)<textarea value={correctionFixNotes[row.roomId]||''} onChange={e=>setCorrectionFixNotes(current=>({...current,[row.roomId]:e.target.value}))} placeholder="Describe what was corrected…"/></label>
-                  <button type="button" className="ops-primary-btn rooms-primary-action" disabled={Boolean(inspectionSaving[row.roomId])} onClick={()=>void markCorrectionFixed(row)}><Check size={16}/>Mark corrected · Send for reinspection</button>
+                  <button type="button" className="ops-primary-btn rooms-primary-action" disabled={Boolean(inspectionSaving[row.roomId])||!(correctionFixNotes[row.roomId]||'').trim()} onClick={()=>void markCorrectionFixed(row)}><Check size={16}/>Mark corrected · Send for reinspection</button>
                 </div>}
                 {(row.inspected||inspection.inspected)&&!inspection.issueOpen
                   ? <div className="rooms-success-line"><Check size={16}/><strong>Inspection passed</strong><span>Guest ready ✓</span></div>
