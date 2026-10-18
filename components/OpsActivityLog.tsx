@@ -15,7 +15,7 @@ const labels:Record<string,string>={
 }
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function asLocalTime(s:string){const d=new Date(s);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Detroit'}).format(d)}
-export default function OpsActivityLog({serviceDate,roomId,compact=false}:{serviceDate:string;roomId?:string;compact?:boolean}){
+export default function OpsActivityLog({serviceDate,roomId,compact=false,initialAction='all'}:{serviceDate:string;roomId?:string;compact?:boolean;initialAction?:string}){
  const [end,setEnd]=useState(serviceDate)
  const [entries,setEntries]=useState<Entry[]>([])
  const [rooms,setRooms]=useState<Room[]>([])
