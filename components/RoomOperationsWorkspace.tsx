@@ -113,7 +113,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  const router=useRouter()
  const [isChangingDate,startDateTransition]=useTransition()
  const [dateInput,setDateInput]=useState(serviceDate)
- const [selected,setSelected]=useState<{roomId:string;reservationId?:string}|null>(null)
+ const [selected,setSelected]=useState<{roomId:string;reservationId?:string;view?:'room'|'log';action?:string;editor?:'room_notes'|'packages'|'inspection'|'tub_assignee'}|null>(null)
  const [category,setCategory]=useState<Category>('all')
  const [showFilters,setShowFilters]=useState(false)
  const [query,setQuery]=useState('')
@@ -143,8 +143,18 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   try{window.localStorage.setItem(isCompact?'ths-room-ops-view-mobile':'ths-room-ops-view-desktop',mode)}catch{}
  }
 
+ const [packageCounts,setPackageCounts]=useState<Record<string,number>>({})
  const [liveRows,setLiveRows]=useState<OpsRow[]>(rows)
  useEffect(()=>{setLiveRows(rows)},[rows])
+ useEffect(()=>{
+  let active=true
+  const load=()=>fetch('/api/ops/room-packages?date='+encodeURIComponent(serviceDate),{cache:'no-store'})
+   .then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(active)setPackageCounts(data.counts||{})}).catch(()=>{})
+  void load()
+  window.addEventListener('ths:live-data-refresh',load)
+  return()=>{active=false;window.removeEventListener('ths:live-data-refresh',load)}
+ },[serviceDate])
+
  useEffect(()=>{setDateInput(serviceDate)},[serviceDate])
  function chooseDate(date:string){
   if(!/^20\d{2}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date+'T12:00:00Z')))return
@@ -229,23 +239,30 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
       const condition=roomCondition(row)
       const guest=activeGuest(row,serviceDate)
       const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})
+      const navigate=(event:React.MouseEvent,view:'room'|'log',action?:string,editor?:'room_notes'|'packages'|'inspection'|'tub_assignee')=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view,action,editor})}
+      const history=(action:string)=>(event:React.MouseEvent)=>navigate(event,'log',action)
+      const editor=(name:'room_notes'|'packages'|'inspection'|'tub_assignee')=>(event:React.MouseEvent)=>navigate(event,'room',undefined,name)
+      const breakfast=(event:React.MouseEvent)=>{event.stopPropagation();router.push('/front-desk?date='+encodeURIComponent(serviceDate)+'&roomId='+encodeURIComponent(row.roomId))}
+
       return <tr key={row.roomId} tabIndex={0} role="button" aria-label={`Open ${row.roomName} room interactions`} onClick={open} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open()}}} style={{borderBottom:'1px solid #e7edf0',cursor:'pointer'}}>
        <th scope="row" style={{padding:'12px 14px',whiteSpace:'nowrap'}}><span className="ths-ops-room-name-with-out">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; tip collection initials shown if available" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}</span></th>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{arrivalServiceLabel(type,row,guest)}{String(row.serviceType||'').toUpperCase()==='RF'?' · RF':''}</td>
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap'}}>{row.assignedTo?.trim()||'—'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</td>
-       <td style={{padding:'12px 14px'}}><span className={`ths-ops-condition ${conditionTone(condition)}`}>{condition}</span></td>
+       <td style={{padding:'12px 14px'}}><button type="button" className={`ths-ops-condition ths-ops-pill-action ${conditionTone(condition)}`} onClick={history("condition_changed")} title="View room condition history">{condition}</button></td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
-         {row.breakfastTag&&<span className="ths-tag-service">Breakfast</span>}
-         {row.lateArrival&&<span className="ths-tag-arrival">Late arrival</span>}
-         {row.checkIssueOpen&&<span className="alert ths-tag-alert">Inspection issue</span>}
-        {row.tubCleanDue&&<span className="alert ths-tag-alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</span>}
-        {row.tubCleanCompleted&&<span className="ths-tag-complete">Tub cleaned</span>}
-         {row.roomNotes&&<span className="ths-tag-note">Room note</span>}
-         {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<span className="ths-tag-complete">Tips · {String(row.serviceType).split('-')[1]}</span>}
+         {row.breakfastTag&&<button type="button" className="ths-tag-service ths-ops-pill-action" onClick={breakfast}>Breakfast</button>}
+         {row.lateArrival&&<button type="button" className="ths-tag-arrival ths-ops-pill-action" onClick={editor("room_notes")}>Late arrival</button>}
+         {row.checkIssueOpen&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={history("issue_reported")}>Inspection issue</button>}
+        {row.tubCleanDue&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</button>}
+        {row.tubCleanCompleted&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub cleaned</button>}
+         {row.roomNotes&&}
+         {(packageCounts[row.roomId]||0)>0&&<button type="button" className="ths-tag-package ths-ops-pill-action" onClick={editor("packages")}>Package · {packageCounts[row.roomId]}</button>}
+         {/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("out_marked")}>OUT</button>}
+         {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("tip_envelope_collected")}>Tips · {String(row.serviceType).split('-')[1]}</button>}
         </span>
-        {row.roomNotes?.trim()&&<div className="ths-ops-note-preview" title={row.roomNotes} aria-label={'Room note: '+row.roomNotes}>{row.roomNotes}</div>}
+        {row.roomNotes?.trim()&&<button type="button" className="ths-ops-note-preview ths-ops-note-action" title="Open room notes" aria-label={'Open room note: '+row.roomNotes} onClick={editor("room_notes")}>{row.roomNotes}</button>}
        </td>
       </tr>
      })}</tbody>
@@ -284,6 +301,6 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     })}
     {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters. Clear search or select another category.</div>}
    </div>}
-   {selected&&<OpsRoomHub roomId={selected.roomId} date={serviceDate} reservationId={selected.reservationId} onClose={()=>setSelected(null)}/>}
+   {selected&&<OpsRoomHub roomId={selected.roomId} date={serviceDate} reservationId={selected.reservationId} onClose={()=>setSelected(null)} initialView={selected.view||"room"} initialAction={selected.action||"all"} initialEditor={selected.editor||null}/>}
   </div>
 }
