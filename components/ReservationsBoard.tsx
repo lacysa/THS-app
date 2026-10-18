@@ -34,6 +34,10 @@ type Row={
   serviceType?:string
   roomCondition?:string
   assignedTo?:string
+  cleanOrder?:number|null
+  tubCleanDue?:boolean
+  tubCleanCompleted?:boolean
+  tubAssignedTo?:string
   nextShiftCondition?:string
   complete?:boolean
   inspected?:boolean
@@ -68,10 +72,54 @@ function statusClass(value:string){
   return 'reservation-status-'+String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')
 }
 
-export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:controlledView,onViewChange,hideViewSwitch=false,showRoomActions=false,onManageRoom}:{serviceDate:string;rows:Row[];canEdit?:boolean;view?:'overview'|'edit';onViewChange?:(view:'overview'|'edit')=>void;hideViewSwitch?:boolean;showRoomActions?:boolean;onManageRoom?:(roomId:string)=>void}){
+type CorrectionEntry={id:string;kind:'found'|'fixed';note:string;at:string}
+type InspectionApproval={signed:boolean;initials:string}
+export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:controlledView,onViewChange,hideViewSwitch=false,showRoomActions=false,onManageRoom,opsDayCards=false,canManageRooms=false}:{serviceDate:string;rows:Row[];canEdit?:boolean;view?:'overview'|'edit';onViewChange?:(view:'overview'|'edit')=>void;hideViewSwitch?:boolean;showRoomActions?:boolean;opsDayCards?:boolean;canManageRooms?:boolean;onManageRoom?:(roomId:string,editor?:'inspection')=>void}){
   const router=useRouter()
   const [internalView,setView]=useState<'overview'|'edit'>('overview')
   const view=controlledView??internalView
+  const [correctionNotes,setCorrectionNotes]=useState<Record<string,CorrectionEntry[]>>({})
+  const [inspectionApprovals,setInspectionApprovals]=useState<Record<string,InspectionApproval>>({})
+  const [packageCounts,setPackageCounts]=useState<Record<string,number>>({})
+  const [extrasError,setExtrasError]=useState(false)
+  const [approvalBusy,setApprovalBusy]=useState<string|null>(null)
+  const [approvalError,setApprovalError]=useState('')
+  useEffect(()=>{
+    if(!opsDayCards)return
+    let active=true
+    const load=async()=>{
+      const routes=[
+        '/api/ops/room-corrections?date='+encodeURIComponent(serviceDate),
+        '/api/ops/inspection-signoff?date='+encodeURIComponent(serviceDate),
+        '/api/ops/room-packages?date='+encodeURIComponent(serviceDate)
+      ]
+      const results=await Promise.allSettled(routes.map(async url=>{
+        const response=await fetch(url,{cache:'no-store'})
+        if(!response.ok)throw new Error('Room details unavailable')
+        return response.json()
+      }))
+      if(!active)return
+      if(results[0].status==='fulfilled')setCorrectionNotes(results[0].value.notesByRoom||{})
+      if(results[1].status==='fulfilled')setInspectionApprovals(results[1].value.rooms||{})
+      if(results[2].status==='fulfilled')setPackageCounts(results[2].value.counts||{})
+      setExtrasError(results.some(result=>result.status==='rejected'))
+    }
+    void load()
+    window.addEventListener('ths:live-data-refresh',load)
+    return()=>{active=false;window.removeEventListener('ths:live-data-refresh',load)}
+  },[serviceDate,opsDayCards])
+  async function approveInspection(event:React.MouseEvent,roomId:string){
+    event.stopPropagation()
+    if(approvalBusy||!canManageRooms)return
+    setApprovalBusy(roomId);setApprovalError('')
+    try{
+      const response=await fetch('/api/ops/inspection-signoff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date:serviceDate,roomId})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not sign off inspection')
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(error:any){setApprovalError(String(error?.message||error))}
+    finally{setApprovalBusy(null)}
+  }
   useEffect(()=>{if(!canEdit)return;try{if(window.sessionStorage.getItem('ths-reservations-view')==='edit')setView('edit')}catch{}},[canEdit])
   function changeView(next:'overview'|'edit'){onViewChange?.(next);setView(next);try{window.sessionStorage.setItem('ths-reservations-view',next)}catch{}}
   const [edits,setEdits]=useState<Record<string,Partial<Row>>>({})
@@ -228,6 +276,7 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
       </button>)}
     </section>}
 
+    {opsDayCards&&(extrasError||approvalError)&&<p className="ths-ops-day-warning" role="alert">{approvalError||'Some room status details could not load. Refresh Day cards to try again.'}</p>}
     {view==='overview' && (shown.length===0 ? <section className="reservations-empty">No occupied or changing rooms are currently synced for this date.</section> :
       filteredRows.length===0 ? <section className="reservations-empty">No {statusFilter.toLowerCase()} rooms are synced for this date.</section> :
       <section className="reservations-grid">
@@ -278,8 +327,30 @@ export default function ReservationsBoard({serviceDate,rows,canEdit=false,view:c
             </div>
 
             {showRoomActions&&onManageRoom&&<button className="ths-card-manage-btn" type="button" onClick={()=>onManageRoom(row.roomId)}>Manage room · Service, inspection & tags</button>}
-            {row.breakfastTag&&<span className="ths-reservation-breakfast-chip">Breakfast included</span>}
-            {row.roomNotes?.trim()&&<div className="ths-reservation-room-notes"><strong>Room notes</strong><span>{row.roomNotes}</span></div>}
+            {opsDayCards&&<div className="ths-reservation-ops-details">
+              <div className="ths-reservation-ops-summary">
+                <div><span>Housekeeper</span><strong>{row.assignedTo?.trim()||'Unassigned'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup>{row.cleanOrder}</sup>}</strong></div>
+                <div><span>Live condition</span><strong>{operationalState}</strong></div>
+              </div>
+              <div className="ths-reservation-ops-pills">
+                {row.inspected&&!row.checkIssueOpen&&<span className="ths-reservation-ops-pill is-complete">Inspection passed{inspectionApprovals[row.roomId]?.signed?' · '+inspectionApprovals[row.roomId].initials:''}</span>}
+                {row.checkIssueOpen&&<span className="ths-reservation-ops-pill is-alert">Inspection issue</span>}
+                {canManageRooms&&row.inspected&&!row.checkIssueOpen&&onManageRoom&&<button type="button" className="ths-reservation-ops-pill is-review" onClick={event=>{event.stopPropagation();onManageRoom(row.roomId,'inspection')}}>Review inspection</button>}
+                {canManageRooms&&row.inspected&&!row.checkIssueOpen&&!inspectionApprovals[row.roomId]?.signed&&<button type="button" className="ths-reservation-ops-pill is-review" disabled={approvalBusy===row.roomId} onClick={event=>void approveInspection(event,row.roomId)}>{approvalBusy===row.roomId?'Signing…':'Sign off'}</button>}
+                {row.breakfastTag&&<span className="ths-reservation-ops-pill is-breakfast">Breakfast</span>}
+                {/^OUT$/i.test(String(row.serviceType||'').trim())&&<span className="ths-reservation-ops-pill is-complete">OUT</span>}
+                {/^OUT-[A-Z]{2,4}$/i.test(String(row.serviceType||'').trim())&&<span className="ths-reservation-ops-pill is-complete">Tips collected · {String(row.serviceType).split('-')[1]}</span>}
+                {(packageCounts[row.roomId]||0)>0&&<span className="ths-reservation-ops-pill is-package">Package · {packageCounts[row.roomId]}</span>}
+                {row.tubCleanDue&&<span className="ths-reservation-ops-pill is-alert">Tub only{row.tubAssignedTo?' · '+row.tubAssignedTo:' · Unassigned'}</span>}
+                {row.tubCleanCompleted&&<span className="ths-reservation-ops-pill is-complete">Tub cleaned</span>}
+              </div>
+            </div>}
+            {!opsDayCards&&row.breakfastTag&&<span className="ths-reservation-breakfast-chip">Breakfast included</span>}
+            {(Boolean(row.roomNotes?.trim())||(opsDayCards&&(correctionNotes[row.roomId]||[]).length>0))&&<div className="ths-reservation-room-notes ths-reservation-ops-notes">
+              <strong>{opsDayCards&&(correctionNotes[row.roomId]||[]).length?'Room notes & fixes':'Room notes'}</strong>
+              {row.roomNotes?.trim()&&<span>{row.roomNotes}</span>}
+              {opsDayCards&&(correctionNotes[row.roomId]||[]).map(note=><div className="ths-reservation-correction-note" key={note.id}><strong>{note.kind==='fixed'?'Fix note':'Inspection issue'}</strong><span>{note.note}</span></div>)}
+            </div>}
             <div className="reservation-live-room-state">
               <span>Room status</span>
               <strong>{operationalState}</strong>
