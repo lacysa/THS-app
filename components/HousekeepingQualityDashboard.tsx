@@ -36,6 +36,7 @@ type Data={
   individuals:Individual[]
   commonMisses:Miss[]
   documentedCorrections:RoomCorrection[]
+  roomTeamNotes?:{id:string;serviceDate:string;roomName:string;note:string;recordUpdatedBy:string}[]
   correctionCategoriesSummary:{category:string;count:number}[]
 }
 
@@ -163,6 +164,22 @@ export default function HousekeepingQualityDashboard(){
       </section>
 
       <CorrectionReviewPanel corrections={data.documentedCorrections||[]} categorySummary={data.correctionCategoriesSummary||[]} onSaved={()=>load(true)}/>
+      {(data.roomTeamNotes||[]).length>0&&<section className="quality-card">
+        <details>
+          <summary style={{cursor:'pointer',fontWeight:700,padding:'5px 0'}}>Housekeeping &amp; Hospitality room notes · {(data.roomTeamNotes||[]).length}</summary>
+          <p style={{fontSize:12,opacity:0.8}}>Room observations are shown separately from confirmed inspection failures. The name identifies the last person who updated the room record, not necessarily the note author.</p>
+          <div style={{display:'grid',gap:9,marginTop:12}}>
+            {(data.roomTeamNotes||[]).map(item=><div key={item.id} style={{border:'1px solid #dde6e9',borderRadius:10,padding:10}}>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',fontSize:12}}>
+                <strong>{item.roomName}</strong><span>{shortDate(item.serviceDate)}</span>
+                {item.recordUpdatedBy&&<span>Room last updated by {item.recordUpdatedBy}</span>}
+              </div>
+              <div style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:12,marginTop:5}}>{item.note}</div>
+            </div>)}
+          </div>
+        </details>
+      </section>}
+
 
       <section className="quality-card quality-table-card">
         <div className="quality-card-head">
