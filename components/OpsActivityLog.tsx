@@ -11,7 +11,7 @@ const labels:Record<string,string>={
   refresh_completed:'Refresh completed',refresh_snapshot:'Scheduled refresh',clean_completed:'Room cleaned',
   inspection_passed:'Inspection passed',issue_reported:'Inspection issue',issue_resolved:'Correction resolved',
   correction_found:'Issue reported',correction_fixed:'Correction fixed',condition_changed:'Room condition',
-  room_note:'Room note'
+  room_note:'Room note',room_note_cleared:'Room note cleared'
 }
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function asLocalTime(s:string){const d=new Date(s);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Detroit'}).format(d)}
@@ -50,8 +50,8 @@ export default function OpsActivityLog({serviceDate,roomId,compact=false,initial
   if(actionFilter!=='all'&&e.eventType!==actionFilter)return false
   if(roomFilter&&e.roomId!==roomFilter)return false
   if(filter==='open')return e.status==='open'
-  if(filter==='guest')return ['guest_request','housekeeping_issue','team_note','room_note'].includes(e.eventType)
-  if(filter==='housekeeping')return !['guest_request','team_note','room_note'].includes(e.eventType)
+  if(filter==='guest')return ['guest_request','housekeeping_issue','team_note','room_note','room_note_cleared'].includes(e.eventType)
+  if(filter==='housekeeping')return !['guest_request','team_note','room_note','room_note_cleared'].includes(e.eventType)
   return true
  }),[entries,roomFilter,filter,actionFilter])
  const openCount=entries.filter(e=>e.status==='open'&&(!roomFilter||e.roomId===roomFilter)).length
