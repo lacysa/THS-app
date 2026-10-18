@@ -10,6 +10,7 @@ import { NON_DESKTOP_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Category='all'|'Arrival'|'Stayover'|'Checkout'|'Out/In'|'Vacant'
+type CorrectionNote={id:string;kind:'found'|'fixed';note:string;at:string}
 type OpsRow=ReservationRow&{expectedArrivalTime?:string|null;cleanOrder?:number|null;tubCleanDue?:boolean;tubCleanCompleted?:boolean;tubAssignedTo?:string}
 function reservationType(row:ReservationRow){
  const value=String(row.operationalStatus||row.status||'').toLowerCase()
@@ -144,6 +145,24 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  }
 
  const [packageCounts,setPackageCounts]=useState<Record<string,number>>({})
+ const [correctionNotes,setCorrectionNotes]=useState<Record<string,CorrectionNote[]>>({})
+ const [correctionNotesError,setCorrectionNotesError]=useState(false)
+ useEffect(()=>{
+  let active=true
+  setCorrectionNotes({})
+  setCorrectionNotesError(false)
+  const load=async()=>{
+   try{
+    const response=await fetch('/api/ops/room-corrections?date='+encodeURIComponent(serviceDate),{cache:'no-store'})
+    if(!response.ok)throw new Error('Failed to load corrections')
+    const data=await response.json()
+    if(active){setCorrectionNotes(data.notesByRoom||{});setCorrectionNotesError(false)}
+   }catch{if(active)setCorrectionNotesError(true)}
+  }
+  void load()
+  window.addEventListener('ths:live-data-refresh',load)
+  return()=>{active=false;window.removeEventListener('ths:live-data-refresh',load)}
+ },[serviceDate])
  const [inspectionSigns,setInspectionSigns]=useState<Record<string,{inspected:boolean;signed:boolean;initials:string}>>({})
  const [inspectionSigning,setInspectionSigning]=useState<string|null>(null)
  const [inspectionError,setInspectionError]=useState('')
@@ -222,8 +241,8 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   if(category!=='all'&&!(category==='Arrival'?['Arrival','Out/In'].includes(reservationType(row)):reservationType(row)===category))return false
   if(conditionsOnly&&!/dirty|issue|blocked|not confirmed/i.test(roomCondition(row))&&!row.checkIssueOpen&&!hasUnassignedService(row))return false
   const guest=activeGuest(row,serviceDate)?.guest_name||''
-  return !query.trim()||[row.roomName,guest,row.roomNotes||'',row.assignedTo||''].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
- }),[liveRows,category,conditionsOnly,query,serviceDate])
+  return !query.trim()||[row.roomName,guest,row.roomNotes||'',row.assignedTo||'',...(correctionNotes[row.roomId]||[]).map(note=>note.note)].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
+ }),[liveRows,category,conditionsOnly,query,serviceDate,correctionNotes])
  return <div className={'ths-unified-operations ths-operations-simplified'+(isChangingDate?' is-date-loading':'')}>
    <div className="ths-calendar-date ths-room-operations-date" aria-label="Choose room operations date">
     <CalendarDays size={18} aria-hidden="true"/>
@@ -286,7 +305,12 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
          {/^OUT$/i.test(String(row.serviceType||'').trim())&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("out_marked")}>OUT</button>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("tip_envelope_collected")}>Tips · {String(row.serviceType).split('-')[1]}</button>}
         </span>
-        {row.roomNotes?.trim()&&<button type="button" className="ths-ops-note-preview ths-ops-note-action" title="Open room notes" aria-label={'Open room note: '+row.roomNotes} onClick={editor("room_notes")}>{row.roomNotes}</button>}
+        {(Boolean(row.roomNotes?.trim())||(correctionNotes[row.roomId]||[]).length>0)&&<div className="ths-ops-note-preview ths-ops-note-stack">
+           {row.roomNotes?.trim()&&<button type="button" className="ths-ops-note-inline-action" title="Open room notes" aria-label={'Open room note: '+row.roomNotes} onClick={editor('room_notes')}>{row.roomNotes}</button>}
+           {(correctionNotes[row.roomId]||[]).map(note=><button type="button" key={note.id} className="ths-ops-note-inline-action ths-ops-correction-line" title="Open inspection and correction notes" onClick={editor('inspection')}>
+             <strong>{note.kind==='fixed'?'Fix note':'Inspection issue'}</strong><span>{note.note}</span>
+           </button>)}
+          </div>
        </td>
       </tr>
      })}</tbody>
@@ -294,12 +318,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters.</div>}
    </div>}
    {inspectionError&&<p role="alert" style={{color:"#9a4646",fontSize:12}}>{inspectionError}</p>}
+   {correctionNotesError&&<p role="alert" style={{color:'#9a4646',fontSize:12}}>Correction notes could not be loaded. Refresh Room Operations to try again.</p>}
    {displayMode==='cards'&&<div className="ths-ops-room-list">
     {filtered.map(row=>{
      const type=reservationType(row)
      const condition=roomCondition(row)
      const guest=activeGuest(row,serviceDate)
      const service=String(row.serviceType||'').trim().toUpperCase()
+     const tone=conditionTone(condition)
      return <button className={`ths-ops-room-row ths-ops-room-card tone-${tone}`} type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})}>
       <span className="ths-ops-room-info">
        <span className="ths-ops-card-top">
@@ -311,7 +337,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</span></span>
        </span>
        <span className="ths-ops-tags">
-        {canManageRooms&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Review inspection for '+row.roomName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}}}>Review inspection</span>}
+        {canManageRooms&&row.inspected&&!row.checkIssueOpen&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Review inspection for '+row.roomName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}}}>Review inspection</span>}
         {row.inspected&&!row.checkIssueOpen&&<span className="ths-tag-complete">Inspection passed{inspectionSigns[row.roomId]?.signed?' · '+inspectionSigns[row.roomId].initials:''}</span>}
         {row.inspected&&!row.checkIssueOpen&&!inspectionSigns[row.roomId]?.signed&&canManageRooms&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Sign off inspection for '+row.roomName} onClick={event=>void signInspection(event,row.roomId)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();void signInspection(event,row.roomId)}}}>{inspectionSigning===row.roomId?'Signing…':'Sign off'}</span>}
         {row.breakfastTag&&<span className="ths-tag-service">Breakfast</span>}
@@ -323,7 +349,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         {/^OUT(?:-[A-Z]{2,4})?$/i.test(service)&&<span className="ths-tag-complete">OUT</span>}
         {/^OUT-([A-Z]{2,4})$/i.test(service)&&<span className="ths-tag-complete">Tips collected · {service.split('-')[1]}</span>}
        </span>
-       {row.roomNotes?.trim()&&<span className="ths-ops-card-note" title={row.roomNotes}><strong>Room note</strong><span>{row.roomNotes}</span></span>}
+        {(Boolean(row.roomNotes?.trim())||(correctionNotes[row.roomId]||[]).length>0)&&<span className="ths-ops-card-note">
+          <strong>{(correctionNotes[row.roomId]||[]).length?'Room notes & fixes':'Room note'}</strong>
+          {row.roomNotes?.trim()&&<span>{row.roomNotes}</span>}
+          {(correctionNotes[row.roomId]||[]).map(note=><span key={note.id} className="ths-ops-correction-line">
+            <strong>{note.kind==='fixed'?'Fix note':'Inspection issue'}</strong>
+            <span>{note.note}</span>
+          </span>)}
+         </span>
       </span>
      </button>
     })}
