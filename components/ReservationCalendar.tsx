@@ -6,7 +6,7 @@ import ReservationsBoard from '@/components/ReservationsBoard'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
 type Cell={reservationId:string;date:string;roomId:string;status:string;guest:string;arrival:string;departure:string;blocked:boolean;condition:string;lateArrival:boolean}
-type Data={roomStatuses?:{date:string;roomId:string;condition:string;status:string;blocked:boolean}[];start:string;canRemove:boolean;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
+type Data={checkedOutIds?:string[];roomStatuses?:{date:string;roomId:string;condition:string;status:string;blocked:boolean}[];start:string;canRemove:boolean;days:string[];rooms:{id:string;name:string}[];cells:Cell[];holds:{date:string;roomId:string}[];notes:{date:string;roomId:string;text:string}[]}
 function shift(day:string,n:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function pretty(day:string){return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
 function occupied(c:Cell){return Boolean(c.guest&&c.arrival&&c.departure&&c.date>=c.arrival&&c.date<c.departure)}
@@ -157,7 +157,9 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
         }
         // Keep the whole reservation one color, using the room's current
         // operational condition rather than a distracting daily patchwork.
+        const isCheckedOut=(bar:typeof bars[number])=>Boolean(data.checkedOutIds?.includes(bar.reservationId))
         const stayBackground=(bar:typeof bars[number])=>{
+          if(isCheckedOut(bar))return '#e4e7ed'
           const today=serviceDate
           const current=roomStatuses.get(today+'|'+room.id)
           const fallback=roomStatuses.get(bar.date+'|'+room.id)
@@ -183,7 +185,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
                 </button>
               </div>
             })}
-            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay ths-calendar-stay-condition" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`,background:stayBackground(bar)}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(data.canRemove?' · Hold to remove':'')}
+            {bars.map(bar=><button key={bar.reservationId} type="button" className={"ths-calendar-stay ths-calendar-stay-condition"+(isCheckedOut(bar)?" ths-calendar-checked-out":"")} style={{gridColumn:`${bar.first+1} / ${bar.last+2}`,background:stayBackground(bar)}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(isCheckedOut(bar)?' · Checked out':'')+(data.canRemove?' · Hold to remove':'')}
               onPointerDown={event=>{
                 if(!data.canRemove||event.button!==0)return
                 stopLongPress();suppressNextTap.current=false
@@ -210,7 +212,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
                 : Math.max(bar.first,data.days.findIndex(day=>day===serviceDate&&day>=bar.arrival&&day<bar.departure))
               setActiveRoom({roomId:room.id,date:data.days[clickedIndex]||bar.date,reservationId:bar.reservationId})
             }}>
-              <span className="ths-calendar-stay-text"><strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}</small></span>
+              <span className="ths-calendar-stay-text"><strong>{bar.guest}</strong><small>{bar.arrival} → {bar.departure}{isCheckedOut(bar)?' · Checked out':''}</small></span>
             </button>)}
           </div>
         </div>
