@@ -1205,3 +1205,16 @@ button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
   box-shadow:none!important;white-space:nowrap;
 }
 .ths-ops-full-table .ths-ops-note-action{padding:5px 7px;font-size:11px;line-height:1.35}
+
+/* Live Condition looks exactly like the original flat status pill, even as a button. */
+.ths-ops-full-table button.ths-ops-condition{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  border:0!important;
+  outline:none;
+  box-shadow:none!important;
+}
+.ths-ops-full-table button.ths-ops-condition:focus-visible{
+  outline:2px solid #456ba8;
+  outline-offset:2px;
+}
