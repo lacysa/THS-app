@@ -1230,3 +1230,37 @@ button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
 }
 .ths-ops-room-card .ths-tag-inspection-sign:hover{background:#e2e3f6}
 .ths-ops-room-card .ths-tag-inspection-sign:focus-visible{outline:2px solid #586bb0;outline-offset:2px}
+
+/* Room Operations cards mirror their live condition pill, not their reservation type. */
+.ths-ops-room-row.ths-ops-room-card{
+  --ths-room-condition-bg:#edf1f5;
+  --ths-room-condition-border:#d5e0e6;
+  --ths-room-condition-accent:#9cafbd;
+  background:var(--ths-room-condition-bg);
+  border-color:var(--ths-room-condition-border);
+  border-left-color:var(--ths-room-condition-accent);
+}
+.ths-ops-room-row.ths-ops-room-card.tone-ready{
+  --ths-room-condition-bg:#e1f2e8;
+  --ths-room-condition-border:#c0ddcc;
+  --ths-room-condition-accent:#75af8b;
+}
+.ths-ops-room-row.ths-ops-room-card.tone-occupied{
+  --ths-room-condition-bg:#e7effa;
+  --ths-room-condition-border:#cbdaed;
+  --ths-room-condition-accent:#87aacb;
+}
+.ths-ops-room-row.ths-ops-room-card.tone-warning{
+  --ths-room-condition-bg:#fae8e4;
+  --ths-room-condition-border:#efcac2;
+  --ths-room-condition-accent:#ce8d7d;
+}
+.ths-ops-room-row.ths-ops-room-card.tone-cleaning{
+  --ths-room-condition-bg:#fff0c7;
+  --ths-room-condition-border:#e8d7a1;
+  --ths-room-condition-accent:#b38e3d;
+}
+.ths-ops-room-row.ths-ops-room-card:hover{
+  background:var(--ths-room-condition-bg);
+  box-shadow:0 5px 16px #1a405016;
+}
