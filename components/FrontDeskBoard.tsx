@@ -4,15 +4,8 @@ import { useEffect, useState } from 'react'
 import BookingMenuNote from '@/components/BookingMenuNote'
 import TonightsDessertDisplay from '@/components/TonightsDessertDisplay'
 
-export default function FrontDeskBoard({initialDate}:{initialDate:string}) {
-  const [targetRoom,setTargetRoom]=useState('')
+export default function FrontDeskBoard({initialDate,targetRoom=''}:{initialDate:string;targetRoom?:string}) {
   const [date,setDate] = useState(initialDate)
-  useEffect(()=>{
-   const params=new URLSearchParams(window.location.search)
-   setTargetRoom(params.get('roomId')||'')
-   const requestedDate=params.get('date')||''
-   if(/^20\d{2}-\d{2}-\d{2}$/.test(requestedDate))setDate(requestedDate)
-  },[])
   const [data,setData] = useState<any>(null)
   const [loading,setLoading] = useState(true)
   const [editing,setEditing] = useState<any>(null)
