@@ -21,6 +21,8 @@ export default function OpsActivityLog({serviceDate,roomId,compact=false}:{servi
  const [rooms,setRooms]=useState<Room[]>([])
  const [roomFilter,setRoomFilter]=useState(roomId||'')
  const [filter,setFilter]=useState<Filter>('all')
+ const [actionFilter,setActionFilter]=useState('all')
+ const [showActionFilters,setShowActionFilters]=useState(false)
  const [loading,setLoading]=useState(true)
  const [error,setError]=useState('')
  const [message,setMessage]=useState('')
@@ -42,13 +44,15 @@ export default function OpsActivityLog({serviceDate,roomId,compact=false}:{servi
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
  },[end,roomId,reload])
+ const actions=useMemo(()=>[...new Set(entries.filter(e=>!roomFilter||e.roomId===roomFilter).map(e=>e.eventType))].sort((a,b)=>(labels[a]||a).localeCompare(labels[b]||b)),[entries,roomFilter])
  const visible=useMemo(()=>entries.filter(e=>{
+  if(actionFilter!=='all'&&e.eventType!==actionFilter)return false
   if(roomFilter&&e.roomId!==roomFilter)return false
   if(filter==='open')return e.status==='open'
   if(filter==='guest')return ['guest_request','housekeeping_issue','team_note','room_note'].includes(e.eventType)
   if(filter==='housekeeping')return !['guest_request','team_note','room_note'].includes(e.eventType)
   return true
- }),[entries,roomFilter,filter])
+ }),[entries,roomFilter,filter,actionFilter])
  const openCount=entries.filter(e=>e.status==='open'&&(!roomFilter||e.roomId===roomFilter)).length
  async function saveRequest(){
   if(busy||!note.trim())return
@@ -88,6 +92,14 @@ export default function OpsActivityLog({serviceDate,roomId,compact=false}:{servi
   <div className="ops-activity-filters" role="group" aria-label="Log filters">
    {(['all','open','guest','housekeeping'] as Filter[]).map(f=><button type="button" key={f} aria-pressed={filter===f} onClick={()=>setFilter(f)}>{f==='all'?'All':f==='open'?'Open'+(openCount?' · '+openCount:''):f==='guest'?'Requests & notes':'Housekeeping'}</button>)}
   </div>
+  <div className="ops-activity-action-bar">
+   <button type="button" className="ops-activity-action-toggle" aria-expanded={showActionFilters} aria-controls="ops-action-filters" onClick={()=>setShowActionFilters(v=>!v)}>Action: {actionFilter==='all'?'All actions':labels[actionFilter]||actionFilter.replaceAll('_',' ')} {showActionFilters?'▴':'▾'}</button>
+   {actionFilter!=='all'&&<button type="button" className="ops-activity-action-clear" onClick={()=>setActionFilter('all')}>Clear</button>}
+  </div>
+  {showActionFilters&&<div id="ops-action-filters" className="ops-activity-action-options" role="group" aria-label="Filter history by action">
+   <button type="button" aria-pressed={actionFilter==='all'} onClick={()=>{setActionFilter('all');setShowActionFilters(false)}}>All actions</button>
+   {actions.map(action=><button type="button" key={action} aria-pressed={actionFilter===action} onClick={()=>{setActionFilter(action);setShowActionFilters(false)}}>{labels[action]||action.replaceAll('_',' ')}</button>)}
+  </div>}
   {writing&&<form className="ops-activity-form" onSubmit={e=>{e.preventDefault();void saveRequest()}}>
    <div className="ops-activity-form-title"><strong>Record a request or note</strong><button type="button" aria-label="Close entry form" onClick={()=>setWriting(false)}><X size={16}/></button></div>
    <label>Type <select value={category} onChange={e=>setCategory(e.target.value)}><option value="guest_request">Guest request</option><option value="housekeeping_issue">Housekeeping issue</option><option value="team_note">Team note</option></select></label>
