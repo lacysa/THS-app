@@ -155,17 +155,14 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
           if(v.includes('block'))return '#e1e5ed'
           return '#edf2f5'
         }
+        // Keep the whole reservation one color, using the room's current
+        // operational condition rather than a distracting daily patchwork.
         const stayBackground=(bar:typeof bars[number])=>{
-          const visible=data.days.slice(bar.first,bar.last+1)
-          const segments=visible.flatMap((day,index)=>{
-            const state=roomStatuses.get(day+'|'+room.id)
-            const blocked=holds.has(day+'|'+room.id)||Boolean(state?.blocked)
-            const fill=conditionColor(state?.condition||'',blocked)
-            const left=(index/visible.length*100).toFixed(4)
-            const right=((index+1)/visible.length*100).toFixed(4)
-            return [fill+' '+left+'%',fill+' '+right+'%']
-          })
-          return 'linear-gradient(to right, '+segments.join(', ')+')'
+          const today=serviceDate
+          const current=roomStatuses.get(today+'|'+room.id)
+          const fallback=roomStatuses.get(bar.date+'|'+room.id)
+          const state=current||fallback
+          return conditionColor(state?.condition||bar.condition||'',Boolean(state?.blocked))
         }
         return <div className="ths-calendar-row" key={room.id} style={{display:'contents'}}>
           <div className="ths-calendar-room">{room.name}</div>
@@ -186,7 +183,7 @@ export default function ReservationCalendar({serviceDate}:{serviceDate:string}){
                 </button>
               </div>
             })}
-            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay ths-calendar-stay-condition" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`,backgroundImage:stayBackground(bar)}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(data.canRemove?' · Hold to remove':'')}
+            {bars.map(bar=><button key={bar.reservationId} type="button" className="ths-calendar-stay ths-calendar-stay-condition" style={{gridColumn:`${bar.first+1} / ${bar.last+2}`,background:stayBackground(bar)}} title={bar.guest+' · '+bar.arrival+' to '+bar.departure+(data.canRemove?' · Hold to remove':'')}
               onPointerDown={event=>{
                 if(!data.canRemove||event.button!==0)return
                 stopLongPress();suppressNextTap.current=false
