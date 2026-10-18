@@ -1218,3 +1218,15 @@ button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
   outline:2px solid #456ba8;
   outline-offset:2px;
 }
+
+/* Compact management approval on the existing Room Operations cards. */
+.ths-ops-room-card .ths-tag-inspection-sign{
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;min-height:0;padding:3px 9px;
+  border:1px solid #c5c6e4;border-radius:999px;
+  background:#eeeefa;color:#4e548a;
+  font:750 10px/1.35 Arial,Helvetica,sans-serif;
+  cursor:pointer;white-space:nowrap;
+}
+.ths-ops-room-card .ths-tag-inspection-sign:hover{background:#e2e3f6}
+.ths-ops-room-card .ths-tag-inspection-sign:focus-visible{outline:2px solid #586bb0;outline-offset:2px}
