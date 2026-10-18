@@ -495,14 +495,14 @@ export async function PATCH(req: NextRequest) {
         dbPatch.room_condition='Blocked'
         dbPatch.complete=false
         dbPatch.ready_for_inspection=false
-        dbPatch.inspected=false
+        dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
         dbPatch.assigned_to=''
         dbPatch.clean_order=null
       }else if(String(existing.reservation_status).toLowerCase()==='blocked'||String(existing.strip_hold||'').toLowerCase().includes('hold')){
         dbPatch.room_condition='Vacant (Dirty)'
         dbPatch.complete=false
         dbPatch.ready_for_inspection=false
-        dbPatch.inspected=false
+        dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
       }
     }
 
@@ -528,7 +528,7 @@ export async function PATCH(req: NextRequest) {
         dbPatch.refresh_completed_initials=complete?initials:null
       }
       dbPatch.ready_for_inspection=!isRefresh&&complete
-      dbPatch.inspected=false
+      dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
       dbPatch.completed_at=complete?(existing.completed_at||now):null
       dbPatch.inspected_at=null
       dbPatch.room_condition=isRefresh?'Occupied':complete?'Ready for Room Check':cleanText(requested.roomCondition)==='Vacant (Dirty)'?'Vacant (Dirty)':'Cleaning'
@@ -551,7 +551,7 @@ export async function PATCH(req: NextRequest) {
       if(nextService!==existingService && (nextService==='RF'||existingService==='RF')){
         dbPatch.complete=false
         dbPatch.ready_for_inspection=false
-        dbPatch.inspected=false
+        dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
         dbPatch.completed_at=null
         dbPatch.inspected_at=null
         dbPatch.refresh_completed_by=null
@@ -587,7 +587,7 @@ export async function PATCH(req: NextRequest) {
       dbPatch.room_condition='Vacant (Dirty)'
       dbPatch.complete=false
       dbPatch.ready_for_inspection=false
-      dbPatch.inspected=false
+      dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
     }
 
     // Persist occupancy for a stayover or a checkout awaiting management OUT.
