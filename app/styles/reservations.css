@@ -1320,3 +1320,71 @@ button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
 .ths-ops-note-stack .ths-ops-note-inline-action:focus-visible{
   outline:2px solid #456ba8;outline-offset:2px;border-radius:4px;
 }
+
+/* Ops Day cards keep the original reservation layout and add a compact
+   Room Operations summary. Other reservation views are unchanged. */
+.ths-calendar-reservation-cards .ths-reservation-ops-details{
+  padding:10px 13px 9px;
+  border-bottom:1px solid #e4e9ed;
+  background:linear-gradient(110deg,#f4faf9,#f6f6fc);
+  display:grid;gap:9px;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-summary{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-summary>div{
+  display:grid;gap:3px;min-width:0;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-summary span{
+  color:#728390;font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-summary strong{
+  color:#2b495b;font-size:12px;font-weight:750;overflow-wrap:anywhere;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-summary sup{
+  font-size:.72em;margin-left:1px;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pills{
+  display:flex;gap:5px;flex-wrap:wrap;align-items:center;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pill{
+  display:inline-flex;align-items:center;flex:0 0 auto;width:auto;
+  padding:3px 7px;border:1px solid #cfdae3;border-radius:999px;
+  background:#ecf2f7;color:#4c657a;
+  font:750 10px/1.35 Arial,Helvetica,sans-serif;
+  white-space:nowrap;box-shadow:none;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pill.is-complete{
+  background:#e2f3ea;border-color:#b7dec9;color:#28664e;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pill.is-alert{
+  background:#fae5e2;border-color:#efbcb7;color:#9a4646;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pill.is-review{
+  appearance:none;background:#eeeefa;border-color:#c5c6e4;color:#4e548a;cursor:pointer;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pill.is-breakfast{
+  background:#e4f1f6;border-color:#bfdce7;color:#326479;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pill.is-package{
+  background:#f0e9f8;border-color:#d5c3e9;color:#664b89;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-pill.is-review:focus-visible{
+  outline:2px solid #586bb0;outline-offset:2px;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-notes{
+  display:grid;gap:5px;padding:10px 13px;background:#fff8e7;
+  border-bottom:1px solid #e9d398;color:#795b19;
+  white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;
+}
+.ths-calendar-reservation-cards .ths-reservation-ops-notes>strong{
+  color:#795b19;font-size:11px;
+}
+.ths-calendar-reservation-cards .ths-reservation-correction-note{
+  display:grid;gap:3px;border-top:1px solid #e9d398;padding-top:6px;margin-top:4px;
+}
+.ths-calendar-reservation-cards .ths-reservation-correction-note strong{color:#806420}
+.ths-calendar-reservation-cards .ths-ops-day-warning{
+  color:#9a4646;font-size:12px;padding:9px 12px;border:1px solid #efbcb7;
+  border-radius:10px;background:#fff7f5;
+}
