@@ -21,7 +21,7 @@ export default function OpsActivityLog({serviceDate,roomId,compact=false,initial
  const [rooms,setRooms]=useState<Room[]>([])
  const [roomFilter,setRoomFilter]=useState(roomId||'')
  const [filter,setFilter]=useState<Filter>('all')
- const [actionFilter,setActionFilter]=useState('all')
+ const [actionFilter,setActionFilter]=useState(initialAction)
  const [showActionFilters,setShowActionFilters]=useState(false)
  const [loading,setLoading]=useState(true)
  const [error,setError]=useState('')
@@ -32,6 +32,7 @@ export default function OpsActivityLog({serviceDate,roomId,compact=false,initial
  const [note,setNote]=useState('')
  const [busy,setBusy]=useState(false)
  useEffect(()=>{setRoomFilter(roomId||'')},[roomId])
+ useEffect(()=>{setActionFilter(initialAction);setFilter('all');setShowActionFilters(false)},[initialAction,roomId,serviceDate])
  useEffect(()=>{
   const controller=new AbortController()
   setLoading(true);setError('')
