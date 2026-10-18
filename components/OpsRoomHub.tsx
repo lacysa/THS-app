@@ -5,7 +5,7 @@ import OpsActivityLog from '@/components/OpsActivityLog'
 import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
-type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
+type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
 type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
 type Data={room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
@@ -50,10 +50,13 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  const roomNoteInput=useRef<HTMLTextAreaElement|null>(null)
  const mentionStart=useRef(-1)
  const [issueNote,setIssueNote]=useState('')
+ const [approval,setApproval]=useState<{signed:boolean;initials:string}|null>(null)
  const [manualPackageDraft,setManualPackageDraft]=useState<string[]>([])
  const [roomOrder,setRoomOrder]=useState('')
  const [times,setTimes]=useState({expectedArrivalTime:'',actualArrivalTime:'',lateCheckoutTime:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
+ useEffect(()=>{let active=true;fetch('/api/ops/inspection-signoff?date='+encodeURIComponent(date),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{if(active)setApproval(v?.rooms?.[roomId]||null)}).catch(()=>{});return()=>{active=false}},[date,roomId,reload])
+ async function approveInspection(){if(busy)return;setBusy(true);setError('');try{const r=await fetch('/api/ops/inspection-signoff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId})});const value=await r.json();if(!r.ok)throw new Error(value.error||'Unable to sign off');refresh();window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))}catch(e:any){setError(String(e.message||e))}finally{setBusy(false)}}
  useEffect(()=>{setSections({room:initialView==='room',guest:initialView==='guest',log:initialView==='log'});setActiveEditor(initialEditor);setMessage('')},[roomId,date,reservationId])
  useEffect(()=>{
   const controller=new AbortController()
@@ -362,12 +365,16 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         <strong>Room inspection</strong>
         <small>{daily.inspected?'Passed':daily.check_issue_open?'Correction required':data.inspectionReady?'Ready for check':'Awaiting completion'}</small>
        </div>
+       {canManage&&daily.inspected&&!daily.check_issue_open&&<div style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap',marginBottom:9}}>
+        <span className="ops-hub-good">{approval?.signed?'Management signed · '+(approval.initials||'✓'):'Awaiting management sign-off'}</span>
+        {!approval?.signed&&<button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void approveInspection()}>Sign off · {data.managerInitials||'Management'}</button>}
+       </div>}
        {canInspect? <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
         {daily.check_issue_open&&!data.inspectionReady
          ? <button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void inspect('fixed')}><Check size={16}/> Mark correction fixed</button>
          : <>
            <button type="button" className="ops-hub-primary" disabled={busy||Boolean(daily.inspected)||!data.inspectionReady} onClick={()=>void inspect('pass')}><Check size={16}/> {daily.inspected?'Inspection passed':'Pass inspection'}</button>
-           <button type="button" className="ops-hub-secondary" disabled={busy||Boolean(daily.inspected)||!data.inspectionReady} onClick={()=>setActiveEditor(v=>v==='inspection'?null:'inspection')}><AlertTriangle size={16}/> Fail inspection</button>
+           <button type="button" className="ops-hub-secondary" disabled={busy||(!canManage&&(Boolean(daily.inspected)||!data.inspectionReady))} onClick={()=>setActiveEditor(v=>v==='inspection'?null:'inspection')}><AlertTriangle size={16}/> Fail inspection</button>
           </>}
        </div>:<small className="ops-hub-muted">Inspection actions are available to authorized team members.</small>}
        {!daily.inspected&&!data.inspectionReady&&!daily.check_issue_open&&<small className="ops-hub-muted">The room must be submitted for inspection before it can pass or fail.</small>}
