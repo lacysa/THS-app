@@ -253,11 +253,10 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
          {row.breakfastTag&&<button type="button" className="ths-tag-service ths-ops-pill-action" onClick={breakfast}>Breakfast</button>}
-         {row.lateArrival&&<button type="button" className="ths-tag-arrival ths-ops-pill-action" onClick={(event)=>{event.stopPropagation();navigate(event,"room")}}>Late arrival</button>}
+         {row.lateArrival&&<button type="button" className="ths-tag-arrival ths-ops-pill-action" onClick={(event)=>navigate(event,"room")}>Late arrival</button>}
          {row.checkIssueOpen&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={history("issue_reported")}>Inspection issue</button>}
         {row.tubCleanDue&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</button>}
         {row.tubCleanCompleted&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub cleaned</button>}
-         {row.roomNotes&&}
          {(packageCounts[row.roomId]||0)>0&&<button type="button" className="ths-tag-package ths-ops-pill-action" onClick={editor("packages")}>Package · {packageCounts[row.roomId]}</button>}
          {/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("out_marked")}>OUT</button>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("tip_envelope_collected")}>Tips · {String(row.serviceType).split('-')[1]}</button>}
