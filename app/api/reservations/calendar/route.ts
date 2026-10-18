@@ -27,6 +27,16 @@ export async function GET(req:NextRequest){
   const ids=[...new Set(links.flatMap((l:any)=>[l.primary_reservation_id,l.arriving_reservation_id,l.stay_reservation_id,l.departing_reservation_id]).filter(Boolean).map(String))]
   const stays=ids.length?(await admin.from('reservation_stays').select('id,guest_name,arrival_date,checkout_date').in('id',ids)):null
   if(stays?.error)return NextResponse.json({error:'Could not load guest stays'},{status:500})
+  // Link recorded OUT actions to departing reservation IDs, not just rooms.
+  // This prevents a previous guest inheriting a later guest's condition.
+  const checkoutDates=[...new Set((stays?.data||[]).map((s:any)=>String(s.checkout_date||'')).filter(Boolean))]
+  const [departureLinks,checkoutDaily]=checkoutDates.length?await Promise.all([
+    admin.from('reservation_daily_links').select('service_date,room_id,departing_reservation_id').in('service_date',checkoutDates),
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,service_type').in('service_date',checkoutDates)
+  ]):[{data:[],error:null},{data:[],error:null}]
+  if(departureLinks.error||checkoutDaily.error)return NextResponse.json({error:'Could not load checkout statuses'},{status:500})
+  const outDates=new Set((checkoutDaily.data||[]).filter((h:any)=>/^OUT(?:-[A-Z]{2,4})?$/i.test(String(h.service_type||'').trim())).map((h:any)=>String(h.service_date)+'|'+String(h.room_id)))
+  const checkedOutIds=[...new Set((departureLinks.data||[]).filter((l:any)=>outDates.has(String(l.service_date)+'|'+String(l.room_id))&&l.departing_reservation_id).map((l:any)=>String(l.departing_reservation_id)))]
   const byId=new Map((stays?.data||[]).map((s:any)=>[String(s.id),s]))
   const conditions=new Map((housekeepingRes.data||[]).map((h:any)=>[String(h.service_date)+'|'+String(h.room_id),h]))
   // For blank calendar dates, carry the latest recorded condition forward.
@@ -58,6 +68,7 @@ export async function GET(req:NextRequest){
   return NextResponse.json({
     start,
     canRemove,
+    checkedOutIds,
     days,
     rooms:(roomsRes.data||[]).map((r:any)=>({id:String(r.id),name:String(r.name)})),
     cells:links.map((l:any)=>{
