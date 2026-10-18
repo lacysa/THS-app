@@ -310,7 +310,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
            {(correctionNotes[row.roomId]||[]).map(note=><button type="button" key={note.id} className="ths-ops-note-inline-action ths-ops-correction-line" title="Open inspection and correction notes" onClick={editor('inspection')}>
              <strong>{note.kind==='fixed'?'Fix note':'Inspection issue'}</strong><span>{note.note}</span>
            </button>)}
-          </div>
+          </div>}
        </td>
       </tr>
      })}</tbody>
@@ -356,7 +356,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
             <strong>{note.kind==='fixed'?'Fix note':'Inspection issue'}</strong>
             <span>{note.note}</span>
           </span>)}
-         </span>
+         </span>}
       </span>
      </button>
     })}
