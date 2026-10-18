@@ -1175,3 +1175,12 @@ button.ops-hub-prominent-note:not(:disabled):hover{border-color:#9abfcf;backgrou
 .ops-activity-action-options{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1px solid #d8e4eb;border-radius:12px;background:#f8fbfd;margin-bottom:10px}
 .ops-activity-action-options button{border:1px solid #d3e0e8;border-radius:9px;background:white;color:#466378;padding:7px 10px;font:700 11px/1.25 Arial,sans-serif;cursor:pointer}
 .ops-activity-action-options button[aria-pressed="true"]{background:#dcecf5;border-color:#89b6cf;color:#27516e}
+
+/* Interactive pill targets in the Room Operations table. */
+.ths-ops-tags>.ths-ops-pill-action{appearance:none;font:inherit;font-weight:750;line-height:1.4;cursor:pointer}
+.ths-ops-tags>.ths-tag-package{background:#f0e9f8!important;color:#664b89!important;border:1px solid #d5c3e9!important;border-radius:999px;padding:3px 9px}
+.ths-ops-pill-action:focus-visible,.ths-ops-note-action:focus-visible,.ths-ops-assignment-action:focus-visible{outline:2px solid #456ba8;outline-offset:3px}
+button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
+.ths-ops-note-action{display:block;width:100%;text-align:left;cursor:pointer;font:inherit}
+.ths-ops-assignment-action{border:0;background:none;color:inherit;cursor:pointer;font:inherit;text-align:left;padding:0}
+.ths-ops-assignment-action:hover{text-decoration:underline}
