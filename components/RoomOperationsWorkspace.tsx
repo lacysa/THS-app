@@ -258,7 +258,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         {row.tubCleanDue&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</button>}
         {row.tubCleanCompleted&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub cleaned</button>}
          {(packageCounts[row.roomId]||0)>0&&<button type="button" className="ths-tag-package ths-ops-pill-action" onClick={editor("packages")}>Package · {packageCounts[row.roomId]}</button>}
-         {/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("out_marked")}>OUT</button>}
+         {/^OUT$/i.test(String(row.serviceType||'').trim())&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("out_marked")}>OUT</button>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("tip_envelope_collected")}>Tips · {String(row.serviceType).split('-')[1]}</button>}
         </span>
         {row.roomNotes?.trim()&&<button type="button" className="ths-ops-note-preview ths-ops-note-action" title="Open room notes" aria-label={'Open room note: '+row.roomNotes} onClick={editor("room_notes")}>{row.roomNotes}</button>}
