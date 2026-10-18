@@ -8,7 +8,7 @@ type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
 type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
-type Data={correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
+type Data={roomNoteHistory?:{id:string;note:string;type:string;at:string;author:string}[];checklistNotes?:{id:string;label:string;note:string;stage:string;at:string}[];correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
 type View='room'|'guest'|'log'
 type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|'tub_assignee'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
@@ -360,23 +360,52 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         {selectedPackageNames.length>0&&<span className="ops-hub-context-package"><strong>Packages</strong> {selectedPackageNames.join(', ')}</span>}
        </div>
       </div>
+      {daily&&(Boolean(daily.notes?.trim())||Boolean(data.roomNoteHistory?.length)||Boolean(data.checklistNotes?.length)||Boolean(data.correctionHistory?.length))&&
+       <section aria-label="Inspection notes and room observations" style={{margin:'12px 0',padding:'12px 14px',border:'1px solid #d7e2e7',borderRadius:13,background:'#f9fbfc'}}>
+        <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:10,flexWrap:'wrap'}}>
+         <strong style={{fontSize:13}}>Inspection notes &amp; room observations</strong>
+         <small style={{color:'#647785'}}>Saved for {dateLabel(date)}</small>
+        </div>
+        <small style={{display:'block',color:'#667985',marginTop:4}}>
+         Housekeeping and Hospitality Assistant room observations are separate from formally failed inspections.
+        </small>
+        {!!daily.notes?.trim()&&<div style={{marginTop:10,padding:'10px 11px',background:'#fff8e7',border:'1px solid #e9d398',borderRadius:9}}>
+         <strong style={{fontSize:12}}>Room observation / HA or HSK note</strong>
+         <div style={{fontSize:12,marginTop:5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{daily.notes}</div>
+         {(data.roomNoteHistory||[]).find(item=>item.type==='room_note'&&item.note.trim()===daily.notes?.trim())&&
+          <small style={{display:'block',marginTop:5,color:'#697a83'}}>
+           Saved by {(data.roomNoteHistory||[]).find(item=>item.type==='room_note'&&item.note.trim()===daily.notes?.trim())?.author}
+          </small>}
+        </div>}
+        {(data.checklistNotes||[]).length>0&&<div style={{marginTop:10,padding:'10px 11px',background:'#fff',border:'1px solid #dce6e9',borderRadius:9}}>
+         <strong style={{fontSize:12}}>Written inspection checklist notes</strong>
+         {(data.checklistNotes||[]).map(item=><div key={item.id} style={{marginTop:8,fontSize:12}}>
+          <strong>{item.label}</strong><span style={{color:'#71818b',marginLeft:6}}>({item.stage==='draft'?'Draft':item.stage==='recheck'?'Recheck':'Inspection'})</span>
+          <div style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:3}}>{item.note}</div>
+         </div>)}
+        </div>}
+        {(data.correctionHistory||[]).length>0&&<div style={{marginTop:10,padding:'10px 11px',background:'#fff',border:'1px solid #dce6e9',borderRadius:9}}>
+         <strong style={{fontSize:12}}>Failed inspections &amp; recorded fixes</strong>
+         {(data.correctionHistory||[]).map(item=><div key={item.id} style={{marginTop:8,fontSize:12,lineHeight:1.4}}>
+          <strong>{item.type==='fixed'?'Fix recorded':item.type==='found'?'Inspection issue':item.type.replaceAll('_',' ')}</strong>
+          <span style={{color:'#657785',marginLeft:6}}>{item.at?new Date(item.at).toLocaleString('en-US',{timeZone:'America/Detroit',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):''}</span>
+          <div style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{item.note}</div>
+         </div>)}
+        </div>}
+        {(data.roomNoteHistory||[]).some(item=>item.type==='room_note_cleared'||item.type==='room_note'&&item.note.trim()!==String(daily.notes||'').trim())&&
+         <details style={{marginTop:10}}>
+          <summary style={{fontSize:12,fontWeight:700,cursor:'pointer'}}>Earlier room note entries ({(data.roomNoteHistory||[]).filter(item=>item.type==='room_note_cleared'||item.type==='room_note'&&item.note.trim()!==String(daily.notes||'').trim()).length})</summary>
+          {(data.roomNoteHistory||[]).filter(item=>item.type==='room_note_cleared'||item.type==='room_note'&&item.note.trim()!==String(daily.notes||'').trim()).map(item=><div key={item.id} style={{padding:'8px 0',borderBottom:'1px solid #e4ebef',fontSize:12}}>
+           <strong>{item.author}</strong><span style={{color:'#6d8290',marginLeft:8}}>{item.at?new Date(item.at).toLocaleString('en-US',{timeZone:'America/Detroit',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):''}</span>
+           <div style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:3}}>{item.note}</div>
+          </div>)}
+         </details>}
+       </section>}
       {daily&&data.inspectionEligible&&<div className="ops-hub-inspection-actions" role="group" aria-label="Room inspection decisions" style={{margin:'12px 0',padding:14,border:'1px solid #d9e6e8',borderRadius:14,background:'#f7fbfc'}}>
        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap',marginBottom:10}}>
         <strong>Room inspection</strong>
         <small>{daily.inspected?'Passed':daily.check_issue_open?'Correction required':data.inspectionReady?'Ready for check':'Awaiting completion'}</small>
        </div>
-       {Boolean(daily.notes?.trim())&&<div style={{marginBottom:10,padding:'9px 11px',background:'#f8fafd',border:'1px solid #dce6e9',borderRadius:10}}>
-        <strong style={{fontSize:12}}>Housekeeping / Hospitality room note</strong>
-        <div style={{fontSize:12,marginTop:5,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{daily.notes}</div>
-       </div>}
-       {(data.correctionHistory||[]).length>0&&<div style={{marginBottom:10,padding:'9px 11px',background:'#fff',border:'1px solid #dce6e9',borderRadius:10}}>
-        <strong style={{fontSize:12}}>Correction notes</strong>
-        {(data.correctionHistory||[]).slice(0,6).map(item=><div key={item.id} style={{marginTop:7,fontSize:12,lineHeight:1.4}}>
-         <strong>{item.type==='fixed'?'Fix recorded':item.type==='found'?'Issue found':item.type.replaceAll('_',' ')}</strong>
-         <span style={{color:'#657785',marginLeft:6}}>{new Date(item.at).toLocaleString('en-US',{timeZone:'America/Detroit',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
-         <div style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{item.note}</div>
-        </div>)}
-       </div>}
        {canManage&&daily.inspected&&!daily.check_issue_open&&<div style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap',marginBottom:9}}>
         <span className="ops-hub-good">{approval?.signed?'Management signed · '+(approval.initials||'✓'):'Awaiting management sign-off'}</span>
         {!approval?.signed&&<button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void approveInspection()}>Sign off · {data.managerInitials||'Management'}</button>}
