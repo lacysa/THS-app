@@ -1264,3 +1264,59 @@ button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
   background:var(--ths-room-condition-bg);
   box-shadow:0 5px 16px #1a405016;
 }
+
+/* Show saved inspection issues and fix notes beneath existing Room Operations
+   notes, with no additional status pills or changes to table columns. */
+.ths-ops-note-preview.ths-ops-note-stack{
+  display:block;
+  -webkit-line-clamp:unset;
+  line-clamp:unset;
+  overflow:visible;
+  white-space:normal;
+}
+.ths-ops-note-stack .ths-ops-note-inline-action{
+  display:block;
+  appearance:none;
+  border:0;
+  background:transparent;
+  width:100%;
+  padding:0;
+  margin:0;
+  color:inherit;
+  font:inherit;
+  line-height:1.45;
+  text-align:left;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  cursor:pointer;
+}
+.ths-ops-note-stack .ths-ops-correction-line,
+.ths-ops-card-note > .ths-ops-correction-line{
+  border-top:1px solid rgba(159,132,66,.24);
+  margin-top:6px;
+  padding-top:7px;
+}
+.ths-ops-note-stack .ths-ops-correction-line{display:grid;gap:3px}
+.ths-ops-card-note > .ths-ops-correction-line{
+  display:grid;
+  gap:3px;
+  -webkit-line-clamp:unset;
+  line-clamp:unset;
+  overflow:visible;
+  white-space:normal;
+}
+.ths-ops-card-note > .ths-ops-correction-line >span{
+  font-size:12px;
+  line-height:1.45;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.ths-ops-card-note >.ths-ops-correction-line >strong,
+.ths-ops-note-stack .ths-ops-correction-line >strong{
+  font-size:11px;
+  font-weight:800;
+  color:#806420;
+}
+.ths-ops-note-stack .ths-ops-note-inline-action:focus-visible{
+  outline:2px solid #456ba8;outline-offset:2px;border-radius:4px;
+}
