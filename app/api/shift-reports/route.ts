@@ -57,7 +57,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     admin.from('breakfast_bookings').select('room_id,status,menu_submitted,time_slot').eq('service_date', breakfastDate),
     admin.from('maintenance_work_orders').select('*').order('created_at', { ascending: false }),
     admin.from('room_notes').select('*').or(`service_date.eq.${date},note_type.eq.persistent`).order('created_at', { ascending: false }),
-    admin.from('staff_members').select('id,name'),
+    admin.from('staff_members').select('id,name,auth_user_id,job_title'),
     admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', date).eq('breakfast_tag', true),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',date).eq('work_mode','onsite'),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',breakfastDate).eq('work_mode','onsite'),
@@ -77,8 +77,35 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
   const roomById = new Map(rooms.map((r: any) => [String(r.id), r.name]))
   const staffById = new Map((staffRes.data || []).map((s: any) => [String(s.id), s.name]))
 
-  const fixedNotes=new Set((correctionsRes.data||[]).filter((e:any)=>e.event_type==='fixed').map((e:any)=>[e.room_id,String(e.note||'').trim()].join('|')))
-  const housekeepingFixes=(correctionsRes.data||[]).filter((e:any)=>e.event_type==='found').map((e:any)=>({id:e.id,roomName:roomById.get(String(e.room_id))||'Room',note:String(e.note||''),resolved:fixedNotes.has([e.room_id,String(e.note||'').trim()].join('|')),assignedTo:String((housekeepingRes.data||[]).find((d:any)=>d.room_id===e.room_id)?.assigned_to||'')}))
+  // Pair each fix with the most recent unresolved issue for the same room.
+  // Fix descriptions are intentionally different from issue descriptions, so
+  // matching by equal text incorrectly labelled today's completed fixes as open.
+  type HskFix={id:string;roomName:string;note:string;resolved:boolean;assignedTo:string;fixNote?:string}
+  const housekeepingFixes:HskFix[]=[]
+  const pendingByRoom=new Map<string,HskFix[]>()
+  for(const event of correctionsRes.data||[]){
+    const roomId=String(event.room_id),note=String(event.note||'').trim()
+    if(event.event_type==='found'){
+      const item:HskFix={id:String(event.id),roomName:roomById.get(roomId)||'Room',note,
+        resolved:false,assignedTo:String((housekeepingRes.data||[]).find((r:any)=>String(r.room_id)===roomId)?.assigned_to||'')}
+      housekeepingFixes.push(item)
+      const pending=pendingByRoom.get(roomId)||[]
+      pending.push(item);pendingByRoom.set(roomId,pending)
+    }else if(event.event_type==='fixed'){
+      const pending=pendingByRoom.get(roomId)||[]
+      const open=[...pending].reverse().find(item=>!item.resolved)
+      if(open){open.resolved=true;open.fixNote=note}
+    }
+  }
+  // The daily note editor is used by housekeepers and Hospitality Assistants.
+  // These notes are observations, not inspection failures, and must not be
+  // silently dropped just because they aren't in room_notes or correction_events.
+  const staffByUser=new Map((staffRes.data||[]).filter((s:any)=>s.auth_user_id)
+    .map((s:any)=>[String(s.auth_user_id),String(s.name||'')]))
+  const housekeepingObservations=(housekeepingRes.data||[]).filter((r:any)=>String(r.notes||'').trim())
+    .map((r:any)=>({roomId:String(r.room_id),roomName:roomById.get(String(r.room_id))||'Room',
+      note:String(r.notes).trim(),lastUpdatedBy:staffByUser.get(String(r.updated_by||''))||''}))
+    .sort((a,b)=>a.roomName.localeCompare(b.roomName))
 
   const housekeeping = (housekeepingRes.data || []).map((row: any) => ({
     roomId: row.room_id,
@@ -173,6 +200,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     breakfastDate,
     housekeeping,
     housekeepingFixes,
+    housekeepingObservations,
     breakfast,
     maintenance,
     roomNotes,
