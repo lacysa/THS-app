@@ -29,6 +29,11 @@ export async function POST(request: Request) {
     .select('id').eq('auth_user_id',userId).eq('active',true).maybeSingle()
   if (!linkedMember) return NextResponse.json({ error: 'Active staff account not found' }, { status: 404 })
 
+  const { data: ownerCapability } = await admin.from('staff_member_capabilities')
+    .select('capability_key').eq('staff_member_id',linkedMember.id)
+    .eq('capability_key','owner').maybeSingle()
+  if (ownerCapability) return NextResponse.json({ error: 'Owner credentials cannot be changed here' }, { status: 403 })
+
   const { data: staff } = await admin.from('staff_profiles')
     .select('user_id,active,staff_roles(name)').eq('user_id',userId).maybeSingle()
   const role: any = Array.isArray(staff?.staff_roles) ? staff?.staff_roles[0] : staff?.staff_roles
@@ -41,7 +46,11 @@ export async function POST(request: Request) {
   const password = randomBytes(24).toString('base64url')
   // Owner-authorized staff onboarding: a mailbox is not required for username sign-in.
   // Do not alter the user's role or permission assignments.
-  const { error } = await admin.auth.admin.updateUserById(userId, { password, email_confirm: true })
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password,
+    email_confirm: true,
+    user_metadata: { ...(auth.user.user_metadata || {}), ths_password_change_required: true }
+  })
   if (error) return NextResponse.json({ error: 'Could not create temporary password' }, { status: 500 })
 
   return NextResponse.json({ password, accountEmail: auth.user.email }, { headers: { 'Cache-Control': 'private, no-store, max-age=0', 'Pragma':'no-cache', 'X-Content-Type-Options':'nosniff' } })
