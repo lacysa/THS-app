@@ -60,7 +60,7 @@ export async function POST(req:NextRequest){
    .eq('id',staff.id).is('auth_user_id',null)
  if(linkError)return NextResponse.json({error:'Invitation exists but the staff record could not be linked.'},{status:500})
  try{
-  const delivery=await sendHotelInvite({email:EMAIL,name:NAME,username:USERNAME,origin:req.nextUrl.origin})
+  const delivery=await sendHotelInvite({email:EMAIL,name:NAME,username:USERNAME,role:'Manager',origin:req.nextUrl.origin})
   return NextResponse.json({ok:true,email:EMAIL,role:'Manager',invited:true,from:delivery.from,message:'Hotel-branded account setup email sent. Al can open it to set his password.'})
  }catch(error:any){return NextResponse.json({error:String(error?.message||'Could not send invitation')},{status:502})}
 }
