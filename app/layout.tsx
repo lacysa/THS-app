@@ -23,6 +23,7 @@ import './styles/housekeeping-mobile.css'
 import './styles/rooms.css'
 import './styles/housekeeping-assignments.css'
 import './styles/shell-tablet.css'
+import './styles/shell-compact-desktop.css'
 // Intentionally last: paper-only breakfast styles must override theme/module polish.
 import './styles/breakfast-overview-print.css'
 
