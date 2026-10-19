@@ -1,6 +1,7 @@
 'use client'
 
 import { getStaffSession } from '@/lib/client/staff-session'
+import { staffModuleLabel } from '@/lib/module-labels'
 import StaffShiftNote from '@/components/StaffShiftNote'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_RAIL_MEDIA } from '@/lib/layout-breakpoints'
 
@@ -474,6 +475,7 @@ export default function StaffShell({
         return (
           title.includes(q) ||
           label.includes(q) ||
+          staffModuleLabel(item).toLowerCase().includes(q) ||
           key.includes(q)
         )
       })
@@ -538,8 +540,8 @@ export default function StaffShell({
       <Link
         key={item.module_key}
         href={href}
-        title={item.module_key==='housekeeping'?'Housekeeping':item.module_key==='room_checks'?'Room Inspections':managementWorkspace && item.module_key==='ops'?'Calendar & Activity':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
-        aria-label={item.module_key==='housekeeping'?'Housekeeping':item.module_key==='room_checks'?'Room Inspections':managementWorkspace && item.module_key==='ops'?'Calendar & Activity':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+        title={staffModuleLabel(item)}
+        aria-label={staffModuleLabel(item)}
         className={[
           active ? 'active' : '',
           nested ? 'sidebar-nested-link' : '',
@@ -551,7 +553,7 @@ export default function StaffShell({
         </span>
 
         <span className="sidebar-link-label">
-          {item.module_key==='housekeeping'?'Housekeeping':item.module_key==='room_checks'?'Room Inspections':managementWorkspace && item.module_key==='ops'?'Calendar & Activity':managementWorkspace && item.module_key==='reservations'?'Room Operations':(item.label || item.title)}
+          {staffModuleLabel(item)}
         </span>
 
         {preview && (
@@ -846,8 +848,7 @@ export default function StaffShell({
                         <Icon size={16} />
 
                         <span>
-                          {item.label ||
-                            item.title}
+                          {staffModuleLabel(item)}
                         </span>
                       </button>
                     )
