@@ -25,7 +25,7 @@ export async function GET() {
       .eq('active',true)
       .order('name'),
     admin.from('app_modules').select('*').eq('active',true).order('sort_order'),
-    admin.from('staff_members').select('id,auth_user_id,name,job_title,active').eq('active',true),
+    admin.from('staff_members').select('id,auth_user_id,name,job_title,username,active').eq('active',true),
     admin.from('staff_member_capabilities').select('staff_member_id,capability_key'),
     admin.from('role_permissions').select('role_id,allowed,app_permissions(permission_key)').eq('allowed',true),
     admin.from('staff_module_access').select('staff_member_id,module_key,allowed')
@@ -35,7 +35,11 @@ export async function GET() {
   if(modulesError) return NextResponse.json({error:modulesError.message},{status:400})
 
   const memberIdByUser=new Map<string,string>()
-  for(const row of members||[]) if(row.auth_user_id) memberIdByUser.set(String(row.auth_user_id),String(row.id))
+  const usernameByUser=new Map<string,string>()
+  for(const row of members||[]) if(row.auth_user_id){
+    memberIdByUser.set(String(row.auth_user_id),String(row.id))
+    if(row.username) usernameByUser.set(String(row.auth_user_id),String(row.username))
+  }
 
   const capsByMember=new Map<string,string[]>()
   for(const row of capabilities||[]){
@@ -105,6 +109,7 @@ export async function GET() {
     return {
       userId,
       memberId:memberId||null,
+      username:usernameByUser.get(userId)||null,
       name:profile.preferred_name||profile.name||'Staff',
       fullName:profile.name||'Staff',
       email:profile.email||null,
