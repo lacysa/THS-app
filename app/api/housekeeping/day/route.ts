@@ -534,7 +534,11 @@ export async function PATCH(req: NextRequest) {
       dbPatch.room_condition=isRefresh?'Occupied':complete?'Ready for Room Check':cleanText(requested.roomCondition)==='Vacant (Dirty)'?'Vacant (Dirty)':'Cleaning'
       if(!complete){
         dbPatch.housekeeper_attested_by=null; dbPatch.housekeeper_attested_at=null
-        dbPatch.check_issue_open=false; dbPatch.check_issue_note=''
+        // An open inspection correction must survive a status or completion
+        // change. Only the correction workflow may close or resolve it.
+        if(!existing.check_issue_open){
+          dbPatch.check_issue_open=false; dbPatch.check_issue_note=null
+        }
         dbPatch.ha_signed_by=null; dbPatch.ha_signed_at=null
         dbPatch.foh_signed_by=null; dbPatch.foh_signed_at=null
       }
@@ -543,6 +547,57 @@ export async function PATCH(req: NextRequest) {
       }
     } else if (manager && Object.prototype.hasOwnProperty.call(requested,'roomCondition')) {
       dbPatch.room_condition=cleanText(requested.roomCondition)
+    }
+
+    // A manager's explicitly saved condition is an operational transition,
+    // not just cosmetic text. Otherwise one board reads room_condition while
+    // another recomputes "Cleaning" from outdated completion/check flags.
+    // This applies to both the Ops popup and the Housekeeping condition selector.
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'roomCondition')){
+      const chosen=cleanText(requested.roomCondition)
+      const activity=String(requested.reservationStatus??existing.reservation_status??'')
+      const service=String(requested.serviceType??existing.service_type??'')
+      const hold=String(requested.stripHold??existing.strip_hold??'')
+      const blocked=hold.toLowerCase().includes('hold')||activity.toLowerCase()==='blocked'
+      const occupied=isStayoverRoom({reservationStatus:activity})||
+        isCheckoutAwaitingOut({reservationStatus:activity,serviceType:service})
+      if(['Ready','Vacant (Clean)'].includes(chosen)){
+        if(blocked||occupied)return NextResponse.json({error:'Confirm the room is vacant and not blocked before marking it ready.'},{status:409})
+        if(existing.check_issue_open)return NextResponse.json({error:'Resolve the outstanding inspection correction before marking this room clean.'},{status:409})
+        if(!currentPerson?.id)return NextResponse.json({error:'A linked management staff profile is required to approve a clean room.'},{status:403})
+        // Record a manager final-verification override, never a fabricated
+        // housekeeping completion or independent inspection by another staffer.
+        dbPatch.complete=true
+        dbPatch.completed_at=existing.completed_at||now
+        dbPatch.ready_for_inspection=false
+        dbPatch.foh_signed_by=currentPerson.id
+        dbPatch.foh_signed_at=now
+        dbPatch.room_condition=chosen
+      }else if(chosen==='Ready for Room Check'){
+        if(blocked||occupied)return NextResponse.json({error:'This room must be vacant and unblocked before inspection.'},{status:409})
+        if(existing.check_issue_open&&!existing.ready_for_inspection)return NextResponse.json({error:'Document the correction before resubmitting this room for inspection.'},{status:409})
+        dbPatch.complete=true
+        dbPatch.completed_at=existing.completed_at||now
+        dbPatch.ready_for_inspection=true
+        dbPatch.inspected=false
+        dbPatch.inspected_at=null
+        dbPatch.inspection_signed_by=null;dbPatch.inspection_signed_at=null
+        dbPatch.foh_signed_by=null;dbPatch.foh_signed_at=null
+        dbPatch.ha_signed_by=null;dbPatch.ha_signed_at=null
+        dbPatch.room_condition=chosen
+      }else if(chosen==='Cleaning'||chosen==='Vacant (Dirty)'){
+        if(occupied)return NextResponse.json({error:'Mark the guest OUT before starting a full clean.'},{status:409})
+        dbPatch.complete=false
+        dbPatch.completed_at=null
+        dbPatch.ready_for_inspection=false
+        dbPatch.inspected=false
+        dbPatch.inspected_at=null
+        dbPatch.inspection_signed_by=null;dbPatch.inspection_signed_at=null
+        dbPatch.foh_signed_by=null;dbPatch.foh_signed_at=null
+        dbPatch.ha_signed_by=null;dbPatch.ha_signed_at=null
+        dbPatch.housekeeper_attested_by=null;dbPatch.housekeeper_attested_at=null
+        dbPatch.room_condition=chosen
+      }
     }
 
     if(manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')){
