@@ -35,6 +35,31 @@ export default function StaffAccessBoard(){
   const [cleanLimits,setCleanLimits]=useState<Record<string,number>>({})
   const [limitsError,setLimitsError]=useState('')
   const [savingLimit,setSavingLimit]=useState('')
+  const [alInviteStatus,setAlInviteStatus]=useState<'loading'|'pending'|'linked'|'unavailable'>('loading')
+  const [alInviteBusy,setAlInviteBusy]=useState(false)
+  const [alInviteMessage,setAlInviteMessage]=useState('')
+  async function loadAlInvite(){
+    try{
+      const response=await fetch('/api/admin/invite-al',{cache:'no-store'})
+      if(!response.ok)throw new Error('Could not check invitation')
+      const result=await response.json()
+      setAlInviteStatus(result.provisioned?'linked':result.needsInvitation?'pending':'unavailable')
+    }catch{setAlInviteStatus('unavailable')}
+  }
+  useEffect(()=>{void loadAlInvite()},[])
+  async function sendAlInvite(){
+    if(alInviteBusy||alInviteStatus!=='pending')return
+    setAlInviteBusy(true);setAlInviteMessage('')
+    try{
+      const response=await fetch('/api/admin/invite-al',{method:'POST'})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not send invitation')
+      setAlInviteStatus('linked')
+      setAlInviteMessage(result.invited?'Invitation sent. Al can open the email to set his password.':'Manager account already linked.')
+      void load()
+    }catch(error:any){setAlInviteMessage(error?.message||'Could not send invitation.')}
+    finally{setAlInviteBusy(false)}
+  }
 
   async function load(){
     setLoading(true)
@@ -123,6 +148,15 @@ export default function StaffAccessBoard(){
 
   return <div className="staff-access-page">
     {message&&<div className="staff-access-message">{message}</div>}
+    <section style={{padding:'13px 16px',border:'1px solid #d4e2e9',borderRadius:14,background:'linear-gradient(110deg,#eef7f8,#f5f0fd)',display:'flex',gap:12,alignItems:'center',justifyContent:'space-between',flexWrap:'wrap'}}>
+      <div style={{display:'grid',gap:4}}>
+        <strong style={{fontSize:13}}>Al Heminger · Manager account</strong>
+        <span style={{fontSize:12,color:'#526a79'}}>alheminger1975@gmail.com</span>
+        <span style={{fontSize:12,color:'#526a79'}}>{alInviteStatus==='linked'?'Account linked. Al must accept the invitation before signing in.':alInviteStatus==='pending'?'Staff permissions prepared. Email invitation not yet sent.':alInviteStatus==='loading'?'Checking account status…':'Could not verify account invitation.'}</span>
+        {alInviteMessage&&<span role="status" style={{fontSize:12,color:'#516184'}}>{alInviteMessage}</span>}
+      </div>
+      {alInviteStatus==='pending'&&<button type="button" onClick={()=>void sendAlInvite()} disabled={alInviteBusy} style={{padding:'9px 13px',borderRadius:10,border:'1px solid #b2c4df',background:'#e7e9fb',color:'#35487a',fontWeight:750,cursor:'pointer'}}>{alInviteBusy?'Sending invitation…':'Email manager invitation'}</button>}
+    </section>
 
     <section className="staff-access-hero">
       <div>
