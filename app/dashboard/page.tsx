@@ -37,6 +37,12 @@ function roomName(value:any, roomMap:Map<string,string>) {
 export default async function DashboardPage() {
   const access = await getStaffAccess()
   if (!access) redirect('/login')
+  // Task-only staff open their relevant workspace instead of the manager dashboard.
+  const caps=access.capabilities||[]
+  const manager=access.isAdmin || ['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>caps.includes(cap))
+  if (!manager && caps.includes('housekeeping') && !caps.includes('hospitality_assistant')) redirect('/housekeeping')
+  if (!manager && caps.includes('runner') && !caps.includes('hospitality_assistant')) redirect('/breakfast/overview')
+
 
   const supabase = await createSupabaseServerClient()
   const admin = createSupabaseAdmin()
