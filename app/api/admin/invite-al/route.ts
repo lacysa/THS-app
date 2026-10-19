@@ -58,7 +58,7 @@ export async function POST(req:NextRequest){
   return NextResponse.json({error:'Account email could not be verified; no privileges were assigned'},{status:409})
  const {error:profileError}=await admin.from('staff_profiles').upsert({
   user_id:userId,name:NAME,preferred_name:'Al',email:EMAIL,
-  job_title:'Owner / Manager',role:'manager',role_id:role.id,active:true,
+  job_title:'Manager',role:'manager',role_id:role.id,active:true,
   updated_at:new Date().toISOString()
  },{onConflict:'user_id'})
  if(profileError)return NextResponse.json({error:'Invitation exists but the Manager profile could not be linked. Contact the administrator.'},{status:500})
