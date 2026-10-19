@@ -22,6 +22,7 @@ export type StaffAccess = {
   moduleOverrides:Record<string,boolean>
   isPreviewMode?:boolean
   previewOwnerUserId?:string|null
+  requiresPasswordChange?:boolean
 }
 
 async function loadAccessForUser(userId:string):Promise<StaffAccess|null> {
@@ -110,6 +111,7 @@ export const getStaffAccess = cache(async function getStaffAccess():Promise<Staf
       return {
         ...previewAccess,
         isPreviewMode:true,
+        requiresPasswordChange:false,
         previewOwnerUserId:user.id
       }
     }
@@ -118,6 +120,7 @@ export const getStaffAccess = cache(async function getStaffAccess():Promise<Staf
   return {
     ...actualAccess,
     isPreviewMode:false,
+    requiresPasswordChange:Boolean(user.user_metadata?.ths_password_change_required),
     previewOwnerUserId:null
   }
 })
