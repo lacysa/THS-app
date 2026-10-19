@@ -74,11 +74,8 @@ function todayDetroit() {
   return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 }
 
-function initials(value:string) {
-  const parts=String(value||'').trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return ''
-  if (parts.length===1) return parts[0].slice(0,1).toUpperCase()
-  return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase()
+function authorName(value:string) {
+  return String(value||'').trim().replace(/\s+/g,' ') || 'Staff'
 }
 
 
@@ -215,7 +212,7 @@ export default function ShiftReportBoard() {
           pendingNotesRef.current.delete(section)
           localStorage.removeItem(localKey(myStaffId,section))
         }
-        setStaffNotes(old=>[...old.filter(x=>!(x.section===section&&x.staff_member_id===myStaffId)),{section,staff_member_id:myStaffId,content,name:currentStaffName,initials:initials(currentStaffName)}])
+        setStaffNotes(old=>[...old.filter(x=>!(x.section===section&&x.staff_member_id===myStaffId)),{section,staff_member_id:myStaffId,content,name:currentStaffName,initials:authorName(currentStaffName)}])
       }catch{errors=true}
     }
     setNoteStatus(errors?'Not saved to server — copy kept on this device':pendingNotesRef.current.size?'Unsaved changes':'Saved')
@@ -517,9 +514,9 @@ export default function ShiftReportBoard() {
     const prior=draft[key]||''
     const other=staffNotes.filter(e=>e.section===section&&e.staff_member_id!==myStaffId&&e.content.trim())
     return <div className="shift-note-entry"><strong className="shift-note-entry-label">{label}</strong>
-      {prior&&<div className="shift-note-prior"><strong>{report?.note_authors?.[authorKey||'staff']?.initials||'Previous'}:</strong><FormattedNote value={prior}/></div>}
-      {other.map(e=><div className="shift-note-prior" key={e.staff_member_id}><strong>{e.initials}:</strong><FormattedNote value={e.content}/></div>)}
-      {notesReady&&myStaffId&&<div><span className="shift-note-author">{initials(currentStaffName)} · Your note</span>
+      {prior&&<div className="shift-note-prior"><strong>{authorName(report?.note_authors?.[authorKey||'staff']?.name||'Previous')}:</strong><FormattedNote value={prior}/></div>}
+      {other.map(e=><div className="shift-note-prior" key={e.staff_member_id}><strong>{authorName(e.name)}:</strong><FormattedNote value={e.content}/></div>)}
+      {notesReady&&myStaffId&&<div><span className="shift-note-author">{authorName(currentStaffName)} · Your note</span>
         <NoteEditor label={label} value={myNotes[section]||''} onChange={value=>editPersonalNote(section,value)} disabled={locked||(section==='management'&&!canManage)} placeholder={placeholder}/>
       </div>}
     </div>
@@ -527,7 +524,7 @@ export default function ShiftReportBoard() {
 
   function authoredText(value:string,authorKey:keyof NonNullable<Report['note_authors']>) {
     const author=report?.note_authors?.[authorKey]
-    return <>{author && <strong className="shift-note-prefix">{author.initials}: </strong>}<FormattedNote value={value}/></>
+    return <>{author && <strong className="shift-note-prefix">{authorName(author.name)}: </strong>}<FormattedNote value={value}/></>
   }
 
   // Include the individually autosaved notes from every account in the printable handoff.
@@ -542,9 +539,9 @@ export default function ShiftReportBoard() {
       <div className="shift-print-note-list">
         {legacy.trim()&&<div className="shift-print-note"><div className="shift-print-note-body">{authoredText(legacy,authorKey)}</div></div>}
         {other.map(n=><div className="shift-print-note" key={`print-note-${section}-${n.staff_member_id}`}>
-          <strong>{n.initials||initials(n.name)}:</strong> <div className="shift-print-note-body"><FormattedNote value={n.content}/></div>
+          <strong>{authorName(n.name)}:</strong> <div className="shift-print-note-body"><FormattedNote value={n.content}/></div>
         </div>)}
-        {mine&&<div className="shift-print-note"><strong>{initials(currentStaffName)}:</strong> <div className="shift-print-note-body"><FormattedNote value={mine}/></div></div>}
+        {mine&&<div className="shift-print-note"><strong>{authorName(currentStaffName)}:</strong> <div className="shift-print-note-body"><FormattedNote value={mine}/></div></div>}
       </div>
     </section>
   }
@@ -677,7 +674,7 @@ export default function ShiftReportBoard() {
         <div className="shift-print-section-title"><h3>Room / guest notes</h3><span>Guest-facing context</span></div>
         <div className="shift-print-list">
           {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
-            <strong>{n.roomName}</strong><span><b>{initials(n.createdByName)}:</b> {n.note}</span>
+            <strong>{n.roomName}</strong><span><b>{authorName(n.createdByName)}:</b> {n.note}</span>
           </div>)}
         </div>
       </section>}
@@ -901,7 +898,7 @@ export default function ShiftReportBoard() {
         <h3>Room / Guest Notes</h3>
         {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <div className="shift-list">
           {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={n.id} className="shift-line">
-            <span><strong>{n.roomName}</strong><br/><span className="shift-muted"><b>{initials(n.createdByName)}:</b> {n.note}</span></span>
+            <span><strong>{n.roomName}</strong><br/><span className="shift-muted"><b>{authorName(n.createdByName)}:</b> {n.note}</span></span>
             <span className="shift-badge">{n.note_type}</span>
           </div>)}
         </div>}
