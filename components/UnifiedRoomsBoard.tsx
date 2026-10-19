@@ -770,6 +770,30 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       </tr>)}
       {!dailyOverview.length&&!loading&&<tr><td colSpan={5}>No rooms scheduled for this date.</td></tr>}
       </tbody></table></div>
+      <details className="rooms-staff-overview-mobile">
+        <summary>
+          <span>See all {dailyOverview.length} rooms</span>
+          <span>Room status & notes <ChevronDown size={16}/></span>
+        </summary>
+        <div className="rooms-staff-reference-cards">
+          {dailyOverview.map(row=><article key={row.roomId} className={row.isMine?'rooms-staff-reference-card is-mine':'rooms-staff-reference-card'}>
+            <div className="rooms-staff-reference-title">
+              <strong>{row.roomName}</strong>
+              <span>{derivedLiveCondition(row)||'Not recorded'}</span>
+            </div>
+            <div className="rooms-staff-reference-tags">
+              <span>{row.reservationStatus||'No activity'}</span>
+              {/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.serviceType||'').trim())&&<span>OUT</span>}
+              {/^OUT-([A-Z]{2,4})$/i.test(String(row.serviceType||'').trim())&&<span>Tips · {String(row.serviceType).trim().split('-')[1].toUpperCase()}</span>}
+              {row.isMine&&<span className="mine">Your room</span>}
+            </div>
+            <div className="rooms-staff-reference-assigned"><span>Housekeeper</span><strong>{row.assignedTo?.trim()||'Unassigned'}</strong></div>
+            {row.deepClean&&<p className="rooms-staff-reference-detail"><strong>Deep clean {row.deepClean.completed?'complete':'needed'}:</strong> {row.deepClean.assignedTo||'Unassigned'}{row.deepClean.instructions?' · '+row.deepClean.instructions:''}</p>}
+            {row.notes?.trim()&&<p className="rooms-staff-reference-note"><strong>Room notes:</strong> {row.notes.trim()}</p>}
+          </article>)}
+          {!dailyOverview.length&&!loading&&<div className="rooms-staff-reference-empty">No rooms scheduled for this date.</div>}
+        </div>
+      </details>
     </section>}
     {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
       <summary className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Occupied rooms without a refresh request · tap to expand</span></div><span>{inactiveStayovers.length} stayovers <ChevronDown size={15}/></span></summary>
