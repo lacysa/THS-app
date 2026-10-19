@@ -92,7 +92,7 @@ export async function GET() {
       const effectiveAccess=isModuleAllowedForAccess(staffAccess,module)
       return {
         module_key:module.module_key,
-        label:module.label||module.title,
+        label:({reservations:'Room Operations',ops:'Calendar & Activity',housekeeping:'Housekeeping',room_checks:'Room Inspections',daily_overview:'Daily Overview',housekeeping_assignments:'Housekeeping Assignments'} as Record<string,string>)[module.module_key] || module.label || module.title,
         department:module.department,
         enabled:module.enabled!==false,
         published:module.published!==false,
