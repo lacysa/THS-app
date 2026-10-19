@@ -1,6 +1,7 @@
 'use client'
 
 import { getStaffSession } from '@/lib/client/staff-session'
+import StaffShiftNote from '@/components/StaffShiftNote'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_RAIL_MEDIA } from '@/lib/layout-breakpoints'
 
 import Link from 'next/link'
@@ -994,6 +995,7 @@ export default function StaffShell({
         </header>
 
         <div className={`ops-content staff-page-content ${access?.isPreviewMode ? 'staff-preview-readonly' : ''}`}>
+          {access && !access.isPreviewMode && (access.capabilities||[]).some(cap=>['housekeeping','hospitality_assistant','runner'].includes(cap)) && <StaffShiftNote/>}
           {children}
         </div>
 
