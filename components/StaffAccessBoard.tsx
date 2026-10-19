@@ -115,7 +115,7 @@ export default function StaffAccessBoard(){
   async function copyTemporaryCredentials(){
     if(!visibleCredentials)return
     const login=visibleCredentials.username||visibleCredentials.email||''
-    const text=`THS Operations Hub\\nLogin: https://ths-breakfast-app.vercel.app/login\\nUsername: ${login}\\nTemporary password: ${visibleCredentials.password}\\nPlease change your password in Settings → Security after your first sign-in.`
+    const text=`THS Operations Hub\nLogin: https://ths-breakfast-app.vercel.app/login\nUsername: ${login}\nTemporary password: ${visibleCredentials.password}\nPlease change your password in Settings → Security after your first sign-in.`
     try{await navigator.clipboard.writeText(text);setMessage('Login details copied. Send them directly to the intended staff member.')}catch{setCredentialError('Copy was blocked by your browser. Select and copy the password from the box below.')}
   }
 
