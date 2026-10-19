@@ -185,3 +185,19 @@ html[data-theme="dark"] .staff-preview-nav-item:hover,html[data-theme="dark"] .s
  .staff-login-event{padding:11px 12px}
  .staff-login-event-time small{font-size:10px}
 }
+
+/* Owner-issued staff credentials */
+.staff-access-credentials{margin:15px 16px;padding:15px;border-radius:15px;border:1px solid color-mix(in srgb,var(--app-accent) 35%,var(--app-border));background:color-mix(in srgb,var(--app-accent) 5%,var(--app-surface));display:grid;gap:10px}
+.staff-access-credentials-intro>strong{font-size:14px;color:var(--app-text)}
+.staff-access-credentials-intro p{margin:5px 0 10px;font-size:12px;line-height:1.5;color:var(--app-muted)}
+.staff-access-login-id{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:4px 0;font-size:12px}
+.staff-access-login-id span{color:var(--app-muted)}
+.staff-access-login-id strong{font-weight:700;color:var(--app-text);overflow-wrap:anywhere;text-align:right}
+.staff-access-credential-button,.staff-access-issued-credentials button{justify-self:start;padding:10px 14px;border-radius:10px;background:var(--app-accent);border:1px solid var(--app-accent);color:#fff;font-weight:700;cursor:pointer}
+.staff-access-credential-button:disabled{opacity:.5;cursor:not-allowed}
+.staff-access-credential-error{color:#a84444!important;font-size:12px!important}
+.staff-access-issued-credentials{display:grid;gap:8px;padding:13px;border-radius:12px;border:1px solid #a6cbbf;background:color-mix(in srgb,#a9d7c4 24%,var(--app-surface))}
+.staff-access-issued-credentials>strong{font-size:13px}
+.staff-access-issued-credentials p,.staff-access-issued-credentials small{font-size:11px;color:var(--app-muted);line-height:1.5}
+.staff-access-issued-credentials input{font:600 14px ui-monospace,SFMono-Regular,monospace;width:100%;max-width:460px;padding:11px 10px;border:1px solid var(--app-border);border-radius:8px;background:var(--app-surface);color:var(--app-text);letter-spacing:.02em}
+@media(max-width:650px){.staff-access-credentials{margin:10px;padding:12px}.staff-access-login-id{display:grid;gap:3px}.staff-access-login-id strong{text-align:left}}
