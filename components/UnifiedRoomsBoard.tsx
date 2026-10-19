@@ -185,6 +185,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   const saveTimers=useRef<Record<string,ReturnType<typeof setTimeout>>>({})
   const pendingPatches=useRef<Record<string,Partial<RoomRow>>>({})
   const saveQueues=useRef<Record<string,Promise<boolean>>>({})
+  const editGeneration=useRef(0)
   const [isCompact,setIsCompact]=useState(false)
   const [isTablet,setIsTablet]=useState(false)
 
@@ -211,6 +212,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   },[])
 
   async function load(silent=false){
+    const startedBeforeEdit=editGeneration.current
     if(!silent){setLoading(true);setMessage('');setSaveState('idle');setSelfChecks({})}
     try{
       const [me,dayResponse]=await Promise.all([
@@ -223,6 +225,9 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       const day=await dayResponse.json().catch(()=>({}))
       if(!dayResponse.ok)throw new Error(day.error||'Could not load rooms.')
       const nextRows=(day.rows||[]) as RoomRow[]
+      // Discard a background GET that began before a local save. Otherwise
+      // it can repaint a fresh condition with stale room state and mislead staff.
+      if(silent&&startedBeforeEdit!==editGeneration.current)return
       setRows(nextRows);rowsRef.current=nextRows
       setDailyOverview(Array.isArray(day.dailyOverview)?day.dailyOverview:[])
       setViewMode(day.viewMode==='assigned'?'assigned':'manager')
@@ -266,6 +271,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   },[date])
 
   async function saveRoomPatch(roomId:string,update:Partial<RoomRow>){
+    editGeneration.current++
     setSaveState('saving')
     try{
       const response=await fetch('/api/housekeeping/day',{
@@ -300,6 +306,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   }
 
   function patch(roomId:string,update:Partial<RoomRow>,autosave=true){
+    editGeneration.current++
     setRows(current=>{
       const next=current.map(r=>r.roomId===roomId?{...r,...update}:r)
       rowsRef.current=next
@@ -392,6 +399,30 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     patch(row.roomId,update,false)
     const ok=await saveRoomPatch(row.roomId,update)
     if(!ok)patch(row.roomId,row,false)
+  }
+
+  async function setManagerCondition(row:RoomRow,value:string){
+    if(!isManager(access))return
+    const roomId=row.roomId
+    // Commit any earlier debounced notes/assignment edit first so it cannot
+    // arrive after the condition change and overwrite its workflow state.
+    const timer=saveTimers.current[roomId]
+    if(timer){clearTimeout(timer);delete saveTimers.current[roomId]}
+    const previous=saveQueues.current[roomId]
+    if(previous)await previous.catch(()=>false)
+    const pending=pendingPatches.current[roomId]
+    if(pending&&Object.keys(pending).length){
+      delete pendingPatches.current[roomId]
+      const saved=await saveRoomPatch(roomId,pending)
+      if(!saved){void load(true);return}
+    }
+    const update:Partial<RoomRow>={
+      roomCondition:value,
+      ...(value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})
+    }
+    patch(roomId,update,false)
+    const saved=await saveRoomPatch(roomId,update)
+    if(!saved)void load(true)
   }
 
   async function markRoomDirty(row:RoomRow){
@@ -841,7 +872,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
                           <small>{roomWorkflowLabel({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</small>
                         </button>
                       </td>
-                      <td><select aria-label="Room condition" className="rooms-table-status-select" value={isStayover(row)||isCheckoutAwaitingOut(row)?'Occupied':row.roomCondition||''} disabled={isStayover(row)||isCheckoutAwaitingOut(row)} onChange={e=>patch(row.roomId,{roomCondition:e.target.value,...(e.target.value==='Blocked'?{stripHold:'Hold'}:normalize(row.stripHold).includes('hold')?{stripHold:''}:{})})}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
+                      <td><select aria-label="Room condition" className="rooms-table-status-select" value={isStayover(row)||isCheckoutAwaitingOut(row)?'Occupied':row.roomCondition||''} disabled={!isManager(access)||isStayover(row)||isCheckoutAwaitingOut(row)} onChange={e=>void setManagerCondition(row,e.target.value)}>{['','Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked'].map(v=><option key={v} value={v}>{v||'Not set'}</option>)}</select><span className={`rooms-live-condition ${state}`}>{derivedLiveCondition({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})}</span></td>
                       <td>
                         <details className="rooms-table-packages">
                           <summary>{selectedPackages.length?selectedPackages.join(', '):'Select packages'}</summary>
