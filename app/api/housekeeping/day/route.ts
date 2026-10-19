@@ -133,6 +133,7 @@ export async function GET(req: NextRequest) {
     const assignedOnlyView =
       !access.isAdmin &&
       currentCaps.has('housekeeping') &&
+      !currentCaps.has('hospitality_assistant') &&
       !['manager','general_manager','operations_manager','owner'].some(cap => currentCaps.has(cap))
 
     const allStaffOptions = peopleData.people
