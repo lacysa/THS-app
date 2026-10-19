@@ -133,6 +133,7 @@ function managerInitials(access:Access|null){
   return raw.slice(0,2).toUpperCase()
 }
 function canUseAdvancedRoomsViews(access:Access|null){
+  if((access?.capabilities||[]).includes('hospitality_assistant'))return true
   // Focus/Table presentation is enabled for Sarah and David only.
   // This controls visibility of layouts, not editing or inspection permissions.
   return access?.userId==='316f638d-bd3a-4c6b-9ff3-47ff437a2390' ||
@@ -231,7 +232,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       setRows(nextRows);rowsRef.current=nextRows
       setDailyOverview(Array.isArray(day.dailyOverview)?day.dailyOverview:[])
       setViewMode(day.viewMode==='assigned'?'assigned':'manager')
-      if(!canUseAdvancedRoomsViews(nextAccess))setManagerDisplay('cards')
+      if(!canUseAdvancedRoomsViews(nextAccess) || ((nextAccess?.capabilities||[]).includes('hospitality_assistant') && !isManager(nextAccess) && managerDisplay==='focus'))setManagerDisplay('cards')
       setStaffOptions(day.staffOptions||[])
       setPackageOptions(day.packageOptions||[])
       setCanHaSignoff(Boolean(day.signoffAccess?.canHaSignoff))
@@ -698,13 +699,14 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
 
   function chooseManagerDisplay(next:'focus'|'cards'|'table'){
     if((next==='focus'||next==='table')&&!canUseAdvancedRoomsViews(access))return
+    if(next==='focus' && (access?.capabilities||[]).includes('hospitality_assistant') && !isManager(access))return
     if(isCompact&&!isTablet&&next==='table')return
     setManagerDisplay(next)
     try{window.localStorage.setItem('ths-rooms-manager-view',next)}catch{}
   }
 
   function openRoomCard(row:RoomRow){
-    chooseManagerDisplay(!canUseAdvancedRoomsViews(access)||isCompact?'cards':'focus')
+    chooseManagerDisplay(!canUseAdvancedRoomsViews(access)||isCompact||((access?.capabilities||[]).includes('hospitality_assistant')&&!isManager(access))?'cards':'focus')
     setSelectedRoomId(row.roomId)
     setExpanded(current=>({...current,[row.roomId]:true}))
     window.requestAnimationFrame(()=>{
@@ -787,7 +789,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     </details>}
 
     {canUseAdvancedRoomsViews(access)&&<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
-      <button type="button" className={managerDisplay==='focus'?'active':''} onClick={()=>chooseManagerDisplay('focus')}>Focus</button>
+      {(isManager(access) || !(access?.capabilities||[]).includes('hospitality_assistant')) && <button type="button" className={managerDisplay==='focus'?'active':''} onClick={()=>chooseManagerDisplay('focus')}>Focus</button>}
       <button type="button" className={managerDisplay==='cards'?'active':''} onClick={()=>chooseManagerDisplay('cards')}>Cards</button>
       {viewMode==='manager'&&(!isCompact||isTablet)&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
     </div>}
