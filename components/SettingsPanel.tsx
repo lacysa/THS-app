@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 type Access = {
   name:string; preferredName:string|null; email:string|null; phone:string|null; jobTitle:string|null;
-  theme:'light'|'blue'|'sage'|'violet'|'dark'; roleName:string|null; canManageModules:boolean
+  theme:'light'|'blue'|'sage'|'violet'|'dark'; roleName:string|null; canManageModules:boolean; requiresPasswordChange?:boolean
 }
 
 type Module = { module_key:string; title:string; label:string|null; enabled:boolean; published:boolean; status:string; active:boolean }
@@ -14,6 +14,7 @@ export default function SettingsPanel({initial}:{initial:Access}){
   const [modules,setModules] = useState<Module[]>([])
   const [message,setMessage] = useState('')
   const [password,setPassword] = useState('')
+  const [requiresPasswordChange,setRequiresPasswordChange] = useState(Boolean(initial.requiresPasswordChange))
 
   useEffect(()=>{
     fetch('/api/me').then(r=>r.json()).then(d=>setModules((d.modules||[]).filter((m:Module)=>m.active!==false)))
@@ -30,8 +31,9 @@ export default function SettingsPanel({initial}:{initial:Access}){
   }
 
   async function changePassword(){
+    if(requiresPasswordChange && password.length<12){setMessage('Choose a personal password with at least 12 characters.');return}
     const r = await fetch('/api/settings/password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password})})
-    const d = await r.json(); setMessage(r.ok?'Password updated.':d.error||'Could not update password.'); if(r.ok)setPassword('')
+    const d = await r.json(); setMessage(r.ok?'Password updated.':d.error||'Could not update password.'); if(r.ok){setPassword('');if(requiresPasswordChange){setRequiresPasswordChange(false);window.location.assign('/dashboard')}}
   }
 
   async function sendReset(){
@@ -46,6 +48,10 @@ export default function SettingsPanel({initial}:{initial:Access}){
 
   return <div className="settings-wrap">
     {message && <div className="settings-message">{message}</div>}
+    {requiresPasswordChange&&<section className="settings-card" style={{border:'2px solid #b2c8dc',background:'linear-gradient(105deg,#eaf2f9,#f3f0fb)'}}>
+      <h2 style={{color:'#304962'}}>Set your personal password</h2>
+      <p style={{color:'#4e6577'}}>You signed in using a temporary staff password. Before continuing, choose a private password with at least 12 characters using <strong>Security → Change password</strong> below. You do not need access to a hotel email inbox.</p>
+    </section>}
     <section className="settings-card">
       <h2>Profile</h2><p>Update your personal account information. Your role is managed separately.</p>
       <div className="settings-grid">
@@ -61,7 +67,7 @@ export default function SettingsPanel({initial}:{initial:Access}){
 
     <section className="settings-card">
       <h2>Security</h2>
-      <div className="settings-inline"><input type="password" placeholder="New password (8+ characters)" value={password} onChange={e=>setPassword(e.target.value)}/><button onClick={changePassword}>Change password</button></div>
+      <div className="settings-inline"><input type="password" placeholder={requiresPasswordChange?'Choose password (12+ characters)':'New password (8+ characters)'} value={password} onChange={e=>setPassword(e.target.value)}/><button onClick={changePassword}>Change password</button></div>
       <button className="settings-secondary" onClick={sendReset}>Send password reset email</button>
     </section>
 
