@@ -367,7 +367,7 @@ export default function StaffShell({
     setUnreadCount(0)
   }
 
-  const managementWorkspace=Boolean(access?.isAdmin || access?.capabilities?.some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap)))
+  const managementWorkspace=Boolean(access?.isAdmin || access?.capabilities?.some(cap=>['manager','general_manager','operations_manager','owner','hospitality_assistant'].includes(cap)))
   const hasReservations=modules.some(module=>module.module_key==='reservations'&&module.active!==false&&module.enabled!==false)
   // Keep the dedicated Rooms workspace visible to managers without moving the
   // existing Room Operations submenu or reparenting HSK Quality.
