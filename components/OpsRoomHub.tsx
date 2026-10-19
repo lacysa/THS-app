@@ -5,7 +5,7 @@ import OpsActivityLog from '@/components/OpsActivityLog'
 import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
-type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null}
+type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null;foh_signed_by?:string|null;ha_signed_by?:string|null}
 type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
 type Data={roomNoteHistory?:{id:string;note:string;type:string;at:string;author:string}[];checklistNotes?:{id:string;label:string;note:string;stage:string;at:string}[];correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
@@ -149,7 +149,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
   complete:daily.complete,
   readyForInspection:daily.ready_for_inspection,
   inspected:daily.inspected,
-  checkIssueOpen:daily.check_issue_open
+  checkIssueOpen:daily.check_issue_open,
+  fohSignedBy:daily.foh_signed_by,
+  haSignedBy:daily.ha_signed_by
  }):'Not recorded'
  const isStayover=String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'
  const currentHousekeeper=String(daily?.assigned_to||'').trim()
@@ -205,7 +207,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
   const patch:Record<string,unknown>={roomCondition:condition}
   if(condition==='Blocked')patch.stripHold='Hold'
   else if(blocked){patch.stripHold='';if(daily.reservation_status==='Blocked')patch.reservationStatus=data?.pmsActivity==='Blocked'?'Vacant':(data?.pmsActivity||'Vacant')}
-  if(condition==='Vacant (Dirty)'||condition==='Cleaning')patch.complete=false
+  // The shared API applies the full clean/inspection/manager approval
+  // transition. Do not separately send complete=false and erase an open
+  // correction when changing a room's condition.
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch},'Room condition updated'))setActiveEditor(null)
  }
  async function changeActivity(status:string){
@@ -422,7 +426,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
       </div>}
       {activeEditor&&daily&&<section className="ops-hub-quick-editor" aria-label="Room card editor">
        <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',tub_assignee:'Assign tub-only cleaning',inspection:'Room inspection',service:'Choose service',out:'OUT status',tip_envelope:'Tip envelope collection',packages:'Room packages',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
-       {activeEditor==='condition'&&canManage&&<div className="ops-hub-choices">{conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}</div>}
+       {activeEditor==='condition'&&canManage&&<><div className="ops-hub-choices">{conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}</div><small className="ops-hub-muted">Selecting Ready or Vacant (Clean) records your management approval. Ready for Room Check sends the room for inspection. Dirty and Cleaning reopen cleaning without deleting correction notes.</small></>}
        {activeEditor==='activity'&&canManage&&<><div className="ops-hub-choices">{activities.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.reservation_status===value} className={daily.reservation_status===value?'is-current':''} onClick={()=>void changeActivity(value)}><span>{value}</span>{daily.reservation_status===value&&<Check size={16}/>}</button>)}</div><small>Operational status only; the PMS booking is unchanged.</small></>}
        {activeEditor==='tub_assignee'&&canManage&&data.tubCleanDue&&<div className="ops-hub-inline-form">
         <p className="ops-hub-muted">Choose the person responsible for the tub only. This does not change the assigned room cleaner, completion history, inspection, or full-clean counts.</p>
