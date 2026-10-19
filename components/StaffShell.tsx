@@ -171,19 +171,10 @@ const operationsModules = new Set([
   'staff'
 ])
 
+// Avatars use a recognizable three-letter name cue, never an ambiguous two-letter pair.
 function initials(name: string) {
-  const pieces = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-
-  if (!pieces.length) return 'TH'
-
-  if (pieces.length === 1) {
-    return pieces[0].slice(0, 2).toUpperCase()
-  }
-
-  return `${pieces[0][0]}${pieces[pieces.length - 1][0]}`.toUpperCase()
+  const first = String(name || '').trim().split(/\s+/)[0] || 'Staff'
+  return first.slice(0,3).toUpperCase()
 }
 
 function notificationTime(value: string) {
