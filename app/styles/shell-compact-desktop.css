@@ -1,0 +1,42 @@
+/* A narrower desktop browser is still a desktop.
+   Restore the THS sidebar without changing touch-based iPad and phone behavior. */
+@media (min-width:940px) and (max-width:1199px) and (pointer:fine) and (hover:hover) {
+ :root{--ths-sidebar-width:210px;--ths-header-height:70px}
+ .staff-ops-app{display:block!important;width:100%!important;min-width:0!important}
+ .staff-ops-sidebar,.staff-ops-sidebar.collapsed{
+   display:flex!important;position:fixed!important;inset:0 auto 0 0!important;
+   width:var(--ths-sidebar-width)!important;height:100dvh!important;
+   min-height:0!important;padding:18px 10px 14px!important;
+   overflow-x:hidden!important;overflow-y:auto!important;
+   transform:none!important;box-shadow:none!important;z-index:60!important;
+   transition:width .18s ease,padding .18s ease!important
+ }
+ .staff-ops-main,.sidebar-collapsed .staff-ops-main{
+   display:block!important;width:calc(100% - var(--ths-sidebar-width))!important;
+   margin-left:var(--ths-sidebar-width)!important;
+   padding:0!important;min-width:0!important;
+   transition:width .18s ease,margin-left .18s ease!important
+ }
+ .staff-ops-sidebar.collapsed{width:62px!important;padding-left:6px!important;padding-right:6px!important}
+ .sidebar-collapsed .staff-ops-main{width:calc(100% - 62px)!important;margin-left:62px!important}
+ .sidebar-collapse-btn{display:grid!important}
+ .mobile-nav-toggle,.mobile-sidebar-backdrop{display:none!important}
+ .staff-ops-topbar{position:sticky!important;top:0!important;min-height:70px!important}
+ .staff-page-content{width:100%!important;max-width:none!important;padding:18px 20px 40px!important}
+ .staff-ops-sidebar.collapsed .ops-logo-copy,
+ .staff-ops-sidebar.collapsed .ops-nav-label,
+ .staff-ops-sidebar.collapsed .sidebar-link-label,
+ .staff-ops-sidebar.collapsed .preview-badge,
+ .staff-ops-sidebar.collapsed .ops-sidebar-profile-copy,
+ .staff-ops-sidebar.collapsed .sidebar-footer-actions span{display:none!important}
+ .staff-ops-sidebar.collapsed .sidebar-brand{padding-top:34px!important;padding-right:0!important}
+ .staff-ops-sidebar.collapsed .sidebar-collapse-btn{top:0!important;right:8px!important}
+ .staff-ops-sidebar.collapsed .ops-logo{justify-content:center!important;padding:2px 0 10px!important}
+ .staff-ops-sidebar.collapsed .staff-ops-nav a,
+ .staff-ops-sidebar.collapsed .sidebar-footer-actions button,
+ .staff-ops-sidebar.collapsed .ops-sidebar-profile{justify-content:center!important;padding-left:0!important;padding-right:0!important}
+ .staff-ops-sidebar.collapsed .sidebar-nested-links{padding:0!important;margin:0!important;border:0!important}
+ .staff-ops-sidebar.collapsed .staff-ops-nav a.sidebar-nested-link{padding-left:0!important;padding-right:0!important}
+ .staff-ops-sidebar.collapsed .sidebar-link-icon{width:22px!important;flex-basis:22px!important}
+ .staff-ops-sidebar.collapsed .ops-logo-mark{width:34px!important;height:34px!important;flex-basis:34px!important}
+}
