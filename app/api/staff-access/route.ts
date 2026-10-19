@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess, isModuleAllowedForAccess, type StaffAccess } from '@/lib/access'
+import { staffModuleLabel } from '@/lib/module-labels'
 
 function ownerOnly(access:StaffAccess|null) {
   return Boolean(access && access.roleName === 'Owner')
@@ -96,7 +97,7 @@ export async function GET() {
       const effectiveAccess=isModuleAllowedForAccess(staffAccess,module)
       return {
         module_key:module.module_key,
-        label:({reservations:'Room Operations',ops:'Calendar & Activity',housekeeping:'Housekeeping',room_checks:'Room Inspections',daily_overview:'Daily Overview',housekeeping_assignments:'Housekeeping Assignments'} as Record<string,string>)[module.module_key] || module.label || module.title,
+        label:staffModuleLabel(module),
         department:module.department,
         enabled:module.enabled!==false,
         published:module.published!==false,
