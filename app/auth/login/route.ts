@@ -17,6 +17,10 @@ function loginRedirect(req:NextRequest, code?:string) {
   return NextResponse.redirect(url, 303)
 }
 
+function signedInDestination(user:any) {
+  return user?.user_metadata?.ths_password_change_required ? '/settings' : '/dashboard'
+}
+
 function hasAdminKey() {
   return Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
 }
@@ -86,14 +90,14 @@ export async function POST(req: NextRequest) {
   // Preserve canonical Supabase email/password login exactly as before.
   if (identifier.includes('@')) {
     const direct = await supabase.auth.signInWithPassword({ email:identifier, password })
-    if (!direct.error) return NextResponse.redirect(new URL('/dashboard', req.url), 303)
+    if (!direct.error) return NextResponse.redirect(new URL(signedInDestination(direct.data.user), req.url), 303)
 
     // staff_profiles.email may be a contact/login alias that differs from auth.users.email.
     try {
       const authEmail = await resolveAuthEmailFromStaffProfile(identifier)
       if (authEmail && authEmail.toLowerCase() !== identifier.toLowerCase()) {
         const alias = await supabase.auth.signInWithPassword({ email:authEmail, password })
-        if (!alias.error) return NextResponse.redirect(new URL('/dashboard', req.url), 303)
+        if (!alias.error) return NextResponse.redirect(new URL(signedInDestination(alias.data.user), req.url), 303)
       }
     } catch {
       // Direct email login remains usable even if the server admin key is missing.
@@ -113,7 +117,7 @@ export async function POST(req: NextRequest) {
     const alias = await supabase.auth.signInWithPassword({ email:authEmail, password })
     if (alias.error) return loginRedirect(req, 'invalid_credentials')
 
-    return NextResponse.redirect(new URL('/dashboard', req.url), 303)
+    return NextResponse.redirect(new URL(signedInDestination(alias.data.user), req.url), 303)
   } catch {
     return loginRedirect(req, 'phone_config')
   }
