@@ -62,6 +62,7 @@ type Access = {
   isAdmin: boolean
   isPreviewMode?: boolean
   previewOwnerUserId?: string | null
+  requiresPasswordChange?: boolean
 }
 
 type NotificationRow = {
@@ -264,6 +265,10 @@ export default function StaffShell({
   useEffect(() => {
     setMobileNavOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    if(access?.requiresPasswordChange && pathname !== '/settings') router.replace('/settings')
+  }, [access?.requiresPasswordChange, pathname, router])
 
   async function loadNotifications(showLoading = false) {
     if (showLoading) {
