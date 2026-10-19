@@ -16,6 +16,7 @@ type ModuleAccess={
 type CleanLimit={id:string; fullRoomCleanLimit:number}
 type StaffRow={
   userId:string
+  username:string|null
   memberId:string|null
   name:string
   fullName:string
@@ -39,6 +40,9 @@ export default function StaffAccessBoard(){
   const [alInviteBusy,setAlInviteBusy]=useState(false)
   const [alSmtpReady,setAlSmtpReady]=useState(false)
   const [alInviteMessage,setAlInviteMessage]=useState('')
+  const [credentialBusy,setCredentialBusy]=useState(false)
+  const [credentialError,setCredentialError]=useState('')
+  const [temporaryCredentials,setTemporaryCredentials]=useState<{userId:string;password:string;email:string|null;username:string;name:string}|null>(null)
   async function loadAlInvite(){
     try{
       const response=await fetch('/api/admin/invite-al',{cache:'no-store'})
@@ -88,6 +92,33 @@ export default function StaffAccessBoard(){
   },[staff,search])
 
   const selected=staff.find(s=>s.userId===selectedId)||filtered[0]||null
+  const visibleCredentials=temporaryCredentials?.userId===selected?.userId?temporaryCredentials:null
+
+  async function createTemporaryPassword(){
+    if(credentialBusy || !selected || selected.isOwner || !selected.memberId)return
+    const confirmed=window.confirm(`Generate a new temporary password for ${selected.name}? Any existing password will stop working immediately.`)
+    if(!confirmed)return
+    setCredentialBusy(true);setCredentialError('');setTemporaryCredentials(null)
+    try{
+      const response=await fetch('/api/admin/staff-credentials',{
+        method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({userId:selected.userId})
+      })
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok || !result.password)throw new Error(result.error||'Unable to create a temporary password')
+      setTemporaryCredentials({userId:selected.userId,password:String(result.password),email:result.accountEmail||selected.email,username:selected.username||'',name:selected.name})
+      setMessage(`Temporary password created for ${selected.name}. Copy it now; it cannot be shown again.`)
+    }catch(error:any){setCredentialError(error?.message||'Could not create a temporary password.')}
+    finally{setCredentialBusy(false)}
+  }
+
+  async function copyTemporaryCredentials(){
+    if(!visibleCredentials)return
+    const login=visibleCredentials.username||visibleCredentials.email||''
+    const text=`THS Operations Hub\\nLogin: https://ths-breakfast-app.vercel.app/login\\nUsername: ${login}\\nTemporary password: ${visibleCredentials.password}\\nPlease change your password in Settings → Security after your first sign-in.`
+    try{await navigator.clipboard.writeText(text);setMessage('Login details copied. Send them directly to the intended staff member.')}catch{setCredentialError('Copy was blocked by your browser. Select and copy the password from the box below.')}
+  }
+
 
   async function setOverride(module:ModuleAccess,allowed:boolean|null){
     if(!selected || selected.isOwner) return
@@ -169,7 +200,7 @@ export default function StaffAccessBoard(){
       <UsersRound size={30}/>
     </section>
 
-    <div className="staff-access-mobile-picker"><label>Choose employee<select value={selected?.userId||''} onChange={e=>setSelectedId(e.target.value)}>{filtered.map(person=><option key={person.userId} value={person.userId}>{person.name} · {person.jobTitle||person.roleName||'Staff'}</option>)}</select></label></div>
+    <div className="staff-access-mobile-picker"><label>Choose employee<select value={selected?.userId||''} onChange={e=>{setSelectedId(e.target.value);setTemporaryCredentials(null);setCredentialError('')}}>{filtered.map(person=><option key={person.userId} value={person.userId}>{person.name} · {person.jobTitle||person.roleName||'Staff'}</option>)}</select></label></div>
     <div className="staff-access-layout">
       <aside className="staff-access-list">
         <div className="staff-access-search">
@@ -180,7 +211,7 @@ export default function StaffAccessBoard(){
           {filtered.map(person=><button
             key={person.userId}
             className={selected?.userId===person.userId?'selected':''}
-            onClick={()=>setSelectedId(person.userId)}
+            onClick={()=>{setSelectedId(person.userId);setTemporaryCredentials(null);setCredentialError('')}}
           >
             <span className="staff-access-avatar">{person.name.slice(0,2).toUpperCase()}</span>
             <span>
@@ -225,6 +256,26 @@ export default function StaffAccessBoard(){
         </div>}
 
         {selected.isOwner&&<div className="staff-access-owner-note">Owner access is always available and cannot be restricted here.</div>}
+
+        {!selected.isOwner&&<div className="staff-access-credentials">
+          <div className="staff-access-credentials-intro">
+            <strong>Staff sign-in · Temporary password</strong>
+            <p>Generate credentials for this staff member without requiring an email inbox. This resets any existing password, but does not change their role or permissions.</p>
+            <div className="staff-access-login-id"><span>Username</span><strong>{selected.username||'Not configured'}</strong></div>
+            {selected.email&&<div className="staff-access-login-id"><span>Login email</span><strong>{selected.email}</strong></div>}
+          </div>
+          <button type="button" className="staff-access-credential-button" onClick={()=>void createTemporaryPassword()} disabled={credentialBusy||!selected.memberId||!selected.username}>
+            {credentialBusy?'Setting password…':'Generate temporary password'}
+          </button>
+          {credentialError&&<p className="staff-access-credential-error" role="alert">{credentialError}</p>}
+          {visibleCredentials&&<div className="staff-access-issued-credentials" role="status">
+            <strong>Password set successfully</strong>
+            <p>Copy this now. It is displayed only once and will disappear if you leave or refresh this page.</p>
+            <input type="text" aria-label="New temporary password" readOnly value={visibleCredentials.password} onFocus={e=>e.currentTarget.select()}/>
+            <button type="button" onClick={()=>void copyTemporaryCredentials()}>Copy login details</button>
+            <small>Give these directly to {visibleCredentials.name}. They should change the password under Settings → Security after signing in.</small>
+          </div>}
+        </div>}
 
         <div className="staff-access-modules">
           {selected.modules
