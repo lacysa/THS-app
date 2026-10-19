@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from 'next/server'
 import {getStaffAccess} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
+import {rackspaceConfigured,sendHotelInvite} from '@/lib/staff-invitation'
 
 export const dynamic='force-dynamic'
 export const runtime='nodejs'
@@ -27,7 +28,7 @@ export async function GET(){
  if('error' in gate)return gate.error
  const {data:staff,error}=await gate.admin.from('staff_members').select('id,auth_user_id,active').eq('username',USERNAME).maybeSingle()
  if(error)return NextResponse.json({error:'Unable to check Al’s account'},{status:500})
- return NextResponse.json({name:NAME,email:EMAIL,role:'Manager',provisioned:Boolean(staff?.auth_user_id),staffReady:Boolean(staff?.active),needsInvitation:Boolean(staff?.active&&!staff?.auth_user_id)},{headers:{'cache-control':'private, no-store'}})
+ return NextResponse.json({name:NAME,email:EMAIL,role:'Manager',provisioned:Boolean(staff?.auth_user_id),staffReady:Boolean(staff?.active),needsInvitation:Boolean(staff?.active),smtpReady:rackspaceConfigured()},{headers:{'cache-control':'private, no-store'}})
 }
 
 export async function POST(req:NextRequest){
@@ -40,17 +41,10 @@ export async function POST(req:NextRequest){
   return NextResponse.json({error:'Al’s prepared staff record could not be verified'},{status:409})
  const {data:role,error:roleError}=await admin.from('staff_roles').select('id').eq('name','Manager').eq('active',true).maybeSingle()
  if(roleError||!role)return NextResponse.json({error:'Manager role unavailable'},{status:500})
+ if(!rackspaceConfigured())return NextResponse.json({error:'Rackspace SMTP password has not been configured. Add THS_SMTP_PASSWORD securely in Vercel before inviting Al.'},{status:409})
  let userId=String(staff.auth_user_id||'')
- let invited=false
  if(!userId){
-  const {data:invitation,error:inviteError}=await admin.auth.admin.inviteUserByEmail(EMAIL,{
-   redirectTo:new URL('/auth/accept-invite',req.nextUrl.origin).toString(),
-   data:{name:NAME,username:USERNAME,provisioned_from:'ths_owner_invite'}
-  })
-  if(inviteError||!invitation.user)
-   return NextResponse.json({error:inviteError?.message||'Supabase could not create invitation'},{status:400})
-  userId=invitation.user.id
-  invited=true
+  return NextResponse.json({error:'Al has no linked Auth account. Contact the app administrator before sending a secure invite.'},{status:409})
  }
  // Verify email of any previously linked user before assigning access.
  const {data:userResult,error:userError}=await admin.auth.admin.getUserById(userId)
@@ -65,5 +59,8 @@ export async function POST(req:NextRequest){
  const {error:linkError}=await admin.from('staff_members').update({auth_user_id:userId})
    .eq('id',staff.id).is('auth_user_id',null)
  if(linkError)return NextResponse.json({error:'Invitation exists but the staff record could not be linked.'},{status:500})
- return NextResponse.json({ok:true,email:EMAIL,role:'Manager',invited,message:invited?'Invitation sent. Al must accept and set his password.':'Manager account already linked.'})
+ try{
+  const delivery=await sendHotelInvite({email:EMAIL,name:NAME,username:USERNAME,origin:req.nextUrl.origin})
+  return NextResponse.json({ok:true,email:EMAIL,role:'Manager',invited:true,from:delivery.from,message:'Hotel-branded account setup email sent. Al can open it to set his password.'})
+ }catch(error:any){return NextResponse.json({error:String(error?.message||'Could not send invitation')},{status:502})}
 }
