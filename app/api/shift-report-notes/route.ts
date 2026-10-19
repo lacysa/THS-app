@@ -4,10 +4,6 @@ import { canUseModule } from '@/lib/access'
 
 export const dynamic = 'force-dynamic'
 const sections = ['guest','staff','supplies','tomorrow','general','maintenance','management']
-function initials(name:string) {
-  const parts=String(name||'').trim().split(/\s+/).filter(Boolean)
-  return parts.length>1 ? (parts[0][0]+parts[parts.length-1][0]).toUpperCase() : (parts[0]||'?').slice(0,2).toUpperCase()
-}
 async function context() {
   const gate=await canUseModule('shift_reports')
   if (!gate.access || !gate.allowed) return null
@@ -30,7 +26,7 @@ export async function GET(req:NextRequest) {
   const ids=[...new Set(rows.map((x:any)=>x.staff_member_id))]
   const {data:staff}=ids.length ? await ctx.admin.from('staff_members').select('id,name').in('id',ids) : {data:[]}
   const names=new Map((staff||[]).map((x:any)=>[x.id,x.name]))
-  return NextResponse.json({entries:rows.map((x:any)=>({...x,name:names.get(x.staff_member_id)||'Staff',initials:initials(names.get(x.staff_member_id)||'Staff')})),currentStaffId:ctx.staff.id,currentStaffName:ctx.staff.name,canManage:ctx.manager})
+  return NextResponse.json({entries:rows.map((x:any)=>({...x,name:names.get(x.staff_member_id)||'Staff',initials:names.get(x.staff_member_id)||'Staff'})),currentStaffId:ctx.staff.id,currentStaffName:ctx.staff.name,canManage:ctx.manager})
 }
 export async function POST(req:NextRequest) {
   const ctx=await context()
