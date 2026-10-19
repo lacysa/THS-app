@@ -37,13 +37,15 @@ export default function StaffAccessBoard(){
   const [savingLimit,setSavingLimit]=useState('')
   const [alInviteStatus,setAlInviteStatus]=useState<'loading'|'pending'|'linked'|'unavailable'>('loading')
   const [alInviteBusy,setAlInviteBusy]=useState(false)
+  const [alSmtpReady,setAlSmtpReady]=useState(false)
   const [alInviteMessage,setAlInviteMessage]=useState('')
   async function loadAlInvite(){
     try{
       const response=await fetch('/api/admin/invite-al',{cache:'no-store'})
       if(!response.ok)throw new Error('Could not check invitation')
       const result=await response.json()
-      setAlInviteStatus(result.provisioned?'linked':result.needsInvitation?'pending':'unavailable')
+      setAlInviteStatus(result.needsInvitation?'pending':'unavailable')
+      setAlSmtpReady(Boolean(result.smtpReady))
     }catch{setAlInviteStatus('unavailable')}
   }
   useEffect(()=>{void loadAlInvite()},[])
@@ -55,7 +57,7 @@ export default function StaffAccessBoard(){
       const result=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(result.error||'Could not send invitation')
       setAlInviteStatus('linked')
-      setAlInviteMessage(result.invited?'Invitation sent. Al can open the email to set his password.':'Manager account already linked.')
+      setAlInviteMessage(result.invited?'Hotel-branded invitation sent from '+result.from+'.':'Manager account already linked.')
       void load()
     }catch(error:any){setAlInviteMessage(error?.message||'Could not send invitation.')}
     finally{setAlInviteBusy(false)}
@@ -152,10 +154,10 @@ export default function StaffAccessBoard(){
       <div style={{display:'grid',gap:4}}>
         <strong style={{fontSize:13}}>Al Heminger · Manager account</strong>
         <span style={{fontSize:12,color:'#526a79'}}>alheminger1975@gmail.com</span>
-        <span style={{fontSize:12,color:'#526a79'}}>{alInviteStatus==='linked'?'Account linked. Al must accept the invitation before signing in.':alInviteStatus==='pending'?'Staff permissions prepared. Email invitation not yet sent.':alInviteStatus==='loading'?'Checking account status…':'Could not verify account invitation.'}</span>
+        <span style={{fontSize:12,color:'#526a79'}}>{alInviteStatus==='linked'?'Hotel-branded invitation sent. Al can open the email to set his password.':alInviteStatus==='pending'?(alSmtpReady?'Account ready. Send a new hotel-branded invitation.':'Manager account linked. Rackspace SMTP password still needs to be set in Vercel before sending.'):alInviteStatus==='loading'?'Checking account status…':'Could not verify account invitation.'}</span>
         {alInviteMessage&&<span role="status" style={{fontSize:12,color:'#516184'}}>{alInviteMessage}</span>}
       </div>
-      {alInviteStatus==='pending'&&<button type="button" onClick={()=>void sendAlInvite()} disabled={alInviteBusy} style={{padding:'9px 13px',borderRadius:10,border:'1px solid #b2c4df',background:'#e7e9fb',color:'#35487a',fontWeight:750,cursor:'pointer'}}>{alInviteBusy?'Sending invitation…':'Email manager invitation'}</button>}
+      {alInviteStatus==='pending'&&<button type="button" onClick={()=>void sendAlInvite()} disabled={alInviteBusy||!alSmtpReady} style={{padding:'9px 13px',borderRadius:10,border:'1px solid #b2c4df',background:'#e7e9fb',color:'#35487a',fontWeight:750,cursor:'pointer'}}>{alInviteBusy?'Sending invitation…':'Send branded invitation'}</button>}
     </section>
 
     <section className="staff-access-hero">
