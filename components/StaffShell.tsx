@@ -3,6 +3,7 @@
 import { getStaffSession } from '@/lib/client/staff-session'
 import { staffModuleLabel } from '@/lib/module-labels'
 import { staffInitials } from '@/lib/staff-initials'
+import {notificationHref,type RoomNotification} from '@/lib/notification-links'
 import StaffShiftNote from '@/components/StaffShiftNote'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_RAIL_MEDIA } from '@/lib/layout-breakpoints'
 
@@ -21,6 +22,7 @@ import {
   Settings,
   LogOut,
   Bell,
+  Archive,
   Search,
   RefreshCw,
   CalendarDays,
@@ -68,16 +70,7 @@ type Access = {
   requiresPasswordChange?: boolean
 }
 
-type NotificationRow = {
-  id: string
-  notification_type: string
-  title: string
-  message: string
-  room_id: string | null
-  service_date: string | null
-  read_at: string | null
-  created_at: string
-}
+type NotificationRow = RoomNotification
 
 const iconMap: Record<string, any> = {
   dashboard: LayoutGrid,
@@ -266,7 +259,7 @@ export default function StaffShell({
     }
 
     try {
-      const r = await fetch('/api/notifications', {
+      const r = await fetch('/api/notifications?view=unread&limit=8', {
         cache: 'no-store'
       })
 
@@ -302,37 +295,29 @@ export default function StaffShell({
     }
   }, [])
 
-  async function markNotificationRead(id: string) {
-    const target = notifications.find(n => n.id === id)
-
-    if (!target || target.read_at) {
-      return
-    }
-
-    const r = await fetch('/api/notifications', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ id })
+  async function updateNotification(id:string,action:'read'|'archive'){
+    const target=notifications.find(n=>n.id===id)
+    if(!target)return false
+    const r=await fetch('/api/notifications',{
+      method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id,action})
     })
+    if(!r.ok)return false
+    setNotifications(current=>current.filter(item=>item.id!==id))
+    if(!target.read_at)setUnreadCount(current=>Math.max(0,current-1))
+    return true
+  }
 
-    if (!r.ok) return
-
-    setNotifications(current =>
-      current.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              read_at: new Date().toISOString()
-            }
-          : item
-      )
-    )
-
-    setUnreadCount(current =>
-      Math.max(0, current - 1)
-    )
+  async function openNotification(n:NotificationRow){
+    if(!n.read_at){
+      const ok=await updateNotification(n.id,'read')
+      if(!ok)return
+    }
+    setNotificationsOpen(false)
+    const canOpenRooms=modules.some(module=>module.module_key==='housekeeping'&&module.active!==false&&module.enabled!==false)
+    // A room correction opens the dated room card; other roles see its
+    // recipient-only detail in the notification center.
+    window.location.assign(notificationHref(n,canOpenRooms))
   }
 
   async function markAllNotificationsRead() {
@@ -350,14 +335,7 @@ export default function StaffShell({
 
     if (!r.ok) return
 
-    const now = new Date().toISOString()
-
-    setNotifications(current =>
-      current.map(item => ({
-        ...item,
-        read_at: item.read_at || now
-      }))
-    )
+    setNotifications([])
 
     setUnreadCount(0)
   }
@@ -901,16 +879,10 @@ export default function StaffShell({
                       </span>
                     </div>
 
-                    {unreadCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void markAllNotificationsRead()
-                        }
-                      >
-                        Mark all read
-                      </button>
-                    )}
+                    <div className="notification-panel-head-actions">
+                      {unreadCount > 0 && <button type="button" onClick={()=>void markAllNotificationsRead()}>Mark all read</button>}
+                      <Link href="/notifications" onClick={()=>setNotificationsOpen(false)}>View all</Link>
+                    </div>
                   </div>
 
                   <div className="notification-list">
@@ -930,42 +902,21 @@ export default function StaffShell({
                       )}
 
                     {notifications.map(notification => (
-                      <button
-                        key={notification.id}
-                        type="button"
-                        className={
-                          notification.read_at
-                            ? 'notification-item'
-                            : 'notification-item unread'
-                        }
-                        onClick={() =>
-                          void markNotificationRead(
-                            notification.id
-                          )
-                        }
-                      >
-                        <span className="notification-item-dot" />
-
-                        <span className="notification-item-copy">
-                          <strong>
-                            {notification.title}
-                          </strong>
-
-                          <span>
-                            {notification.message}
+                      <div key={notification.id} className="notification-item unread">
+                        <span className="notification-item-dot"/>
+                        <button type="button" className="notification-item-open" onClick={()=>void openNotification(notification)} title="Open this notification">
+                          <span className="notification-item-copy">
+                            <strong>{notification.title}</strong>
+                            <span>{notification.message}</span>
+                            <small>{notificationTime(notification.created_at)} · Open details</small>
                           </span>
-
-                          <small>
-                            {notificationTime(
-                              notification.created_at
-                            )}
-                          </small>
-                        </span>
-                      </button>
+                        </button>
+                        <button type="button" className="notification-item-dismiss" aria-label={'Archive '+notification.title} title="Archive notification" onClick={()=>void updateNotification(notification.id,'archive')}><Archive size={14}/></button>
+                      </div>
                     ))}
 
                   </div>
-
+                  <div className="notification-panel-footer"><Link href="/notifications" onClick={()=>setNotificationsOpen(false)}>All notifications & history →</Link></div>
                 </div>
               )}
 
