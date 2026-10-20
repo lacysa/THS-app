@@ -3,7 +3,7 @@ import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { loadTubTaskStates } from '@/lib/ops-tub'
 import { conditionForDay,previousVacantConditions } from '@/lib/room-condition-carry'
-import { isCheckoutAwaitingOut, isStayoverRoom } from '@/lib/room-state'
+import { isCheckoutAwaitingOut, isStayoverRoom, roomServiceTask } from '@/lib/room-state'
 
 export const dynamic = 'force-dynamic'
 
@@ -443,16 +443,22 @@ export async function PATCH(req: NextRequest) {
       if (proposedName) {
         const person = peopleData.people.find((p:any)=>String(p.name||'').trim().toLowerCase()===proposedName.toLowerCase()) as any
         if (!person) return NextResponse.json({ error: 'Choose an active staff member.' }, { status: 400 })
-        const status = String(existing.reservation_status||'').trim().toLowerCase()
-        if (['checkout','out/in','dirty'].includes(status)) {
-          const { data: dayRows, error: countError } = await admin
-            .from('housekeeping_daily_rooms')
-            .select('room_id,reservation_status,assigned_to')
-            .eq('service_date',serviceDate)
-          if (countError) throw new Error(countError.message)
+        const { data: dayRows, error: countError } = await admin
+          .from('housekeeping_daily_rooms')
+          .select('room_id,reservation_status,service_type,room_condition,strip_hold,assigned_to,complete,inspected,updated_by')
+          .eq('service_date',serviceDate)
+        if (countError) throw new Error(countError.message)
+        const carriedConditions=await previousVacantConditions(admin,serviceDate,dayRows||[])
+        const taskFor=(row:any)=>roomServiceTask({
+          reservationStatus:row.reservation_status,
+          serviceType:row.service_type,
+          roomCondition:conditionForDay(row,carriedConditions.get(String(row.room_id))||''),
+          stripHold:row.strip_hold
+        })
+        if (taskFor(existing)==='full') {
           const fullCleanCount=(dayRows||[]).filter((row:any)=>{
             if(String(row.room_id)===roomId)return false
-            if(!['checkout','out/in','dirty'].includes(String(row.reservation_status||'').trim().toLowerCase()))return false
+            if(taskFor(row)!=='full')return false
             return String(row.assigned_to||'').split(',').map((v:string)=>v.trim().toLowerCase()).includes(proposedName.toLowerCase())
           }).length
           const limit=Number(person.full_room_clean_limit??2)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { canUseModule } from '@/lib/access'
 import { roomServiceTask } from '@/lib/room-state'
+import { conditionForDay, previousVacantConditions } from '@/lib/room-condition-carry'
 import { loadTubTaskStates } from '@/lib/ops-tub'
 
 export const dynamic = 'force-dynamic'
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
     const [roomsResult, dailyResult, staffResult, scheduleResult, linksResult, capabilitiesResult] = await Promise.all([
       admin.from('rooms').select('id,name,sort_order').eq('active', true).order('sort_order'),
       admin.from('housekeeping_daily_rooms')
-        .select('room_id,reservation_status,service_type,room_condition,strip_hold,assigned_to,clean_order,complete,ready_for_inspection,check_issue_open')
+        .select('room_id,reservation_status,service_type,room_condition,next_shift_condition,strip_hold,assigned_to,clean_order,complete,ready_for_inspection,inspected,check_issue_open,updated_by')
         .eq('service_date', date),
       admin.from('staff_members').select('id,name,job_title,active,full_room_clean_limit').eq('active', true).order('name'),
       admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date', date),
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
     for (const result of [roomsResult, dailyResult, staffResult, scheduleResult, linksResult, capabilitiesResult]) {
       if (result.error) throw new Error(result.error.message)
     }
+    const carriedConditions = await previousVacantConditions(admin, date as string, dailyResult.data || [])
     const dailyByRoom = new Map((dailyResult.data || []).map((row: any) => [String(row.room_id), row]))
     const linkedByRoom = new Map((linksResult.data || []).map((row: any) => [String(row.room_id), row]))
     const scheduleByStaff = new Map<string, any>()
@@ -76,7 +78,7 @@ export async function GET(req: NextRequest) {
       const link: any = linkedByRoom.get(String(room.id)) || {}
       const activity = String(daily.reservation_status || link.reservation_status || 'Vacant')
       const serviceType = String(daily.service_type || '')
-      const condition = String(daily.room_condition || '')
+      const condition = conditionForDay(daily, carriedConditions.get(String(room.id)) || '')
       const baseTask = roomServiceTask({ reservationStatus: activity, serviceType, roomCondition: condition, stripHold: String(daily.strip_hold || '') })
       const task = baseTask // Tub-only work is tracked independently, even when full cleaning is also required.
       const assignedTo = String(daily.assigned_to || '').trim()

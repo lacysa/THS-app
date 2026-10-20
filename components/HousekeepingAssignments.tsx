@@ -38,7 +38,15 @@ function assigned(room: Room, name: string) {
   return names(room.assignedTo).some(value => value.toLowerCase() === name.toLowerCase())
 }
 function taskLabel(room: Room) {
-  return room.task === 'refresh' ? 'Refresh' : room.task === 'tub' ? 'Tub clean only' : 'Full clean'
+  if (room.task === 'refresh') return 'Stayover · Refresh'
+  if (room.task === 'tub') return 'Tub clean only'
+  // Show the operational reason for a clean, while keeping the internal
+  // full-clean task type for capacity limits and assignment accounting.
+  const activity = room.activity.trim()
+  if (['vacant', 'arrival'].includes(activity.toLowerCase()) && /dirty|cleaning/i.test(room.condition)) {
+    return activity + ' (Dirty)'
+  }
+  return activity || 'Cleaning required'
 }
 function timeLabel(raw: string | null) {
   return raw ? raw.slice(0, 5) : ''
@@ -235,7 +243,7 @@ export default function HousekeepingAssignments({initialDate}:{initialDate?:stri
     return <div className={'hka-room ' + (room.needsAssignment ? 'needs-assignment' : '')} key={room.roomId}>
       <div className="hka-room-info">
         <strong>{room.roomName}</strong>
-        <span>{taskLabel(room)} · {room.activity}{room.complete ? ' · Complete' : ''}</span>
+        <span>{taskLabel(room)}{room.complete ? ' · Complete' : ''}</span>
         {room.checkIssueOpen && <em>Correction required</em>}
         {!room.hasDailyRecord && <em>Daily room record missing; initialize via Room Operations</em>}
       </div>

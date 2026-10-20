@@ -8,6 +8,7 @@ export type ConditionDay={
   reservation_status?:unknown
   service_type?:unknown
   room_condition?:unknown
+  strip_hold?:unknown
   next_shift_condition?:unknown
   updated_by?:unknown
   complete?:unknown
@@ -38,6 +39,14 @@ export function conditionForDay(row:ConditionDay,carried=''):string{
  */
 export function priorConditionCandidate(prior:ConditionDay):{condition:string;stop:boolean}{
   const status=String(prior.reservation_status||'').trim().toLowerCase()
+  // A hold is a dated operational interruption, not a clean room condition.
+  // When its final blocked day passes, the room must return to the full-clean queue.
+  // Check the hold before checkout/out-in occupancy rules (those statuses can be
+  // present on the blocked day, as with Coral Gables).
+  const blocked=status==='blocked'||
+    String(prior.strip_hold||'').toLowerCase().includes('hold')||
+    String(prior.room_condition||'').trim().toLowerCase()==='blocked'
+  if(blocked)return {condition:'Vacant (Dirty)',stop:true}
   if(!['vacant','dirty','blocked','checkout','out/in',''].includes(status))
     return {condition:'',stop:true}
   const isOut=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(prior.service_type||'').trim())
@@ -47,7 +56,7 @@ export function priorConditionCandidate(prior:ConditionDay):{condition:string;st
   const value=String(prior.next_shift_condition||prior.room_condition||'').trim()
   if(!value)return {condition:'',stop:false}
   const lower=value.toLowerCase()
-  const allowed=['vacant (clean)','vacant (dirty)','blocked','ready','ready for guest'].includes(lower)||
+  const allowed=['vacant (clean)','vacant (dirty)','ready','ready for guest'].includes(lower)||
     (status==='vacant'&&lower==='occupied'&&!isOut)
   return {condition:allowed?value:'',stop:true}
 }
@@ -65,7 +74,7 @@ export async function previousVacantConditions(admin:any,date:string,rows:any[])
   const carried=new Map<string,string>()
   if(!targets.size)return carried
   const result=await admin.from('housekeeping_daily_rooms')
-    .select('room_id,service_date,reservation_status,service_type,room_condition,next_shift_condition,updated_by,complete,inspected,assigned_to')
+    .select('room_id,service_date,reservation_status,service_type,room_condition,next_shift_condition,strip_hold,updated_by,complete,inspected,assigned_to')
     .lt('service_date',date)
     .order('service_date',{ascending:false})
     .limit(3000)
