@@ -907,8 +907,8 @@ export default function HousekeepingBoard() {
         <div className="module-toolbar hsk-sticky-toolbar">
           <div className="hsk-title-block">
             <div className="module-kicker">Housekeeping</div>
-            <h1>My Rooms</h1>
-            <p>Your assigned rooms are shown below. Requested unassigned refreshes can be claimed by on-site Housekeeping staff.</p>
+            <h1>My Assignments</h1>
+            <p>Open your assigned room, review its notes, complete the required checklist, then mark the clean complete. Managers will see the same updates.</p>
           </div>
 
           <div className="toolbar-actions hsk-toolbar-actions">
@@ -929,6 +929,12 @@ export default function HousekeepingBoard() {
         </div>
 
         {message && <div className="module-message">{message}</div>}
+        {!loading && <div className="hsk-assigned-progress" role="status" aria-live="polite" style={{padding:'12px 16px',marginBottom:14,borderRadius:14,background:'var(--surface-soft,rgba(120,145,165,.09))'}}>
+          <strong>{rows.filter(row=>row.complete).length} of {rows.length} rooms complete</strong>
+          <div style={{height:7,borderRadius:999,background:'rgba(120,145,165,.18)',overflow:'hidden',marginTop:9}}>
+            <div style={{height:'100%',width:`${rows.length?Math.round(rows.filter(row=>row.complete).length/rows.length*100):0}%`,background:'var(--accent,#789b99)',transition:'width .2s'}}/>
+          </div>
+        </div>}
 
         {!loading && stripTasks.length>0 && (
           <section className="hsk-strip-pool">
@@ -976,11 +982,14 @@ export default function HousekeepingBoard() {
                         .filter(Boolean)
                         .join(' · ') || 'Assigned clean'}
                     </div>
-                    <div className="hsk-assigned-service-controls">
-                      <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearOutRf(row)}>—</button>
-                      <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>markOut(row)}>OUT</button>
-                      <button type="button" className={String(row.serviceType||'').toUpperCase()==='RF'?'active':''} onClick={()=>markRefresh(row)}>RF</button>
-                    </div>
+                    <details className="hsk-assigned-service-details" style={{marginTop:8}}>
+                      <summary style={{cursor:'pointer',fontSize:12,opacity:.8}}>Service actions (OUT / RF)</summary>
+                      <div className="hsk-assigned-service-controls">
+                        <button type="button" className={!row.serviceType?'active':''} onClick={()=>clearOutRf(row)}>—</button>
+                        <button type="button" className={String(row.serviceType||'').toUpperCase().startsWith('OUT')?'active':''} onClick={()=>markOut(row)}>OUT</button>
+                        <button type="button" className={String(row.serviceType||'').toUpperCase()==='RF'?'active':''} onClick={()=>markRefresh(row)}>RF</button>
+                      </div>
+                    </details>
                   </div>
 
                   <span className={row.complete ? 'hsk-complete-pill done' : 'hsk-complete-pill'}>
@@ -1023,11 +1032,13 @@ export default function HousekeepingBoard() {
                 )}
 
                 <label className="hsk-assigned-notes">
-                  Notes
+                  Room notes <small style={{fontWeight:400}}>· autosaved and shared with Room Ops</small>
                   <textarea
                     value={row.notes}
                     onChange={e => patch(row.roomId, { notes: e.target.value })}
-                    placeholder="Add room notes…"
+                    placeholder="Add a note about this room…"
+                    aria-label={`Notes for ${row.roomName}`}
+                    rows={2}
                   />
                 </label>
 
@@ -1110,7 +1121,7 @@ export default function HousekeepingBoard() {
                     ? 'Ready for re-check'
                     : row.complete
                       ? (String(row.serviceType||'').toUpperCase()==='RF' ? 'Mark refresh incomplete' : 'Mark incomplete')
-                      : (String(row.serviceType||'').toUpperCase()==='RF' ? 'Mark refresh complete' : 'Mark complete')}
+                      : (String(row.serviceType||'').toUpperCase()==='RF' ? 'Mark refresh complete' : 'Mark cleaning complete')}
                 </button>
               </article>
             ))}
