@@ -5,18 +5,13 @@ import LiveDataRefresh from '@/components/LiveDataRefresh'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { canUseModule } from '@/lib/access'
 import { ymdInHotelTz } from '@/lib/time'
+import { conditionForDay,previousVacantConditions } from '@/lib/room-condition-carry'
 import '../styles/reservations.css'
 
 export const dynamic='force-dynamic'
 
 function validDate(value:unknown):value is string{
   return typeof value==='string' && /^20\d{2}-\d{2}-\d{2}$/.test(value)
-}
-
-function previousDate(value:string){
-  const d=new Date(`${value}T12:00:00Z`)
-  d.setUTCDate(d.getUTCDate()-1)
-  return d.toISOString().slice(0,10)
 }
 
 export default async function ReservationsPage({searchParams}:{searchParams:Promise<{date?:string}>}){
@@ -29,24 +24,20 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const serviceDate=validDate(params?.date)?params.date:todayDate
   const admin=createSupabaseAdmin()
 
-  const priorDate=previousDate(serviceDate)
-  const [roomsRes,linksRes,housekeepingRes,priorHousekeepingRes,opsDetailsRes]=await Promise.all([
+  const [roomsRes,linksRes,housekeepingRes,opsDetailsRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('*').eq('service_date',serviceDate),
-    admin.from('housekeeping_daily_rooms').select('room_id,assigned_to,clean_order,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag').eq('service_date',serviceDate),
-    admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',priorDate),
+    admin.from('housekeeping_daily_rooms').select('room_id,assigned_to,clean_order,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag,updated_by').eq('service_date',serviceDate),
      admin.from('room_ops_details').select('room_id,expected_arrival_time').eq('service_date',serviceDate)
   ])
 
   const rooms=roomsRes.data||[]
   const links=linksRes.data||[]
   const housekeeping=housekeepingRes.data||[]
+  const carryConditions=await previousVacantConditions(admin,serviceDate,housekeeping)
    const expectedTimes=new Map<string,string>((opsDetailsRes.data||[]).map((item:any)=>[String(item.room_id),String(item.expected_arrival_time||'')]))
   const housekeepingByRoom=new Map<string,any>(
     housekeeping.map((row:any)=>[String(row.room_id||''),row])
-  )
-  const priorHousekeepingByRoom=new Map<string,any>(
-    (priorHousekeepingRes.data||[]).map((row:any)=>[String(row.room_id||''),row])
   )
   const roomNameById=new Map<string,string>(rooms.map((room:any)=>[String(room.id),String(room.name)]))
   const sortById=new Map<string,number>(rooms.map((room:any)=>[String(room.id),Number(room.sort_order??9999)]))
@@ -69,10 +60,7 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
     const roomId=String(room.id)
     const link=linksByRoom.get(roomId)||{}
     const current=housekeepingByRoom.get(roomId)||{}
-    const prior=priorHousekeepingByRoom.get(roomId)||{}
-    const currentCondition=String(current.room_condition||'').trim()
-    const priorEos=String(prior.next_shift_condition||prior.room_condition||'').trim()
-    const inheritedReady=!currentCondition&&priorEos==='Vacant (Clean)'
+    const currentCondition=conditionForDay(current,carryConditions.get(roomId)||'')
     return {
       roomId,
       expectedArrivalTime:expectedTimes.get(roomId)||'',
@@ -90,7 +78,7 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
       cleanOrder:current.clean_order==null?null:Number(current.clean_order),
       breakfastTag:Boolean(current.breakfast_tag),
       lateArrival:Boolean(current.late_arrival),
-      roomCondition:currentCondition||(inheritedReady?'Ready':''),
+      roomCondition:currentCondition,
       nextShiftCondition:String(current.next_shift_condition||''),
       complete:Boolean(current.complete),
       inspected:Boolean(current.inspected),
