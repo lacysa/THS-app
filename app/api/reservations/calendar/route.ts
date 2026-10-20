@@ -21,7 +21,7 @@ export async function GET(req:NextRequest){
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('service_date,room_id,reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').gte('service_date',start).lte('service_date',end),
     admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,next_shift_condition,late_arrival,notes').gte('service_date',start).lte('service_date',end),
-    admin.from('housekeeping_daily_rooms').select('service_date,room_id,room_condition,next_shift_condition,reservation_status,service_type').lt('service_date',start).not('room_condition','is',null).order('service_date',{ascending:false}).limit(3000)
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,room_condition,next_shift_condition,reservation_status,service_type').lt('service_date',start).order('service_date',{ascending:false}).limit(3000)
   ])
   if(roomsRes.error||linksRes.error||housekeepingRes.error||historyRes.error)return NextResponse.json({error:'Could not load calendar'},{status:500})
   const links=linksRes.data||[]
