@@ -8,7 +8,7 @@ import StaffShiftNote from '@/components/StaffShiftNote'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_RAIL_MEDIA } from '@/lib/layout-breakpoints'
 
 import Link from 'next/link'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutGrid,
@@ -210,6 +210,7 @@ export default function StaffShell({
 
   const [notificationsLoading, setNotificationsLoading] =
     useState(false)
+  const notificationPanelRef=useRef<HTMLDivElement|null>(null)
 
   useEffect(() => {
     // Tablet landscape starts with an icon rail; desktop uses the saved preference.
@@ -247,6 +248,7 @@ export default function StaffShell({
 
   useEffect(() => {
     setMobileNavOpen(false)
+    setNotificationsOpen(false)
   }, [pathname])
 
   useEffect(() => {
@@ -294,6 +296,17 @@ export default function StaffShell({
       document.removeEventListener('visibilitychange',onVisible)
     }
   }, [])
+
+  useEffect(()=>{
+    if(!notificationsOpen)return
+    const outside=(event:PointerEvent)=>{
+      if(notificationPanelRef.current&&!notificationPanelRef.current.contains(event.target as Node))setNotificationsOpen(false)
+    }
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape')setNotificationsOpen(false)}
+    document.addEventListener('pointerdown',outside)
+    document.addEventListener('keydown',escape)
+    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}
+  },[notificationsOpen])
 
   async function updateNotification(id:string,action:'read'|'archive'){
     const target=notifications.find(n=>n.id===id)
@@ -836,7 +849,7 @@ export default function StaffShell({
 
           <div className="staff-user-area">
 
-            <div className="notification-center">
+            <div className="notification-center" ref={notificationPanelRef}>
 
               <button
                 className="ops-icon-btn notification-bell-btn"
