@@ -642,6 +642,11 @@ export default function StaffShell({
                 </span>
               </Link>
             )}
+            <Link href="/notifications" className={pathname==='/notifications'?'active':''} aria-current={pathname==='/notifications'?'page':undefined}>
+              <span className="sidebar-link-icon"><Bell size={17}/></span>
+              <span className="sidebar-link-label">Notifications</span>
+              {unreadCount>0&&<span className="staff-nav-notification-count">{unreadCount>99?'99+':unreadCount}</span>}
+            </Link>
           </div>
 
           {breakfastNav.length > 0 && (
