@@ -93,6 +93,8 @@ export async function GET() {
 
     const moduleAccess=(modules||[]).map((module:any)=>{
       const hasOverride=Object.prototype.hasOwnProperty.call(staffAccess.moduleOverrides,module.module_key)
+      const managerOnly=module.module_key==='housekeeping_assignments'
+      const managerEligible=staffAccess.isAdmin||['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>staffAccess.capabilities.includes(cap))
       const defaultAccess=isModuleAllowedForAccess({...staffAccess,moduleOverrides:{}},module)
       const effectiveAccess=isModuleAllowedForAccess(staffAccess,module)
       return {
@@ -101,6 +103,8 @@ export async function GET() {
         department:module.department,
         enabled:module.enabled!==false,
         published:module.published!==false,
+        managerOnly,
+        managerEligible,
         defaultAccess,
         effectiveAccess,
         override:hasOverride ? staffAccess.moduleOverrides[module.module_key] : null
@@ -143,6 +147,15 @@ export async function POST(req:NextRequest) {
 
   const {data:member}=await admin.from('staff_members').select('id,auth_user_id').eq('id',memberId).eq('auth_user_id',userId).maybeSingle()
   if(!member) return NextResponse.json({error:'Staff member mapping was not found.'},{status:404})
+  const {data:module}=await admin.from('app_modules').select('module_key,active,enabled,published').eq('module_key',moduleKey).maybeSingle()
+  if(!module?.active)return NextResponse.json({error:'This module is not registered.'},{status:404})
+  if(allowed===true && moduleKey==='housekeeping_assignments'){
+    const {data:profile}=await admin.from('staff_profiles').select('role_id,staff_roles(name,is_admin)').eq('user_id',userId).maybeSingle()
+    const role:any=Array.isArray(profile?.staff_roles)?profile?.staff_roles[0]:profile?.staff_roles
+    const {data:caps}=await admin.from('staff_member_capabilities').select('capability_key').eq('staff_member_id',memberId)
+    const eligible=Boolean(role?.is_admin)||['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>(caps||[]).some((r:any)=>r.capability_key===cap))
+    if(!eligible)return NextResponse.json({error:'Assignments is only available to managers. Staff may use their assigned Housekeeping room cards.'},{status:403})
+  }
 
   if(allowed===null){
     const {error}=await admin.from('staff_module_access').delete().eq('staff_member_id',memberId).eq('module_key',moduleKey)
