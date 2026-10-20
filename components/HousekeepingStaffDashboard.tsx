@@ -57,13 +57,13 @@ export default function HousekeepingStaffDashboard(){
   const result={complete:0,correction:0,inspection:0}
   for(const room of rows){
    const state=roomWorkflowState(room)
-   if(state==='ready')result.complete++
+   if(state==='ready'||(isRefreshRoom(room)&&room.complete))result.complete++
    else if(state==='correction')result.correction++
    else if(state==='inspection'||state==='final')result.inspection++
   }
   return result
  },[rows])
- const taskRows=useMemo(()=>rows.filter(r=>roomWorkflowState(r)!=='ready').sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[rows])
+ const taskRows=useMemo(()=>rows.filter(r=>roomWorkflowState(r)!=='ready'&&!(isRefreshRoom(r)&&r.complete)).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[rows])
  const dateQuery='&date='+encodeURIComponent(date)
  return <div className="hsk-home">
   <header className="hsk-home-hero">
@@ -80,7 +80,7 @@ export default function HousekeepingStaffDashboard(){
   {error&&<p role="alert" className="hsk-home-error">{error}</p>}
   <section className="hsk-home-stats" aria-label="Your room progress">
    {([
-    {key:'complete',label:'Rooms complete',value:stats.complete,description:'Guest-ready rooms',icon:CheckCircle2},
+    {key:'complete',label:'Rooms complete',value:stats.complete,description:'Finished rooms and refreshes',icon:CheckCircle2},
     {key:'correction',label:'Needs correction',value:stats.correction,description:'Corrections to fix',icon:AlertTriangle},
     {key:'inspection',label:'Awaiting checks',value:stats.inspection,description:'Ready for inspection',icon:ClipboardCheck}
    ] as const).map(item=><Link className={'hsk-home-stat '+item.key} href={'/housekeeping?filter='+item.key+dateQuery} key={item.key}>
@@ -96,7 +96,7 @@ export default function HousekeepingStaffDashboard(){
     <Link href={'/housekeeping?filter=all'+dateQuery}>Open Housekeeping <ChevronRight size={15}/></Link>
    </div>
    {loading?<p className="hsk-home-empty">Loading your rooms…</p>:rows.length===0?<p className="hsk-home-empty">No active room assignments found for this date.</p>:<>
-    {taskRows.length===0?<p className="hsk-home-done"><CheckCircle2 size={19}/>Your assigned rooms are guest-ready. Nicely done.</p>:
+    {taskRows.length===0?<p className="hsk-home-done"><CheckCircle2 size={19}/>Your assigned room work is complete. Nicely done.</p>:
      <div className="hsk-home-rooms">{taskRows.map(room=><Link key={room.roomId} href={'/housekeeping?room='+encodeURIComponent(room.roomId)+dateQuery} className="hsk-home-room">
       <span className="hsk-home-room-icon"><BedDouble size={17}/></span>
       <span><strong>{room.roomName}</strong><small>{room.checkIssueOpen?'Correction: '+(room.checkIssueNote||'Review the issue'):roomWorkflowLabel(room)}</small></span>
