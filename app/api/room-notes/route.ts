@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
+import { staffAttribution } from '@/lib/staff-initials'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ function validDate(value: string | null | undefined) {
 }
 
 async function currentMember(admin: ReturnType<typeof createSupabaseAdmin>, userId: string) {
-  const { data } = await admin.from('staff_members').select('id,name').eq('auth_user_id', userId).maybeSingle()
+  const { data } = await admin.from('staff_members').select('id,name,username').eq('auth_user_id', userId).maybeSingle()
   return data
 }
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const roomById = new Map((rooms || []).map((r: any) => [String(r.id), r.name]))
-  const staffById = new Map((staff || []).map((s: any) => [String(s.id), s.name]))
+  const staffById = new Map((staff || []).map((s: any) => [String(s.id), s]))
 
   return NextResponse.json({
     rooms: rooms || [],
@@ -40,7 +41,8 @@ export async function GET(req: NextRequest) {
       .map((n: any) => ({
         ...n,
         roomName: roomById.get(String(n.room_id)) || 'Room',
-        createdByName: n.created_by ? staffById.get(String(n.created_by)) || 'Staff' : 'Staff'
+        createdByName: n.created_by ? (staffById.get(String(n.created_by)) as any)?.name || 'Staff' : 'Staff',
+        createdByInitials: n.created_by ? staffAttribution((staffById.get(String(n.created_by)) as any)?.username,(staffById.get(String(n.created_by)) as any)?.name) : 'Staff'
       }))
   })
 }
