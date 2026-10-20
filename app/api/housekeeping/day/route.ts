@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { loadTubTaskStates } from '@/lib/ops-tub'
-import { previousVacantConditions } from '@/lib/room-condition-carry'
+import { conditionForDay,previousVacantConditions } from '@/lib/room-condition-carry'
 import { isCheckoutAwaitingOut, isStayoverRoom } from '@/lib/room-state'
 
 export const dynamic = 'force-dynamic'
@@ -251,7 +251,7 @@ export async function GET(req: NextRequest) {
         inspected: Boolean(savedRow.inspected),
         completedAt: savedRow.completed_at || null,
         inspectedAt: savedRow.inspected_at || null,
-        roomCondition: (isStayoverRoom({reservationStatus:savedRow.reservation_status})||isCheckoutAwaitingOut({reservationStatus:savedRow.reservation_status,serviceType:savedRow.service_type}))&&!String(savedRow.strip_hold||'').toLowerCase().includes('hold')?'Occupied':savedRow.room_condition || carryConditions.get(String(room.id)) || '',
+        roomCondition: (isStayoverRoom({reservationStatus:savedRow.reservation_status})||isCheckoutAwaitingOut({reservationStatus:savedRow.reservation_status,serviceType:savedRow.service_type}))&&!String(savedRow.strip_hold||'').toLowerCase().includes('hold')?'Occupied':conditionForDay(savedRow,carryConditions.get(String(room.id))||''),
         nextShiftCondition: savedRow.next_shift_condition || '',
         notes: savedRow.notes || '',
         breakfastTag: Boolean(savedRow.breakfast_tag),
