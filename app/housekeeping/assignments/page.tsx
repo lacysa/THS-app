@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function HousekeepingAssignmentsPage({searchParams}:{searchParams:Promise<{date?:string}>}) {
   const params = await searchParams
   const initialDate = params?.date && /^20\d{2}-\d{2}-\d{2}$/.test(params.date) ? params.date : undefined
-  const gate = await canUseModule('housekeeping')
+  const gate = await canUseModule('housekeeping_assignments')
   if (!gate.access) redirect('/login')
   const manager = gate.access.isAdmin || (gate.access.capabilities || []).some(cap =>
     ['manager', 'general_manager', 'operations_manager', 'owner'].includes(cap)
