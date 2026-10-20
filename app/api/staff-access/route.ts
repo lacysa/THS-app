@@ -93,7 +93,7 @@ export async function GET() {
 
     const moduleAccess=(modules||[]).map((module:any)=>{
       const hasOverride=Object.prototype.hasOwnProperty.call(staffAccess.moduleOverrides,module.module_key)
-      const managerOnly=module.module_key==='housekeeping_assignments'
+      const managerOnly=['housekeeping_assignments','reservation_sync','housekeeping_quality'].includes(module.module_key)
       const managerEligible=staffAccess.isAdmin||['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>staffAccess.capabilities.includes(cap))
       const defaultAccess=isModuleAllowedForAccess({...staffAccess,moduleOverrides:{}},module)
       const effectiveAccess=isModuleAllowedForAccess(staffAccess,module)
@@ -149,12 +149,12 @@ export async function POST(req:NextRequest) {
   if(!member) return NextResponse.json({error:'Staff member mapping was not found.'},{status:404})
   const {data:module}=await admin.from('app_modules').select('module_key,active,enabled,published').eq('module_key',moduleKey).maybeSingle()
   if(!module?.active)return NextResponse.json({error:'This module is not registered.'},{status:404})
-  if(allowed===true && moduleKey==='housekeeping_assignments'){
+  if(allowed===true && ['housekeeping_assignments','reservation_sync','housekeeping_quality'].includes(moduleKey)){
     const {data:profile}=await admin.from('staff_profiles').select('role_id,staff_roles(name,is_admin)').eq('user_id',userId).maybeSingle()
     const role:any=Array.isArray(profile?.staff_roles)?profile?.staff_roles[0]:profile?.staff_roles
     const {data:caps}=await admin.from('staff_member_capabilities').select('capability_key').eq('staff_member_id',memberId)
     const eligible=Boolean(role?.is_admin)||['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>(caps||[]).some((r:any)=>r.capability_key===cap))
-    if(!eligible)return NextResponse.json({error:'Assignments is only available to managers. Staff may use their assigned Housekeeping room cards.'},{status:403})
+    if(!eligible)return NextResponse.json({error:'This module is manager-only and is not available for this role.'},{status:403})
   }
 
   if(allowed===null){
