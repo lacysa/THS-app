@@ -332,6 +332,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       return next
     })
     if(autosave){
+      const serviceDate=dateRef.current
       pendingPatches.current[roomId]={...(pendingPatches.current[roomId]||{}),...update}
       const existing=saveTimers.current[roomId]
       if(existing)clearTimeout(existing)
@@ -340,7 +341,6 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         const pending=pendingPatches.current[roomId]||{}
         delete pendingPatches.current[roomId]
         const previous=saveQueues.current[roomId]||Promise.resolve(true)
-        const serviceDate=dateRef.current
         const queued=previous.catch(()=>false).then(()=>saveRoomPatch(roomId,pending,serviceDate))
         saveQueues.current[roomId]=queued
         void queued.finally(()=>{if(saveQueues.current[roomId]===queued)delete saveQueues.current[roomId]})
