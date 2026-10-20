@@ -154,6 +154,19 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
     return access.roleName === 'Owner' && !access.isPreviewMode
   }
 
+  // The Assignments screen performs manager-only writes. A Hospitality
+  // Assistant's room-view access must never cause it to appear as a usable link.
+  // Keep the same gate in navigation, Staff Access, and the destination route.
+  if (key === 'housekeeping_assignments') {
+    const mayAssign=access.isAdmin ||
+      ['manager','general_manager','operations_manager','owner','foh_manager']
+        .some(cap=>access.capabilities.includes(cap))
+    if(!mayAssign)return false
+    if(Object.prototype.hasOwnProperty.call(access.moduleOverrides,key))
+      return access.moduleOverrides[key]
+    return module.published!==false || access.canPreviewUnpublished
+  }
+
   // Keep role defaults consistent across the owner access panel, navigation and routes.
   // Explicit owner-configured per-person overrides are evaluated below.
   const caps=access.capabilities || []
