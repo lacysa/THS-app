@@ -289,17 +289,17 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     }
   },[date])
 
-  async function saveRoomPatch(roomId:string,update:Partial<RoomRow>){
+  async function saveRoomPatch(roomId:string,update:Partial<RoomRow>,serviceDate=dateRef.current){
     editGeneration.current++
     setSaveState('saving')
     try{
       const response=await fetch('/api/housekeeping/day',{
         method:'PATCH',headers:{'content-type':'application/json'},
-        body:JSON.stringify({serviceDate:dateRef.current,roomId,patch:update})
+        body:JSON.stringify({serviceDate,roomId,patch:update})
       })
       const d=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(d.error||'Could not save room.')
-      if(d.row){
+      if(d.row&&dateRef.current===serviceDate){
         setRows(current=>{
           const next=current.map(row=>{
             if(row.roomId!==roomId)return row
@@ -315,7 +315,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
           return next
         })
       }
-      window.dispatchEvent(new CustomEvent('ths:live-data-refresh',{detail:{roomId,date:dateRef.current}}))
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh',{detail:{roomId,date:serviceDate}}))
       setSaveState('saved')
       window.setTimeout(()=>setSaveState(current=>current==='saved'?'idle':current),1600)
       return true
@@ -340,7 +340,8 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         const pending=pendingPatches.current[roomId]||{}
         delete pendingPatches.current[roomId]
         const previous=saveQueues.current[roomId]||Promise.resolve(true)
-        const queued=previous.catch(()=>false).then(()=>saveRoomPatch(roomId,pending))
+        const serviceDate=dateRef.current
+        const queued=previous.catch(()=>false).then(()=>saveRoomPatch(roomId,pending,serviceDate))
         saveQueues.current[roomId]=queued
         void queued.finally(()=>{if(saveQueues.current[roomId]===queued)delete saveQueues.current[roomId]})
       },450)
