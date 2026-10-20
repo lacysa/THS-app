@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { BedDouble, Check, ChevronDown, ChevronUp, RefreshCw, Save, Search, SlidersHorizontal, UtensilsCrossed } from 'lucide-react'
+import StaffAssignmentSelect from '@/components/StaffAssignmentSelect'
+import { staffPickerOptions } from '@/lib/staff-picker-options'
 
 type BreakfastStatus = 'none'|'needed'|'received'|'declined'
 type SaveState = 'idle'|'saving'|'saved'|'error'
@@ -95,7 +97,7 @@ export default function RoomBoard(){
   const [rows,setRows]=useState<RoomRow[]>([])
   const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
   const [allStaffOptions,setAllStaffOptions]=useState<StaffOption[]>([])
-  const [showAllStaff,setShowAllStaff]=useState(false)
+  const pickerStaff=useMemo(()=>staffPickerOptions(staffOptions,allStaffOptions),[staffOptions,allStaffOptions])
   const [access,setAccess]=useState<Access|null>(null)
   const [packageOptions,setPackageOptions]=useState<PackageOption[]>([])
   const [breakfastDate,setBreakfastDate]=useState('')
@@ -781,35 +783,14 @@ export default function RoomBoard(){
 
                 <div className="rb-detail-block">
                   <span>Assigned staff</span>
-                  <div className="rb-staff-scope">
-                    <b>{showAllStaff?'All active staff':'On site today'}</b>
-                    <button type="button" onClick={()=>setShowAllStaff(value=>!value)}>
-                      {showAllStaff?'Show on-site only':'All active staff'}
-                    </button>
-                  </div>
+                  <StaffAssignmentSelect
+                    staff={pickerStaff} value="" label={'Assign staff to '+row.roomName}
+                    disableStaff={person=>isFullRoomClean(row)&&!staff.includes(person.name)&&fullCleanCountFor(person.name)>=person.fullRoomCleanLimit}
+                    onChange={name=>{if(name)toggleStaff(row,name)}}
+                    style={{width:'100%',minHeight:42,padding:'8px 10px',borderRadius:9,border:'1px solid #b9ced7',background:'#fff',color:'#253f4d'}}
+                  />
                   <div className="rb-chip-list">
-                    {(showAllStaff?allStaffOptions:staffOptions).map(option=>{
-                      const checked=staff.includes(option.name)
-                      const fullCleanCount=fullCleanCountFor(option.name)
-                      const fullCleanLimit=Number(option.fullRoomCleanLimit??2)
-                      const atLimit=isFullRoomClean(row)&&!checked&&fullCleanCount>=fullCleanLimit
-                      const meta=[
-                        !showAllStaff&&option.onSite?option.roleLabel:'',
-                        !showAllStaff&&option.onSite&&option.shiftStart&&option.shiftEnd?`${option.shiftStart.slice(0,5)}–${option.shiftEnd.slice(0,5)}`:'',
-                        `Full cleans ${fullCleanCount}/${fullCleanLimit}`
-                      ].filter(Boolean).join(' · ')
-                      return <button
-                        type="button"
-                        key={option.id}
-                        className={`${checked?'is-selected':''} ${atLimit?'is-at-limit':''}`}
-                        onClick={()=>toggleStaff(row,option.name)}
-                        aria-disabled={atLimit}
-                        title={atLimit?`${option.name} is at their full clean limit (${fullCleanCount}/${fullCleanLimit})`:meta||undefined}
-                      >
-                        {checked&&<Check size={12}/>} {option.name}{meta&&<small>{meta}</small>}
-                      </button>
-                    })}
-                    {!(showAllStaff?allStaffOptions:staffOptions).length&&<em>No on-site staff scheduled.</em>}
+                    {staff.map(name=><button type="button" key={name} className="is-selected" onClick={()=>toggleStaff(row,name)} title={'Remove '+name}><Check size={12}/> {name} ×</button>)}
                   </div>
                 </div>
 
