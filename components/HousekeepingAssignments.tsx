@@ -2,12 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckCircle2, ClipboardList, RefreshCw, Search, UsersRound } from 'lucide-react'
+import StaffAssignmentSelect from '@/components/StaffAssignmentSelect'
+import type { AssignmentStaff } from '@/lib/assignment-staff'
 
-type Staff = {
-  id: string; name: string; roleLabel: string; onSite: boolean; housekeepingEligible: boolean
-  scheduleState: string; shiftStart: string | null; shiftEnd: string | null
-  fullRoomCleanLimit: number
-}
+type Staff = AssignmentStaff
 type Room = {
   roomId: string; roomName: string; sortOrder: number; activity: string; serviceType: string
   condition: string; assignedTo: string; cleanOrder: number | null; complete: boolean
@@ -216,33 +214,15 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
   }
 
   function assignmentSelect(room: Room) {
-    return <select
-      aria-label={'Assign ' + room.roomName + ' to a housekeeper'}
+    return <StaffAssignmentSelect
+      staff={staff}
       value={room.assignedTo}
+      label={'Assign ' + room.roomName + ' to a housekeeper'}
       disabled={Boolean(data?.readOnly) || Boolean(busyRoom) || !room.hasDailyRecord}
-      onChange={event => void saveAssignment(room, event.target.value)}
-    >
-      <option value="">Unassigned</option>
-      {room.assignedTo && !staff.some(person => person.name === room.assignedTo) && <option value={room.assignedTo}>{room.assignedTo} (existing assignment)</option>}
-      <optgroup label="Scheduled on site">
-        {assignable.map(person => {
-          const atLimit = room.task === 'full' && !assigned(room, person.name) &&
-            (counts.get(person.name.toLowerCase()) || 0) >= person.fullRoomCleanLimit
-          return <option key={person.id} value={person.name} disabled={atLimit}>
-            {person.name}{atLimit ? ' · full-clean limit reached' : ''}
-          </option>
-        })}
-      </optgroup>
-      {otherScheduled.length > 0 && <optgroup label="Other scheduled staff">
-        {otherScheduled.map(person => <option key={person.id} value={person.name}>{person.name} · {person.roleLabel || 'Other role'}</option>)}
-      </optgroup>}
-      {otherActive.length > 0 && <optgroup label="Other active staff (not scheduled on site)">
-        {otherActive.map(person => <option key={person.id} value={person.name}>{person.name} · not on site</option>)}
-      </optgroup>}
-      {absent.length > 0 && <optgroup label="Unavailable today (assignments disabled)">
-        {absent.map(person => <option key={person.id} value={person.name} disabled={room.assignedTo !== person.name}>{person.name} · {person.scheduleState.replaceAll('_', ' ')}</option>)}
-      </optgroup>}
-    </select>
+      onChange={name => void saveAssignment(room,name)}
+      disableStaff={person => room.task === 'full' && !assigned(room,person.name) &&
+        (counts.get(person.name.toLowerCase()) || 0) >= person.fullRoomCleanLimit}
+    />
   }
 
   function roomCard(room: Room) {
@@ -338,11 +318,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
        <div className="hka-person-rooms">{(data?.tubTasks||[]).map(task=>
         <div className="hka-person-room" key={task.roomId} style={{gap:12,flexWrap:'wrap'}}>
           <div style={{flex:'1 1 170px'}}><strong>{task.roomName} · Tub only</strong><small>{task.assignedTo?'Assigned to '+task.assignedTo:'Needs tub-only assignment'}</small></div>
-          <select aria-label={'Assign tub-only cleaning for '+task.roomName} value={task.assignedTo} disabled={data?.readOnly||Boolean(tubBusy)} onChange={e=>void assignTub(task,e.target.value)} style={{maxWidth:220}}>
-            <option value="">Unassigned</option>
-            {task.assignedTo&&!staff.some(person=>person.name===task.assignedTo)&&<option value={task.assignedTo}>{task.assignedTo} (existing)</option>}
-            {staff.filter(person=>person.housekeepingEligible).map(person=><option key={person.id} value={person.name}>{person.name}{person.onSite?'':' (not scheduled)'}</option>)}
-          </select>
+          <StaffAssignmentSelect staff={staff} housekeepingOnly label={'Assign tub-only cleaning for '+task.roomName} value={task.assignedTo} disabled={data?.readOnly||Boolean(tubBusy)} onChange={name=>void assignTub(task,name)} style={{maxWidth:220}}/>
         </div>)}</div>}
     </section>
     <section className="hka-person hka-deep-clean">
@@ -357,9 +333,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
           </select>
         </label>
         <label>Housekeeper
-          <select aria-label="Deep clean housekeeper" value={deepStaff} onChange={e=>setDeepStaff(e.target.value)}>
-            <option value="">Unassigned</option>{[...assignable,...otherActive.filter(person=>person.housekeepingEligible)].map(person=><option key={person.id} value={person.name}>{person.name}{person.onSite?'':' (not scheduled)'}</option>)}
-          </select>
+          <StaffAssignmentSelect staff={staff} housekeepingOnly label="Deep clean housekeeper" value={deepStaff} onChange={setDeepStaff}/>
         </label>
         <label className="hka-deep-instructions">Instructions
           <input aria-label="Deep clean instructions" placeholder="e.g. grout, baseboards, behind furniture…" value={deepInstructions} onChange={e=>setDeepInstructions(e.target.value)}/>
@@ -369,7 +343,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       {deepCleans.length===0 ? <p className="hka-empty-line">No deep cleans scheduled for this date.</p> : <div className="hka-person-rooms">
         {deepCleans.map(task=>{const room=rooms.find(item=>item.roomId===task.room_id);return <div className="hka-person-room" key={task.room_id} style={{gap:12,flexWrap:'wrap'}}>
           <div style={{flex:'1 1 170px'}}><strong>{room?.roomName||'Room'} · Deep clean</strong><small>{task.completed_at?'Completed':task.assigned_to||'Unassigned'}{task.instructions?' · '+task.instructions:''}</small></div>
-          {!data?.readOnly&&!task.completed_at&&<select style={{maxWidth:180}} aria-label={'Assign deep clean '+(room?.roomName||'room')} value={task.assigned_to} disabled={deepBusy} onChange={e=>void deepAction('save',task.room_id,{assignedTo:e.target.value,instructions:task.instructions})}><option value="">Unassigned</option>{staff.filter(person=>person.housekeepingEligible).map(person=><option key={person.id} value={person.name}>{person.name}</option>)}</select>}
+          {!data?.readOnly&&!task.completed_at&&<StaffAssignmentSelect staff={staff} housekeepingOnly style={{maxWidth:180}} label={'Assign deep clean '+(room?.roomName||'room')} value={task.assigned_to} disabled={deepBusy} onChange={name=>void deepAction('save',task.room_id,{assignedTo:name,instructions:task.instructions})}/>}
           {!data?.readOnly&&<button type="button" disabled={deepBusy} onClick={()=>void deepAction('complete',task.room_id,{completed:!!task.completed_at?false:true})}>{task.completed_at?'Reopen':'Mark complete'}</button>}
           {!data?.readOnly&&!task.completed_at&&<button type="button" disabled={deepBusy} onClick={()=>{if(window.confirm('Remove this deep clean?'))void deepAction('remove',task.room_id)}}>Remove</button>}
         </div>})}
