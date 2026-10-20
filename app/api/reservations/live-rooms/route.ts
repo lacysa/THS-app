@@ -2,7 +2,7 @@ import { NextRequest,NextResponse } from 'next/server'
 import { canUseModule } from '@/lib/access'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { loadTubTaskStates } from '@/lib/ops-tub'
-import { previousVacantConditions } from '@/lib/room-condition-carry'
+import { conditionForDay,previousVacantConditions } from '@/lib/room-condition-carry'
 import { isCheckoutAwaitingOut, isStayoverRoom } from '@/lib/room-state'
 
 export const dynamic='force-dynamic'
@@ -14,7 +14,7 @@ export async function GET(req:NextRequest){
  if(!date||!/^20\d{2}-\d{2}-\d{2}$/.test(date))return NextResponse.json({error:'Invalid date'},{status:400})
  const admin=createSupabaseAdmin()
  const result=await admin.from('housekeeping_daily_rooms')
-  .select('room_id,assigned_to,clean_order,reservation_status,late_arrival,strip_hold,service_type,room_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag')
+  .select('room_id,assigned_to,clean_order,reservation_status,late_arrival,strip_hold,service_type,room_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag,updated_by')
   .eq('service_date',date)
  if(result.error)return NextResponse.json({error:'Could not refresh live room status'},{status:500})
  let carryConditions:Map<string,string>
@@ -44,7 +44,7 @@ export async function GET(req:NextRequest){
  return NextResponse.json({rooms:(result.data||[]).map((r:any)=>({
   roomId:String(r.room_id),expectedArrivalTime:expectedTimes.get(String(r.room_id))||'',assignedTo:String(r.assigned_to||''),cleanOrder:r.clean_order==null?null:Number(r.clean_order),roomNotes:String(r.notes||''),breakfastTag:Boolean(r.breakfast_tag),operationalStatus:String(r.reservation_status||''),
   stripHold:String(r.strip_hold||''),lateArrival:Boolean(r.late_arrival),serviceType:String(r.service_type||''),
-  roomCondition:(isStayoverRoom({reservationStatus:r.reservation_status})||isCheckoutAwaitingOut({reservationStatus:r.reservation_status,serviceType:r.service_type}))&&!String(r.strip_hold||'').toLowerCase().includes('hold')?'Occupied':String(r.room_condition||carryConditions.get(String(r.room_id))||''),complete:Boolean(r.complete),
+  roomCondition:(isStayoverRoom({reservationStatus:r.reservation_status})||isCheckoutAwaitingOut({reservationStatus:r.reservation_status,serviceType:r.service_type}))&&!String(r.strip_hold||'').toLowerCase().includes('hold')?'Occupied':conditionForDay(r,carryConditions.get(String(r.room_id))||''),complete:Boolean(r.complete),
   inspected:Boolean(r.inspected),housekeeperAttested:Boolean(r.housekeeper_attested_by),
   haChecked:Boolean(r.ha_signed_by),fohChecked:Boolean(r.foh_signed_by),
   checkIssueOpen:Boolean(r.check_issue_open),tubCleanDue:Boolean(tubStates.get(String(r.room_id))?.due),tubAssignedTo:String(tubStates.get(String(r.room_id))?.assignedTo||''),tubCleanCompleted:Boolean(tubStates.get(String(r.room_id))?.completed)
