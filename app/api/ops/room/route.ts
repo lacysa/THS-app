@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
+import {conditionForDay,previousVacantConditions} from '@/lib/room-condition-carry'
 
 export const dynamic='force-dynamic'
 const validDate=(value:string)=>/^20\d{2}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+'T12:00:00Z'))
@@ -19,13 +20,14 @@ export async function GET(req:NextRequest){
  const admin=createSupabaseAdmin()
  const [roomResult,dailyResult,linkResult]=await Promise.all([
   admin.from('rooms').select('id,name').eq('id',roomId).eq('active',true).maybeSingle(),
-  admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,reservation_status,service_type,room_condition,strip_hold,clean_order,complete,ready_for_inspection,inspected,inspected_at,check_issue_open,check_issue_note,breakfast_tag,late_arrival,housekeeper_attested_by,refresh_completed_initials,foh_signed_by,ha_signed_by').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
+  admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,reservation_status,service_type,room_condition,strip_hold,clean_order,complete,ready_for_inspection,inspected,inspected_at,check_issue_open,check_issue_note,breakfast_tag,late_arrival,housekeeper_attested_by,refresh_completed_initials,foh_signed_by,ha_signed_by,updated_by').eq('service_date',date).eq('room_id',roomId).maybeSingle(),
   admin.from('reservation_daily_links').select('reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').eq('service_date',date).eq('room_id',roomId).maybeSingle()
  ])
  if(roomResult.error||dailyResult.error||linkResult.error)
   return NextResponse.json({error:'Unable to load room operations'},{status:500})
  if(!roomResult.data)return NextResponse.json({error:'Room not found'},{status:404})
- const daily=dailyResult.data
+ const carry=await previousVacantConditions(admin,date,dailyResult.data?[dailyResult.data]:[])
+ const daily=dailyResult.data?{...dailyResult.data,room_condition:conditionForDay(dailyResult.data,carry.get(roomId)||'')}:null
  const link=linkResult.data
  // A calendar empty-cell click is room-only, even on checkout days where
  // the daily link still points to a departing guest. Only an explicit click
