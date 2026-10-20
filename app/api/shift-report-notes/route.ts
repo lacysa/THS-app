@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { canUseModule } from '@/lib/access'
+import { staffAttribution } from '@/lib/staff-initials'
 
 export const dynamic = 'force-dynamic'
 const sections = ['guest','staff','supplies','tomorrow','general','maintenance','management']
@@ -8,7 +9,7 @@ async function context() {
   const gate=await canUseModule('shift_reports')
   if (!gate.access || !gate.allowed) return null
   const admin=createSupabaseAdmin()
-  const {data:staff}=await admin.from('staff_members').select('id,name').eq('auth_user_id',gate.access.userId).eq('active',true).maybeSingle()
+  const {data:staff}=await admin.from('staff_members').select('id,name,username').eq('auth_user_id',gate.access.userId).eq('active',true).maybeSingle()
   if (!staff) return null
   const caps=gate.access.capabilities
   const manager=gate.access.isAdmin || ['manager','general_manager','operations_manager','owner','foh_manager'].some(x=>caps.includes(x))
@@ -24,9 +25,18 @@ export async function GET(req:NextRequest) {
   if (error) return NextResponse.json({error:error.message},{status:500})
   const rows=(data||[]).filter((x:any)=>ctx.manager || x.section!=='management')
   const ids=[...new Set(rows.map((x:any)=>x.staff_member_id))]
-  const {data:staff}=ids.length ? await ctx.admin.from('staff_members').select('id,name').in('id',ids) : {data:[]}
-  const names=new Map((staff||[]).map((x:any)=>[x.id,x.name]))
-  return NextResponse.json({entries:rows.map((x:any)=>({...x,name:names.get(x.staff_member_id)||'Staff',initials:names.get(x.staff_member_id)||'Staff'})),currentStaffId:ctx.staff.id,currentStaffName:ctx.staff.name,canManage:ctx.manager})
+  const {data:staff}=ids.length ? await ctx.admin.from('staff_members').select('id,name,username').in('id',ids) : {data:[]}
+  const people=new Map((staff||[]).map((person:any)=>[String(person.id),person]))
+  return NextResponse.json({
+    entries:rows.map((entry:any)=>{
+      const person:any=people.get(String(entry.staff_member_id))
+      return {...entry,name:person?.name||'Staff',initials:staffAttribution(person?.username,person?.name)}
+    }),
+    currentStaffId:ctx.staff.id,
+    currentStaffName:ctx.staff.name,
+    currentStaffInitials:staffAttribution(ctx.staff.username,ctx.staff.name),
+    canManage:ctx.manager
+  })
 }
 export async function POST(req:NextRequest) {
   const ctx=await context()
