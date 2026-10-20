@@ -289,6 +289,9 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     }
   },[date])
 
+  // Scope every pending autosave to a room AND service date, not the room alone.
+  const roomSaveKey=(roomId:string,serviceDate:string)=>`${serviceDate}|${roomId}`
+
   async function saveRoomPatch(roomId:string,update:Partial<RoomRow>,serviceDate=dateRef.current){
     editGeneration.current++
     setSaveState('saving')
@@ -306,7 +309,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
             // Do not replace values the user has edited since this request began.
             const serverRow=d.row as Partial<RoomRow>
             const safeFields=Object.fromEntries(Object.entries(serverRow).filter(([key])=>
-              !(key in (pendingPatches.current[roomId]||{})) &&
+              !(key in (pendingPatches.current[roomSaveKey(roomId,serviceDate)]||{})) &&
               (!(key in update) || row[key as keyof RoomRow]===update[key as keyof RoomRow])
             ))
             return {...row,...safeFields}
@@ -316,11 +319,16 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         })
       }
       window.dispatchEvent(new CustomEvent('ths:live-data-refresh',{detail:{roomId,date:serviceDate}}))
-      setSaveState('saved')
-      window.setTimeout(()=>setSaveState(current=>current==='saved'?'idle':current),1600)
+      if(dateRef.current===serviceDate){
+        setSaveState('saved')
+        window.setTimeout(()=>setSaveState(current=>current==='saved'?'idle':current),1600)
+      }
       return true
     }catch(error:any){
-      setSaveState('error');setMessage(error?.message||'Could not save room.');return false
+      if(dateRef.current===serviceDate){
+        setSaveState('error');setMessage(error?.message||'Could not save room.')
+      }
+      return false
     }
   }
 
@@ -333,17 +341,18 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     })
     if(autosave){
       const serviceDate=dateRef.current
-      pendingPatches.current[roomId]={...(pendingPatches.current[roomId]||{}),...update}
-      const existing=saveTimers.current[roomId]
+      const key=roomSaveKey(roomId,serviceDate)
+      pendingPatches.current[key]={...(pendingPatches.current[key]||{}),...update}
+      const existing=saveTimers.current[key]
       if(existing)clearTimeout(existing)
-      saveTimers.current[roomId]=setTimeout(()=>{
-        delete saveTimers.current[roomId]
-        const pending=pendingPatches.current[roomId]||{}
-        delete pendingPatches.current[roomId]
-        const previous=saveQueues.current[roomId]||Promise.resolve(true)
+      saveTimers.current[key]=setTimeout(()=>{
+        delete saveTimers.current[key]
+        const pending=pendingPatches.current[key]||{}
+        delete pendingPatches.current[key]
+        const previous=saveQueues.current[key]||Promise.resolve(true)
         const queued=previous.catch(()=>false).then(()=>saveRoomPatch(roomId,pending,serviceDate))
-        saveQueues.current[roomId]=queued
-        void queued.finally(()=>{if(saveQueues.current[roomId]===queued)delete saveQueues.current[roomId]})
+        saveQueues.current[key]=queued
+        void queued.finally(()=>{if(saveQueues.current[key]===queued)delete saveQueues.current[key]})
       },450)
     }
   }
@@ -424,15 +433,16 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   async function setManagerCondition(row:RoomRow,value:string){
     if(!isManager(access))return
     const roomId=row.roomId
+    const key=roomSaveKey(roomId,dateRef.current)
     // Commit any earlier debounced notes/assignment edit first so it cannot
     // arrive after the condition change and overwrite its workflow state.
-    const timer=saveTimers.current[roomId]
-    if(timer){clearTimeout(timer);delete saveTimers.current[roomId]}
-    const previous=saveQueues.current[roomId]
+    const timer=saveTimers.current[key]
+    if(timer){clearTimeout(timer);delete saveTimers.current[key]}
+    const previous=saveQueues.current[key]
     if(previous)await previous.catch(()=>false)
-    const pending=pendingPatches.current[roomId]
+    const pending=pendingPatches.current[key]
     if(pending&&Object.keys(pending).length){
-      delete pendingPatches.current[roomId]
+      delete pendingPatches.current[key]
       const saved=await saveRoomPatch(roomId,pending)
       if(!saved){void load(true);return}
     }
