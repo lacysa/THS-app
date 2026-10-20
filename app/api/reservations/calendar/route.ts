@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 import {ymdInHotelTz} from '@/lib/time'
+import {priorConditionCandidate} from '@/lib/room-condition-carry'
 
 export const dynamic='force-dynamic'
 function addDay(day:string,days:number){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
@@ -44,24 +45,15 @@ export async function GET(req:NextRequest){
   // a clean/ready state from missing historical data.
   const statusByDate=new Map<string,any>()
   const lastByRoom=new Map<string,string>()
-  // Follow the same prior-day carry rule as the housekeeping board: an explicit
-  // end-of-shift condition takes priority over the previous day's live condition.
-  // Do not carry guest occupancy from an unrelated completed stay.
-  const historyByRoom=new Map<string,any>()
+  // Resolve historical conditions once per room with exactly the same rules
+  // as the Housekeeping API. Never derive a past guest's occupancy as Ready.
+  const settledRooms=new Set<string>()
   for(const row of historyRes.data||[]){
-    const id=String((row as any).room_id)
-    if(!historyByRoom.has(id))historyByRoom.set(id,row)
-  }
-  for(const [id,row] of historyByRoom){
-    const status=String(row.reservation_status||'').trim().toLowerCase()
-    const isOut=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.service_type||'').trim())
-    const prior=String(row.next_shift_condition||row.room_condition||'').trim()
-    if(['checkout','out/in'].includes(status)&&!isOut){
-      lastByRoom.set(id,'Occupied')
-    }else if(['vacant','dirty','blocked','checkout','out/in',''].includes(status)&&prior){
-      const valid=['vacant (clean)','vacant (dirty)','ready','ready for guest','blocked'].includes(prior.toLowerCase())
-      if(valid)lastByRoom.set(id,prior)
-    }
+    const id=String(row.room_id)
+    if(settledRooms.has(id))continue
+    const candidate=priorConditionCandidate(row)
+    if(candidate.condition)lastByRoom.set(id,candidate.condition)
+    if(candidate.stop)settledRooms.add(id)
   }
   const days=Array.from({length:7},(_,i)=>addDay(start,i))
   const today=ymdInHotelTz()
