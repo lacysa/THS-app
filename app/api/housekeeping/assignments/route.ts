@@ -4,6 +4,7 @@ import { canUseModule } from '@/lib/access'
 import { roomServiceTask } from '@/lib/room-state'
 import { conditionForDay, previousVacantConditions } from '@/lib/room-condition-carry'
 import { loadTubTaskStates } from '@/lib/ops-tub'
+import { loadAssignmentStaff } from '@/lib/assignment-staff'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,52 +27,20 @@ export async function GET(req: NextRequest) {
   const admin = createSupabaseAdmin()
 
   try {
-    const [roomsResult, dailyResult, staffResult, scheduleResult, linksResult, capabilitiesResult] = await Promise.all([
+    const [roomsResult, dailyResult, linksResult, staff] = await Promise.all([
       admin.from('rooms').select('id,name,sort_order').eq('active', true).order('sort_order'),
       admin.from('housekeeping_daily_rooms')
         .select('room_id,reservation_status,service_type,room_condition,next_shift_condition,strip_hold,assigned_to,clean_order,complete,ready_for_inspection,inspected,check_issue_open,updated_by')
         .eq('service_date', date),
-      admin.from('staff_members').select('id,name,job_title,active,full_room_clean_limit').eq('active', true).order('name'),
-      admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date', date),
       admin.from('reservation_daily_links').select('room_id,reservation_status').eq('service_date', date),
-      admin.from('staff_member_capabilities').select('staff_member_id,capability_key')
+      loadAssignmentStaff(admin, date as string)
     ])
-    for (const result of [roomsResult, dailyResult, staffResult, scheduleResult, linksResult, capabilitiesResult]) {
+    for (const result of [roomsResult, dailyResult, linksResult]) {
       if (result.error) throw new Error(result.error.message)
     }
     const carriedConditions = await previousVacantConditions(admin, date as string, dailyResult.data || [])
     const dailyByRoom = new Map((dailyResult.data || []).map((row: any) => [String(row.room_id), row]))
     const linkedByRoom = new Map((linksResult.data || []).map((row: any) => [String(row.room_id), row]))
-    const scheduleByStaff = new Map<string, any>()
-    for (const item of scheduleResult.data || []) {
-      const id = String(item.staff_member_id)
-      const existing = scheduleByStaff.get(id)
-      // An on-site entry takes precedence if a person has multiple shifts.
-      if (!existing || (item.work_mode === 'onsite' && existing.work_mode !== 'onsite')) scheduleByStaff.set(id, item)
-    }
-    const capabilitiesByStaff = new Map<string, Set<string>>()
-    for (const row of capabilitiesResult.data || []) {
-      const id = String(row.staff_member_id)
-      const caps = capabilitiesByStaff.get(id) || new Set<string>()
-      caps.add(String(row.capability_key || ''))
-      capabilitiesByStaff.set(id, caps)
-    }
-    const staff = (staffResult.data || []).map((person: any) => {
-      const shift = scheduleByStaff.get(String(person.id))
-      const roleLabel = String(shift?.role_label || person.job_title || '')
-      const capabilities = capabilitiesByStaff.get(String(person.id)) || new Set<string>()
-      const housekeepingEligible = ['housekeeping', 'runner', 'hospitality_assistant', 'laundry'].some(cap => capabilities.has(cap)) || /housekeep|hospitality|laundry|runner/i.test(roleLabel)
-      return {
-        id: String(person.id),
-        name: String(person.name || ''),
-        roleLabel, housekeepingEligible,
-        onSite: shift?.work_mode === 'onsite',
-        scheduleState: String(shift?.work_mode || 'not_scheduled'),
-        shiftStart: shift?.shift_start || null,
-        shiftEnd: shift?.shift_end || null,
-        fullRoomCleanLimit: Number(person.full_room_clean_limit ?? 2)
-      }
-    }).sort((a, b) => Number(b.onSite) - Number(a.onSite) || Number(b.housekeepingEligible) - Number(a.housekeepingEligible) || a.name.localeCompare(b.name))
     const tubStates = await loadTubTaskStates(admin,date as string)
     const rooms = (roomsResult.data || []).map((room: any) => {
       const daily: any = dailyByRoom.get(String(room.id)) || {}
@@ -101,7 +70,7 @@ export async function GET(req: NextRequest) {
       date, rooms, staff, tubTasks,
       staffing: {
         scheduledOnSite: staff.filter(s => s.onSite).length,
-        hasSchedule: (scheduleResult.data || []).length > 0
+        hasSchedule: staff.some(person => person.scheduleState !== 'not_scheduled')
       },
       readOnly: Boolean(access.isPreviewMode)
     }, { headers: { 'cache-control': 'private, no-store' } })
