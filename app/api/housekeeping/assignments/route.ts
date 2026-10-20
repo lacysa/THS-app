@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
-import { getStaffAccess } from '@/lib/access'
+import { canUseModule } from '@/lib/access'
 import { roomServiceTask } from '@/lib/room-state'
 import { loadTubTaskStates } from '@/lib/ops-tub'
 
@@ -11,8 +11,10 @@ function validDate(value: string | null) {
 }
 
 export async function GET(req: NextRequest) {
-  const access = await getStaffAccess()
+  const gate = await canUseModule('housekeeping_assignments')
+  const access = gate.access
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!gate.allowed) return NextResponse.json({ error: 'Assignments module access is disabled for your account.' }, { status: 403 })
   const canManage = access.isAdmin || (access.capabilities || []).some(cap =>
     ['manager', 'general_manager', 'operations_manager', 'owner'].includes(cap)
   )
@@ -107,8 +109,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const access = await getStaffAccess()
+  const gate = await canUseModule('housekeeping_assignments')
+  const access = gate.access
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!gate.allowed) return NextResponse.json({ error: 'Assignments module access is disabled for your account.' }, { status: 403 })
   const canManage = access.isAdmin || (access.capabilities || []).some(cap =>
     ['manager', 'general_manager', 'operations_manager', 'owner'].includes(cap))
   if (!canManage || access.isPreviewMode) return NextResponse.json({ error: 'Management access required.' }, { status: 403 })
