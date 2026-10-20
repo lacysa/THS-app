@@ -187,6 +187,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   const pendingPatches=useRef<Record<string,Partial<RoomRow>>>({})
   const saveQueues=useRef<Record<string,Promise<boolean>>>({})
   const editGeneration=useRef(0)
+  const openedNotificationRoom=useRef('')
   const [isCompact,setIsCompact]=useState(false)
   const [isTablet,setIsTablet]=useState(false)
 
@@ -249,6 +250,22 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     }finally{if(!silent)setLoading(false)}
   }
   useEffect(()=>{void load()},[date])
+  // A notification opens the exact dated room card, including its correction
+  // details. Scroll once after the authorized room data actually renders.
+  useEffect(()=>{
+    if(!initialRoomId||loading||!rows.some(r=>r.roomId===initialRoomId))return
+    const key=date+':'+initialRoomId
+    if(openedNotificationRoom.current===key)return
+    openedNotificationRoom.current=key
+    setFilter('all')
+    setManagerDisplay('cards')
+    setSelectedRoomId(initialRoomId)
+    setExpanded(current=>({...current,[initialRoomId]:true}))
+    const frame=window.requestAnimationFrame(()=>{
+      window.setTimeout(()=>document.getElementById('room-card-'+initialRoomId)?.scrollIntoView({behavior:'smooth',block:'start'}),100)
+    })
+    return()=>window.cancelAnimationFrame(frame)
+  },[initialRoomId,date,loading,rows])
   // Background synchronization uses the same proven loader as the initial
   // view, but never resets the open interface while someone is editing.
   useEffect(()=>{
@@ -758,6 +775,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       </div>
     </div>
 
+    {initialRoomId&&!loading&&!rows.some(row=>row.roomId===initialRoomId)&&<div className="module-message" role="status">This room is not available in your assigned work for {date}. The notification details remain available in your Notifications history.</div>}
     {viewMode==='assigned'&&<section className="rooms-staff-daily-overview" aria-label="Daily housekeeping overview">
       <div className="rooms-staff-overview-head"><strong>Daily room overview</strong><span>Read-only context for all rooms. Only your assigned rooms can be updated below.</span></div>
       <div className="rooms-staff-overview-scroll"><table><thead><tr><th>Room</th><th>Activity</th><th>Housekeeper</th><th>Condition</th><th>Room notes</th></tr></thead><tbody>
