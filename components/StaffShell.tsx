@@ -2,6 +2,7 @@
 
 import { getStaffSession } from '@/lib/client/staff-session'
 import { staffModuleLabel } from '@/lib/module-labels'
+import { staffInitials } from '@/lib/staff-initials'
 import StaffShiftNote from '@/components/StaffShiftNote'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_RAIL_MEDIA } from '@/lib/layout-breakpoints'
 
@@ -51,6 +52,7 @@ type ModuleRow = {
 type Access = {
   userId: string
   name: string
+  username?: string | null
   preferredName: string | null
   email: string | null
   phone: string | null
@@ -171,11 +173,7 @@ const operationsModules = new Set([
   'staff'
 ])
 
-// Avatars use a recognizable three-letter name cue, never an ambiguous two-letter pair.
-function initials(name: string) {
-  const first = String(name || '').trim().split(/\s+/)[0] || 'Staff'
-  return first.slice(0,3).toUpperCase()
-}
+
 
 function notificationTime(value: string) {
   try {
@@ -711,7 +709,7 @@ export default function StaffShell({
           <div className="ops-sidebar-profile">
 
             <div className="ops-sidebar-avatar">
-              {initials(displayName)}
+              {staffInitials(access?.username,displayName)||'TH'}
             </div>
 
             <div className="ops-sidebar-profile-copy">
@@ -974,7 +972,7 @@ export default function StaffShell({
             </div>
 
             <div className="ops-avatar">
-              {initials(displayName)}
+              {staffInitials(access?.username,displayName)||'TH'}
             </div>
 
             <div className="ops-user-copy">
