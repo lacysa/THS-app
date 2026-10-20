@@ -19,8 +19,8 @@ export async function GET(req:NextRequest){
   const [roomsRes,linksRes,housekeepingRes,historyRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('service_date,room_id,reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').gte('service_date',start).lte('service_date',end),
-    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,late_arrival,notes').gte('service_date',start).lte('service_date',end),
-    admin.from('housekeeping_daily_rooms').select('service_date,room_id,room_condition').lt('service_date',start).not('room_condition','is',null).order('service_date',{ascending:false}).limit(3000)
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,next_shift_condition,late_arrival,notes').gte('service_date',start).lte('service_date',end),
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,room_condition,next_shift_condition,reservation_status,service_type').lt('service_date',start).not('room_condition','is',null).order('service_date',{ascending:false}).limit(3000)
   ])
   if(roomsRes.error||linksRes.error||housekeepingRes.error||historyRes.error)return NextResponse.json({error:'Could not load calendar'},{status:500})
   const links=linksRes.data||[]
@@ -44,9 +44,24 @@ export async function GET(req:NextRequest){
   // a clean/ready state from missing historical data.
   const statusByDate=new Map<string,any>()
   const lastByRoom=new Map<string,string>()
-  for(const row of [...(historyRes.data||[])].reverse()){
-    const condition=String((row as any).room_condition||'').trim()
-    if(condition)lastByRoom.set(String((row as any).room_id),condition)
+  // Follow the same prior-day carry rule as the housekeeping board: an explicit
+  // end-of-shift condition takes priority over the previous day's live condition.
+  // Do not carry guest occupancy from an unrelated completed stay.
+  const historyByRoom=new Map<string,any>()
+  for(const row of historyRes.data||[]){
+    const id=String((row as any).room_id)
+    if(!historyByRoom.has(id))historyByRoom.set(id,row)
+  }
+  for(const [id,row] of historyByRoom){
+    const status=String(row.reservation_status||'').trim().toLowerCase()
+    const isOut=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.service_type||'').trim())
+    const prior=String(row.next_shift_condition||row.room_condition||'').trim()
+    if(['checkout','out/in'].includes(status)&&!isOut){
+      lastByRoom.set(id,'Occupied')
+    }else if(['vacant','dirty','blocked','checkout','out/in',''].includes(status)&&prior){
+      const valid=['vacant (clean)','vacant (dirty)','ready','ready for guest','blocked'].includes(prior.toLowerCase())
+      if(valid)lastByRoom.set(id,prior)
+    }
   }
   const days=Array.from({length:7},(_,i)=>addDay(start,i))
   const today=ymdInHotelTz()
@@ -56,7 +71,9 @@ export async function GET(req:NextRequest){
       const roomId=String((room as any).id)
       const recorded:any=conditions.get(day+'|'+roomId)
       const direct=String(recorded?.room_condition||'').trim()
-      if(direct)lastByRoom.set(roomId,direct)
+      // Preserve the manager's explicitly saved condition on this date.
+      // Otherwise carry the most recent applicable vacant/checkout condition.
+      if(direct)lastByRoom.set(roomId,String(recorded?.next_shift_condition||direct).trim())
       statusByDate.set(day+'|'+roomId,{
         date:day,roomId,condition:(day===today||day===tomorrow)?(direct||lastByRoom.get(roomId)||''):'',
         status:String(recorded?.reservation_status||''),
