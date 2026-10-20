@@ -685,3 +685,40 @@
   .rooms-staff-reference-empty{padding:12px;text-align:center;font-size:12px;color:#718899}
   .rooms-workspace .rooms-card-list{grid-template-columns:minmax(0,1fr)!important}
 }
+
+/* One actionable progress bar replaces the duplicate workflow pills for HSK. */
+.rooms-staff-quick-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 3px}
+.rooms-staff-quick-header>strong{font-size:14px;color:var(--text,#294657)}
+.rooms-staff-all-link{display:inline-flex;align-items:center;gap:7px;min-height:36px;border:1px solid #d0dfe6;border-radius:10px;background:#fff;color:#48677a;padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer}
+.rooms-staff-all-link.is-active{border-color:#79b6b0;background:#ebf8f5;color:#285d59}
+.rooms-staff-all-link span{font-size:11px;border-radius:999px;background:#e6eef2;padding:2px 7px;color:#496777}
+.rooms-workflow-overview>button.rooms-progress-action{
+ width:100%;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+ padding:15px 17px;text-align:left;border:1px solid #d6e4eb;border-radius:17px;
+ background:linear-gradient(135deg,#eff7fa,#f5f2fa);color:#27465b;
+ box-shadow:0 4px 14px rgba(41,70,95,.035);cursor:pointer;
+ transition:border-color .12s ease,background .12s ease,box-shadow .12s ease
+}
+.rooms-workflow-overview>button.rooms-progress-action:hover{border-color:#9abac9;background:linear-gradient(135deg,#e8f5f7,#eeeaf7)}
+.rooms-workflow-overview>button.rooms-progress-action.is-active{
+ border-color:#6fa9aa;box-shadow:0 0 0 2px rgba(103,172,172,.17);
+ background:linear-gradient(135deg,#e2f5ef,#eaf1fb)
+}
+.rooms-workflow-overview>button.rooms-progress-action:focus-visible,.rooms-staff-all-link:focus-visible{outline:3px solid #76aebb;outline-offset:3px}
+.rooms-workflow-overview>button.rooms-progress-action strong{font-size:clamp(23px,3vw,32px);line-height:1;font-variant-numeric:tabular-nums}
+.rooms-workflow-overview>button.rooms-progress-action small{font-size:12px;font-weight:800;color:#405e70;line-height:1.3}
+.rooms-workflow-overview .rooms-progress-hint{display:flex;align-items:center;gap:5px;color:#6b8392;font-size:10px;font-weight:600;line-height:1.3}
+.rooms-progress-hint svg{margin-left:auto;flex:0 0 auto}
+.rooms-workflow-actions{margin:7px 0 18px}
+@media(max-width:700px){
+ .rooms-staff-quick-header{margin-top:14px}
+ .rooms-workflow-overview>button.rooms-progress-action{padding:12px 9px;border-radius:13px;gap:5px}
+ .rooms-workflow-overview>button.rooms-progress-action strong{font-size:25px}
+ .rooms-workflow-overview>button.rooms-progress-action small{font-size:11px}
+ .rooms-workflow-actions .rooms-progress-hint{display:none}
+}
+@media(max-width:370px){
+ .rooms-workflow-overview.rooms-workflow-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .rooms-workflow-overview>button.rooms-progress-action{padding:9px 6px}
+ .rooms-workflow-overview>button.rooms-progress-action small{font-size:10px}
+}
