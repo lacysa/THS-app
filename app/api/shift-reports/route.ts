@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
+import { staffAttribution } from '@/lib/staff-initials'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ function nextDate(value: string) {
 async function currentStaff(admin: ReturnType<typeof createSupabaseAdmin>, authUserId: string) {
   const { data: member } = await admin
     .from('staff_members')
-    .select('id,name,auth_user_id,active')
+    .select('id,name,username,auth_user_id,active')
     .eq('auth_user_id', authUserId)
     .eq('active', true)
     .maybeSingle()
@@ -39,9 +40,6 @@ function canManage(caps: Set<string>) {
   return ['manager','general_manager','operations_manager','owner','foh_manager'].some(key => caps.has(key))
 }
 
-function authorInitials(name:string) {
-  return String(name||'').trim() || 'Staff'
-}
 
 async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: string) {
   const breakfastDate = nextDate(date)
@@ -52,7 +50,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     admin.from('breakfast_bookings').select('room_id,status,menu_submitted,time_slot').eq('service_date', breakfastDate),
     admin.from('maintenance_work_orders').select('*').order('created_at', { ascending: false }),
     admin.from('room_notes').select('*').or(`service_date.eq.${date},note_type.eq.persistent`).order('created_at', { ascending: false }),
-    admin.from('staff_members').select('id,name,auth_user_id,job_title'),
+    admin.from('staff_members').select('id,name,username,auth_user_id,job_title'),
     admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', date).eq('breakfast_tag', true),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',date).eq('work_mode','onsite'),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',breakfastDate).eq('work_mode','onsite'),
@@ -156,12 +154,14 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     return completedYmd === date
   })
 
+  const usernameById=new Map((staffRes.data||[]).map((staff:any)=>[String(staff.id),String(staff.username||'')]))
   const roomNotes = (notesRes.data || [])
     .filter((n: any) => n.note_type !== 'persistent' || !n.resolved)
     .map((n: any) => ({
       ...n,
       roomName: roomById.get(String(n.room_id)) || 'Room',
-      createdByName: n.created_by ? staffById.get(String(n.created_by)) || 'Staff' : 'Staff'
+      createdByName: n.created_by ? staffById.get(String(n.created_by)) || 'Staff' : 'Staff',
+       createdByInitials: n.created_by ? staffAttribution(usernameById.get(String(n.created_by)), staffById.get(String(n.created_by))) : 'Staff'
     }))
 
   const mapStaffSchedule = (rows:any[]) => (rows || []).map((row:any)=>({
@@ -244,11 +244,11 @@ export async function GET(req: NextRequest) {
     ].filter(Boolean) : []
 
     const { data:authorRows, error:authorError } = noteAuthorIds.length
-      ? await admin.from('staff_members').select('id,name').in('id',noteAuthorIds)
+      ? await admin.from('staff_members').select('id,name,username').in('id',noteAuthorIds)
       : { data:[], error:null as any }
 
     if (authorError) throw new Error(authorError.message)
-    const authorMap = new Map((authorRows || []).map((row:any)=>[String(row.id),String(row.name || '')]))
+    const authorMap = new Map((authorRows || []).map((row:any)=>[String(row.id),row]))
 
     const safeReport = report ? {
       ...report,
@@ -256,33 +256,33 @@ export async function GET(req: NextRequest) {
       note_authors: {
         guest: report.guest_notes_by ? {
           id:String(report.guest_notes_by),
-          name:authorMap.get(String(report.guest_notes_by)) || 'Staff',
-          initials:authorInitials(authorMap.get(String(report.guest_notes_by)) || 'Staff')
+          name:(authorMap.get(String(report.guest_notes_by)) as any)?.name || 'Staff',
+          initials:staffAttribution((authorMap.get(String(report.guest_notes_by)) as any)?.username,(authorMap.get(String(report.guest_notes_by)) as any)?.name)
         } : null,
         staff: report.staff_notes_by ? {
           id:String(report.staff_notes_by),
-          name:authorMap.get(String(report.staff_notes_by)) || 'Staff',
-          initials:authorInitials(authorMap.get(String(report.staff_notes_by)) || 'Staff')
+          name:(authorMap.get(String(report.staff_notes_by)) as any)?.name || 'Staff',
+          initials:staffAttribution((authorMap.get(String(report.staff_notes_by)) as any)?.username,(authorMap.get(String(report.staff_notes_by)) as any)?.name)
         } : null,
         supplies: report.supplies_notes_by ? {
           id:String(report.supplies_notes_by),
-          name:authorMap.get(String(report.supplies_notes_by)) || 'Staff',
-          initials:authorInitials(authorMap.get(String(report.supplies_notes_by)) || 'Staff')
+          name:(authorMap.get(String(report.supplies_notes_by)) as any)?.name || 'Staff',
+          initials:staffAttribution((authorMap.get(String(report.supplies_notes_by)) as any)?.username,(authorMap.get(String(report.supplies_notes_by)) as any)?.name)
         } : null,
         tomorrow: report.tomorrow_notes_by ? {
           id:String(report.tomorrow_notes_by),
-          name:authorMap.get(String(report.tomorrow_notes_by)) || 'Staff',
-          initials:authorInitials(authorMap.get(String(report.tomorrow_notes_by)) || 'Staff')
+          name:(authorMap.get(String(report.tomorrow_notes_by)) as any)?.name || 'Staff',
+          initials:staffAttribution((authorMap.get(String(report.tomorrow_notes_by)) as any)?.username,(authorMap.get(String(report.tomorrow_notes_by)) as any)?.name)
         } : null,
         general: report.general_notes_by ? {
           id:String(report.general_notes_by),
-          name:authorMap.get(String(report.general_notes_by)) || 'Staff',
-          initials:authorInitials(authorMap.get(String(report.general_notes_by)) || 'Staff')
+          name:(authorMap.get(String(report.general_notes_by)) as any)?.name || 'Staff',
+          initials:staffAttribution((authorMap.get(String(report.general_notes_by)) as any)?.username,(authorMap.get(String(report.general_notes_by)) as any)?.name)
         } : null,
         management: report.management_notes_by ? {
           id:String(report.management_notes_by),
-          name:authorMap.get(String(report.management_notes_by)) || 'Staff',
-          initials:authorInitials(authorMap.get(String(report.management_notes_by)) || 'Staff')
+          name:(authorMap.get(String(report.management_notes_by)) as any)?.name || 'Staff',
+          initials:staffAttribution((authorMap.get(String(report.management_notes_by)) as any)?.username,(authorMap.get(String(report.management_notes_by)) as any)?.name)
         } : null
       }
     } : null
@@ -294,7 +294,8 @@ export async function GET(req: NextRequest) {
       access: {
         canManageReport: manager,
         currentStaffId: (me.member as any)?.id || null,
-        currentStaffName: (me.member as any)?.name || access.preferredName || access.name
+        currentStaffName: (me.member as any)?.name || access.preferredName || access.name,
+        currentStaffInitials: staffAttribution((me.member as any)?.username,(me.member as any)?.name || access.name)
       }
     })
   } catch (error: any) {
