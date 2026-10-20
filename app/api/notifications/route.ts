@@ -17,6 +17,14 @@ const response=(data:any,status=200)=>NextResponse.json(data,{
 export async function GET(req:NextRequest){
  const {db,user}=await session()
  if(!user)return response({error:'Unauthorized'},401)
+ const focusedId=req.nextUrl.searchParams.get('id')
+ if(focusedId){
+  if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(focusedId))return response({error:'Invalid notification id'},400)
+  const {data,error}=await db.from('notifications').select('id,notification_type,title,message,room_id,service_date,created_at,read_at,archived_at').eq('recipient_user_id',user.id).eq('id',focusedId).maybeSingle()
+  if(error)return response({error:error.message},400)
+  if(!data)return response({error:'Notification not found'},404)
+  return response({notification:data})
+ }
  const status=req.nextUrl.searchParams.get('view')||'inbox'
  if(!['inbox','unread','archived'].includes(status))return response({error:'Invalid filter'},400)
  const limit=Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')||100)||100,1),200)
