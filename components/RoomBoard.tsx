@@ -784,7 +784,7 @@ export default function RoomBoard(){
                 <div className="rb-detail-block">
                   <span>Assigned staff</span>
                   <StaffAssignmentSelect
-                    staff={pickerStaff} value="" label={'Assign staff to '+row.roomName}
+                    staff={pickerStaff} value="" emptyLabel="Add housekeeper…" label={'Assign staff to '+row.roomName}
                     disableStaff={person=>isFullRoomClean(row)&&!staff.includes(person.name)&&fullCleanCountFor(person.name)>=person.fullRoomCleanLimit}
                     onChange={name=>{if(name)toggleStaff(row,name)}}
                     style={{width:'100%',minHeight:42,padding:'8px 10px',borderRadius:9,border:'1px solid #b9ced7',background:'#fff',color:'#253f4d'}}
