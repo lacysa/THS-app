@@ -11,6 +11,7 @@ type Props = {
   disabled?: boolean
   housekeepingOnly?: boolean
   disableStaff?: (staff: AssignmentStaff) => boolean
+  emptyLabel?: string
   className?: string
   style?: CSSProperties
 }
@@ -18,7 +19,7 @@ type Props = {
 const unavailableStates = new Set(['called_off', 'no_call_no_show', 'time_off', 'unavailable'])
 
 /** Native grouped select to keep staff assignments consistent on iPhone, iPad and desktop. */
-export default function StaffAssignmentSelect({staff,value,onChange,label,disabled,housekeepingOnly=false,disableStaff,className,style}:Props) {
+export default function StaffAssignmentSelect({staff,value,onChange,label,disabled,housekeepingOnly=false,disableStaff,emptyLabel='Unassigned',className,style}:Props) {
   const eligible = staff.filter(person => !housekeepingOnly || person.housekeepingEligible)
   const unavailable = eligible.filter(person => unavailableStates.has(person.scheduleState))
   const available = eligible.filter(person => !unavailableStates.has(person.scheduleState))
@@ -34,7 +35,7 @@ export default function StaffAssignmentSelect({staff,value,onChange,label,disabl
     </option>
   })
   return <select aria-label={label} className={className} style={style} value={value} disabled={disabled} onChange={event => onChange(event.target.value)}>
-    <option value="">Unassigned</option>
+    <option value="">{emptyLabel}</option>
     {missing && <option value={value}>{value} (existing assignment)</option>}
     {onsite.length > 0 && <optgroup label="Scheduled on site">{options(onsite)}</optgroup>}
     {otherScheduled.length > 0 && <optgroup label="Other scheduled staff">{options(otherScheduled)}</optgroup>}
