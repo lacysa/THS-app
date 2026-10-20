@@ -150,6 +150,7 @@ const breakfastModules = new Set([
 
 const operationsModules = new Set([
   'housekeeping',
+  'housekeeping_assignments',
   'room_board',
   'housekeeping_setup',
   'room_checks',
@@ -401,11 +402,6 @@ export default function StaffShell({
     operationsModules.has(item.module_key)
   )
 
-  const assignmentSidebarItem: ModuleRow | undefined = managementWorkspace && roomsSidebarItem ? {
-    module_key: 'housekeeping_assignments', title: 'Assignments', label: 'Assignments',
-    href: '/housekeeping/assignments', active: true, enabled: true, published: true,
-    status: 'active', sort_order: 0
-  } : undefined
   const nestedChildrenByParent: Record<string, string[]> = {
     reservations: managementWorkspace
       ? ['ops', 'reservation_sync', 'housekeeping', 'housekeeping_assignments', 'room_checks']
@@ -423,7 +419,7 @@ export default function StaffShell({
 
   const nestedChildrenFor = (parentKey: string) =>
     (nestedChildrenByParent[parentKey] || [])
-      .map(key => key==='housekeeping' && parentKey==='reservations' ? roomsSidebarItem : key==='housekeeping_assignments' ? assignmentSidebarItem : operationsNav.find(item => item.module_key === key))
+      .map(key => key==='housekeeping' && parentKey==='reservations' ? roomsSidebarItem : operationsNav.find(item => item.module_key === key))
       .filter(Boolean) as ModuleRow[]
 
   const orphanedNestedChildren = operationsNav.filter(item => {
