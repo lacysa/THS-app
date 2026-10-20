@@ -201,7 +201,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     const sync=()=>{
       setIsCompact(query.matches)
       setIsTablet(tablet.matches)
-      if(query.matches){setManagerDisplay('cards');if(initialRoomId)setExpanded(current=>({...current,[initialRoomId]:true}));else setFilter(current=>current==='all'?'active':current)}
+      if(query.matches){setManagerDisplay('cards');if(initialRoomId)setExpanded(current=>({...current,[initialRoomId]:true}))}
       else{
         try{
           const saved=window.localStorage.getItem('ths-rooms-manager-view')
@@ -836,14 +836,33 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       {viewMode==='manager'&&(!isCompact||isTablet)&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
     </div>}
 
-    <div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
+    {viewMode==='manager'&&<div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
       {([
         ['active','Needs action',counts.active],['all','All rooms',counts.all],['stayovers','Stayovers',counts.stayovers],['cleaning','Cleaning',counts.cleaning],
         ['inspection','Room check',counts.inspection],['correction','Correction',counts.correction],['complete','Ready for guest',counts.complete]
-      ] as Array<[Filter,string,number]>).map(([key,label,count])=><button key={key} type="button" className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<span>{count}</span></button>)}
+      ] as Array<[Filter,string,number]>).map(([key,label,count])=><button key={key} type="button" role="tab" aria-selected={filter===key} className={filter===key?'active':''} onClick={()=>{setFilter(key);setRoomSearch('')}}>{label}<span>{count}</span></button>)}
+    </div>}
+    {viewMode==='assigned'&&<div className="rooms-staff-quick-header">
+      <strong>My room progress</strong>
+      <button type="button" className={filter==='all'?'rooms-staff-all-link is-active':'rooms-staff-all-link'} onClick={()=>{setFilter('all');setRoomSearch('')}} aria-pressed={filter==='all'}>
+        <BedDouble size={15}/>All my rooms <span>{counts.all}</span>
+      </button>
+    </div>}
+    <div className={viewMode==='assigned'?'rooms-workflow-overview rooms-workflow-actions':'rooms-workflow-overview'} role="group" aria-label="Room progress filters">
+      {([
+        {key:'complete' as Filter,label:'Rooms complete',value:counts.complete,description:'Guest-ready rooms'},
+        {key:'correction' as Filter,label:'Needs correction',value:counts.correction,description:'Open corrections to fix'},
+        {key:'inspection' as Filter,label:'Awaiting checks',value:counts.inspection,description:'Ready for an inspection'}
+      ]).map(item=><button key={item.key} type="button"
+        className={'rooms-progress-action '+(filter===item.key?'is-active':'')}
+        aria-pressed={filter===item.key}
+        aria-label={item.label+': '+item.value+'. Show matching rooms.'}
+        onClick={()=>{setFilter(item.key);setRoomSearch('');setSelectedRoomId('')}}>
+        <strong>{item.value}</strong>
+        <small>{item.label}</small>
+        <span className="rooms-progress-hint">{item.description} <ChevronRight size={13}/></span>
+      </button>)}
     </div>
-
-    <div className="rooms-workflow-overview"><div><strong>{counts.complete}<span> / {activeRows.length}</span></strong><small>Rooms complete</small></div><div><strong>{counts.correction}</strong><small>Needs correction</small></div><div><strong>{counts.inspection}</strong><small>Awaiting checks</small></div></div>
     <label className="rooms-search-field"><span>Find a room or team member</span><input type="search" value={roomSearch} onChange={e=>setRoomSearch(e.target.value)} placeholder="Search rooms, staff, status…" /></label>
     {managerDisplay==='focus'&&!loading&&searchedRows.length>0&&<div className="rooms-focus-layout">
       <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
@@ -857,7 +876,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     <div className={`rooms-save-state ${saveState}`}>{saveState==='saving'?'Saving…':saveState==='error'?'Save failed':saveState==='saved'?'Saved ✓':''}</div>
     {message&&<div className="module-message">{message}</div>}
 
-    {loading?<div className="module-empty">Loading rooms…</div>:searchedRows.length===0?<div className="module-empty">No rooms match this view.</div>:
+    {loading?<div className="module-empty">Loading rooms…</div>:searchedRows.length===0?<div className="module-empty">{roomSearch.trim()?'No rooms match your search.':filter==='complete'?'No rooms are guest-ready in this view yet.':filter==='correction'?'No rooms need correction right now.':filter==='inspection'?'No rooms are awaiting checks right now.':'No rooms match this view.'}</div>:
       viewMode==='manager'&&canUseAdvancedRoomsViews(access)&&managerDisplay==='table'
         ? <div className="rooms-table-shell">
             <div className="rooms-table-scroll">
