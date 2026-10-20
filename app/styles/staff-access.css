@@ -201,3 +201,16 @@ html[data-theme="dark"] .staff-preview-nav-item:hover,html[data-theme="dark"] .s
 .staff-access-issued-credentials p,.staff-access-issued-credentials small{font-size:11px;color:var(--app-muted);line-height:1.5}
 .staff-access-issued-credentials input{font:600 14px ui-monospace,SFMono-Regular,monospace;width:100%;max-width:460px;padding:11px 10px;border:1px solid var(--app-border);border-radius:8px;background:var(--app-surface);color:var(--app-text);letter-spacing:.02em}
 @media(max-width:650px){.staff-access-credentials{margin:10px;padding:12px}.staff-access-login-id{display:grid;gap:3px}.staff-access-login-id strong{text-align:left}}
+
+/* Group real, usable staff access separately from dormant modules. */
+.staff-access-module-manager{margin-top:13px;border-top:1px solid #dde8ec}
+.staff-access-module-heading{display:grid;gap:4px;padding:15px 16px 12px;background:linear-gradient(105deg,#eef7f8,#f3f1fa)}
+.staff-access-module-heading strong{color:#2c4e63;font-size:14px}
+.staff-access-module-heading span{color:#667e8b;font-size:11px;line-height:1.4}
+.staff-access-module.is-inactive{background:#f7f9fb;opacity:.83}
+.staff-access-inactive{margin:12px 14px 18px;border:1px solid #d9e3e9;border-radius:13px;overflow:hidden}
+.staff-access-inactive>summary{padding:13px 15px;cursor:pointer;background:#f4f7f9;color:#47657a;font-weight:800;font-size:12px}
+.staff-access-inactive>summary span{display:block;font-weight:500;color:#738896;margin-top:5px;font-size:11px}
+.staff-access-inactive[open]>summary{border-bottom:1px solid #d9e3e9}
+.staff-access-inactive .staff-access-modules{max-height:390px;overflow-y:auto}
+.staff-access-inactive .staff-access-module:last-child{border-bottom:0}
