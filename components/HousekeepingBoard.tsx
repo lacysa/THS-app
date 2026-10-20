@@ -770,7 +770,6 @@ export default function HousekeepingBoard() {
             onChange={name=>{if(name)toggleStaff(row,name)}}
             style={{width:'100%',minHeight:42,padding:'8px 10px',border:'1px solid #b9ced7',borderRadius:10,background:'#fff',color:'#253f4d'}}/>
         </div>}
-        </div>}
 
         {orderActive&&!hasOrder&&<label className="hsk-mobile-setup-block">
           <span>Cleaning order</span>
