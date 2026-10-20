@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
+import {conditionForDay,isAutoOccupiedPlaceholder} from '@/lib/room-condition-carry'
+import {ymdInHotelTz} from '@/lib/time'
 import { getStaffAccess } from '@/lib/access'
 import { normalizeEditedReservation, parseArrivalReportPages } from '@/lib/reservations/import'
 
@@ -115,7 +117,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   // override already recorded for a day being rebuilt. Never import an older
   // reservation's workflow status into a reservation-free day.
   const carryResult=await admin.from('housekeeping_daily_rooms')
-    .select('service_date,room_id,reservation_status,service_type,room_condition,next_shift_condition,strip_hold')
+    .select('service_date,room_id,reservation_status,service_type,room_condition,next_shift_condition,strip_hold,updated_by,complete,inspected,assigned_to')
     .lt('service_date',end)
     .order('service_date',{ascending:false})
     .limit(10000)
@@ -123,7 +125,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
   const priorByDay=new Map((carryResult.data||[]).map((row:any)=>[String(row.service_date)+'|'+String(row.room_id),row]))
   const [currentRows,previousLinkRows]=await Promise.all([
     loadDateRangeRows(admin,'housekeeping_daily_rooms',
-      'service_date,room_id,room_condition,reservation_status,service_type,strip_hold,updated_by,breakfast_tag',start,end),
+      'service_date,room_id,room_condition,reservation_status,service_type,strip_hold,updated_by,breakfast_tag,complete,inspected,assigned_to',start,end),
     loadDateRangeRows(admin,'reservation_daily_links',
       'service_date,room_id,reservation_status',start,end)
   ])
@@ -135,7 +137,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
     const activity=String(row.reservation_status||'').trim().toLowerCase()
     const confirmedOut=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(row.service_type||'').trim())
     const pendingOut=['checkout','out/in'].includes(activity)&&!confirmedOut
-    const condition=pendingOut?'Occupied':String(row.next_shift_condition||row.room_condition||'').trim()
+    const condition=pendingOut?'Occupied':String(row.next_shift_condition||conditionForDay(row)||'').trim()
     // Occupied follows a reservation-free date only when checkout has not
     // been confirmed OUT. Other guest occupancy never leaks forward.
     if(condition && (pendingOut||!['occupied','ready for room check','final check','cleaning'].includes(condition.toLowerCase())))
@@ -183,7 +185,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         )
         const effectiveStatus=staffActivityOverride?recordedStatus:status
         const noReservation=effectiveStatus==='Vacant'
-        const staffCondition=String(current.room_condition||'').trim()
+        const staffCondition=conditionForDay(current)
         const outConfirmed=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(current.service_type||'').trim())
         const onHold=String(current.strip_hold||'').toLowerCase().includes('hold')
         const awaitingOut=['checkout','out/in'].includes(effectiveStatus.toLowerCase())&&!outConfirmed&&!onHold
@@ -202,6 +204,10 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
           // cleaning, inspection, notes, assignments, tip and service fields.
           const patch:Record<string,unknown>={}
           if(recordedStatus!==nextStatus)patch.reservation_status=nextStatus
+          // Legacy imports generated unconfirmed future Occupied placeholders.
+          // Clearing only those lets the shared read path inherit the latest
+          // manager-confirmed physical state without touching staff edits.
+          if(date>ymdInHotelTz()&&isAutoOccupiedPlaceholder(current))patch.room_condition=null
           if(Boolean(current.breakfast_tag)!==nextBreakfast)patch.breakfast_tag=nextBreakfast
           if(Object.keys(patch).length){
             patch.updated_at=new Date().toISOString()
@@ -211,7 +217,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
           newRoomDays.push({
             service_date:date,room_id:room.id,reservation_status:nextStatus,
             breakfast_tag:nextBreakfast,
-            ...(awaitingOut||stayoverOccupied ? {room_condition:'Occupied'} : carryCondition ? {room_condition:carryCondition} : {}),
+            ...(awaitingOut||stayoverOccupied ? {room_condition:'Occupied'} : {}),
             ...(carryDirty ? {service_type:'OUT'} : {}),
             updated_at:new Date().toISOString()
           })
@@ -223,7 +229,7 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
       const current:any=currentByDay.get(date+'|'+room.id)||{}
       const confirmedOut=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(current.service_type||'').trim())
       const awaitingOut=['Checkout','Out/In'].includes(status)&&!confirmedOut
-      const liveCondition=awaitingOut?'Occupied':String(current.next_shift_condition||current.room_condition||
+      const liveCondition=awaitingOut?'Occupied':String(current.next_shift_condition||conditionForDay(current)||
         (status==='Vacant'?lastConditionByRoom.get(String(room.id))||'':'')).trim()
       const carriedOccupied=status==='Vacant'&&liveCondition.toLowerCase()==='occupied'&&
         lastConditionByRoom.get(String(room.id))==='Occupied'&&!confirmedOut
