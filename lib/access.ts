@@ -6,6 +6,7 @@ import { cookies } from 'next/headers'
 export type StaffAccess = {
   userId:string
   name:string
+  username?:string|null
   preferredName:string|null
   email:string|null
   phone:string|null
@@ -59,7 +60,7 @@ async function loadAccessForUser(userId:string):Promise<StaffAccess|null> {
 
   const {data:member}=await admin
     .from('staff_members')
-    .select('id')
+    .select('id,username')
     .eq('auth_user_id',userId)
     .maybeSingle()
 
@@ -77,6 +78,7 @@ async function loadAccessForUser(userId:string):Promise<StaffAccess|null> {
   return {
     userId:String((profile as any).user_id),
     name:(profile as any).name || (profile as any).email || 'Staff',
+    username:member?.username || null,
     preferredName:(profile as any).preferred_name || null,
     email:(profile as any).email || null,
     phone:(profile as any).phone || null,
