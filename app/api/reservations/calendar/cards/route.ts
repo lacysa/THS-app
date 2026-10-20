@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
+import {conditionForDay,previousVacantConditions} from '@/lib/room-condition-carry'
 
 export const dynamic='force-dynamic'
 
@@ -26,13 +27,12 @@ export async function GET(req:NextRequest){
   if(!validDate(date))return NextResponse.json({error:'Invalid date'},{status:400})
 
   const admin=createSupabaseAdmin()
-  const [roomsResult,linksResult,dailyResult,priorResult]=await Promise.all([
+  const [roomsResult,linksResult,dailyResult]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('room_id,reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').eq('service_date',date),
-    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag,assigned_to,clean_order').eq('service_date',date),
-    admin.from('housekeeping_daily_rooms').select('room_id,room_condition,next_shift_condition').eq('service_date',previousDate(date))
+    admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,late_arrival,strip_hold,service_type,room_condition,next_shift_condition,complete,inspected,housekeeper_attested_by,ha_signed_by,foh_signed_by,check_issue_open,notes,breakfast_tag,assigned_to,clean_order,updated_by').eq('service_date',date)
   ])
-  if(roomsResult.error||linksResult.error||dailyResult.error||priorResult.error){
+  if(roomsResult.error||linksResult.error||dailyResult.error){
     return NextResponse.json({error:'Could not load reservation cards'},{status:500})
   }
 
@@ -47,7 +47,7 @@ export async function GET(req:NextRequest){
 
   const stays=new Map<string,any>((staysResult?.data||[]).map((stay:any)=>[String(stay.id),stay]))
   const current=new Map<string,any>((dailyResult.data||[]).map((room:any)=>[String(room.room_id),room]))
-  const prior=new Map<string,any>((priorResult.data||[]).map((room:any)=>[String(room.room_id),room]))
+  const carried=await previousVacantConditions(admin,date,dailyResult.data||[])
   const linksByRoom=new Map<string,any>(links.map((link:any)=>[String(link.room_id),link]))
 
   const rows=(roomsResult.data||[]).flatMap((room:any)=>{
@@ -61,10 +61,7 @@ export async function GET(req:NextRequest){
     if(!primary&&!arriving&&!staying&&!departing)return []
 
     const now=current.get(roomId)||{}
-    const before=prior.get(roomId)||{}
-    const condition=String(now.room_condition||'').trim()
-    const priorCondition=String(before.next_shift_condition||before.room_condition||'').trim()
-    const inheritedReady=!condition&&priorCondition==='Vacant (Clean)'
+    const condition=conditionForDay(now,carried.get(roomId)||'')
     return [{
       roomId,roomName:String(room.name||'Room'),
       status:String(link.reservation_status||now.reservation_status||'Vacant'),
@@ -77,7 +74,7 @@ export async function GET(req:NextRequest){
       roomNotes:String(now.notes||''),
       breakfastTag:Boolean(now.breakfast_tag),
       lateArrival:Boolean(now.late_arrival),
-      roomCondition:condition||(inheritedReady?'Ready':''),
+      roomCondition:condition,
       nextShiftCondition:String(now.next_shift_condition||''),
       complete:Boolean(now.complete),
       inspected:Boolean(now.inspected),
