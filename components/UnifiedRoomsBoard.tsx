@@ -2,6 +2,7 @@
 
 import { getStaffSession } from '@/lib/client/staff-session'
 import HousekeepingAssignments from '@/components/HousekeepingAssignments'
+import HousekeepingInspectionMode from '@/components/HousekeepingInspectionMode'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 import { useEffect,useMemo,useRef,useState } from 'react'
@@ -157,9 +158,9 @@ function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='block
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
-export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilter='all',initialView='rooms',allowAssignments=false}:{initialDate?:string;initialRoomId?:string;initialFilter?:Filter;initialView?:'rooms'|'assignments';allowAssignments?:boolean}={}){
+export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilter='all',initialView='rooms',allowAssignments=false}:{initialDate?:string;initialRoomId?:string;initialFilter?:Filter;initialView?:'rooms'|'assignments'|'inspections';allowAssignments?:boolean}={}){
   const [date,setDate]=useState(initialDate||todayDetroit())
-  const [workspaceView,setWorkspaceView]=useState<'rooms'|'assignments'>(allowAssignments&&!initialRoomId?initialView:'rooms')
+  const [workspaceView,setWorkspaceView]=useState<'rooms'|'assignments'|'inspections'>(!initialRoomId?initialView:'rooms')
   const [access,setAccess]=useState<Access|null>(null)
   const [rows,setRows]=useState<RoomRow[]>([])
   const [dailyOverview,setDailyOverview]=useState<DailyOverviewRow[]>([])
@@ -797,15 +798,25 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     complete:activeRows.filter(r=>(isRefresh(r)&&r.complete)||roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='ready').length
   }),[activeRows,inactiveStayovers,rows,checkByRoom])
 
-  // Both views operate on the same dated room records and permissioned APIs.
-  const showAssignmentView=allowAssignments&&isManager(access)&&workspaceView==='assignments'&&!initialRoomId
-  const workspaceTabs=allowAssignments&&isManager(access)?<nav className="rooms-workspace-tabs" aria-label="Housekeeping workspace">
-    <button type="button" className={showAssignmentView?'':'active'} aria-current={!showAssignmentView?'page':undefined} onClick={()=>setWorkspaceView('rooms')}>Rooms</button>
-    <button type="button" className={showAssignmentView?'active':''} aria-current={showAssignmentView?'page':undefined} onClick={()=>setWorkspaceView('assignments')}>Assignments</button>
+  // Task-focused views share the same dated room records and inspection API.
+  // Role capabilities determine which options exist; housekeeping-only staff
+  // stay in My Assignments without gaining inspection or staffing access.
+  const mayInspect=canInspect(access)
+  const mayAssign=allowAssignments&&isManager(access)
+  const showAssignmentView=mayAssign&&workspaceView==='assignments'&&!initialRoomId
+  const showInspectionView=mayInspect&&workspaceView==='inspections'&&!initialRoomId
+  const workspaceTabs=(mayAssign||mayInspect)?<nav className="rooms-workspace-tabs" aria-label="Housekeeping workspace">
+    <button type="button" className={showAssignmentView||showInspectionView?'':'active'} aria-current={!showAssignmentView&&!showInspectionView?'page':undefined} onClick={()=>setWorkspaceView('rooms')}>Rooms</button>
+    {mayAssign&&<button type="button" className={showAssignmentView?'active':''} aria-current={showAssignmentView?'page':undefined} onClick={()=>setWorkspaceView('assignments')}>Assignments</button>}
+    {mayInspect&&<button type="button" className={showInspectionView?'active':''} aria-current={showInspectionView?'page':undefined} onClick={()=>setWorkspaceView('inspections')}>Inspections</button>}
   </nav>:null
   if(showAssignmentView)return <div className="rooms-workspace module-pretty-page">
     {workspaceTabs}
     <HousekeepingAssignments selectedDate={date} onDateChange={setDate}/>
+  </div>
+  if(showInspectionView)return <div className="rooms-workspace module-pretty-page">
+    {workspaceTabs}
+    <HousekeepingInspectionMode date={date} onDateChange={setDate}/>
   </div>
 
   // Today is available only to managers and Hospitality Assistants. Housekeeping-only staff use My Assignments.

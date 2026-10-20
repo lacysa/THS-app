@@ -7,6 +7,6 @@ export default async function RoomInspectionsPage() {
   const gate = await canUseModule('housekeeping')
   if (!gate.access) redirect('/login')
   if (!gate.allowed) redirect('/dashboard')
-  // Inspections now live inside Rooms; preserve older dashboard/bookmarked links.
-  redirect('/housekeeping?filter=inspection')
+  // Preserve old bookmarks, but open the focused queue instead of all room cards.
+  redirect('/housekeeping?view=inspections')
 }

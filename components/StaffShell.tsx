@@ -381,6 +381,7 @@ export default function StaffShell({
             m.module_key !== 'breakfast_menu_manager' &&
             m.module_key !== 'room_board' &&
             m.module_key !== 'housekeeping_assignments' &&
+            m.module_key !== 'room_checks' &&
             !(managementWorkspace && hasReservations && m.module_key==='housekeeping') &&
             !m.module_key.endsWith('_inventory')
         )

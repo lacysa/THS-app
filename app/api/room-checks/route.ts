@@ -10,7 +10,7 @@ function names(v:string){return String(v||'').split(',').map(x=>x.trim().toLower
 async function context(){
   const access=await getStaffAccess()
   if(!access) return {error:NextResponse.json({error:'Unauthorized'},{status:401})}
-  const allowed=access.isAdmin||access.capabilities.some(c=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c))
+  const allowed=access.isAdmin||access.permissions.includes('room_checks.perform')||access.capabilities.some(c=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(c))
   if(!allowed) return {error:NextResponse.json({error:'Room-check access required.'},{status:403})}
   return {access}
 }
@@ -67,7 +67,7 @@ export async function GET(req:NextRequest){
       const status=String(r.reservation_status||'').trim().toLowerCase()
       const stripHold=String(r.strip_hold||'').trim().toLowerCase()
       const service=String(r.service_type||'').trim().toUpperCase()
-      return status!=='blocked' && status!=='stayover' && !stripHold.includes('hold') && service!=='RF'
+      return status!=='blocked' && status!=='stayover' && !stripHold.includes('hold') && service!=='RF' && String(r.room_condition||'').trim().toLowerCase()!=='blocked'
     })
     .map((r:any)=>{
       const latest=latestQualityByRoom.get(String(r.room_id))
@@ -83,8 +83,13 @@ export async function GET(req:NextRequest){
         sortOrder:roomMap.get(String(r.room_id))?.sort_order??999,
         reservationStatus:r.reservation_status||'',
         serviceType:r.service_type||'',
+        roomCondition:r.room_condition||'',
+        roomNotes:r.notes||'',
         assignedTo:r.assigned_to||'',
         complete:Boolean(r.complete),
+        // Distinguish an actual submitted room from the legacy synthesized
+        // readyForInspection flag on empty/vacant days.
+        inspectionSubmitted:Boolean(r.ready_for_inspection),
         readyForInspection:Boolean(r.ready_for_inspection) || !activeHskService,
         issueOpen:Boolean(r.check_issue_open),
         issueNote:r.check_issue_note||'',
@@ -149,7 +154,8 @@ export async function POST(req:NextRequest){
       if(failed&&room.inspected&&!manager)return NextResponse.json({error:'Only management may overturn a passed inspection.'},{status:403})
       const status=String(room.reservation_status||'').trim().toLowerCase()
       const service=String(room.service_type||'').trim().toUpperCase()
-      if(status==='blocked'||status==='stayover'||String(room.strip_hold||'').toLowerCase().includes('hold')||service==='RF')return NextResponse.json({error:'Room is not eligible for inspection.'},{status:400})
+      if(status==='blocked'||status==='stayover'||String(room.strip_hold||'').toLowerCase().includes('hold')||service==='RF'||String(room.room_condition||'').trim().toLowerCase()==='blocked')return NextResponse.json({error:'Room is not eligible for inspection.'},{status:400})
+      if(room.check_issue_open&&(!room.complete||!room.ready_for_inspection))return NextResponse.json({error:'Housekeeping must submit the correction before reinspection.'},{status:409})
       const needsClean=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(room.check_issue_open)
       // Authorized inspectors may inspect even before housekeeping has app access.
       // An open correction can be reinspected only once marked fixed.

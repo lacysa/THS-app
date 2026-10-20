@@ -15,6 +15,10 @@ export default async function Page({searchParams}:{searchParams:Promise<{filter?
   const initialDate=/^20\d{2}-\d{2}-\d{2}$/.test(params?.date||'')?params.date:undefined
   const manager=gate.access.isAdmin || (gate.access.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap))
   const allowAssignments=Boolean(assignmentGate.allowed&&manager)
-  const initialView=allowAssignments && !initialRoomId && params?.view==='assignments'?'assignments':'rooms'
+  const caps=gate.access.capabilities||[]
+  const allowInspections=gate.access.isAdmin || (gate.access.permissions||[]).includes('room_checks.perform') ||
+    caps.some(cap=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(cap))
+  const initialView=!initialRoomId&&params?.view==='inspections'&&allowInspections?'inspections':
+    allowAssignments&&!initialRoomId&&params?.view==='assignments'?'assignments':'rooms'
   return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate} initialView={initialView} allowAssignments={allowAssignments}/></StaffShell>
 }
