@@ -764,7 +764,9 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     complete:activeRows.filter(r=>(isRefresh(r)&&r.complete)||roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='ready').length
   }),[activeRows,inactiveStayovers,rows,checkByRoom])
 
-  if(viewMode==='assigned' && staffTab==='today') return <div className="rooms-workspace module-pretty-page">
+  // Today is available only to managers and Hospitality Assistants. Housekeeping-only staff use My Assignments.
+  const canViewStaffToday = isManager(access) || (access?.capabilities||[]).includes('hospitality_assistant')
+  if(viewMode==='assigned' && canViewStaffToday && staffTab==='today') return <div className="rooms-workspace module-pretty-page">
     <div className="module-toolbar rooms-toolbar">
       <div><div className="module-kicker">Housekeeping</div><h1>Today</h1><p>All room assignments, conditions and notes. Read-only reference.</p></div>
       <div className="toolbar-actions">
@@ -802,7 +804,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       </div>
     </div>
 
-    {viewMode==='assigned'&&<div role="tablist" aria-label="Housekeeping navigation" style={{display:'flex',gap:8,marginBottom:18,flexWrap:'wrap'}}>
+    {viewMode==='assigned'&&canViewStaffToday&&<div role="tablist" aria-label="Housekeeping navigation" style={{display:'flex',gap:8,marginBottom:18,flexWrap:'wrap'}}>
       <button type="button" role="tab" aria-selected="false" className="ops-secondary-btn" onClick={()=>setStaffTab('today')}>Today</button>
       <button type="button" role="tab" aria-selected="true" className="ops-primary-btn" onClick={()=>setStaffTab('mine')}>My Assignments</button>
     </div>}
