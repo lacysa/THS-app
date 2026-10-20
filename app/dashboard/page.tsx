@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
 import DailyDashboard from '@/components/DailyDashboard'
+import HousekeepingStaffDashboard from '@/components/HousekeepingStaffDashboard'
 import ManagerCommandCenter from '@/components/ManagerCommandCenter'
 import DashboardViewSwitcher from '@/components/DashboardViewSwitcher'
 import LiveDataRefresh from '@/components/LiveDataRefresh'
@@ -40,7 +41,8 @@ export default async function DashboardPage() {
   // Task-only staff open their relevant workspace instead of the manager dashboard.
   const caps=access.capabilities||[]
   const manager=access.isAdmin || ['manager','general_manager','operations_manager','owner','foh_manager'].some(cap=>caps.includes(cap))
-  if (!manager && caps.includes('housekeeping') && !caps.includes('hospitality_assistant')) redirect('/housekeeping')
+  if (!manager && caps.includes('housekeeping') && !caps.includes('hospitality_assistant'))
+    return <StaffShell title="Dashboard"><HousekeepingStaffDashboard/></StaffShell>
   if (!manager && caps.includes('runner') && !caps.includes('hospitality_assistant')) redirect('/breakfast/overview')
 
 
