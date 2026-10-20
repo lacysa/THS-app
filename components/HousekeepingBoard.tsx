@@ -6,7 +6,8 @@ import {
   useRef,
   useState
 } from 'react'
-import { createPortal } from 'react-dom'
+import StaffAssignmentSelect from '@/components/StaffAssignmentSelect'
+import { staffPickerOptions } from '@/lib/staff-picker-options'
 
 import {
   RefreshCw,
@@ -188,7 +189,6 @@ export default function HousekeepingBoard() {
   const [stripTasks,setStripTasks] = useState<RoomRow[]>([])
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
   const [allStaffOptions, setAllStaffOptions] = useState<StaffOption[]>([])
-  const [showAllStaff, setShowAllStaff] = useState(false)
   const [packageOptions, setPackageOptions] = useState<RoomPackageOption[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -204,9 +204,6 @@ export default function HousekeepingBoard() {
   const [issueDrafts, setIssueDrafts] = useState<Record<string,string>>({})
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [dirty, setDirty] = useState(false)
-  const [openStaffRoomId, setOpenStaffRoomId] = useState<string | null>(null)
-  const [staffPopover, setStaffPopover] = useState<{left:number;top:number;width:number}|null>(null)
-  const [staffSearch, setStaffSearch] = useState('')
   const [openPackageRoomId, setOpenPackageRoomId] = useState<string | null>(null)
   const [selfChecks,setSelfChecks] = useState<Record<string,SelfCheckState>>({})
   const rowsRef = useRef<RoomRow[]>([])
@@ -234,20 +231,6 @@ export default function HousekeepingBoard() {
   useEffect(() => {
     dateRef.current = date
   }, [date])
-
-  useEffect(() => {
-    if (!openStaffRoomId) return
-    const close = () => {
-      setOpenStaffRoomId(null)
-      setStaffPopover(null)
-    }
-    window.addEventListener('resize', close)
-    window.addEventListener('scroll', close, true)
-    return () => {
-      window.removeEventListener('resize', close)
-      window.removeEventListener('scroll', close, true)
-    }
-  }, [openStaffRoomId])
 
   useEffect(() => {
     fetch('/api/me', { cache: 'no-store' })
@@ -708,14 +691,7 @@ export default function HousekeepingBoard() {
   }
 
 
-  const filteredStaff = useMemo(() => {
-    const q = staffSearch.trim().toLowerCase()
-    const source = showAllStaff ? allStaffOptions : staffOptions
-    if (!q) return source
-    return source.filter(option =>
-      [option.name, option.roleLabel].filter(Boolean).join(' ').toLowerCase().includes(q)
-    )
-  }, [staffOptions, allStaffOptions, showAllStaff, staffSearch])
+  const pickerStaff = useMemo(() => staffPickerOptions(staffOptions,allStaffOptions),[staffOptions,allStaffOptions])
 
   useEffect(()=>{
     if(viewMode!=='manager'||loading) return
@@ -789,20 +765,11 @@ export default function HousekeepingBoard() {
 
         {!selectedStaff.length&&<div className="hsk-mobile-setup-block">
           <span>Staff</span>
-          <button type="button" className="hsk-mobile-select" onClick={()=>setOpenStaffRoomId(openStaffRoomId===row.roomId?null:row.roomId)}>
-            Select staff <ChevronDown size={14}/>
-          </button>
-          {openStaffRoomId===row.roomId&&<div className="hsk-mobile-staff-list">
-            {(showAllStaff?allStaffOptions:staffOptions).map(option=>{
-              const count=fullCleanCountFor(option.name)
-              const limit=Number(option.fullRoomCleanLimit??2)
-              const atLimit=isFullRoomClean(row)&&count>=limit
-              return <button key={option.id} type="button" className={atLimit?'is-at-limit':''} onClick={()=>toggleStaff(row,option.name)}>
-                <span>{option.name}</span><small>{isFullRoomClean(row)?`Full cleans ${count}/${limit}`:option.roleLabel||''}</small>
-              </button>
-            })}
-            <button type="button" className="hsk-mobile-staff-scope" onClick={()=>setShowAllStaff(v=>!v)}>{showAllStaff?'Show on-site staff':'Show all active staff'}</button>
-          </div>}
+          <StaffAssignmentSelect staff={pickerStaff} value="" label={'Assign staff to '+row.roomName}
+            disableStaff={person=>isFullRoomClean(row)&&fullCleanCountFor(person.name)>=person.fullRoomCleanLimit}
+            onChange={name=>{if(name)toggleStaff(row,name)}}
+            style={{width:'100%',minHeight:42,padding:'8px 10px',border:'1px solid #b9ced7',borderRadius:10,background:'#fff',color:'#253f4d'}}/>
+        </div>}
         </div>}
 
         {orderActive&&!hasOrder&&<label className="hsk-mobile-setup-block">
@@ -1410,91 +1377,12 @@ export default function HousekeepingBoard() {
                     </td>
 
                     <td className={`hsk-staff-cell hsk-setup-cell ${(!assignmentActive||hasStaff)?'is-collapsed':''}`}>
-                      {assignmentActive && !hasStaff && <div className="hsk-staff-picker">
-                        <button
-                          type="button"
-                          className="hsk-staff-trigger"
-                          onClick={e => {
-                            const opening = openStaffRoomId !== row.roomId
-                            if (!opening) {
-                              setOpenStaffRoomId(null)
-                              setStaffPopover(null)
-                              return
-                            }
-                            const rect = e.currentTarget.getBoundingClientRect()
-                            const popoverWidth = Math.max(250, rect.width)
-                            const estimatedHeight = 330
-                            const roomBelow = window.innerHeight - rect.bottom
-                            const opensUp = roomBelow < estimatedHeight && rect.top > estimatedHeight
-                            const left = Math.max(8, Math.min(rect.left, window.innerWidth - popoverWidth - 8))
-                            const top = opensUp
-                              ? Math.max(8, rect.top - estimatedHeight - 4)
-                              : Math.min(window.innerHeight - estimatedHeight - 8, rect.bottom + 4)
-                            setStaffPopover({ left, top, width: popoverWidth })
-                            setOpenStaffRoomId(row.roomId)
-                            setStaffSearch('')
-                          }}
-                        >
-                          <span>{selectedStaff.length ? selectedStaff.join(', ') : 'Select staff'}</span>
-                          <ChevronDown size={14} />
-                        </button>
-
-                        {openStaffRoomId === row.roomId && staffPopover && typeof document !== 'undefined' && createPortal(
-                          <div
-                            className="hsk-staff-popover hsk-staff-popover-portal"
-                            style={{ left: staffPopover.left, top: staffPopover.top, width: staffPopover.width }}
-                            onClick={e=>e.stopPropagation()}
-                          >
-                            <div className="hsk-staff-search">
-                              <Search size={14} />
-                              <input
-                                autoFocus
-                                value={staffSearch}
-                                onChange={e => setStaffSearch(e.target.value)}
-                                placeholder={showAllStaff ? 'Search all active staff' : 'Search on-site staff'}
-                              />
-                            </div>
-                            <div className="hsk-staff-scope">
-                              <strong>{showAllStaff ? 'All active staff' : 'On site today'}</strong>
-                              <button type="button" onClick={() => setShowAllStaff(value => !value)}>
-                                {showAllStaff ? 'On-site only' : 'All active staff'}
-                              </button>
-                            </div>
-                            <div className="hsk-staff-options">
-                              {filteredStaff.map(option => {
-                                const checked = selectedStaff.includes(option.name)
-                                const fullCleanCount=fullCleanCountFor(option.name)
-                                const fullCleanLimit=Number(option.fullRoomCleanLimit ?? 2)
-                                const atLimit=isFullRoomClean(row) && !checked && fullCleanCount>=fullCleanLimit
-                                return (
-                                  <button
-                                    type="button"
-                                    key={option.id}
-                                    className={`${checked ? 'is-selected' : ''} ${atLimit?'is-at-limit':''}`}
-                                    onClick={() => toggleStaff(row, option.name)}
-                                    aria-disabled={atLimit}
-                                    title={atLimit?`${option.name} is at their full clean limit (${fullCleanCount}/${fullCleanLimit})`:undefined}
-                                  >
-                                    <span className="hsk-staff-check">{checked && <Check size={13} />}</span>
-                                    <span>
-                                      {option.name}
-                                      <small>
-                                        {[
-                                          !showAllStaff && option.onSite ? option.roleLabel : '',
-                                          !showAllStaff && option.onSite && option.shiftStart && option.shiftEnd ? `${String(option.shiftStart).slice(0,5)}–${String(option.shiftEnd).slice(0,5)}` : '',
-                                          `Full cleans ${fullCleanCount}/${fullCleanLimit}`
-                                        ].filter(Boolean).join(' · ')}
-                                      </small>
-                                    </span>
-                                  </button>
-                                )
-                              })}
-                              {!filteredStaff.length && <div className="hsk-no-staff">{showAllStaff ? 'No matching active staff.' : 'No on-site staff scheduled for this day.'}</div>}
-                            </div>
-                          </div>,
-                          document.body
-                        )}
-                      </div>}
+                      {assignmentActive && !hasStaff && <StaffAssignmentSelect
+                        staff={pickerStaff} value="" label={'Assign staff to '+row.roomName}
+                        disableStaff={person=>isFullRoomClean(row)&&fullCleanCountFor(person.name)>=person.fullRoomCleanLimit}
+                        onChange={name=>{if(name)toggleStaff(row,name)}}
+                        style={{width:'100%',minWidth:160,padding:'8px 10px',border:'1px solid #b9ced7',borderRadius:9,background:'#fff',color:'#253f4d'}}
+                      />}
                     </td>
 
                     <td className={(!orderActive||hasOrder)?'hsk-setup-cell is-collapsed':'hsk-setup-cell'}>
