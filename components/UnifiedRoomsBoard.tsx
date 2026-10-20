@@ -737,6 +737,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   const filtered=useMemo(()=>rows.filter(row=>{
     if(filter==='stayovers')return isStayover(row)
     if(isStayover(row)&&!isRefresh(row))return filter==='all'
+    if(filter==='complete'&&isRefresh(row))return Boolean(row.complete)
     const state=roomWorkflowState({...row,checkIssueOpen:row.checkIssueOpen||checkByRoom.get(row.roomId)?.issueOpen})
     if(filter==='all')return true
     if(filter==='active')return !['ready','blocked','occupied'].includes(state)
@@ -759,7 +760,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     self:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='self').length,
     inspection:activeRows.filter(r=>['inspection','final'].includes(roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen}))).length,
     correction:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='correction').length,
-    complete:activeRows.filter(r=>roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='ready').length
+    complete:activeRows.filter(r=>(isRefresh(r)&&r.complete)||roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='ready').length
   }),[activeRows,inactiveStayovers,rows,checkByRoom])
 
   return <div className="rooms-workspace module-pretty-page">
@@ -850,7 +851,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     </div>}
     <div className={viewMode==='assigned'?'rooms-workflow-overview rooms-workflow-actions':'rooms-workflow-overview'} role="group" aria-label="Room progress filters">
       {([
-        {key:'complete' as Filter,label:'Rooms complete',value:counts.complete,description:'Guest-ready rooms'},
+        {key:'complete' as Filter,label:'Rooms complete',value:counts.complete,description:'Finished rooms and refreshes'},
         {key:'correction' as Filter,label:'Needs correction',value:counts.correction,description:'Open corrections to fix'},
         {key:'inspection' as Filter,label:'Awaiting checks',value:counts.inspection,description:'Ready for an inspection'}
       ]).map(item=><button key={item.key} type="button"
