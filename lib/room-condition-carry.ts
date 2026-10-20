@@ -1,4 +1,32 @@
 /**
+ * Shared previous-day condition resolver used by the Housekeeping API and
+ * the Ops calendar. The dated live condition remains authoritative for a
+ * day on which it was actually saved. No new editable condition field.
+ *
+ * stop=true means a more distant record must not be allowed to leak through
+ * a newer occupied stay or an explicit turnover event.
+ */
+export function priorConditionCandidate(prior:{
+  reservation_status?:unknown
+  service_type?:unknown
+  room_condition?:unknown
+  next_shift_condition?:unknown
+}):{condition:string;stop:boolean}{
+  const status=String(prior.reservation_status||'').trim().toLowerCase()
+  if(!['vacant','dirty','blocked','checkout','out/in',''].includes(status))
+    return {condition:'',stop:true}
+  const isOut=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(prior.service_type||'').trim())
+  if(['checkout','out/in'].includes(status)&&!isOut)
+    return {condition:'Occupied',stop:true}
+  const value=String(prior.next_shift_condition||prior.room_condition||'').trim()
+  if(!value)return {condition:'',stop:false}
+  const lower=value.toLowerCase()
+  const allowed=['vacant (clean)','vacant (dirty)','blocked','ready','ready for guest'].includes(lower)||
+    (status==='vacant'&&lower==='occupied'&&!isOut)
+  return {condition:allowed?value:'',stop:true}
+}
+
+/**
  * Read-only fallback for a reservation-free room with no condition recorded today.
  * A departing room still awaiting OUT may carry Occupied; ordinary guest
  * occupancy does not carry forward after the scheduled stay.
@@ -21,22 +49,9 @@ export async function previousVacantConditions(admin:any, date:string, rows:any[
   for(const prior of result.data||[]){
     const id=String(prior.room_id)
     if(!targets.has(id)||settled.has(id))continue
-    const status=String(prior.reservation_status||'').trim().toLowerCase()
-    // A previous Checkout/Out-In with no OUT remains occupied. Stop looking
-    // further back as soon as a newer explicit reservation status is found.
-    if(!['vacant','dirty','blocked','checkout','out/in',''].includes(status)){settled.add(id);continue}
-    const isOut=/^OUT(?:-[A-Z]{2,4})?$/i.test(String(prior.service_type||'').trim())
-    if(['checkout','out/in'].includes(status)&&!isOut){
-      settled.add(id)
-      carried.set(id,'Occupied')
-      continue
-    }
-    const value=String(prior.next_shift_condition||prior.room_condition||'').trim()
-    const lower=value.toLowerCase()
-    if(!value)continue
-    settled.add(id)
-    if(['vacant (clean)','vacant (dirty)','blocked','ready','ready for guest'].includes(lower)|| (status==='vacant'&&lower==='occupied'&&!isOut))
-      carried.set(id,value)
+    const result=priorConditionCandidate(prior)
+    if(result.stop)settled.add(id)
+    if(result.condition)carried.set(id,result.condition)
   }
   return carried
 }
