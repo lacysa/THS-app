@@ -164,6 +164,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
   const [packageOptions,setPackageOptions]=useState<PackageOption[]>([])
   const [viewMode,setViewMode]=useState<'assigned'|'manager'>('manager')
+  const [staffTab,setStaffTab]=useState<'today'|'mine'>('mine')
   const [inspectionRooms,setInspectionRooms]=useState<InspectionRoom[]>([])
   const [selfChecks,setSelfChecks]=useState<Record<string,SelfCheck>>({})
   const [expanded,setExpanded]=useState<Record<string,boolean>>({})
@@ -763,12 +764,37 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     complete:activeRows.filter(r=>(isRefresh(r)&&r.complete)||roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='ready').length
   }),[activeRows,inactiveStayovers,rows,checkByRoom])
 
+  if(viewMode==='assigned' && staffTab==='today') return <div className="rooms-workspace module-pretty-page">
+    <div className="module-toolbar rooms-toolbar">
+      <div><div className="module-kicker">Housekeeping</div><h1>Today</h1><p>All room assignments, conditions and notes. Read-only reference.</p></div>
+      <div className="toolbar-actions">
+        <label className="date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+        <button type="button" className="ops-secondary-btn" onClick={()=>void load()}><RefreshCw size={15}/>Refresh</button>
+      </div>
+    </div>
+    <div role="tablist" aria-label="Housekeeping navigation" style={{display:'flex',gap:8,marginBottom:18,flexWrap:'wrap'}}>
+      <button type="button" role="tab" aria-selected="true" className="ops-primary-btn" onClick={()=>setStaffTab('today')}>Today</button>
+      <button type="button" role="tab" aria-selected="false" className="ops-secondary-btn" onClick={()=>setStaffTab('mine')}>My Assignments</button>
+    </div>
+    {message&&<div className="module-message" role="status">{message}</div>}
+    {loading?<div className="module-empty">Loading room overview…</div>:<div className="rooms-staff-reference-cards" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:12}}>
+      {dailyOverview.map(row=><article key={row.roomId} className={row.isMine?'rooms-staff-reference-card is-mine':'rooms-staff-reference-card'}>
+        <div className="rooms-staff-reference-title"><strong>{row.roomName}</strong><span>{derivedLiveCondition(row)||'Not recorded'}</span></div>
+        <div className="rooms-staff-reference-tags"><span>{row.reservationStatus||'No activity'}</span>{row.serviceType&&<span>{row.serviceType}</span>}{row.isMine&&<span className="mine">Your assignment</span>}</div>
+        <div className="rooms-staff-reference-assigned"><span>Assigned to</span><strong>{row.assignedTo?.trim()||'Unassigned'}</strong></div>
+        {row.deepClean&&<p className="rooms-staff-reference-detail"><strong>Deep clean {row.deepClean.completed?'complete':'needed'}:</strong> {row.deepClean.assignedTo||'Unassigned'}{row.deepClean.instructions?' · '+row.deepClean.instructions:''}</p>}
+        {row.notes?.trim()&&<p className="rooms-staff-reference-note"><strong>Room notes:</strong> {row.notes.trim()}</p>}
+      </article>)}
+      {!dailyOverview.length&&<div className="module-empty">No rooms scheduled for this date.</div>}
+    </div>}
+  </div>
+
   return <div className="rooms-workspace module-pretty-page">
     <div className="module-toolbar rooms-toolbar">
       <div>
         <div className="module-kicker">Daily room operations</div>
-        <h1>Rooms</h1>
-        <p>{viewMode==='assigned'?'Your assigned housekeeping work and corrections.':'A clear room-by-room path from turnover to guest-ready.'}</p>
+        <h1>{viewMode==='assigned'?'My Assignments':'Rooms'}</h1>
+        <p>{viewMode==='assigned'?'Your room cleans, corrections and notes. Changes save to the shared room record.':'A clear room-by-room path from turnover to guest-ready.'}</p>
       </div>
       <div className="toolbar-actions">
         <label className="date-control">Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
@@ -776,8 +802,12 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       </div>
     </div>
 
+    {viewMode==='assigned'&&<div role="tablist" aria-label="Housekeeping navigation" style={{display:'flex',gap:8,marginBottom:18,flexWrap:'wrap'}}>
+      <button type="button" role="tab" aria-selected="false" className="ops-secondary-btn" onClick={()=>setStaffTab('today')}>Today</button>
+      <button type="button" role="tab" aria-selected="true" className="ops-primary-btn" onClick={()=>setStaffTab('mine')}>My Assignments</button>
+    </div>}
     {initialRoomId&&!loading&&!rows.some(row=>row.roomId===initialRoomId)&&<div className="module-message" role="status">This room is not available in your assigned work for {date}. The notification details remain available in your Notifications history.</div>}
-    {viewMode==='assigned'&&<section className="rooms-staff-daily-overview" aria-label="Daily housekeeping overview">
+    {false&&viewMode==='assigned'&&<section className="rooms-staff-daily-overview" aria-label="Daily housekeeping overview">
       <div className="rooms-staff-overview-head"><strong>Daily room overview</strong><span>Read-only context for all rooms. Only your assigned rooms can be updated below.</span></div>
       <div className="rooms-staff-overview-scroll"><table><thead><tr><th>Room</th><th>Activity</th><th>Housekeeper</th><th>Condition</th><th>Room notes</th></tr></thead><tbody>
       {dailyOverview.map(row=><tr key={row.roomId} className={row.isMine?'is-mine':''}>
