@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 import {conditionForDay,previousVacantConditions} from '@/lib/room-condition-carry'
+import {loadAssignmentStaff} from '@/lib/assignment-staff'
 
 export const dynamic='force-dynamic'
 const validDate=(value:string)=>/^20\d{2}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+'T12:00:00Z'))
@@ -96,14 +97,16 @@ export async function GET(req:NextRequest){
  const caps=gate.access.capabilities||[]
  const canManage=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
  const canInspect=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c)))
- const staffResult=canManage?await admin.from('staff_members').select('name,auth_user_id').eq('active',true).order('name'):null
- if(staffResult?.error)return NextResponse.json({error:'Unable to load active staff'},{status:500})
- const staffNames=[...new Set((staffResult?.data||[]).map((m:any)=>String(m.name||'').trim()).filter(Boolean))]
- const mentionableStaff=(staffResult?.data||[]).filter((m:any)=>m.name).map((m:any)=>({name:String(m.name).trim(),userId:String(m.auth_user_id||'')}))
+ let staff:Awaited<ReturnType<typeof loadAssignmentStaff>>=[]
+ try{if(canManage)staff=await loadAssignmentStaff(admin,date)}catch{
+  return NextResponse.json({error:'Unable to load staff schedule'},{status:500})
+ }
+ const staffNames=[...new Set(staff.map(person=>person.name).filter(Boolean))]
+ const mentionableStaff=staff.filter(person=>person.name).map(person=>({name:person.name,userId:person.authUserId}))
  // Keep the legacy OUT-XX envelope initial format used by Housekeeping.
  // Match the existing staff initials mapping so the same manager shows consistently.
  const managerText=[gate.access.name,gate.access.preferredName,gate.access.email].filter(Boolean).join(' ').toLowerCase()
- const ownName=String((staffResult?.data||[]).find((m:any)=>String(m.auth_user_id)===gate.access.userId)?.name||gate.access.name||'').trim()
+ const ownName=String(staff.find(person=>person.authUserId===gate.access.userId)?.name||gate.access.name||'').trim()
  const nameParts=ownName.split(/\s+/).filter(Boolean)
  const managerInitials=!canManage?'':managerText.includes('sarah')||managerText.includes('lacysa')?'SL':
    managerText.includes('brittany')||managerText.includes('hollingshead')?'BH':
@@ -194,7 +197,7 @@ export async function GET(req:NextRequest){
   at:String(event.created_at),author:String(nameByUser.get(String(event.actor_user_id))||event.actor_name||'Room team')
  }))
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
+  permissions:{canManage,canInspect},staffNames,staff,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
   serviceDetails,autoTubDue,vacancyDays,tubCleanDue,correctionHistory,roomNoteHistory,checklistNotes,
   inspectionEligible:eligible,
   inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
