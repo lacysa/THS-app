@@ -157,7 +157,7 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   // The Assignments screen performs manager-only writes. A Hospitality
   // Assistant's room-view access must never cause it to appear as a usable link.
   // Keep the same gate in navigation, Staff Access, and the destination route.
-  if (key === 'housekeeping_assignments') {
+  if (['housekeeping_assignments','reservation_sync','housekeeping_quality'].includes(key)) {
     const mayAssign=access.isAdmin ||
       ['manager','general_manager','operations_manager','owner','foh_manager']
         .some(cap=>access.capabilities.includes(cap))
