@@ -5,13 +5,16 @@ import { canUseModule } from '@/lib/access'
 
 export const dynamic='force-dynamic'
 
-export default async function Page({searchParams}:{searchParams:Promise<{filter?:string;room?:string;date?:string}>}){
-  const gate=await canUseModule('housekeeping')
+export default async function Page({searchParams}:{searchParams:Promise<{filter?:string;room?:string;date?:string;view?:string}>}){
+  const [gate,assignmentGate]=await Promise.all([canUseModule('housekeeping'),canUseModule('housekeeping_assignments')])
   if(!gate.access) redirect('/login')
   if(!gate.allowed) redirect('/dashboard')
   const params=await searchParams
   const initialFilter=(['all','active','stayovers','cleaning','inspection','correction','complete'] as string[]).includes(params?.filter||'') ? params.filter as 'all'|'active'|'stayovers'|'cleaning'|'inspection'|'correction'|'complete' : undefined
   const initialRoomId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(params?.room||'')?params.room:undefined
   const initialDate=/^20\d{2}-\d{2}-\d{2}$/.test(params?.date||'')?params.date:undefined
-  return <StaffShell title="Rooms"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate}/></StaffShell>
+  const manager=gate.access.isAdmin || (gate.access.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap))
+  const allowAssignments=Boolean(assignmentGate.allowed&&manager)
+  const initialView=allowAssignments && !initialRoomId && params?.view==='assignments'?'assignments':'rooms'
+  return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate} initialView={initialView} allowAssignments={allowAssignments}/></StaffShell>
 }

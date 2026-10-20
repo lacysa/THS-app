@@ -1,6 +1,7 @@
 'use client'
 
 import { getStaffSession } from '@/lib/client/staff-session'
+import HousekeepingAssignments from '@/components/HousekeepingAssignments'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 import { useEffect,useMemo,useRef,useState } from 'react'
@@ -156,8 +157,9 @@ function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='block
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
-export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilter='all'}:{initialDate?:string;initialRoomId?:string;initialFilter?:Filter}={}){
+export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilter='all',initialView='rooms',allowAssignments=false}:{initialDate?:string;initialRoomId?:string;initialFilter?:Filter;initialView?:'rooms'|'assignments';allowAssignments?:boolean}={}){
   const [date,setDate]=useState(initialDate||todayDetroit())
+  const [workspaceView,setWorkspaceView]=useState<'rooms'|'assignments'>(allowAssignments&&!initialRoomId?initialView:'rooms')
   const [access,setAccess]=useState<Access|null>(null)
   const [rows,setRows]=useState<RoomRow[]>([])
   const [dailyOverview,setDailyOverview]=useState<DailyOverviewRow[]>([])
@@ -795,6 +797,17 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     complete:activeRows.filter(r=>(isRefresh(r)&&r.complete)||roomWorkflowState({...r,checkIssueOpen:r.checkIssueOpen||checkByRoom.get(r.roomId)?.issueOpen})==='ready').length
   }),[activeRows,inactiveStayovers,rows,checkByRoom])
 
+  // Both views operate on the same dated room records and permissioned APIs.
+  const showAssignmentView=allowAssignments&&isManager(access)&&workspaceView==='assignments'&&!initialRoomId
+  const workspaceTabs=allowAssignments&&isManager(access)?<nav className="rooms-workspace-tabs" aria-label="Housekeeping workspace">
+    <button type="button" className={showAssignmentView?'':'active'} aria-current={!showAssignmentView?'page':undefined} onClick={()=>setWorkspaceView('rooms')}>Rooms</button>
+    <button type="button" className={showAssignmentView?'active':''} aria-current={showAssignmentView?'page':undefined} onClick={()=>setWorkspaceView('assignments')}>Assignments</button>
+  </nav>:null
+  if(showAssignmentView)return <div className="rooms-workspace module-pretty-page">
+    {workspaceTabs}
+    <HousekeepingAssignments selectedDate={date} onDateChange={setDate}/>
+  </div>
+
   // Today is available only to managers and Hospitality Assistants. Housekeeping-only staff use My Assignments.
   const canViewStaffToday = isManager(access) || (access?.capabilities||[]).includes('hospitality_assistant')
   if(viewMode==='assigned' && canViewStaffToday && staffTab==='today') return <div className="rooms-workspace module-pretty-page">
@@ -823,6 +836,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   </div>
 
   return <div className="rooms-workspace module-pretty-page">
+    {workspaceTabs}
     <div className="module-toolbar rooms-toolbar">
       <div>
         <div className="module-kicker">Daily room operations</div>
@@ -908,12 +922,19 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
       {viewMode==='manager'&&(!isCompact||isTablet)&&<button type="button" className={managerDisplay==='table'?'active':''} onClick={()=>chooseManagerDisplay('table')}>Table</button>}
     </div>}
 
-    {viewMode==='manager'&&<div className="rooms-filter-strip" role="tablist" aria-label="Room workflow filters">
-      {([
-        ['active','Needs action',counts.active],['all','All rooms',counts.all],['stayovers','Stayovers',counts.stayovers],['cleaning','Cleaning',counts.cleaning],
-        ['inspection','Room check',counts.inspection],['correction','Correction',counts.correction],['complete','Ready for guest',counts.complete]
-      ] as Array<[Filter,string,number]>).map(([key,label,count])=><button key={key} type="button" role="tab" aria-selected={filter===key} className={filter===key?'active':''} onClick={()=>{setFilter(key);setRoomSearch('')}}>{label}<span>{count}</span></button>)}
-    </div>}
+    {viewMode==='manager'&&<label className="rooms-filter-picker">
+      <span>Show rooms</span>
+      <span className="rooms-filter-picker-field">
+        <select aria-label="Filter rooms by workflow" value={filter} onChange={event=>{setFilter(event.target.value as Filter);setRoomSearch('');setSelectedRoomId('')}}>
+          {([
+            ['active','Needs action',counts.active],['all','All rooms',counts.all],['stayovers','Stayovers',counts.stayovers],
+            ['cleaning','Cleaning',counts.cleaning],['inspection','Awaiting inspection',counts.inspection],
+            ['correction','Needs correction',counts.correction],['complete','Rooms complete',counts.complete]
+          ] as Array<[Filter,string,number]>).map(([key,label,count])=><option key={key} value={key}>{label} ({count})</option>)}
+        </select>
+        <ChevronDown size={17} aria-hidden="true"/>
+      </span>
+    </label>}
     {viewMode==='assigned'&&<div className="rooms-staff-quick-header">
       <strong>My room progress</strong>
       <button type="button" className={filter==='all'?'rooms-staff-all-link is-active':'rooms-staff-all-link'} onClick={()=>{setFilter('all');setRoomSearch('')}} aria-pressed={filter==='all'}>

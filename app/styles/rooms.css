@@ -722,3 +722,43 @@
  .rooms-workflow-overview>button.rooms-progress-action{padding:9px 6px}
  .rooms-workflow-overview>button.rooms-progress-action small{font-size:10px}
 }
+
+
+/* Housekeeping: integrated task views and compact workflow filter. */
+.rooms-workspace-tabs{
+  display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;
+  padding:5px;margin:0 0 15px;border:1px solid var(--app-border,#d7e1e7);
+  border-radius:15px;background:linear-gradient(110deg,rgba(216,243,242,.65),rgba(232,225,250,.65));
+}
+.rooms-workspace-tabs button{
+  flex:1;padding:11px 19px;min-height:44px;border:0;border-radius:11px;
+  font:inherit;font-size:14px;font-weight:800;color:var(--app-muted,#5f7180);
+  background:transparent;cursor:pointer;
+}
+.rooms-workspace-tabs button.active{
+  background:var(--app-surface,#fff);
+  box-shadow:0 2px 9px rgba(46,76,91,.12);color:var(--app-text,#243e50);
+}
+.rooms-filter-picker{display:grid;width:min(100%,345px);gap:6px;margin:10px 0 14px}
+.rooms-filter-picker>span:first-child{
+  font-size:11px;font-weight:900;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--app-muted,#647785);
+}
+.rooms-filter-picker-field{display:block;position:relative;min-width:0}
+.rooms-filter-picker-field select{
+  appearance:none;-webkit-appearance:none;display:block;width:100%;min-width:0;
+  min-height:48px;box-sizing:border-box;border:1px solid var(--app-border,#c9dbe3);
+  border-radius:13px;padding:11px 43px 11px 15px;background:var(--app-surface,#fff);
+  color:var(--app-text,#243e50);font:inherit;font-weight:750;cursor:pointer;
+}
+.rooms-filter-picker-field svg{
+  position:absolute;right:15px;top:50%;transform:translateY(-50%);
+  pointer-events:none;color:var(--app-muted,#647785);
+}
+.rooms-filter-picker-field select:focus-visible,.rooms-workspace-tabs button:focus-visible{
+  outline:2px solid var(--app-accent,#658eac);outline-offset:3px;
+}
+@media(max-width:700px){
+  .rooms-workspace-tabs{display:flex;width:100%}
+  .rooms-filter-picker{width:100%}
+}

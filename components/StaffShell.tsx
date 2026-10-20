@@ -380,6 +380,7 @@ export default function StaffShell({
           m =>
             m.module_key !== 'breakfast_menu_manager' &&
             m.module_key !== 'room_board' &&
+            m.module_key !== 'housekeeping_assignments' &&
             !(managementWorkspace && hasReservations && m.module_key==='housekeeping') &&
             !m.module_key.endsWith('_inventory')
         )
@@ -404,7 +405,7 @@ export default function StaffShell({
 
   const nestedChildrenByParent: Record<string, string[]> = {
     reservations: managementWorkspace
-      ? ['ops', 'reservation_sync', 'housekeeping', 'housekeeping_assignments', 'room_checks']
+      ? ['ops', 'reservation_sync', 'housekeeping', 'room_checks']
       : ['ops', 'reservation_sync'],
     housekeeping: managementWorkspace ? [] : ['room_checks', 'housekeeping_quality']
   }

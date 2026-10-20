@@ -52,8 +52,14 @@ function timeLabel(raw: string | null) {
   return raw ? raw.slice(0, 5) : ''
 }
 
-export default function HousekeepingAssignments({initialDate}:{initialDate?:string}={}) {
-  const [date, setDate] = useState(initialDate || todayDetroit())
+export default function HousekeepingAssignments({initialDate,selectedDate,onDateChange}:{initialDate?:string;selectedDate?:string;onDateChange?:(nextDate:string)=>void}={}) {
+  const [ownDate, setOwnDate] = useState(initialDate || todayDetroit())
+  const date = selectedDate ?? ownDate
+  const setDate = (nextDate:string|((currentDate:string)=>string)) => {
+    const resolved = typeof nextDate === 'function' ? nextDate(date) : nextDate
+    if (onDateChange) onDateChange(resolved)
+    else setOwnDate(resolved)
+  }
   const [view, setView] = useState<View>('staff')
   const [data, setData] = useState<AssignmentData | null>(null)
   const [loading, setLoading] = useState(true)
