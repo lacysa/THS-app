@@ -151,7 +151,7 @@ export default function RoomBoard(){
       setOpenRooms({})
       setStaffOptions(d.staffOptions||[])
       setAllStaffOptions(d.allStaffOptions||d.staffOptions||[])
-      setShowAllStaff(false)
+
       setPackageOptions(d.packageOptions||[])
       setBreakfastDate(d.breakfast?.serviceDate||'')
       setMenuNeededRooms(d.breakfast?.menuNeededRooms||[])

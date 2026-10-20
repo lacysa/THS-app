@@ -268,7 +268,7 @@ export default function HousekeepingBoard() {
       setViewMode(d.viewMode === 'assigned' ? 'assigned' : 'manager')
       setStaffOptions(d.staffOptions || [])
       setAllStaffOptions(d.allStaffOptions || d.staffOptions || [])
-      setShowAllStaff(false)
+
       setPackageOptions(d.packageOptions || [])
       setCanHaSignoff(Boolean(d.signoffAccess?.canHaSignoff))
       setCanFohSignoff(Boolean(d.signoffAccess?.canFohSignoff))
