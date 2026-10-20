@@ -9,6 +9,8 @@ type ModuleAccess={
   department:string
   enabled:boolean
   published:boolean
+  managerOnly?:boolean
+  managerEligible?:boolean
   defaultAccess:boolean
   effectiveAccess:boolean
   override:boolean|null
@@ -177,6 +179,36 @@ export default function StaffAccessBoard(){
     window.location.assign('/dashboard')
   }
 
+  function renderModule(module:ModuleAccess){
+    const roleRestricted=Boolean(module.managerOnly&&!module.managerEligible)
+    const canEdit=!selected?.isOwner&&Boolean(selected?.memberId)&&module.enabled&&module.published&&!roleRestricted
+    const limitedReason=roleRestricted?' · Manager-only; not available to this role':''
+    return <div className={'staff-access-module'+(!module.enabled||!module.published?' is-inactive':'')} key={module.module_key}>
+      <div className="staff-access-module-copy">
+        <strong>{module.label}</strong>
+        <span>
+          {module.override===null
+            ? `Role default: ${module.defaultAccess?'Visible':'Hidden'}`
+            : `Override: ${module.effectiveAccess?'Visible':'Hidden'}`}
+          {limitedReason}
+          {!module.enabled?' · disabled globally':''}
+          {!module.published?' · unpublished':''}
+        </span>
+      </div>
+      <div className="staff-access-module-actions">
+        {module.override!==null&&!selected?.isOwner&&<button
+          type="button" className="staff-access-reset"
+          onClick={()=>void setOverride(module,null)}
+          title="Reset to role default"><RotateCcw size={14}/> Default</button>}
+        <label className="staff-access-switch">
+          <input type="checkbox" checked={module.effectiveAccess} disabled={!canEdit}
+            onChange={e=>void setOverride(module,e.target.checked)}/>
+          <span>{module.effectiveAccess?'Visible':'Hidden'}</span>
+        </label>
+      </div>
+    </div>
+  }
+
   if(loading) return <div className="staff-access-loading">Loading staff…</div>
 
   return <div className="staff-access-page">
@@ -277,39 +309,23 @@ export default function StaffAccessBoard(){
           </div>}
         </div>}
 
-        <div className="staff-access-modules">
-          {selected.modules
-            .filter(m=>m.module_key!=='staff' || selected.isOwner)
-            .map(module=><div className="staff-access-module" key={module.module_key}>
-              <div className="staff-access-module-copy">
-                <strong>{module.label}</strong>
-                <span>
-                  {module.override===null
-                    ? `Role default: ${module.defaultAccess?'Visible':'Hidden'}`
-                    : `Override: ${module.effectiveAccess?'Visible':'Hidden'}`}
-                  {!module.enabled?' · disabled globally':''}
-                  {!module.published?' · preview/unpublished':''}
-                </span>
+        <div className="staff-access-module-manager">
+          <div className="staff-access-module-heading">
+            <strong>Current modules</strong>
+            <span>Only enabled, published modules appear here. Visibility is per staff member.</span>
+          </div>
+          <div className="staff-access-modules">
+            {selected.modules.filter(m=>(m.module_key!=='staff'||selected.isOwner)&&m.enabled&&m.published)
+             .map(module=>renderModule(module))}
+          </div>
+          {selected.modules.filter(m=>(m.module_key!=='staff'||selected.isOwner)&&(!m.enabled||!m.published)).length>0&&
+            <details className="staff-access-inactive">
+              <summary>Inactive / unpublished modules <span>{selected.modules.filter(m=>(m.module_key!=='staff'||selected.isOwner)&&(!m.enabled||!m.published)).length} hidden from live navigation</span></summary>
+              <div className="staff-access-modules">
+                {selected.modules.filter(m=>(m.module_key!=='staff'||selected.isOwner)&&(!m.enabled||!m.published))
+                 .map(module=>renderModule(module))}
               </div>
-
-              <div className="staff-access-module-actions">
-                {module.override!==null&&!selected.isOwner&&<button
-                  type="button"
-                  className="staff-access-reset"
-                  onClick={()=>void setOverride(module,null)}
-                  title="Reset to role default"
-                ><RotateCcw size={14}/> Default</button>}
-                <label className="staff-access-switch">
-                  <input
-                    type="checkbox"
-                    checked={module.effectiveAccess}
-                    disabled={selected.isOwner || module.module_key==='staff' || !selected.memberId || !module.enabled}
-                    onChange={e=>void setOverride(module,e.target.checked)}
-                  />
-                  <span>{module.effectiveAccess?'Visible':'Hidden'}</span>
-                </label>
-              </div>
-            </div>)}
+            </details>}
         </div>
       </section>}
     </div>
