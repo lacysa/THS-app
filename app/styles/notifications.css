@@ -299,3 +299,9 @@
  .ths-notifications-hero p{max-width:280px}
  .notification-panel{right:-48px;width:min(355px,calc(100vw - 18px))}
 }
+
+.notification-item-open{display:block;width:100%;min-width:0;text-align:left;background:transparent;border:0;padding:0;color:inherit;cursor:pointer}
+.notification-item-open:hover .notification-item-copy strong{text-decoration:underline}
+.notification-item-open:focus-visible,.notification-item-dismiss:focus-visible{outline:2px solid #78a5bd;outline-offset:2px}
+.staff-nav-notification-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#7a91b1;color:white;font-weight:850;font-size:10px;line-height:1}
+.staff-ops-sidebar.collapsed .staff-nav-notification-count{display:none!important}
