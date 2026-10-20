@@ -3,6 +3,11 @@
 export const STAFF_MODULE_LABELS: Readonly<Record<string,string>> = {
   dashboard: 'Dashboard',
   front_desk: 'Front Desk',
+  front_desk_inventory: 'Front Desk Inventory',
+  kitchen_inventory: 'Kitchen Inventory',
+  housekeeping_inventory: 'Housekeeping Inventory',
+  laundry_inventory: 'Laundry Inventory',
+  lobby_inventory: 'Lobby Inventory',
   kitchen: 'Kitchen',
   menu_manager: 'Menu Manager',
   breakfast_menu_manager: 'Menu Manager',
