@@ -176,7 +176,7 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   const runner=caps.includes('runner') && !hospitality && !housekeeper && !manager
   if (!Object.prototype.hasOwnProperty.call(access.moduleOverrides,key)) {
     if (key==='daily_overview' && caps.includes('runner')) return true
-    if (housekeeper) return key==='housekeeping'
+    if (housekeeper) return key==='housekeeping' || key==='dashboard'
     if (hospitality && !manager) return ['ops','housekeeping','room_checks','dashboard'].includes(key)
     if (runner && key==='daily_overview') return true
   }
