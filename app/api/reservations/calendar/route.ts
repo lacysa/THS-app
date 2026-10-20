@@ -20,7 +20,7 @@ export async function GET(req:NextRequest){
   const [roomsRes,linksRes,housekeepingRes,historyRes]=await Promise.all([
     admin.from('rooms').select('id,name,sort_order').eq('active',true).order('sort_order'),
     admin.from('reservation_daily_links').select('service_date,room_id,reservation_status,primary_reservation_id,arriving_reservation_id,stay_reservation_id,departing_reservation_id').gte('service_date',start).lte('service_date',end),
-    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,next_shift_condition,late_arrival,notes').gte('service_date',start).lte('service_date',end),
+    admin.from('housekeeping_daily_rooms').select('service_date,room_id,reservation_status,strip_hold,room_condition,next_shift_condition,late_arrival,notes,updated_by').gte('service_date',start).lte('service_date',end),
     admin.from('housekeeping_daily_rooms').select('service_date,room_id,room_condition,next_shift_condition,reservation_status,service_type').lt('service_date',start).order('service_date',{ascending:false}).limit(3000)
   ])
   if(roomsRes.error||linksRes.error||housekeepingRes.error||historyRes.error)return NextResponse.json({error:'Could not load calendar'},{status:500})
@@ -62,9 +62,17 @@ export async function GET(req:NextRequest){
     for(const room of roomsRes.data||[]){
       const roomId=String((room as any).id)
       const recorded:any=conditions.get(day+'|'+roomId)
-      const direct=String(recorded?.room_condition||'').trim()
-      // Preserve the manager's explicitly saved condition on this date.
-      // Otherwise carry the most recent applicable vacant/checkout condition.
+      const storedCondition=String(recorded?.room_condition||'').trim()
+      const activity=String(recorded?.reservation_status||'').trim().toLowerCase()
+      // Reservation sync previously prefilled future vacant and arrival rooms
+      // with Occupied before anybody changed their physical condition. Those
+      // unedited placeholders must not override today's saved manager condition.
+      // Preserve manually saved Occupied and genuine stayovers/checkouts.
+      const staleFutureOccupied=day>today &&
+        !recorded?.updated_by &&
+        storedCondition.toLowerCase()==='occupied' &&
+        ['vacant','arrival',''].includes(activity)
+      const direct=staleFutureOccupied?'':storedCondition
       if(direct)lastByRoom.set(roomId,String(recorded?.next_shift_condition||direct).trim())
       statusByDate.set(day+'|'+roomId,{
         date:day,roomId,condition:(day===today||day===tomorrow)?(direct||lastByRoom.get(roomId)||''):'',
