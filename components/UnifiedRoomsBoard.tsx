@@ -749,7 +749,27 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
     return state==='ready'
   }),[rows,filter,checkByRoom])
 
-  const searchedRows=useMemo(()=>filtered.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType} ${row.deepClean?'deep clean '+row.deepClean.assignedTo+' '+row.deepClean.instructions:''}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[filtered,roomSearch])
+  // Housekeeping should work from their own actionable rooms, not a wall of vacant/occupied rooms.
+  // Preserve manager filters and existing inspection/refresh actions.
+  const housekeepingRows=useMemo(()=>{
+    if(viewMode!=='assigned')return filtered
+    const fullName=normalize(access?.name||access?.preferredName||'')
+    const firstName=fullName.split(/\s+/)[0]
+    const mine=(assigned:string)=>splitAssigned(assigned).some(person=>{
+      const name=normalize(person)
+      return Boolean(fullName&&(name===fullName||name===firstName||fullName.startsWith(name+' ')||name.startsWith(fullName+' ')))
+    })
+    return filtered.filter(row=>{
+      if(isStayover(row)&&!isRefresh(row))return false
+      return mine(row.assignedTo) || Boolean(row.claimableRefresh) ||
+        Boolean(row.tubCleanDue&&row.tubIsMine) ||
+        Boolean(row.deepClean&&mine(row.deepClean.assignedTo))
+    }).sort((a,b)=>{
+      const rank=(row:RoomRow)=>row.checkIssueOpen?0:row.complete?2:1
+      return rank(a)-rank(b)||(a.cleanOrder??999)-(b.cleanOrder??999)||a.sortOrder-b.sortOrder
+    })
+  },[filtered,viewMode,access])
+  const searchedRows=useMemo(()=>housekeepingRows.filter(row=>`${row.roomName} ${row.reservationStatus} ${row.assignedTo} ${row.serviceType} ${row.deepClean?'deep clean '+row.deepClean.assignedTo+' '+row.deepClean.instructions:''}`.toLowerCase().includes(roomSearch.trim().toLowerCase())),[housekeepingRows,roomSearch])
   const selectedRow=(initialRoomId?rows.find(row=>row.roomId===selectedRoomId):undefined)||searchedRows.find(row=>row.roomId===selectedRoomId)||searchedRows[0]
   const displayRows=(managerDisplay==='focus'||Boolean(initialRoomId))?(selectedRow?[selectedRow]:[]):searchedRows
   function focusRoom(row:RoomRow){setSelectedRoomId(row.roomId);setExpanded(current=>({...current,[row.roomId]:true}));}
@@ -858,9 +878,17 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         </div>)}
       </div>
     </details>}
-    {viewMode==='assigned'&&inactiveStayovers.length>0&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
-      <summary className="rooms-stayover-heading"><div><strong>Stayover coverage</strong><span>No refresh due unless RF requested · tap to expand</span></div><span>{inactiveStayovers.length} assigned <ChevronDown size={15}/></span></summary>
-      <div className="rooms-stayover-grid">{inactiveStayovers.map(row=><div className="rooms-stayover-item" key={row.roomId}><div><strong>{row.roomName}</strong><small>No service requested</small></div></div>)}</div>
+    {viewMode==='assigned'&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
+      <summary className="rooms-stayover-heading"><div><strong>All stayovers · reference</strong><span>Read-only room status, assigned staff and notes · tap to expand</span></div><span>{dailyOverview.filter(room=>normalize(room.reservationStatus)==='stayover').length} rooms <ChevronDown size={15}/></span></summary>
+      <div className="rooms-stayover-grid">
+        {dailyOverview.filter(room=>normalize(room.reservationStatus)==='stayover').map(room=><div className="rooms-stayover-item" key={room.roomId} style={{display:'grid',gap:5}}>
+          <strong>{room.roomName}</strong>
+          <small>{room.serviceType==='RF'?'Refresh requested':'No service requested'} · {derivedLiveCondition(room)||'Occupied'}</small>
+          <small>Assigned: {room.assignedTo?.trim()||'Unassigned'}</small>
+          {room.notes?.trim()&&<small style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>Room note: {room.notes.trim()}</small>}
+        </div>)}
+        {!dailyOverview.some(room=>normalize(room.reservationStatus)==='stayover')&&<span>No stayovers scheduled.</span>}
+      </div>
     </details>}
 
     {canUseAdvancedRoomsViews(access)&&<div className="rooms-view-toggle" role="group" aria-label="Rooms view">
@@ -896,7 +924,11 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         <span className="rooms-progress-hint">{item.description} <ChevronRight size={13}/></span>
       </button>)}
     </div>
-    <label className="rooms-search-field"><span>Find a room or team member</span><input type="search" value={roomSearch} onChange={e=>setRoomSearch(e.target.value)} placeholder="Search rooms, staff, status…" /></label>
+    {viewMode==='assigned'&&<div style={{margin:'16px 0 10px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+      <div><strong style={{fontSize:19}}>My Cleans</strong><div style={{fontSize:12,opacity:.75}}>Corrections first, then rooms to clean, then completed work</div></div>
+      <span style={{fontSize:13,fontWeight:600}}>{housekeepingRows.filter(row=>row.complete).length} / {housekeepingRows.length} completed</span>
+    </div>}
+    <label className="rooms-search-field"><span>{viewMode==='assigned'?'Find my assignment':'Find a room or team member'}</span><input type="search" value={roomSearch} onChange={e=>setRoomSearch(e.target.value)} placeholder={viewMode==='assigned'?'Search my assigned rooms…':'Search rooms, staff, status…'} /></label>
     {managerDisplay==='focus'&&!loading&&searchedRows.length>0&&<div className="rooms-focus-layout">
       <div className="rooms-focus-heading"><strong>Choose a room</strong><span>{searchedRows.length} shown</span></div>
       <div className="rooms-room-picker" role="group" aria-label="Select room">
