@@ -85,7 +85,6 @@ export default function DailyStaffSchedule(){
       </div>
       <div className="daily-staff-editor-date">
         <label>Date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
-        <strong>{onSite.length} on site</strong>
       </div>
     </header>
 
