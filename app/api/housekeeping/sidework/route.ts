@@ -40,7 +40,7 @@ export async function GET(req:NextRequest){
    const assignedTo=saved?saved.assigned_to:assigned(task.group,task.key)
    return {...task,assignedTo,assignedName:staff.find(p=>p.id===assignedTo)?.name||people.find((p:any)=>p.id===assignedTo)?.name||'',completedAt:saved?.completed_at||null,notes:saved?.notes||''}
   }).filter(task=>isManager||!!self&&task.assignedTo===self.id)
-  return NextResponse.json({items,staff: isManager?staff:[],manager:isManager,preview:Boolean(access.isPreviewMode),date})
+  return NextResponse.json({items,staff: isManager?staff:[],manager:isManager,selfId:self?.id||null,preview:Boolean(access.isPreviewMode),date})
  }catch(e:any){return NextResponse.json({error:e.message||'Could not load sidework'},{status:500})}
 }
 export async function PATCH(req:NextRequest){
