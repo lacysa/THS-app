@@ -6,7 +6,7 @@ import StaffAssignmentSelect from '@/components/StaffAssignmentSelect'
 import type { AssignmentStaff } from '@/lib/assignment-staff'
 import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
-type Stay={id:string;reservation_number:string|null;guest_name:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
+type Stay={id:string;reservation_number:string|null;guest_name:string|null;accompanying_guest:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null;foh_signed_by?:string|null;ha_signed_by?:string|null}
 type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
@@ -19,21 +19,22 @@ function present(value:unknown){return String(value??'').trim()||'Not recorded'}
 function dateLabel(value:string){return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z'))}
 function shortDate(value:string){return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z'))}
 function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="ops-hub-field"><span>{label}</span><strong>{children}</strong></div>}
-type EditableGuestField='guest_name'|'guest_phone'|'occupancy'|'rate_plan'|'check_in_time'|'dietary_restrictions'|'reason_for_visit'|'guest_comments'|'innkeeper_notes'
+type EditableGuestField='accompanying_guest'|'guest_name'|'guest_phone'|'occupancy'|'rate_plan'|'check_in_time'|'dietary_restrictions'|'reason_for_visit'|'guest_comments'|'innkeeper_notes'
 function GuestCard({label,value,field,canEdit,busy,onSave,large=false}:{label:string;value:string|number|null|undefined;field:EditableGuestField;canEdit:boolean;busy:boolean;large?:boolean;onSave:(field:EditableGuestField,value:string)=>Promise<boolean>}){
  const [editing,setEditing]=useState(false)
  const [draft,setDraft]=useState(String(value??''))
  useEffect(()=>{if(!editing)setDraft(String(value??''))},[value,editing])
  const save=async()=>{if(await onSave(field,draft))setEditing(false)}
- return <div className={'ops-hub-guest-card'+(large?' wide':'')+(editing?' is-editing':'')}>
-  <button type="button" className="ops-hub-guest-card-trigger" disabled={!canEdit||busy} onClick={()=>{setDraft(String(value??''));setEditing(v=>!v)}} aria-expanded={editing}>
-   <span>{label}</span>
-   <strong>{String(value??'').trim()||'Not recorded'}</strong>
-   {canEdit&&<Pencil size={15}/>}
+ return <div className="ops-hub-guest-card">
+  <button type="button" className="ops-hub-guest-card-trigger" disabled={!canEdit||busy} onClick={()=>{setDraft(String(value??''));setEditing(true)}} aria-haspopup="dialog">
+   <span>{label}</span><strong title={String(value??'')}>{String(value??'').trim()||'Not recorded'}</strong>{canEdit&&<Pencil size={15}/>}
   </button>
-  {editing&&canEdit&&<div className="ops-hub-guest-card-editor">
-   {large?<textarea rows={3} aria-label={'Edit '+label} value={draft} maxLength={6000} disabled={busy} onChange={e=>setDraft(e.target.value)}/>:<input aria-label={'Edit '+label} type={field==='occupancy'?'number':field==='guest_phone'?'tel':'text'} min={field==='occupancy'?1:undefined} max={field==='occupancy'?20:undefined} maxLength={6000} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)}/>}
-   <div className="ops-hub-inline-actions"><button type="button" disabled={busy||draft===String(value??'')} onClick={()=>void save()}><Save size={14}/>Save</button><button type="button" disabled={busy} onClick={()=>setEditing(false)}>Cancel</button></div>
+  {editing&&canEdit&&<div className="ops-hub-guest-edit-overlay" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setEditing(false)}}>
+   <div className="ops-hub-guest-edit-dialog" role="dialog" aria-modal="true" aria-label={'Edit '+label} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setEditing(false)}}}>
+    <div className="ops-hub-guest-edit-title"><strong>Edit {label}</strong><button type="button" aria-label="Close editor" disabled={busy} onClick={()=>setEditing(false)}><X size={17}/></button></div>
+    {large?<textarea autoFocus rows={5} aria-label={label} value={draft} maxLength={6000} disabled={busy} onChange={e=>setDraft(e.target.value)}/>:<input autoFocus aria-label={label} type={field==='occupancy'?'number':field==='guest_phone'?'tel':'text'} min={field==='occupancy'?1:undefined} max={field==='occupancy'?20:undefined} maxLength={6000} value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)}/>}
+    <div className="ops-hub-inline-actions"><button type="button" disabled={busy||draft===String(value??'')} onClick={()=>void save()}><Save size={14}/>Save changes</button><button type="button" disabled={busy} onClick={()=>setEditing(false)}>Cancel</button></div>
+   </div>
   </div>}
  </div>
 }
@@ -535,6 +536,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
       <div className="ops-hub-guest-grid">
        {([
         {field:'guest_name',label:'Guest name'},
+        {field:'accompanying_guest',label:'Accompanying guest'},
         {field:'guest_phone',label:'Phone'},
         {field:'occupancy',label:'Number of guests'},
         {field:'check_in_time',label:'Check-in time'},
