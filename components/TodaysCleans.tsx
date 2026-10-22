@@ -27,7 +27,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
- const locked=(r:Room)=>!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
+ const locked=(r:Room)=>mode==='cleans'&&!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
  async function begin(room:Room){
   setBusy(room.roomId);setMessage('');setError('')
   try{
@@ -51,7 +51,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned to you for this date.':'No full room cleans assigned to you for this date.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
    const waiting=isWaiting(r),orderLocked=locked(r),done=r.complete
    return <article className={'ths-clean-card '+(done?'done':waiting||orderLocked?'locked':'available')} key={r.roomId}>
-    <div className="ths-clean-head"><div><small>{r.cleanOrder!=null?'CLEAN '+r.cleanOrder:'ROOM ASSIGNMENT'}</small><h2>{r.roomName}</h2></div>{done?<CheckCircle2 size={24}/>:waiting||orderLocked?<LockKeyhole size={22}/>:<span className="ths-clean-ready">Ready</span>}</div>
+    <div className="ths-clean-head"><div><small>{mode==='refreshes'?'STAYOVER REFRESH':r.cleanOrder!=null?'CLEAN '+r.cleanOrder:'ROOM ASSIGNMENT'}</small><h2>{r.roomName}</h2></div>{done?<CheckCircle2 size={24}/>:waiting||orderLocked?<LockKeyhole size={22}/>:<span className="ths-clean-ready">Ready</span>}</div>
     <p className="ths-clean-detail">{r.reservationStatus} {r.serviceType?'· '+r.serviceType:''}</p>
     {r.notes&&<p className="ths-clean-notes">{r.notes}</p>}
     <p className="ths-clean-status">{done?(mode==='refreshes'?'Refresh complete':'Finished · sent for inspection'):waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':r.checkIssueOpen?'Inspection correction needed':r.roomCondition==='Cleaning'?'Cleaning in progress':'Ready to clean'}</p>
