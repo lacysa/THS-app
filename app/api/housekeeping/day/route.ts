@@ -523,17 +523,21 @@ export async function PATCH(req: NextRequest) {
     const startingClean=!manager && requested.roomCondition==='Cleaning' && !Object.prototype.hasOwnProperty.call(requested,'complete')
     const finishingClean=!manager && requested.complete===true
     if(startingClean||finishingClean){
+      // Passive stayovers are reference-only, even when a stale room assignment exists.
+      if(String(existing.reservation_status||'').trim().toLowerCase()==='stayover' &&
+        !['RF','REFRESH'].includes(String(existing.service_type||'').trim().toUpperCase()))
+        return NextResponse.json({error:'Stayover has no requested refresh or cleaning service.'},{status:409})
       if(Boolean(existing.complete)&&startingClean)return NextResponse.json({error:'This room is already complete.'},{status:409})
       if(isCheckoutAwaitingOut({reservationStatus:existing.reservation_status,serviceType:existing.service_type}))
         return NextResponse.json({error:'The guest must be marked OUT before cleaning can begin.'},{status:409})
       const currentOrder=existing.clean_order===null?null:Number(existing.clean_order)
       if(currentOrder!==null&&Number.isFinite(currentOrder)&&currentPerson){
         const {data:orderedRooms,error:orderError}=await admin.from('housekeeping_daily_rooms')
-          .select('room_id,assigned_to,clean_order,complete').eq('service_date',serviceDate)
+          .select('room_id,assigned_to,clean_order,complete,reservation_status,service_type').eq('service_date',serviceDate)
           .lt('clean_order',currentOrder).eq('complete',false)
         if(orderError)throw new Error(orderError.message)
         const staffName=String(currentPerson.name||'').trim().toLowerCase()
-        if((orderedRooms||[]).some((room:any)=>String(room.assigned_to||'').split(',').some((n:string)=>n.trim().toLowerCase()===staffName)))
+        if((orderedRooms||[]).some((room:any)=>!(String(room.reservation_status||'').toLowerCase()==='stayover'&&!['RF','REFRESH'].includes(String(room.service_type||'').toUpperCase()))&&String(room.assigned_to||'').split(',').some((n:string)=>n.trim().toLowerCase()===staffName)))
           return NextResponse.json({error:'Send your earlier numbered room for inspection first.'},{status:409})
       }
       if(startingClean)dbPatch.room_condition='Cleaning'
