@@ -158,7 +158,7 @@ function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='block
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
-export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilter='all',initialView='rooms',allowAssignments=false}:{initialDate?:string;initialRoomId?:string;initialFilter?:Filter;initialView?:'rooms'|'assignments'|'inspections';allowAssignments?:boolean}={}){
+export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialInspectionRoomId,initialFilter='all',initialView='rooms',allowAssignments=false}:{initialDate?:string;initialRoomId?:string;initialInspectionRoomId?:string;initialFilter?:Filter;initialView?:'rooms'|'assignments'|'inspections';allowAssignments?:boolean}={}){
   const [date,setDate]=useState(initialDate||todayDetroit())
   const [workspaceView,setWorkspaceView]=useState<'rooms'|'assignments'|'inspections'>(!initialRoomId?initialView:'rooms')
   const [access,setAccess]=useState<Access|null>(null)
@@ -815,7 +815,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   </div>
   if(showInspectionView)return <div className="rooms-workspace module-pretty-page">
     {workspaceTabs}
-    <HousekeepingInspectionMode date={date} onDateChange={setDate}/>
+    <HousekeepingInspectionMode date={date} onDateChange={setDate} initialRoomId={initialInspectionRoomId}/>
   </div>
 
   // Today is available only to managers and Hospitality Assistants. Housekeeping-only staff use My Assignments.

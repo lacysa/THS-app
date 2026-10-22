@@ -60,9 +60,10 @@ function taskName(room:InspectionRoom){
   return status||'Room inspection'
 }
 
-export default function HousekeepingInspectionMode({date,onDateChange}:{date:string;onDateChange:(date:string)=>void}){
+export default function HousekeepingInspectionMode({date,onDateChange,initialRoomId}:{date:string;onDateChange:(date:string)=>void;initialRoomId?:string}){
   const [rooms,setRooms]=useState<InspectionRoom[]>([])
-  const [selectedId,setSelectedId]=useState('')
+  const [loadedDate,setLoadedDate]=useState('')
+  const [selectedId,setSelectedId]=useState(initialRoomId||'')
   const [filter,setFilter]=useState<QueueFilter>('queue')
   const [note,setNote]=useState('')
   const [showCorrectionForm,setShowCorrectionForm]=useState(false)
@@ -73,6 +74,7 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
   const requestId=useRef(0)
   const busyRef=useRef(false)
   const mountedRef=useRef(true)
+  const deepLinkApplied=useRef('')
 
   const load=useCallback(async(silent=false)=>{
     const id=++requestId.current
@@ -83,6 +85,7 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
       if(!response.ok)throw new Error(body.error||'Unable to load inspections.')
       if(id!==requestId.current||!mountedRef.current)return
       setRooms(Array.isArray(body.rooms)?body.rooms:[])
+      setLoadedDate(date)
       setError('')
     }catch(err:any){
       if(id===requestId.current&&mountedRef.current)setError(err?.message||'Unable to load inspections.')
@@ -94,7 +97,8 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
   useEffect(()=>{
     mountedRef.current=true
     setRooms([])
-    setSelectedId('')
+    setLoadedDate('')
+    setSelectedId(initialRoomId||'')
     setFeedback('')
     setNote('')
     setShowCorrectionForm(false)
@@ -110,7 +114,7 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
       window.removeEventListener('focus',onRefresh)
       window.clearInterval(interval)
     }
-  },[load])
+  },[load,initialRoomId])
 
   const ordered=useMemo(()=>[...rooms].sort((a,b)=>a.sortOrder-b.sortOrder||a.roomName.localeCompare(b.roomName)),[rooms])
   const rechecks=ordered.filter(isRecheck)
@@ -118,8 +122,19 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
   const awaiting=ordered.filter(room=>room.issueOpen&&!isRecheck(room))
   const passed=ordered.filter(room=>room.inspected&&!room.issueOpen)
   const queue=[...rechecks,...ready]
+  const deepLinkedRoom=initialRoomId&&loadedDate===date?ordered.find(room=>room.roomId===initialRoomId):undefined
+  useEffect(()=>{
+    if(!deepLinkedRoom||!initialRoomId)return
+    const token=date+'|'+initialRoomId
+    if(deepLinkApplied.current===token)return
+    deepLinkApplied.current=token
+    setSelectedId(initialRoomId)
+    setFilter(deepLinkedRoom.inspected&&!deepLinkedRoom.issueOpen?'passed':deepLinkedRoom.issueOpen&&!isRecheck(deepLinkedRoom)?'corrections':'queue')
+  },[deepLinkedRoom,initialRoomId,date])
   const shown=filter==='queue'?queue:filter==='corrections'?awaiting:passed
-  const current=shown.find(room=>room.roomId===selectedId)||shown[0]
+  const pendingFocus=filter==='queue'&&selectedId===initialRoomId&&deepLinkedRoom&&![...queue,...awaiting,...passed].some(room=>room.roomId===initialRoomId)?deepLinkedRoom:undefined
+  const current=pendingFocus||shown.find(room=>room.roomId===selectedId)||shown[0]
+  const isPendingFocus=Boolean(pendingFocus)
   const currentIndex=current?shown.findIndex(room=>room.roomId===current.roomId):-1
 
   useEffect(()=>{
@@ -189,11 +204,12 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
           </select><ChevronDown size={16}/>
         </span>
       </label>
-      {filter==='queue'&&queue.length>0&&<span className="hki-position">Room {currentIndex+1} of {queue.length}</span>}
+      {filter==='queue'&&queue.length>0&&!isPendingFocus&&<span className="hki-position">Room {currentIndex+1} of {queue.length}</span>}
     </div>
 
     {error&&<p className="hki-notice error" role="alert"><AlertTriangle size={17}/>{error}</p>}
     {feedback&&<p className="hki-notice success" role="status"><Check size={17}/>{feedback}</p>}
+    {initialRoomId&&loadedDate===date&&!deepLinkedRoom&&<p className="hki-notice" role="status">That room has no inspection record for this date. Showing the available queue instead.</p>}
     {loading?<div className="hki-empty">Loading today's inspection queue…</div>:
      !current?<div className="hki-empty">
        <ClipboardCheck size={29}/>
@@ -204,7 +220,7 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
      <article className="hki-room-card" key={current.roomId}>
        <div className="hki-room-top">
          <div>
-           <span className="hki-room-eyebrow">{filter==='queue'?(isRecheck(current)?'REINSPECTION':'READY FOR INSPECTION'):filter==='corrections'?'AWAITING HOUSEKEEPING':'INSPECTION COMPLETE'}</span>
+           <span className="hki-room-eyebrow">{isPendingFocus?'WAITING FOR HOUSEKEEPING':filter==='queue'?(isRecheck(current)?'REINSPECTION':'READY FOR INSPECTION'):filter==='corrections'?'AWAITING HOUSEKEEPING':'INSPECTION COMPLETE'}</span>
            <h2>{current.roomName}</h2>
          </div>
          <span className={'hki-type'+(isRecheck(current)?' recheck':'')}>{taskName(current)}</span>
@@ -215,7 +231,8 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
        </div>
        {current.roomNotes?.trim()&&<div className="hki-room-note"><strong>Room note</strong><p>{current.roomNotes.trim()}</p></div>}
        {isRecheck(current)&&<div className="hki-room-note correction"><strong>Previous correction</strong><p>{current.issueNote||current.correctionHistory?.find(event=>event.type==='found')?.note||'Review the correction history.'}</p></div>}
-       {filter==='queue'&&<>
+       {isPendingFocus&&<div className="hki-waiting"><AlertTriangle size={18}/><span>This room has not been submitted for inspection yet. It will join the queue after housekeeping finishes and submits it.</span></div>}
+       {filter==='queue'&&!isPendingFocus&&<>
          <div className="hki-decision">
            <button type="button" className="hki-pass" disabled={saving} onClick={()=>void decide(current,'pass')}><Check size={21}/>{saving?'Saving…':'Pass inspection'}</button>
            <button type="button" className="hki-fail" disabled={saving} aria-expanded={showCorrectionForm} onClick={()=>{setShowCorrectionForm(value=>!value);setError('')}}><X size={20}/>Needs correction</button>
@@ -239,13 +256,14 @@ export default function HousekeepingInspectionMode({date,onDateChange}:{date:str
        </details>}
      </article>}
 
-    {shown.length>1&&<div className="hki-nav">
+    {shown.length>1&&!isPendingFocus&&<div className="hki-nav">
       <button type="button" disabled={currentIndex<=0||saving} onClick={()=>setSelectedId(shown[currentIndex-1].roomId)}><ChevronLeft size={16}/>Previous</button>
       <label><span>Jump to room</span><select aria-label="Choose inspection room" value={current?.roomId||''} onChange={e=>setSelectedId(e.target.value)} disabled={saving}>
         {shown.map((room)=><option key={room.roomId} value={room.roomId}>{room.roomName}{isRecheck(room)?' · Recheck':''}</option>)}
       </select></label>
       <button type="button" disabled={currentIndex>=shown.length-1||saving} onClick={()=>setSelectedId(shown[currentIndex+1].roomId)}>Next<ChevronRight size={16}/></button>
     </div>}
+    {isPendingFocus&&<button className="hki-awaiting-link" type="button" onClick={()=>setSelectedId('')}>Back to inspection queue <ChevronRight size={15}/></button>}
     {filter==='queue'&&awaiting.length>0&&<button className="hki-awaiting-link" type="button" onClick={()=>{setFilter('corrections');setSelectedId('')}}>{awaiting.length} room{awaiting.length===1?'':'s'} still awaiting correction <ChevronRight size={15}/></button>}
   </section>
 }
