@@ -902,18 +902,6 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
         </div>
       </details>
     </section>}
-    {viewMode==='manager'&&isManager(access)&&inactiveStayovers.length>0&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
-      <summary className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Occupied rooms without a refresh request · tap to expand</span></div><span>{inactiveStayovers.length} stayovers <ChevronDown size={15}/></span></summary>
-      <div className="rooms-stayover-grid">
-        {inactiveStayovers.map(row=><div className="rooms-stayover-item" key={row.roomId}>
-          <div><strong>{row.roomName}</strong><small>Occupied · no refresh requested</small></div>
-          <label>Assigned coverage<select value={splitAssigned(row.assignedTo)[0]||''} onChange={e=>assignStaff(row,e.target.value)}>
-            <option value="">Unassigned</option>{staffOptions.map(person=><option key={person.id} value={person.name}>{person.name}</option>)}
-          </select></label>
-          <button type="button" onClick={()=>setRefresh(row)}>Request RF</button>
-        </div>)}
-      </div>
-    </details>}
     {viewMode==='assigned'&&<details className="rooms-stayover-planner rooms-stayover-collapsible">
       <summary className="rooms-stayover-heading"><div><strong>All stayovers · reference</strong><span>Read-only room status, assigned staff and notes · tap to expand</span></div><span>{dailyOverview.filter(room=>normalize(room.reservationStatus)==='stayover').length} rooms <ChevronDown size={15}/></span></summary>
       <div className="rooms-stayover-grid">
