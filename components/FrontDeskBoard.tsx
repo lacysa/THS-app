@@ -109,7 +109,7 @@ export default function FrontDeskBoard({initialDate,targetRoom=''}:{initialDate:
       <section className="module-pretty-hero">
         <div>
           <div className="module-kicker">Breakfast operations</div>
-          <h1>Front Desk</h1>
+          <h1>Breakfast Orders</h1>
           <p>Manage delivery times, missing menus, guest breakfast updates, and room notes.</p>
         </div>
         <div className="module-pretty-hero-stat">
