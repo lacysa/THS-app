@@ -21,6 +21,7 @@ type InspectionRoom={
   issueOpen:boolean
   issueNote:string
   inspected:boolean
+  fohSignedBy?:string|null
   correctionHistory:Correction[]
   latestInspection?:{stage:string;status:string;submittedAt:string;inspectorName:string}|null
 }
