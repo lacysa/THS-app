@@ -1,6 +1,6 @@
 import {redirect} from 'next/navigation'
 import StaffShell from '@/components/StaffShell'
-import InspectionWorkspace from '@/components/InspectionWorkspace'
+import UnifiedRoomsBoard from '@/components/UnifiedRoomsBoard'
 import {canUseModule} from '@/lib/access'
 
 export const dynamic='force-dynamic'
@@ -15,5 +15,5 @@ export default async function RoomInspectionsPage({searchParams}:{searchParams:P
  const initialDate=/^20\d{2}-\d{2}-\d{2}$/.test(params?.date||'')?params.date:undefined
  const room=params?.inspectionRoom||params?.room||''
  const initialRoomId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(room)?room:undefined
- return <StaffShell title="Room Inspections"><InspectionWorkspace initialDate={initialDate} initialRoomId={initialRoomId}/></StaffShell>
+ return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialDate={initialDate} initialInspectionRoomId={initialRoomId} initialView="inspections" allowAssignments={true}/></StaffShell>
 }
