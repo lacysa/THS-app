@@ -32,6 +32,7 @@ type Data={
     unresolved:number
     averageCorrectionMinutes:number|null
   }
+  turnaround?:{start:string;end:string;rows:{housekeeperId:string;name:string;rooms:number;averageMinutes:number;minMinutes:number;maxMinutes:number}[]}
   weekly:Weekly[]
   individuals:Individual[]
   commonMisses:Miss[]
@@ -161,6 +162,12 @@ export default function HousekeepingQualityDashboard(){
               <strong className="quality-person-rate">{person.roomsInspected?rateLabel(person.firstPassRate):'N/A'}</strong>
             </div>)}
           </div>}
+      </section>
+
+      <section className="quality-card quality-table-card">
+        <div className="quality-card-head"><div><BarChart3 size={17}/><span><strong>Room clean turnaround by housekeeper</strong><small>October 22, 2026 onward · full cleans only · completed rooms</small></span></div></div>
+        <p style={{fontSize:12,opacity:0.8,margin:'8px 0 14px'}}>Elapsed time from creation of the daily room record to recorded clean completion. This is a <strong>workflow estimate, not actual cleaning time</strong>. Excludes refreshes, shared or ambiguous assignments, and invalid timestamps. Inspect sample sizes before comparing staff.</p>
+        {!data.turnaround?.rows.length?<div className="quality-empty-chart">No qualifying turnaround records for this period.</div>:<div className="quality-table-wrap"><table className="quality-table"><thead><tr><th>Housekeeper</th><th>Rooms</th><th>Average elapsed</th><th>Shortest</th><th>Longest</th></tr></thead><tbody>{data.turnaround.rows.map(person=><tr key={person.housekeeperId}><td><strong>{person.name}</strong></td><td>{person.rooms}</td><td>{person.averageMinutes} min</td><td>{person.minMinutes} min</td><td>{person.maxMinutes} min</td></tr>)}</tbody></table></div>}
       </section>
 
       <CorrectionReviewPanel corrections={data.documentedCorrections||[]} categorySummary={data.correctionCategoriesSummary||[]} onSaved={()=>load(true)}/>
