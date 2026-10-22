@@ -679,6 +679,12 @@ export default function StaffShell({
                   <span className="sidebar-link-label">Today's Cleans</span>
                 </Link>
               )}
+              {(access?.isAdmin || (access?.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant'].includes(cap))) && (
+                <Link href="/housekeeping/refreshes" className={pathname==='/housekeeping/refreshes'?'active':''}>
+                  <span className="sidebar-link-icon"><BedDouble size={17}/></span>
+                  <span className="sidebar-link-label">Today's Refreshes</span>
+                </Link>
+              )}
               <Link href="/housekeeping/sidework" className={pathname==='/housekeeping/sidework'?'active':''}>
                 <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
                 <span className="sidebar-link-label">Today's Sidework</span>
