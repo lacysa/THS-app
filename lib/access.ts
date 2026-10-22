@@ -170,6 +170,14 @@ export function isModuleAllowedForAccess(access:StaffAccess, module:any) {
   // Keep role defaults consistent across the owner access panel, navigation and routes.
   // Explicit owner-configured per-person overrides are evaluated below.
   const caps=access.capabilities || []
+  if(['housekeeping_today_cleans','housekeeping_today_refreshes','housekeeping_today_sidework'].includes(key)){
+    const managerView=access.isAdmin||['manager','general_manager','operations_manager','owner'].some(c=>caps.includes(c))
+    const eligible=key==='housekeeping_today_sidework'
+      ? ['housekeeping','hospitality_assistant','runner','laundry'].some(c=>caps.includes(c))
+      : ['housekeeping','hospitality_assistant'].some(c=>caps.includes(c))
+    if(Object.prototype.hasOwnProperty.call(access.moduleOverrides,key))return access.moduleOverrides[key]&&(managerView||eligible)
+    return managerView||eligible
+  }
   const manager=access.isAdmin || ['manager','general_manager','operations_manager','owner','foh_manager'].some(c=>caps.includes(c))
   const hospitality=caps.includes('hospitality_assistant')
   const housekeeper=caps.includes('housekeeping') && !hospitality && !manager
