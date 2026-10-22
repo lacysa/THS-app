@@ -15,7 +15,7 @@ export default function TodaysCleans(){
  const load=useCallback(async()=>{
   setLoading(true);setError('')
   try{
-   const [response,me]=await Promise.all([fetch('/api/housekeeping/day?date='+encodeURIComponent(date),{cache:'no-store'}),fetch('/api/me',{cache:'no-store'})])
+   const [response,me]=await Promise.all([fetch('/api/housekeeping/day?scope=mine&date='+encodeURIComponent(date),{cache:'no-store'}),fetch('/api/me',{cache:'no-store'})])
    const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to load your rooms.')
    setRows(data.rows||[])
    const self=await me.json().catch(()=>({}))
