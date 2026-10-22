@@ -302,7 +302,7 @@ export async function GET(req: NextRequest) {
           // Show all stayovers for scheduling visibility; only unassigned RF rooms can be claimed.
           const deepAssignedToMe=String(row.deepClean?.assignedTo||'').trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()
           const tubAssignedToMe=Boolean(row.tubCleanDue)&&String(row.tubAssignedTo||'').trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()
-          return assignedToMe || deepAssignedToMe || tubAssignedToMe || Boolean(row.claimableRefresh) || String(row.reservationStatus||'').trim().toLowerCase()==='stayover'
+          return assignedToMe || deepAssignedToMe || tubAssignedToMe || (req.nextUrl.searchParams.get('scope') !== 'mine' && (Boolean(row.claimableRefresh) || String(row.reservationStatus||'').trim().toLowerCase()==='stayover'))
         })
       : rows
 
