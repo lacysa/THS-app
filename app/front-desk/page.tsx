@@ -13,7 +13,7 @@ export default async function FrontDeskPage({searchParams}:{searchParams:Promise
   if (!gate.access) redirect('/login')
   if (!gate.allowed) redirect('/dashboard')
   return (
-    <StaffShell title="Front Desk Breakfast">
+    <StaffShell title="Breakfast Orders">
       <FrontDeskBoard key={initialDate+":"+targetRoom} initialDate={initialDate} targetRoom={targetRoom} />
     </StaffShell>
   )
