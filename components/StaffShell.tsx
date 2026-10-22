@@ -686,6 +686,16 @@ export default function StaffShell({
                   <span className="sidebar-link-label">Today's Refreshes</span>
                 </Link>
               )}
+              {(access?.isAdmin||(access?.capabilities||[]).some(c=>['manager','general_manager','operations_manager','owner'].includes(c)))&&<>
+                <Link href="/housekeeping?view=assignments" className={pathname==='/housekeeping'?'active':''}>
+                  <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
+                  <span className="sidebar-link-label">Room Assignments</span>
+                </Link>
+                <Link href="/housekeeping/sidework-assignments" className={pathname==='/housekeeping/sidework-assignments'?'active':''}>
+                  <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
+                  <span className="sidebar-link-label">Sidework Assignments</span>
+                </Link>
+              </>}
               {modules.some(m=>m.module_key==='housekeeping_today_sidework')&&<Link href="/housekeeping/sidework" className={pathname==='/housekeeping/sidework'?'active':''}>
                 <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
                 <span className="sidebar-link-label">Today's Sidework</span>
