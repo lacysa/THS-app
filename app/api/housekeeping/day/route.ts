@@ -518,6 +518,27 @@ export async function PATCH(req: NextRequest) {
     }
 
 
+    // A room can be started only after the guest has been recorded OUT.
+    // Staff cannot skip an earlier numbered clean by opening a second tab or device.
+    const startingClean=!manager && requested.roomCondition==='Cleaning' && !Object.prototype.hasOwnProperty.call(requested,'complete')
+    const finishingClean=!manager && requested.complete===true
+    if(startingClean||finishingClean){
+      if(Boolean(existing.complete)&&startingClean)return NextResponse.json({error:'This room is already complete.'},{status:409})
+      if(isCheckoutAwaitingOut({reservationStatus:existing.reservation_status,serviceType:existing.service_type}))
+        return NextResponse.json({error:'The guest must be marked OUT before cleaning can begin.'},{status:409})
+      const currentOrder=existing.clean_order===null?null:Number(existing.clean_order)
+      if(currentOrder!==null&&Number.isFinite(currentOrder)&&currentPerson){
+        const {data:orderedRooms,error:orderError}=await admin.from('housekeeping_daily_rooms')
+          .select('room_id,assigned_to,clean_order,complete').eq('service_date',serviceDate)
+          .lt('clean_order',currentOrder).eq('complete',false)
+        if(orderError)throw new Error(orderError.message)
+        const staffName=String(currentPerson.name||'').trim().toLowerCase()
+        if((orderedRooms||[]).some((room:any)=>String(room.assigned_to||'').split(',').some((n:string)=>n.trim().toLowerCase()===staffName)))
+          return NextResponse.json({error:'Send your earlier numbered room for inspection first.'},{status:409})
+      }
+      if(startingClean)dbPatch.room_condition='Cleaning'
+    }
+
     const completeRequested = Object.prototype.hasOwnProperty.call(requested,'complete')
     if (completeRequested) {
       const complete=Boolean(requested.complete)
