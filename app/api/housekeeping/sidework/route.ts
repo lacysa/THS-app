@@ -28,7 +28,7 @@ export async function GET(req:NextRequest){
  try{
   const {people,shifts,existing}=await context(date);const isManager=manage(access)
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
-  const staff=shifts.map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:[s.role_label,s.work_mode,person.job_title].filter(Boolean).join(' ')}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
+  const staff=shifts.map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:s.role_label||person.job_title||''}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
   const assigned=(group:string)=>{
    const eligible=staff.filter(p=>matches(p.role,group))
    return eligible.length?eligible[0].id:null
@@ -51,7 +51,7 @@ export async function PATCH(req:NextRequest){
   const task=SIDEWORK_TASKS.find(t=>t.key===key)!
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
   const saved=existing.find((x:any)=>x.task_key===key)
-  const scheduled=shifts.map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:[s.role_label,s.work_mode,p.job_title].filter(Boolean).join(' ')}:null}).filter(Boolean) as {id:string;role:string}[]
+  const scheduled=shifts.map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:s.role_label||p.job_title||''}:null}).filter(Boolean) as {id:string;role:string}[]
   const auto=scheduled.find(p=>matches(p.role,task.group))?.id||null
   const assignedTo=saved?saved.assigned_to:auto
   if(!isManager&&(!self||assignedTo!==self.id))return NextResponse.json({error:'This sidework is not assigned to you'},{status:403})
