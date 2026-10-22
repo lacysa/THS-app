@@ -300,7 +300,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
 
   return <div className="hka-workspace">
     <header className="hka-header">
-      <div><span className="hka-kicker">THE HOTEL SAUGATUCK</span><h2>Housekeeping Assignments</h2>
+      <div><span className="hka-kicker">THE HOTEL SAUGATUCK</span><h2>Room Assignments</h2>
         <p>Plan the day's room services using your existing schedule and room assignments.</p>
       </div>
       <div className="hka-date-picker">
