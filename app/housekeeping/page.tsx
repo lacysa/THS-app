@@ -14,6 +14,7 @@ export default async function Page({searchParams}:{searchParams:Promise<{filter?
   const initialRoomId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(params?.room||'')?params.room:undefined
   const initialDate=/^20\d{2}-\d{2}-\d{2}$/.test(params?.date||'')?params.date:undefined
   const manager=gate.access.isAdmin || (gate.access.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap))
+  if(!manager) redirect('/housekeeping/today')
   const allowAssignments=Boolean(assignmentGate.allowed&&manager)
   const caps=gate.access.capabilities||[]
   const allowInspections=gate.access.isAdmin || (gate.access.permissions||[]).includes('room_checks.perform') ||
