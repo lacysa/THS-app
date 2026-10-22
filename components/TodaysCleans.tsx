@@ -4,7 +4,7 @@ import { CheckCircle2, LockKeyhole, RefreshCw } from 'lucide-react'
 type Room={roomId:string;roomName:string;assignedTo:string;cleanOrder:number|null;complete:boolean;readyForInspection:boolean;reservationStatus:string;serviceType:string;roomCondition:string;checkIssueOpen:boolean;notes?:string}
 const currentDate=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 const isWaiting=(r:Room)=>['checkout','out/in'].includes((r.reservationStatus||'').toLowerCase())&&!/^out\b/i.test(r.serviceType||'')
-export default function TodaysCleans(){
+export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'}){
  const [date,setDate]=useState(currentDate)
  const [rows,setRows]=useState<Room[]>([])
  const [loading,setLoading]=useState(true)
@@ -23,7 +23,7 @@ export default function TodaysCleans(){
   }catch(e:any){setError(e.message||'Unable to load your rooms.')}finally{setLoading(false)}
  },[date])
  useEffect(()=>{void load()},[load])
- const mine=useMemo(()=>rows.filter(r=>{if(r.reservationStatus.trim().toLowerCase()==='stayover' && !/^(RF|REFRESH)$/i.test((r.serviceType||'').trim()))return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const full=staffName.trim().toLowerCase();return full&&assigned.some(n=>n===full||n===full.split(' ')[0])}),[rows,staffName])
+ const mine=useMemo(()=>rows.filter(r=>{const refresh=r.reservationStatus.trim().toLowerCase()==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim());if(mode==='refreshes'&&!refresh)return false;if(mode==='cleans'&&r.reservationStatus.trim().toLowerCase()==='stayover')return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const full=staffName.trim().toLowerCase();return full&&assigned.some(n=>n===full||n===full.split(' ')[0])}),[rows,staffName,mode])
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
@@ -41,21 +41,21 @@ export default function TodaysCleans(){
   try{
    const response=await fetch('/api/housekeeping/day',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate:date,roomId:room.roomId,patch:{complete:true}})})
    const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Could not finish the room.')
-   setMessage(room.roomName+' sent for inspection.');await load()
+   setMessage(room.roomName+(mode==='refreshes'?' refresh completed.':' sent for inspection.'));await load()
   }catch(e:any){setError(e.message||'Unable to save the room.')}finally{setBusy('')}
  }
  return <div className="ths-cleans">
-  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>Today's Cleans</h1><p>Just your rooms, in cleaning order. No giant operations table.</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
-  <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> rooms finished</div>
+  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Your assigned stayover refreshes, separate from full room cleans.':'Just your rooms, in cleaning order. No giant operations table.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
+  <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
-  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">No rooms assigned to you for this date. If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
+  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned to you for this date.':'No full room cleans assigned to you for this date.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
    const waiting=isWaiting(r),orderLocked=locked(r),done=r.complete
    return <article className={'ths-clean-card '+(done?'done':waiting||orderLocked?'locked':'available')} key={r.roomId}>
     <div className="ths-clean-head"><div><small>{r.cleanOrder!=null?'CLEAN '+r.cleanOrder:'ROOM ASSIGNMENT'}</small><h2>{r.roomName}</h2></div>{done?<CheckCircle2 size={24}/>:waiting||orderLocked?<LockKeyhole size={22}/>:<span className="ths-clean-ready">Ready</span>}</div>
     <p className="ths-clean-detail">{r.reservationStatus} {r.serviceType?'· '+r.serviceType:''}</p>
     {r.notes&&<p className="ths-clean-notes">{r.notes}</p>}
-    <p className="ths-clean-status">{done?'Finished · sent for inspection':waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':r.checkIssueOpen?'Inspection correction needed':r.roomCondition==='Cleaning'?'Cleaning in progress':'Ready to clean'}</p>
-    {!done&&!waiting&&!orderLocked&&<button type="button" disabled={busy===r.roomId} onClick={()=>void (r.roomCondition==='Cleaning'||r.reservationStatus.toLowerCase()==='stayover'?finish(r):begin(r))}>{busy===r.roomId?'Saving…':r.roomCondition==='Cleaning'||r.reservationStatus.toLowerCase()==='stayover'?'Finished · Send for inspection':'Begin cleaning'}</button>}
+    <p className="ths-clean-status">{done?(mode==='refreshes'?'Refresh complete':'Finished · sent for inspection'):waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':r.checkIssueOpen?'Inspection correction needed':r.roomCondition==='Cleaning'?'Cleaning in progress':'Ready to clean'}</p>
+    {!done&&!waiting&&!orderLocked&&<button type="button" disabled={busy===r.roomId} onClick={()=>void (r.roomCondition==='Cleaning'||r.reservationStatus.toLowerCase()==='stayover'?finish(r):begin(r))}>{busy===r.roomId?'Saving…':mode==='refreshes'?'Mark refresh complete':r.roomCondition==='Cleaning'?'Finished · Send for inspection':'Begin cleaning'}</button>}
    </article>
   })}</div>}
   <style jsx>{`
