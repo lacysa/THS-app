@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from 'next/server'
 import {getStaffAccess,canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 export const dynamic='force-dynamic'
-const fields=['guest_name','guest_phone','door_code','arrival_date','checkout_date','occupancy','rate_plan','check_in_time','products_raw','dietary_restrictions','reason_for_visit','guest_comments','innkeeper_notes'] as const
+const fields=['accompanying_guest','guest_name','guest_phone','door_code','arrival_date','checkout_date','occupancy','rate_plan','check_in_time','products_raw','dietary_restrictions','reason_for_visit','guest_comments','innkeeper_notes'] as const
 function arrivalTime24(value:string):string|null{
   const match=/^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(am|pm)?$/i.exec(value.trim().replace(/\./g,''))
   if(!match)return null
@@ -25,7 +25,7 @@ export async function GET(req:NextRequest){
    return NextResponse.json({error:'Invalid reservation ID'},{status:400})
  const admin=createSupabaseAdmin()
  const {data:stay,error}=await admin.from('reservation_stays')
-  .select('id,reservation_number,reservation_key,guest_name,guest_phone,arrival_date,checkout_date,room_id,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes,needs_review,active')
+  .select('id,reservation_number,reservation_key,guest_name,accompanying_guest,guest_phone,arrival_date,checkout_date,room_id,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes,needs_review,active')
   .eq('id',id).maybeSingle()
  if(error)return NextResponse.json({error:'Could not load reservation'},{status:500})
  if(!stay)return NextResponse.json({error:'Reservation not found'},{status:404})
