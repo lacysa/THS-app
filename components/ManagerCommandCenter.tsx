@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import CopyHandoffButton from '@/components/CopyHandoffButton'
+import {roomCheckStage} from '@/lib/room-check-queue'
 import { AlertTriangle, ArrowUpRight, BedDouble, CalendarClock, ClipboardCheck, ClipboardList, Clock3, ShieldCheck, Sparkles, Users, Wrench } from 'lucide-react'
 
 type Room={roomId:string;roomName:string;reservationStatus:string;serviceType:string;assignedTo:string;complete:boolean;stripHold:string;roomCondition:string;inspected:boolean;fohCheckInitials:string;haCheckInitials:string;checkIssueOpen:boolean;notes:string;completedAt?:string;inspectedAt?:string;fohSignedAt?:string;haSignedAt?:string;housekeeperAttestedAt?:string}
@@ -18,7 +19,7 @@ export default function ManagerCommandCenter({today,tomorrow,rooms,tomorrowRooms
   const corrections=showHousekeeping?rooms.filter(r=>!hold(r)&&r.checkIssueOpen):[]
   const arrivals=showHousekeeping?rooms.filter(r=>!hold(r)&&['Arrival','Out/In'].includes(r.reservationStatus)):[]
   const arrivalIssues=arrivals.filter(r=>!ready(r)||r.checkIssueOpen)
-  const waitingChecks=showHousekeeping?rooms.filter(r=>!hold(r)&&r.reservationStatus!=='Stayover'&&r.serviceType!=='RF'&&r.complete&&!r.inspected&&!r.fohCheckInitials&&!r.checkIssueOpen):[]
+  const waitingChecks=showHousekeeping?rooms.filter(r=>['ready','recheck'].includes(roomCheckStage({...r,fohSignedBy:r.fohCheckInitials||null}))):[]
   const holds=showHousekeeping?rooms.filter(hold):[]
   const urgent=showMaintenance?maintenance.filter(r=>r.priority==='urgent'&&r.status!=='complete'):[]
   const outstanding=unassigned.length+corrections.length+arrivalIssues.length+waitingChecks.length+urgent.length
@@ -32,7 +33,7 @@ export default function ManagerCommandCenter({today,tomorrow,rooms,tomorrowRooms
     {name:'Arrival not ready',rows:arrivalIssues,href:'/housekeeping',tone:'warning',hint:'Review room condition'},
     {name:'Corrections open',rows:corrections,href:'/housekeeping?filter=correction',tone:'danger',hint:'Resolve and recheck'},
     {name:'Unassigned cleans',rows:unassigned,href:'/housekeeping',tone:'warning',hint:'Assign a housekeeper'},
-    {name:'Room checks pending',rows:waitingChecks,href:'/housekeeping?filter=inspection',tone:'info',hint:'Complete inspection'},
+    {name:'Room checks pending',rows:waitingChecks,href:'/room-checks',tone:'info',hint:'Complete inspection'},
     {name:'Urgent maintenance',rows:urgent,href:'/maintenance',tone:'danger',hint:'Review open work orders'}
   ].filter(g=>g.rows.length)
   const handoffText=['THS shift handoff · '+today,...handoff.map(item=>'• '+item.label),'Tomorrow: '+tomorrowStaff.length+' scheduled on site; '+tomorrowBlocked.length+' blocked/held rooms'].join('\n')
