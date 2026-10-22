@@ -2,7 +2,7 @@
 // Keys, URLs, roles, permissions, and stored module definitions stay unchanged.
 export const STAFF_MODULE_LABELS: Readonly<Record<string,string>> = {
   dashboard: 'Dashboard',
-  front_desk: 'Front Desk',
+  front_desk: 'Breakfast Orders',
   front_desk_inventory: 'Front Desk Inventory',
   kitchen_inventory: 'Kitchen Inventory',
   housekeeping_inventory: 'Housekeeping Inventory',
@@ -13,7 +13,7 @@ export const STAFF_MODULE_LABELS: Readonly<Record<string,string>> = {
   breakfast_menu_manager: 'Menu Manager',
   daily_overview: 'Daily Overview',
   breakfast_guest: 'Guest Breakfast',
-  reservations: 'Room Operations',
+  reservations: 'Rooms & Reservations',
   ops: 'Calendar & Activity',
   reservation_sync: 'Reservation Sync',
   housekeeping: 'Housekeeping',
