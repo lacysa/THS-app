@@ -1,0 +1,27 @@
+export const SIDEWORK_TASKS=[
+{key:'kitchen_trays',group:'runner',label:'Pull trays after breakfast',time:'7:30–11 AM'},
+{key:'kitchen_pantry',group:'runner',label:'Refill guest pantry: snacks, cookies, napkins, ice, drinks, snack drawer',time:''},
+{key:'kitchen_dishes',group:'runner',label:'Wash dishes after breakfast',time:''},
+{key:'kitchen_caddies',group:'runner',label:'Clean and refill sugar and tea caddies, salt and pepper shakers',time:'2–3:30 PM'},
+{key:'kitchen_silverware',group:'runner',label:'Polish and roll silverware after napkins dry',time:''},
+{key:'kitchen_coffee',group:'runner',label:'Prepare next coffee brew, grind if low, add filters, clean station',time:''},
+{key:'kitchen_floor',group:'runner',label:'Sweep and mop kitchen at end of day',time:''},
+{key:'laundry_linen',group:'laundry',label:'Wash linens, check laundry chute, kitchen rags and breakfast napkins',time:'10 AM–4 PM'},
+{key:'laundry_stains',group:'laundry',label:'Pretreat stained items, soak 20 minutes, run normal cycle',time:''},
+{key:'laundry_refresh',group:'laundry',label:'Check RF magnets and update refresh/housekeeping assignments',time:''},
+{key:'laundry_finish',group:'laundry',label:'Dry, fold, and put away laundry',time:''},
+{key:'laundry_press',group:'laundry',label:'Press pillowcases',time:''},
+{key:'hotel_bathroom',group:'housekeeping',label:'Clean and stock lobby bathroom',time:'2–4 PM'},
+{key:'hotel_closets',group:'housekeeping',label:'Restock housekeeping closets',time:''},
+{key:'hotel_first_hall',group:'housekeeping',label:'Vacuum first-floor hallway',time:''},
+{key:'hotel_trash',group:'housekeeping',label:'Take out bathroom, laundry, lobby and office trash',time:'End of day'},
+{key:'hotel_second_hall',group:'housekeeping',label:'Vacuum second-floor hallway',time:'2–4 PM'},
+{key:'hotel_vacuums',group:'housekeeping',label:'Empty all vacuums; Monday: clean vacuum filters in laundry sink',time:''},
+{key:'hotel_floors',group:'housekeeping',label:'Sweep and mop vestibule and lobby floors',time:''},
+{key:'hotel_closet_trash',group:'housekeeping',label:'Take out first floor, second floor, Douglas closet and hall trash',time:'End of day'},
+{key:'ha_vases',group:'hospitality',label:'Replace water in flower vases',time:'2–4 PM'},
+{key:'ha_glass',group:'hospitality',label:'Clean glass in the lobby',time:''},
+{key:'ha_promos',group:'hospitality',label:'Straighten and restock promotional materials table',time:''},
+{key:'ha_pantry',group:'hospitality',label:'Refill guest pantry: snacks, cookies, napkins, ice, drinks and snack drawer',time:''}
+] as const
+export type SideworkGroup=typeof SIDEWORK_TASKS[number]['group']
