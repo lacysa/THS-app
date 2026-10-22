@@ -9,9 +9,19 @@ export async function GET(req:NextRequest){
  const date=req.nextUrl.searchParams.get('date')||''
  if(!/^20\d{2}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date+'T12:00:00Z')))return NextResponse.json({error:'Invalid date'},{status:400})
  const admin=createSupabaseAdmin()
- const {data,error}=await admin.from('housekeeping_room_packages').select('room_id,package_id').eq('service_date',date)
- if(error)return NextResponse.json({error:'Could not load packages'},{status:500})
- const counts:Record<string,number>={}
- for(const row of data||[])counts[String(row.room_id)]=(counts[String(row.room_id)]||0)+1
- return NextResponse.json({counts},{headers:{'cache-control':'private, no-store'}})
+ const [{data:assigned,error:assignedError},{data:catalog,error:catalogError}]=await Promise.all([
+  admin.from('housekeeping_room_packages').select('room_id,package_id').eq('service_date',date),
+  admin.from('room_package_catalog').select('id,name').order('name')
+ ])
+ if(assignedError||catalogError)return NextResponse.json({error:'Could not load packages'},{status:500})
+ const namesById=new Map((catalog||[]).map(row=>[String(row.id),String(row.name)]))
+ const packagesByRoom:Record<string,string[]>={}
+ for(const row of assigned||[]){
+  const roomId=String(row.room_id)
+  const name=namesById.get(String(row.package_id))
+  if(!name)continue
+  if(!packagesByRoom[roomId])packagesByRoom[roomId]=[]
+  if(!packagesByRoom[roomId].includes(name))packagesByRoom[roomId].push(name)
+ }
+ return NextResponse.json({packagesByRoom},{headers:{'cache-control':'private, no-store'}})
 }

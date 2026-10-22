@@ -146,7 +146,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   try{window.localStorage.setItem(isCompact?'ths-room-ops-view-mobile':'ths-room-ops-view-desktop',mode)}catch{}
  }
 
- const [packageCounts,setPackageCounts]=useState<Record<string,number>>({})
+ const [packageNamesByRoom,setPackageNamesByRoom]=useState<Record<string,string[]>>({})
  const [correctionNotes,setCorrectionNotes]=useState<Record<string,CorrectionNote[]>>({})
  const [correctionNotesError,setCorrectionNotesError]=useState(false)
  useEffect(()=>{
@@ -193,8 +193,9 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  useEffect(()=>{setLiveRows(rows)},[rows])
  useEffect(()=>{
   let active=true
+  setPackageNamesByRoom({})
   const load=()=>fetch('/api/ops/room-packages?date='+encodeURIComponent(serviceDate),{cache:'no-store'})
-   .then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(active)setPackageCounts(data.counts||{})}).catch(()=>{})
+   .then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(active)setPackageNamesByRoom(data.packagesByRoom||{})}).catch(()=>{if(active)setPackageNamesByRoom({})})
   void load()
   window.addEventListener('ths:live-data-refresh',load)
   return()=>{active=false;window.removeEventListener('ths:live-data-refresh',load)}
@@ -305,7 +306,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
          {row.checkIssueOpen&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={history("issue_reported")}>Inspection issue</button>}
         {row.tubCleanDue&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:" · Unassigned"}</button>}
         {row.tubCleanCompleted&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub cleaned</button>}
-         {(packageCounts[row.roomId]||0)>0&&<button type="button" className="ths-tag-package ths-ops-pill-action" onClick={editor("packages")}>Package · {packageCounts[row.roomId]}</button>}
+         {(packageNamesByRoom[row.roomId]||[]).map(name=><button key={name} type="button" className="ths-tag-package ths-ops-pill-action" title={name} aria-label={'Edit package: '+name} onClick={editor("packages")}>{name}</button>)}
          {/^OUT$/i.test(String(row.serviceType||'').trim())&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("out_marked")}>OUT</button>}
          {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("tip_envelope_collected")}>Tips · {String(row.serviceType).split('-')[1]}</button>}
         </span>
@@ -344,6 +345,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         {canManageRooms&&row.inspected&&!row.checkIssueOpen&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Review inspection for '+row.roomName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}}}>Review inspection</span>}
         {row.inspected&&!row.checkIssueOpen&&<span className="ths-tag-complete">Inspection passed{inspectionSigns[row.roomId]?.signed?' · '+inspectionSigns[row.roomId].initials:''}</span>}
         {row.inspected&&!row.checkIssueOpen&&!inspectionSigns[row.roomId]?.signed&&canManageRooms&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Sign off inspection for '+row.roomName} onClick={event=>void signInspection(event,row.roomId)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();void signInspection(event,row.roomId)}}}>{inspectionSigning===row.roomId?'Signing…':'Sign off'}</span>}
+        {(packageNamesByRoom[row.roomId]||[]).map(name=><span key={name} className="ths-tag-package" title={name}>{name}</span>)}
         {row.breakfastTag&&<span className="ths-tag-service">Breakfast</span>}
         {row.lateArrival&&<span className="ths-tag-arrival">Late arrival</span>}
         {row.checkIssueOpen&&<span className="alert ths-tag-alert">Inspection issue</span>}
