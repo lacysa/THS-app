@@ -37,7 +37,11 @@ export function roomCheckStage(row:RoomCheckCandidate):RoomCheckStage{
  const explicitlyRequested=Boolean(row.complete||row.readyForInspection||row.inspected||row.checkIssueOpen)||condition==='ready for room check'
  if(!turnover&&!arrival&&!((vacant||status==='')&&explicitlyRequested))return 'not-required'
  if(row.checkIssueOpen)return row.complete&&row.readyForInspection&&!row.inspected?'recheck':'correction'
- if(row.inspected||row.fohSignedBy)return 'passed'
+ if(row.inspected)return 'passed'
+ // Arrival-only rooms can still receive their independent check even when
+ // management previously confirmed the physical condition as clean.
+ // Preserve the explicit FOH verification bypass for actual turnovers.
+ if(row.fohSignedBy&&!arrival)return 'passed'
  // Departure turnover must be confirmed OUT, cleaned, and submitted for inspection.
  if(turnover)return out(row.serviceType)&&Boolean(row.complete&&row.readyForInspection)?'ready':'waiting'
  // An arrival does not require a fabricated OUT. Explicitly occupied or dirty
