@@ -168,10 +168,17 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  const envelopeCollected=Boolean(envelopeInitials)
  const selectedPackageNames=[...new Set([...(data?.importedPackageIds||[]),...(data?.manualPackageIds||[])])].map(id=>data?.packageOptions.find(p=>p.id===id)?.name).filter((name):name is string=>Boolean(name))
  const needsCorrection=Boolean(daily?.check_issue_open)
- const inspectionDue=Boolean(data?.inspectionEligible&&!daily?.inspected&&(daily?.complete||daily?.ready_for_inspection))
+ const inspectionDue=Boolean(data?.inspectionEligible&&data?.inspectionReady&&!daily?.inspected)
  const awaitingClean=Boolean(daily&&!blocked&&!isStayover&&!daily.complete&&(
    /dirty|cleaning/i.test(String(daily.room_condition||''))||markedOut
  ))
+ // Explicit confirmation is necessary if an arrival still says Occupied or Dirty.
+ // A clean arrival does not require a fabricated checkout or room-clean completion.
+ const arrivalNeedsVacancyConfirmation=Boolean(
+   canManage&&daily&&!blocked&&!daily.check_issue_open&&!daily.inspected&&
+   String(daily.reservation_status||'').trim().toLowerCase()==='arrival'&&!markedOut&&
+   ['occupied','dirty','vacant (dirty)','cleaning'].includes(String(daily.room_condition||'').trim().toLowerCase())
+ )
  const refreshPending=Boolean(isStayover&&serviceCode==='RF'&&!daily?.complete)
  const refreshInitials=String(daily?.refresh_completed_initials||'').trim().toUpperCase()
  const attentionTitle=needsCorrection?'Housekeeping correction needed':
@@ -408,6 +415,11 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
           </div>)}
          </details>}
        </section>}
+      {arrivalNeedsVacancyConfirmation&&<div className="ops-hub-quick-section" style={{margin:'12px 0',padding:14,border:'1px solid #a5d0d0',borderRadius:14,background:'#eaf6f5',display:'grid',gap:9}}>
+       <strong>Already cleaned before this arrival?</strong>
+       <p style={{margin:0,fontSize:13,color:'#42616e'}}>If the room is physically vacant and clean, confirm it here to open inspection. No OUT or new housekeeping clean will be recorded.</p>
+       <button type="button" className="ops-hub-primary" disabled={busy} onClick={()=>void changeCondition('Ready for Room Check')}><Check size={16}/> Confirm vacant &amp; send for inspection</button>
+      </div>}
       {daily&&data.inspectionEligible&&<div className="ops-hub-inspection-actions" role="group" aria-label="Room inspection decisions" style={{margin:'12px 0',padding:14,border:'1px solid #d9e6e8',borderRadius:14,background:'#f7fbfc'}}>
        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap',marginBottom:10}}>
         <strong>Room inspection</strong>
@@ -465,7 +477,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         {!data.inspectionEligible&&<p className="ops-hub-muted">No inspection required for this date.</p>}
         {data.inspectionEligible&&canInspect&&(daily.check_issue_open&&!data.inspectionReady
          ? <><p className="ops-hub-muted">Correction still open. Document exactly what was corrected.</p><label className="ops-hub-label">Fix notes<textarea rows={3} value={issueNote} disabled={busy} onChange={e=>setIssueNote(e.target.value)} placeholder="Describe the cleaning or repair completed"/></label><button type="button" className="ops-hub-secondary" disabled={busy||!issueNote.trim()} onClick={()=>void inspect('fixed')}>Save fix notes & mark corrected</button></>
-         : <><button type="button" className="ops-hub-primary" disabled={busy||Boolean(daily.inspected)} onClick={()=>void inspect('pass')}><Check size={16}/>{daily.inspected?'Already passed':'Pass inspection'}</button><label className="ops-hub-label">Found an issue?<textarea rows={2} value={issueNote} disabled={busy} onChange={e=>setIssueNote(e.target.value)} placeholder="Describe what needs correction"/></label><button type="button" className="ops-hub-secondary" disabled={busy||!issueNote.trim()} onClick={()=>void inspect('fail')}><AlertTriangle size={16}/> Flag issue</button></>)}
+         : <><button type="button" className="ops-hub-primary" disabled={busy||Boolean(daily.inspected)||!data.inspectionReady} onClick={()=>void inspect('pass')}><Check size={16}/>{daily.inspected?'Already passed':'Pass inspection'}</button><label className="ops-hub-label">Found an issue?<textarea rows={2} value={issueNote} disabled={busy} onChange={e=>setIssueNote(e.target.value)} placeholder="Describe what needs correction"/></label><button type="button" className="ops-hub-secondary" disabled={busy||!issueNote.trim()||(!canManage&&!data.inspectionReady)} onClick={()=>void inspect('fail')}><AlertTriangle size={16}/> Flag issue</button></>)}
         {data.inspectionEligible&&!canInspect&&<p className="ops-hub-muted">Room-check permission required.</p>}
        </div>}
       </section>}
