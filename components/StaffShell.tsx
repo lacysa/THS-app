@@ -671,6 +671,22 @@ export default function StaffShell({
             </div>
           )}
 
+          {operationsNav.length > 0 && (
+            <div className="ops-nav-section">
+              <div className="ops-nav-label">
+                Operations
+              </div>
+
+              {operationRoots.map(item=><Fragment key={item.module_key}>
+                {renderOperationItem(item)}
+
+              </Fragment>)}
+              {orphanedNestedChildren.map(item =>
+                renderNavLink(item)
+              )}
+            </div>
+          )}
+
           {modules.some(m=>['housekeeping_today_cleans','housekeeping_today_refreshes','housekeeping_today_sidework'].includes(m.module_key)) && (
             <div className="ops-nav-section">
               <div className="ops-nav-label">Housekeeping</div>
@@ -696,22 +712,6 @@ export default function StaffShell({
                   <span className="sidebar-link-label">Assignments</span>
                 </Link>
               </>}
-            </div>
-          )}
-
-          {operationsNav.length > 0 && (
-            <div className="ops-nav-section">
-              <div className="ops-nav-label">
-                Operations
-              </div>
-
-              {operationRoots.map(item=><Fragment key={item.module_key}>
-                {renderOperationItem(item)}
-
-              </Fragment>)}
-              {orphanedNestedChildren.map(item =>
-                renderNavLink(item)
-              )}
             </div>
           )}
 
