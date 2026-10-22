@@ -2,6 +2,7 @@ import { NextRequest,NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import {roomCheckStage,roomCheckRequired} from '@/lib/room-check-queue'
+import {conditionForDay,previousVacantConditions} from '@/lib/room-condition-carry'
 
 export const dynamic='force-dynamic'
 
@@ -59,6 +60,7 @@ export async function GET(req:NextRequest){
   const error=rErr||dErr||iErr||resErr||pErr||qErr||cErr
   if(error)return NextResponse.json({error:error.message},{status:500})
 
+  const carry=await previousVacantConditions(admin,String(date),daily||[])
   const roomMap=new Map((rooms||[]).map((r:any)=>[String(r.id),r]))
   const resultMap=new Map((results||[]).map((r:any)=>[`${r.room_id}:${r.item_id}`,r]))
   const personMap=new Map((people||[]).map((p:any)=>[String(p.id),String(p.name||'Staff')]))
@@ -92,7 +94,7 @@ export async function GET(req:NextRequest){
         sortOrder:roomMap.get(String(r.room_id))?.sort_order??999,
         reservationStatus:r.reservation_status||'',
         serviceType:r.service_type||'',
-        roomCondition:r.room_condition||'',
+        roomCondition:conditionForDay(r,carry.get(String(r.room_id))||''),
         roomNotes:r.notes||'',
         assignedTo:r.assigned_to||'',
         complete:Boolean(r.complete),
@@ -168,7 +170,10 @@ export async function POST(req:NextRequest){
       if(room.check_issue_open&&(!room.complete||!room.ready_for_inspection))return NextResponse.json({error:'Housekeeping must submit the correction before reinspection.'},{status:409})
        const queueState=roomCheckStage(roomCandidate(room))
        if(!['ready','recheck'].includes(queueState)&&!(failed&&manager&&queueState==='passed')){
-         return NextResponse.json({error:'This room is not ready for inspection. Confirm OUT and housekeeping completion first, or use the arrival check queue.'},{status:409})
+         const message=status==='arrival'?
+           'This arrival room is currently marked occupied or not clean. If it is vacant and already clean, confirm Ready for Room Check in Room & tasks. No OUT or new clean is required.':
+           'This turnover room must be confirmed OUT, cleaned, and submitted for room inspection first.'
+         return NextResponse.json({error:message},{status:409})
        }
       const needsClean=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(room.check_issue_open)
       // Authorized inspectors may inspect even before housekeeping has app access.
