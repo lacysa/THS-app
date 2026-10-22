@@ -92,5 +92,5 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const canEdit=!gate.access.isPreviewMode && Boolean(gate.access.isAdmin || gate.access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap)))
   const roomGate=await canUseModule('housekeeping')
   const canManageRooms=canEdit && Boolean(roomGate.allowed)
-  return <StaffShell title="Room Operations"><LiveDataRefresh intervalMs={10000}/><RoomOperationsWorkspace serviceDate={serviceDate} todayDate={todayDate} rows={rows} canEdit={canEdit} canManageRooms={canManageRooms}/></StaffShell>
+  return <StaffShell title="Rooms & Reservations"><LiveDataRefresh intervalMs={10000}/><RoomOperationsWorkspace serviceDate={serviceDate} todayDate={todayDate} rows={rows} canEdit={canEdit} canManageRooms={canManageRooms}/></StaffShell>
 }
