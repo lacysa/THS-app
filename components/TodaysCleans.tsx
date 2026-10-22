@@ -25,7 +25,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   }catch(e:any){setError(e.message||'Unable to load your rooms.')}finally{setLoading(false)}
  },[date])
  useEffect(()=>{void load()},[load])
- const mine=useMemo(()=>rows.filter(r=>{const refresh=r.reservationStatus.trim().toLowerCase()==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim());if(mode==='refreshes'&&!refresh)return false;if(mode==='cleans'&&r.reservationStatus.trim().toLowerCase()==='stayover')return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const full=staffName.trim().toLowerCase();return assigned.length>0 && (manager || Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0])))}),[rows,staffName,mode,manager])
+ const mine=useMemo(()=>rows.filter(r=>{const refresh=r.reservationStatus.trim().toLowerCase()==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim());if(mode==='refreshes'&&!refresh)return false;if(mode==='cleans'&&r.reservationStatus.trim().toLowerCase()==='stayover')return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase()).filter(Boolean);const full=staffName.trim().toLowerCase();return assigned.length>0 && (manager || Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0])))}),[rows,staffName,mode,manager])
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
