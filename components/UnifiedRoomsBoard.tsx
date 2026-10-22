@@ -806,7 +806,6 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialFilt
   const showAssignmentView=mayAssign&&workspaceView==='assignments'&&!initialRoomId
   const showInspectionView=mayInspect&&workspaceView==='inspections'&&!initialRoomId
   const workspaceTabs=(mayAssign||mayInspect)?<nav className="rooms-workspace-tabs" aria-label="Housekeeping workspace">
-    <button type="button" className={showAssignmentView||showInspectionView?'':'active'} aria-current={!showAssignmentView&&!showInspectionView?'page':undefined} onClick={()=>setWorkspaceView('rooms')}>Rooms</button>
     {mayAssign&&<button type="button" className={showAssignmentView?'active':''} aria-current={showAssignmentView?'page':undefined} onClick={()=>setWorkspaceView('assignments')}>Room Assignments</button>}
     {mayInspect&&<button type="button" className={showInspectionView?'active':''} aria-current={showInspectionView?'page':undefined} onClick={()=>setWorkspaceView('inspections')}>Inspections</button>}
   </nav>:null
