@@ -8,7 +8,6 @@ export default async function Page(){
  const access=gate.access
   if(!access)redirect('/login')
   if(!gate.allowed)redirect('/dashboard')
- if(!gate.allowed)redirect('/dashboard')
   const caps=access.capabilities||[]
   if(!access.isAdmin&&!caps.some(c=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant'].includes(c)))redirect('/dashboard')
   return <StaffShell title="Today's Cleans"><TodaysCleans/></StaffShell>
