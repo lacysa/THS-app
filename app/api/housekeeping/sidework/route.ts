@@ -47,6 +47,26 @@ export async function PATCH(req:NextRequest){
  const access=await getStaffAccess();if(!access)return NextResponse.json({error:'Unauthorized'},{status:401})
  if(access.isPreviewMode)return NextResponse.json({error:'Staff preview is read-only'},{status:403})
  const body=await req.json().catch(()=>null),date=String(body?.date||''),key=String(body?.taskKey||'')
+ if(body?.action==='group_assign'){
+  if(!goodDate(date))return NextResponse.json({error:'Invalid date'},{status:400})
+  if(!manage(access))return NextResponse.json({error:'Managers only'},{status:403})
+  const group=String(body.group||'')
+  const selected=SIDEWORK_TASKS.filter(t=>t.group===group)
+  if(!selected.length)return NextResponse.json({error:'Invalid sidework group'},{status:400})
+  const personId=body.assignedTo===null?null:String(body.assignedTo||'')
+  const {admin,people,existing}=await context(date)
+  if(personId&&!people.some((p:any)=>p.id===personId))return NextResponse.json({error:'Choose an active employee'},{status:400})
+  // Group assignment deliberately overrides earlier individual choices; managers
+  // can then customize individual tasks on the same board.
+  const updates=selected.map(task=>{
+    const prior=existing.find((p:any)=>p.task_key===task.key)
+    const changed=(prior?.assigned_to||null)!==personId
+    return {service_date:date,task_key:task.key,assigned_to:personId,notes:prior?.notes||'',completed_at:changed?null:prior?.completed_at||null,completed_by:changed?null:prior?.completed_by||null,updated_at:new Date().toISOString()}
+  })
+  const {error}=await admin.from('housekeeping_sidework_daily').upsert(updates,{onConflict:'service_date,task_key'})
+  if(error)return NextResponse.json({error:error.message},{status:500})
+  return NextResponse.json({ok:true,updated:updates.length})
+ }
  if(!goodDate(date)||!SIDEWORK_TASKS.some(t=>t.key===key))return NextResponse.json({error:'Invalid task'},{status:400})
  try{
   const {admin,people,shifts,existing}=await context(date),isManager=manage(access)
