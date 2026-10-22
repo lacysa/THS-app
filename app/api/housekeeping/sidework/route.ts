@@ -51,7 +51,7 @@ export async function PATCH(req:NextRequest){
   if(!goodDate(date))return NextResponse.json({error:'Invalid date'},{status:400})
   if(!manage(access))return NextResponse.json({error:'Managers only'},{status:403})
   const group=String(body.group||'')
-  const selected=SIDEWORK_TASKS.filter(t=>t.group===group)
+  const selected=SIDEWORK_TASKS.filter(t=>group==='housekeeping_first'?['hotel_bathroom','hotel_closets','hotel_first_hall','hotel_trash'].includes(t.key):group==='housekeeping_second'?['hotel_second_hall','hotel_vacuums','hotel_floors','hotel_closet_trash'].includes(t.key):t.group===group)
   if(!selected.length)return NextResponse.json({error:'Invalid sidework group'},{status:400})
   const personId=body.assignedTo===null?null:String(body.assignedTo||'')
   const {admin,people,existing}=await context(date)
