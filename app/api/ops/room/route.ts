@@ -39,7 +39,7 @@ export async function GET(req:NextRequest){
  const chosen=reservationId||null
  let stay:any=null
  if(chosen){
-  const result=await admin.from('reservation_stays').select('id,reservation_number,guest_name,guest_phone,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,guest_comments,innkeeper_notes,reason_for_visit').eq('id',chosen).maybeSingle()
+  const result=await admin.from('reservation_stays').select('id,reservation_number,guest_name,accompanying_guest,guest_phone,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,guest_comments,innkeeper_notes,reason_for_visit').eq('id',chosen).maybeSingle()
   if(result.error)return NextResponse.json({error:'Unable to load guest stay'},{status:500})
   stay=result.data
  }
