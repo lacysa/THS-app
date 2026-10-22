@@ -378,6 +378,7 @@ export default function StaffShell({
         )
         .filter(
           m =>
+            !['housekeeping_today_cleans','housekeeping_today_refreshes','housekeeping_today_sidework'].includes(m.module_key) &&
             m.module_key !== 'breakfast_menu_manager' &&
             m.module_key !== 'room_board' &&
             m.module_key !== 'housekeeping_assignments' &&
@@ -670,10 +671,10 @@ export default function StaffShell({
             </div>
           )}
 
-          {Boolean(access && (access.isAdmin || (access.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant','runner','laundry'].includes(cap)))) && (
+          {modules.some(m=>['housekeeping_today_cleans','housekeeping_today_refreshes','housekeeping_today_sidework'].includes(m.module_key)) && (
             <div className="ops-nav-section">
               <div className="ops-nav-label">Housekeeping</div>
-              {(access?.isAdmin || (access?.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant'].includes(cap))) && (
+              {modules.some(m=>m.module_key==='housekeeping_today_cleans') && (
                 <Link href="/housekeeping/today" className={pathname==='/housekeeping/today'?'active':''}>
                   <span className="sidebar-link-icon"><BedDouble size={17}/></span>
                   <span className="sidebar-link-label">Today's Cleans</span>
@@ -685,10 +686,10 @@ export default function StaffShell({
                   <span className="sidebar-link-label">Today's Refreshes</span>
                 </Link>
               )}
-              <Link href="/housekeeping/sidework" className={pathname==='/housekeeping/sidework'?'active':''}>
+              {modules.some(m=>m.module_key==='housekeeping_today_sidework')&&<Link href="/housekeeping/sidework" className={pathname==='/housekeeping/sidework'?'active':''}>
                 <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
                 <span className="sidebar-link-label">Today's Sidework</span>
-              </Link>
+              </Link>}
             </div>
           )}
 
