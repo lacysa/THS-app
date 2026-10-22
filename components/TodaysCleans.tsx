@@ -28,6 +28,14 @@ export default function TodaysCleans(){
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
  const locked=(r:Room)=>!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
+ async function begin(room:Room){
+  setBusy(room.roomId);setMessage('');setError('')
+  try{
+   const response=await fetch('/api/housekeeping/day',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate:date,roomId:room.roomId,patch:{roomCondition:'Cleaning'}})})
+   const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Could not start cleaning.')
+   setMessage(room.roomName+' · cleaning started.');await load()
+  }catch(e:any){setError(e.message||'Unable to start cleaning.')}finally{setBusy('')}
+ }
  async function finish(room:Room){
   setBusy(room.roomId);setMessage('');setError('')
   try{
@@ -46,8 +54,8 @@ export default function TodaysCleans(){
     <div className="ths-clean-head"><div><small>{r.cleanOrder!=null?'CLEAN '+r.cleanOrder:'ROOM ASSIGNMENT'}</small><h2>{r.roomName}</h2></div>{done?<CheckCircle2 size={24}/>:waiting||orderLocked?<LockKeyhole size={22}/>:<span className="ths-clean-ready">Ready</span>}</div>
     <p className="ths-clean-detail">{r.reservationStatus} {r.serviceType?'· '+r.serviceType:''}</p>
     {r.notes&&<p className="ths-clean-notes">{r.notes}</p>}
-    <p className="ths-clean-status">{done?'Finished · sent for inspection':waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':r.checkIssueOpen?'Inspection correction needed':'Ready to clean'}</p>
-    {!done&&!waiting&&!orderLocked&&<button type="button" disabled={busy===r.roomId} onClick={()=>void finish(r)}>{busy===r.roomId?'Saving…':'Finish & send for inspection'}</button>}
+    <p className="ths-clean-status">{done?'Finished · sent for inspection':waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':r.checkIssueOpen?'Inspection correction needed':r.roomCondition==='Cleaning'?'Cleaning in progress':'Ready to clean'}</p>
+    {!done&&!waiting&&!orderLocked&&<button type="button" disabled={busy===r.roomId} onClick={()=>void (r.roomCondition==='Cleaning'||r.reservationStatus.toLowerCase()==='stayover'?finish(r):begin(r))}>{busy===r.roomId?'Saving…':r.roomCondition==='Cleaning'||r.reservationStatus.toLowerCase()==='stayover'?'Finished · Send for inspection':'Begin cleaning'}</button>}
    </article>
   })}</div>}
   <style jsx>{`
