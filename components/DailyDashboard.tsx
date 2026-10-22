@@ -234,7 +234,7 @@ export default function DailyDashboard({
   // Room checks:
   // Stayovers/refreshes never require the independent room-check/final-verification flow.
   const roomCheckRooms = housekeeping.filter(row=>roomCheckRequired({...row,fohSignedBy:row.fohCheckInitials||null}))
-  const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials) || r.inspected)
+  const roomChecksPassed = roomCheckRooms.filter(r=>roomCheckStage({...r,fohSignedBy:r.fohCheckInitials||null})==='passed')
   const roomCheckCorrections = roomCheckRooms.filter(r=>r.checkIssueOpen)
 
   const maintenanceOpen = maintenance.filter(r=>r.status!=='complete')
