@@ -6,13 +6,14 @@ type Staff={id:string;name:string;role:string}
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 const labels:Record<string,string>={runner:'Breakfast / Runner',laundry:'Laundry',housekeeping:'Lobby / Hotel',hospitality:'Hospitality Assistant · Guest Areas'}
 const groups=['runner','laundry','housekeeping','hospitality']
-export default function SideworkBoard({compact=false}:{compact?:boolean}){
- const [date,setDate]=useState(today),[items,setItems]=useState<Task[]>([]),[staff,setStaff]=useState<Staff[]>([])
+export default function SideworkBoard({compact=false,initialDate}:{compact?:boolean;initialDate?:string}){
+ const [date,setDate]=useState(initialDate||today()),[items,setItems]=useState<Task[]>([]),[staff,setStaff]=useState<Staff[]>([])
  const [manager,setManager]=useState(false),[preview,setPreview]=useState(false),[busy,setBusy]=useState(''),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('')
  const load=useCallback(async()=>{setLoading(true);setError('')
   try{const r=await fetch('/api/housekeeping/sidework?date='+encodeURIComponent(date),{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Unable to load sidework');setItems(d.items||[]);setStaff(d.staff||[]);setManager(!!d.manager);setPreview(!!d.preview)}
   catch(e:any){setError(e.message||'Unable to load sidework')}finally{setLoading(false)}
  },[date])
+ useEffect(()=>{if(initialDate)setDate(initialDate)},[initialDate])
  useEffect(()=>{void load()},[load])
  const completed=useMemo(()=>items.filter(t=>t.completedAt).length,[items])
  async function change(task:Task,action:'assign'|'complete'|'note',value:string|boolean|null){
