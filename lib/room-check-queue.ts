@@ -18,6 +18,14 @@ export type RoomCheckCandidate={
 export type RoomCheckStage='not-required'|'waiting'|'ready'|'recheck'|'correction'|'passed'
 const norm=(v:unknown)=>String(v||'').trim().toLowerCase()
 const out=(v:unknown)=>/^OUT(?:-[A-Z]{2,4})?$/i.test(String(v||'').trim())
+/** Already-clean arrival conditions do not imply a checkout or full clean. */
+export const isPrecleanedCondition=(value:unknown)=>[
+ 'vacant (clean)','ready','arrival ready','room ready','ready for guest',
+ 'guest ready','ready for room check','clean'
+].includes(norm(value))
+export const isUnreadyCondition=(value:unknown)=>[
+ 'occupied','vacant (dirty)','dirty','cleaning'
+].includes(norm(value))
 export function roomCheckStage(row:RoomCheckCandidate):RoomCheckStage{
  const status=norm(row.reservationStatus)
  const condition=norm(row.roomCondition)
@@ -32,11 +40,12 @@ export function roomCheckStage(row:RoomCheckCandidate):RoomCheckStage{
  if(row.inspected||row.fohSignedBy)return 'passed'
  // Departure turnover must be confirmed OUT, cleaned, and submitted for inspection.
  if(turnover)return out(row.serviceType)&&Boolean(row.complete&&row.readyForInspection)?'ready':'waiting'
- // An arrival without a departure turnover needs an independent room check.
- // A known dirty, cleaning, or occupied arrival must be cleaned/released first.
+ // An arrival does not require a fabricated OUT. Explicitly occupied or dirty
+ // conditions must be corrected by a manager before inspection.
  if(arrival){
-   if(['occupied','dirty','vacant (dirty)','cleaning'].includes(condition))
-     return row.complete&&row.readyForInspection?'ready':'waiting'
+   if(isUnreadyCondition(condition))return 'waiting'
+   if(isPrecleanedCondition(condition))return 'ready'
+   // Arrival days without a recorded condition still require a physical check.
    return 'ready'
  }
  return row.complete&&row.readyForInspection?'ready':'waiting'
