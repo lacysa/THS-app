@@ -3,6 +3,7 @@ export type ParsedReservation = {
   reservationKey:string
   reservationNumber:string|null
   guestName:string
+  accompanyingGuest:string|null
   phone:string|null
   doorCode:string|null
   arrivalDate:string|null
@@ -54,6 +55,27 @@ function findRoom(text:string, rooms:string[]) {
   if(exact) return exact
   const normalized=norm(text)
   return rooms.find(room=>normalized.includes(norm(room))) || null
+}
+
+/**
+ * On the PMS Arrival Report, the additional guest is printed in parentheses
+ * on the line immediately below (or after) the primary guest's name.
+ * Do not interpret other report parentheses, such as (order:...), as guests.
+ */
+export function accompanyingGuestFromReport(source:string, primaryGuestName:string):string|null {
+  const text=String(source||'')
+  const primary=String(primaryGuestName||'').trim()
+  if(!primary)return null
+  const index=text.toLocaleLowerCase().indexOf(primary.toLocaleLowerCase())
+  if(index<0)return null
+  const after=text.slice(index+primary.length)
+  const match=after.match(/^[ \t]*(?:\r?\n[ \t]*|[ \t]+)\(([^\r\n()]{3,100})\)(?=\s|\||$)/)
+  if(!match)return null
+  const candidate=match[1].replace(/\s+/g,' ').trim()
+  const words=candidate.split(' ')
+  if(words.length<2||words.length>6||candidate.length>80||/[\d:@/]/.test(candidate))return null
+  if(!words.every(word=>/^[\p{L}][\p{L}.'’\-]*$/u.test(word)))return null
+  return candidate
 }
 
 function looksLikeGuestName(line:string) {
@@ -222,6 +244,7 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
       const roomName=findRoom(mainRow||blockText,roomNames)
       const roomIndex=roomName ? lines.findIndex((line,idx)=>idx>=start&&idx<=orderIndex&&norm(line).includes(norm(roomName))) : -1
       const guestName=guestFromMainRow(mainRow,roomName) || candidateGuestName(lines,roomIndex>=0?roomIndex:orderIndex,roomName)
+      const accompanyingGuest=accompanyingGuestFromReport(blockLines.join('\n'),guestName)
 
       const mainDates=[...mainRow.matchAll(DATE_RE)].map(m=>isoDate(m[0])).filter(Boolean) as string[]
       const fallbackDates=closestDatesBeforeOrder(lines,orderIndex)
@@ -263,7 +286,7 @@ export function parseArrivalReportPages(pages:string[], roomNames:string[]) {
 
       const reservationKey=`order:${reservationNumber}`
       reservations.push({
-        reservationKey,reservationNumber,guestName,phone,doorCode,arrivalDate,checkoutDate,
+        reservationKey,reservationNumber,guestName,accompanyingGuest,phone,doorCode,arrivalDate,checkoutDate,
         roomName,occupancy,ratePlan,checkInTime,productsRaw,
         dietaryRestrictions:notes.dietary,referralSource:notes.referral,reasonForVisit:notes.reason,
         guestComments:notes.guest,innkeeperNotes:notes.innkeeper,
@@ -307,8 +330,10 @@ export function normalizeEditedReservation(row:any, roomNames:string[]):ParsedRe
   if(!arrivalDate||!checkoutDate) warnings.push('Valid arrival and checkout dates are required')
   if(arrivalDate&&checkoutDate&&checkoutDate<arrivalDate) warnings.push('Checkout cannot be before arrival')
   if(!roomName) warnings.push('Room is required')
+  const accompanyingGuest=Object.prototype.hasOwnProperty.call(row,'accompanyingGuest')
+    ?clean(row.accompanyingGuest):accompanyingGuestFromReport(String(row.rawText||''),String(row.guestName||''))
   return {
-    reservationKey,reservationNumber,guestName:clean(row.guestName)||'',phone,doorCode:phone?phone.slice(-4):(doorCodeRaw||null),
+    reservationKey,reservationNumber,guestName:clean(row.guestName)||'',accompanyingGuest,phone,doorCode:phone?phone.slice(-4):(doorCodeRaw||null),
     arrivalDate,checkoutDate,roomName,occupancy:Number(row.occupancy)||null,ratePlan:clean(row.ratePlan),
     checkInTime:clean(row.checkInTime),productsRaw:clean(row.productsRaw),dietaryRestrictions:clean(row.dietaryRestrictions),
     referralSource:clean(row.referralSource),reasonForVisit:clean(row.reasonForVisit),guestComments:clean(row.guestComments),
