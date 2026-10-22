@@ -12,6 +12,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  const [error,setError]=useState('')
  const [message,setMessage]=useState('')
  const [staffName,setStaffName]=useState('')
+ const [manager,setManager]=useState(false)
  const load=useCallback(async()=>{
   setLoading(true);setError('')
   try{
@@ -20,14 +21,15 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    setRows(data.rows||[])
    const self=await me.json().catch(()=>({}))
    setStaffName(String(self.access?.name||self.access?.preferredName||''))
+   setManager(Boolean(self.access?.isAdmin || (self.access?.capabilities||[]).some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c))))
   }catch(e:any){setError(e.message||'Unable to load your rooms.')}finally{setLoading(false)}
  },[date])
  useEffect(()=>{void load()},[load])
- const mine=useMemo(()=>rows.filter(r=>{const refresh=r.reservationStatus.trim().toLowerCase()==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim());if(mode==='refreshes'&&!refresh)return false;if(mode==='cleans'&&r.reservationStatus.trim().toLowerCase()==='stayover')return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const full=staffName.trim().toLowerCase();return full&&assigned.some(n=>n===full||n===full.split(' ')[0])}),[rows,staffName,mode])
+ const mine=useMemo(()=>rows.filter(r=>{const refresh=r.reservationStatus.trim().toLowerCase()==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim());if(mode==='refreshes'&&!refresh)return false;if(mode==='cleans'&&r.reservationStatus.trim().toLowerCase()==='stayover')return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const full=staffName.trim().toLowerCase();return assigned.length>0 && (manager || Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0])))}),[rows,staffName,mode,manager])
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
- const nextOrdered=pending.filter(r=>r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
- const locked=(r:Room)=>mode==='cleans'&&!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
+ const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
+ const locked=(r:Room)=>!manager&&mode==='cleans'&&!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
  async function begin(room:Room){
   setBusy(room.roomId);setMessage('');setError('')
   try{
@@ -45,13 +47,14 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   }catch(e:any){setError(e.message||'Unable to save the room.')}finally{setBusy('')}
  }
  return <div className="ths-cleans">
-  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Your assigned stayover refreshes, separate from full room cleans.':'Just your rooms, in cleaning order. No giant operations table.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
+  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'Assigned full cleans, in cleaning order.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
   <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
-  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned to you for this date.':'No full room cleans assigned to you for this date.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
+  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned for this date.':'No full room cleans assigned for this date.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
    const waiting=isWaiting(r),orderLocked=locked(r),done=r.complete
    return <article className={'ths-clean-card '+(done?'done':waiting||orderLocked?'locked':'available')} key={r.roomId}>
     <div className="ths-clean-head"><div><small>{mode==='refreshes'?'STAYOVER REFRESH':r.cleanOrder!=null?'CLEAN '+r.cleanOrder:'ROOM ASSIGNMENT'}</small><h2>{r.roomName}</h2></div>{done?<CheckCircle2 size={24}/>:waiting||orderLocked?<LockKeyhole size={22}/>:<span className="ths-clean-ready">Ready</span>}</div>
+    {manager&&<p className="ths-clean-detail"><strong>Assigned: {r.assignedTo}</strong></p>}
     <p className="ths-clean-detail">{r.reservationStatus} {r.serviceType?'· '+r.serviceType:''}</p>
     {r.notes&&<p className="ths-clean-notes">{r.notes}</p>}
     <p className="ths-clean-status">{done?(mode==='refreshes'?'Refresh complete':'Finished · sent for inspection'):waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':r.checkIssueOpen?'Inspection correction needed':r.roomCondition==='Cleaning'?'Cleaning in progress':'Ready to clean'}</p>
