@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, ClipboardPaste, FileUp, RefreshCw, ShieldCheck, TriangleAlert, UploadCloud } from 'lucide-react'
+import {accompanyingGuestFromReport} from '@/lib/reservations/import'
 
 type PreviewRow = {
   reservationKey:string
   reservationNumber:string|null
   guestName:string
+  accompanyingGuest:string|null
   phone:string|null
   doorCode:string|null
   arrivalDate:string|null
@@ -187,6 +189,7 @@ function parsePmsTableHtml(html:string,roomNames:string[]){
         const addressText=values[schema.address]||''
         const addressLines=addressText.split('\n').map(x=>x.trim()).filter(Boolean)
         const guestName=addressLines[0]||''
+        const accompanyingGuest=accompanyingGuestFromReport(addressText,guestName)
         const phoneLine=addressLines.find(line=>/^Phone\s*:/i.test(line))||addressLines.find(line=>/^Cell\s*:/i.test(line))||''
         const digits=phoneLine.replace(/\D/g,'').slice(-10)
         const reservationNumber=roomText.match(/order\s*[:#]?\s*(\d{4,8})/i)?.[1]||null
@@ -220,6 +223,7 @@ function parsePmsTableHtml(html:string,roomNames:string[]){
             reservationKey:keyBase+'|room:'+normalizeRoomKey(roomName),
             reservationNumber,
             guestName,
+            accompanyingGuest,
             phone:digits.length===10?digits:null,
             doorCode:digits?digits.slice(-4):null,
             arrivalDate:arrival,
@@ -620,6 +624,7 @@ export default function ReservationSyncBoard(){
           {row.warnings?.length>0 && <div className="rs-row-warning">{row.warnings.join(' · ')}</div>}
           <div className="rs-fields">
             <label>Guest<input value={row.guestName||''} onChange={e=>patch(index,{guestName:e.target.value})}/></label>
+            <label>Accompanying guest<input value={row.accompanyingGuest||''} onChange={e=>patch(index,{accompanyingGuest:e.target.value||null})}/></label>
             <label>Room<select value={row.roomName||''} onChange={e=>patch(index,{roomName:e.target.value||null})}><option value="">Choose room</option>{rooms.map(room=><option key={room.id}>{room.name}</option>)}</select></label>
             <label>Arrival<input type="date" value={row.arrivalDate||''} onChange={e=>patch(index,{arrivalDate:e.target.value||null})}/></label>
             <label>Checkout<input type="date" value={row.checkoutDate||''} onChange={e=>patch(index,{checkoutDate:e.target.value||null})}/></label>
