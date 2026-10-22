@@ -351,9 +351,9 @@ export async function GET(req: NextRequest) {
     })) : []
 
     return NextResponse.json({
-      dailyOverview,
+      dailyOverview: req.nextUrl.searchParams.get('scope') === 'mine' ? [] : dailyOverview,
       rows: responseRows,
-      stripTasks,
+      stripTasks: req.nextUrl.searchParams.get('scope') === 'mine' ? [] : stripTasks,
       blockingRoomId: blockingRoom?.roomId || null,
       blockingRoomName: blockingRoom?.roomName || null,
       viewMode: assignedOnlyView ? 'assigned' : 'manager',
