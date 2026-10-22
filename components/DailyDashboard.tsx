@@ -1,6 +1,7 @@
 import type React from 'react'
 import Link from 'next/link'
 import { derivedLiveCondition, roomNextAction, roomWorkflowLabel } from '@/lib/room-state'
+import {roomCheckStage,roomCheckRequired} from '@/lib/room-check-queue'
 import {
   AlertTriangle,
   BedDouble,
@@ -232,12 +233,7 @@ export default function DailyDashboard({
 
   // Room checks:
   // Stayovers/refreshes never require the independent room-check/final-verification flow.
-  const roomCheckRooms = housekeeping.filter(row=>{
-    const status=String(row.reservationStatus||'').trim().toLowerCase()
-    const service=String(row.serviceType||'').trim().toUpperCase()
-    const stripHold=String(row.stripHold||'').trim().toLowerCase()
-    return status!=='blocked' && status!=='stayover' && !stripHold.includes('hold') && service!=='RF'
-  })
+  const roomCheckRooms = housekeeping.filter(row=>roomCheckRequired({...row,fohSignedBy:row.fohCheckInitials||null}))
   const roomChecksPassed = roomCheckRooms.filter(r=>Boolean(r.fohCheckInitials) || r.inspected)
   const roomCheckCorrections = roomCheckRooms.filter(r=>r.checkIssueOpen)
 
@@ -250,12 +246,7 @@ export default function DailyDashboard({
     !splitStaff(row.assignedTo).length &&
     (Boolean(row.serviceType) || ['Checkout','Out/In'].includes(row.reservationStatus))
   )
-  const pendingChecks = roomCheckRooms.filter(row=>
-    row.complete &&
-    !row.inspected &&
-    !row.fohCheckInitials &&
-    !row.checkIssueOpen
-  )
+  const pendingChecks = roomCheckRooms.filter(row=>['ready','recheck'].includes(roomCheckStage({...row,fohSignedBy:row.fohCheckInitials||null})))
   const arrivals = housekeeping.filter(row=>['Arrival','Out/In'].includes(row.reservationStatus))
   const arrivalProgressed = (row:HousekeepingRow) => {
     const condition=String(row.roomCondition||'')
@@ -337,7 +328,7 @@ export default function DailyDashboard({
       value:`${roomChecksPassed.length}/${roomCheckRooms.length}`,
       sub:`${Math.max(0,roomCheckRooms.length-roomChecksPassed.length)} pending · ${roomCheckCorrections.length} correction${roomCheckCorrections.length===1?'':'s'}`,
       icon:ClipboardCheck,
-      href:'/housekeeping?filter=inspection',
+      href:'/room-checks',
       tone:roomCheckCorrections.length>0 ? 'danger' : (roomCheckRooms.length>0 && roomChecksPassed.length===roomCheckRooms.length ? 'good' : 'neutral')
     } : null,
     showMaintenance ? {
@@ -483,7 +474,7 @@ export default function DailyDashboard({
               </Link>
             )}
             {pendingChecks.length>0 && (
-              <Link href="/housekeeping?filter=inspection" className="daily-attention-item tone-info">
+              <Link href="/room-checks" className="daily-attention-item tone-info">
                 <span>{pendingChecks.length}</span>
                 <div><strong>Rooms ready for room check</strong><small>{pendingChecks.map(r=>r.roomName).join(', ')}</small></div>
               </Link>
