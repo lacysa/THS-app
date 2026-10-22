@@ -20,15 +20,7 @@ export default async function Page({searchParams}:{searchParams:Promise<{filter?
   const caps=gate.access.capabilities||[]
   const allowInspections=gate.access.isAdmin || (gate.access.permissions||[]).includes('room_checks.perform') ||
     caps.some(cap=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(cap))
-  // Legacy bookmarks should open the focused modules without rendering the old board.
-  // Room-specific deep links remain supported until their controls are migrated.
-  if(!initialRoomId){
-    const qs=initialDate?'?date='+encodeURIComponent(initialDate):''
-    if(params?.view==='inspections'&&allowInspections)redirect('/room-checks'+qs+(initialInspectionRoomId?(qs?'&':'?')+'room='+encodeURIComponent(initialInspectionRoomId):''))
-    if(allowAssignments)redirect('/housekeeping/assignments'+qs)
-    if(allowInspections)redirect('/room-checks'+qs)
-  }
   const initialView=!initialRoomId&&params?.view==='inspections'&&allowInspections?'inspections':
-    allowAssignments&&!initialRoomId&&params?.view==='rooms'?'rooms':allowAssignments?'assignments':allowInspections?'inspections':'rooms'
+    params?.view==='rooms'?'rooms':params?.view==='assignments'&&allowAssignments?'assignments':allowInspections?'inspections':allowAssignments?'assignments':'rooms'
   return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate} initialView={initialView} initialInspectionRoomId={initialView==='inspections'?initialInspectionRoomId:undefined} allowAssignments={allowAssignments}/></StaffShell>
 }
