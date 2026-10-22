@@ -301,7 +301,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
   return <div className="hka-workspace">
     <header className="hka-header">
       <div><span className="hka-kicker">THE HOTEL SAUGATUCK</span><h2>Room Assignments</h2>
-        <p>Plan the day's room services using your existing schedule and room assignments.</p>
+
       </div>
       <div className="hka-date-picker">
         <div className="hka-date-nav">
@@ -317,13 +317,45 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       </div>
     </header>
 
+    <nav className="hka-assignment-tabs" aria-label="Assignment categories"><a href="/housekeeping/assignments" aria-current="page">Rooms</a><a href="/housekeeping/sidework-assignments">Sidework &amp; Projects</a></nav>
     <div className="hka-stats">
-      <div><strong>{onSite.length}</strong><span>Scheduled room staff</span></div>
-      <div><strong>{work.length}</strong><span>Services to assign</span></div>
+      <div><strong>{onSite.length}</strong><span>On shift</span></div>
+      <div><strong>{work.length}</strong><span>Total services</span></div>
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
     </div>
-    <div className="hka-service-grid" style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:12,alignItems:'start'}}>
+    <div className="hka-controls">
+      <div className="hka-toggle" role="group" aria-label="Assignment board view">
+        <button type="button" className={view === 'staff' ? 'active' : ''} aria-pressed={view === 'staff'} onClick={() => setView('staff')}><UsersRound size={16}/> Scheduled staff</button>
+        <button type="button" className={view === 'unassigned' ? 'active' : ''} aria-pressed={view === 'unassigned'} onClick={() => setView('unassigned')}><ClipboardList size={16}/> Rooms needing assignment {unassigned.length > 0 && <b>{unassigned.length}</b>}</button>
+      </div>
+      {data && !data.readOnly && data.date === date && rooms.some(room => room.assignedTo.trim() && !room.complete) && <button type="button" className="hka-bottom-link" style={{marginLeft:'auto'}} disabled={Boolean(busyRoom)} onClick={()=>void clearPendingAssignments()}>Clear pending assignments</button>}
+    </div>
+    {error && <div className="hka-feedback error" role="alert">{error}</div>}
+    {message && <div className="hka-feedback" role="status"><CheckCircle2 size={16}/> {message}</div>}
+    {data?.readOnly && <p className="hka-notice">Staff preview is read-only. Return to your own account to make assignments.</p>}
+    {data && !data.staffing.hasSchedule && <p className="hka-notice">No staff schedule has been entered for this date. Assignments can still be made from active staff, but no one is marked on site.</p>}
+    {loading && !data && <div className="hka-loading">Loading daily assignments…</div>}
+    {data && data.date !== date && <div className="hka-loading">Loading {date}…</div>}
+    {data && data.date === date && view === 'staff' && <>
+      {onSite.length === 0 ? <div className="hka-empty">There are no housekeeping or hospitality staff scheduled on site for this date. Check Staff & Scheduling or use the rooms view to assign an active employee.</div> :
+        <div className="hka-staff-grid">{onSite.map(staffCard)}</div>}
+      {offSite.length > 0 && <details className="hka-details"><summary>Assigned employees who are not scheduled on site ({offSite.length})</summary>
+        <p>Review these assignments, especially if someone called off or did not show up.</p>
+        <div className="hka-staff-grid">{offSite.map(staffCard)}</div>
+      </details>}
+      {unassigned.length > 0 && <button className="hka-bottom-link" type="button" onClick={() => setView('unassigned')}>View {unassigned.length} unassigned room{unassigned.length === 1 ? '' : 's'} →</button>}
+    </>}
+    {data && data.date === date && view === 'unassigned' && <div className="hka-room-workspace">
+      <div className="hka-list-top">
+        <label className="hka-search"><Search size={17}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a room or housekeeper"/></label>
+        <label className="hka-show-all"><input type="checkbox" checked={showAssigned} onChange={event => setShowAssigned(event.target.checked)}/> Include already assigned</label>
+      </div>
+      {filteredUnassigned.length ? <div className="hka-room-list">{filteredUnassigned.map(roomCard)}</div> :
+        <div className="hka-empty">{work.length === 0 ? 'No room cleaning or refresh assignments are needed for this date.' : 'All applicable rooms have assignments. Toggle “Include already assigned” to review or reassign.'}</div>}
+    </div>}
+    <details className="hka-special-services"><summary><strong>Special services</strong><span>{stayovers.length} stayovers · {(data?.tubTasks||[]).length} tub-only · {deepCleans.filter(t=>!t.completed_at).length} deep cleans</span></summary>
+    <div className="hka-service-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,300px),1fr))',gap:12,alignItems:'start'}}>
     <section className="rooms-stayover-planner hka-planner-panel">
       <details>
         <summary className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Occupied rooms without a refresh request</span></div><span>{stayovers.length} stayovers</span></summary>
@@ -401,36 +433,18 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       @media(max-width:1120px){.hka-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
       @media(max-width:620px){.hka-service-grid{grid-template-columns:minmax(0,1fr)!important}}
     `}</style>
-    <div className="hka-controls">
-      <div className="hka-toggle" role="group" aria-label="Assignment board view">
-        <button type="button" className={view === 'staff' ? 'active' : ''} aria-pressed={view === 'staff'} onClick={() => setView('staff')}><UsersRound size={16}/> Scheduled staff</button>
-        <button type="button" className={view === 'unassigned' ? 'active' : ''} aria-pressed={view === 'unassigned'} onClick={() => setView('unassigned')}><ClipboardList size={16}/> Rooms needing assignment {unassigned.length > 0 && <b>{unassigned.length}</b>}</button>
-      </div>
-      {data && !data.readOnly && data.date === date && rooms.some(room => room.assignedTo.trim() && !room.complete) && <button type="button" className="hka-bottom-link" style={{marginLeft:'auto'}} disabled={Boolean(busyRoom)} onClick={()=>void clearPendingAssignments()}>Clear pending assignments</button>}
-    </div>
-    {error && <div className="hka-feedback error" role="alert">{error}</div>}
-    {message && <div className="hka-feedback" role="status"><CheckCircle2 size={16}/> {message}</div>}
-    {data?.readOnly && <p className="hka-notice">Staff preview is read-only. Return to your own account to make assignments.</p>}
-    {data && !data.staffing.hasSchedule && <p className="hka-notice">No staff schedule has been entered for this date. Assignments can still be made from active staff, but no one is marked on site.</p>}
-    {loading && !data && <div className="hka-loading">Loading daily assignments…</div>}
-    {data && data.date !== date && <div className="hka-loading">Loading {date}…</div>}
-    {data && data.date === date && view === 'staff' && <>
-      {onSite.length === 0 ? <div className="hka-empty">There are no housekeeping or hospitality staff scheduled on site for this date. Check Staff & Scheduling or use the rooms view to assign an active employee.</div> :
-        <div className="hka-staff-grid">{onSite.map(staffCard)}</div>}
-      {offSite.length > 0 && <details className="hka-details"><summary>Assigned employees who are not scheduled on site ({offSite.length})</summary>
-        <p>Review these assignments, especially if someone called off or did not show up.</p>
-        <div className="hka-staff-grid">{offSite.map(staffCard)}</div>
-      </details>}
-      {unassigned.length > 0 && <button className="hka-bottom-link" type="button" onClick={() => setView('unassigned')}>View {unassigned.length} unassigned room{unassigned.length === 1 ? '' : 's'} →</button>}
-    </>}
-    {data && data.date === date && view === 'unassigned' && <div className="hka-room-workspace">
-      <div className="hka-list-top">
-        <label className="hka-search"><Search size={17}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a room or housekeeper"/></label>
-        <label className="hka-show-all"><input type="checkbox" checked={showAssigned} onChange={event => setShowAssigned(event.target.checked)}/> Include already assigned</label>
-      </div>
-      {filteredUnassigned.length ? <div className="hka-room-list">{filteredUnassigned.map(roomCard)}</div> :
-        <div className="hka-empty">{work.length === 0 ? 'No room cleaning or refresh assignments are needed for this date.' : 'All applicable rooms have assignments. Toggle “Include already assigned” to review or reassign.'}</div>}
-    </div>}
+    </details>
+    <style jsx>{`
+      .hka-assignment-tabs{display:flex;gap:4px;width:fit-content;padding:4px;margin:0 0 14px;border:1px solid #d6e3e8;border-radius:12px;background:#f1f5f8}
+      .hka-assignment-tabs a{font-size:13px;font-weight:700;padding:9px 15px;border-radius:9px;text-decoration:none;color:#56717f}
+      .hka-assignment-tabs a[aria-current="page"]{background:#fff;color:#234b5b;box-shadow:0 1px 5px #263c501b}
+      .hka-special-services{margin-top:18px;border:1px solid #d7e4e8;border-radius:14px;background:#f6fafb;padding:0 12px}
+      .hka-special-services>summary{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:14px 4px;cursor:pointer;color:#29495b;font-size:13px}
+      .hka-special-services>summary span{color:#68818d;font-size:12px}
+      .hka-special-services .hka-service-grid{margin:0 0 12px}
+      .hka-workspace .hka-person{min-width:0}
+      @media(max-width:640px){.hka-assignment-tabs{width:100%}.hka-assignment-tabs a{flex:1;text-align:center;padding:10px 7px}.hka-special-services>summary{display:grid}}
+    `}</style>
     <footer className="hka-footer">Assignments save immediately to the existing housekeeping day record. Completed work and inspections remain in their current workflows.</footer>
   </div>
 }
