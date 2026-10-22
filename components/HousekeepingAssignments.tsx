@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckCircle2, ClipboardList, RefreshCw, Search, UsersRound } from 'lucide-react'
 import StaffAssignmentSelect from '@/components/StaffAssignmentSelect'
-import SideworkBoard from '@/components/SideworkBoard'
 import type { AssignmentStaff } from '@/lib/assignment-staff'
 
 type Staff = AssignmentStaff
@@ -324,7 +323,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
     </div>
-    <div className="hka-service-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:12,alignItems:'start'}}>
+    <div className="hka-service-grid" style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:12,alignItems:'start'}}>
     <section className="rooms-stayover-planner hka-planner-panel">
       <details>
         <summary className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Occupied rooms without a refresh request</span></div><span>{stayovers.length} stayovers</span></summary>
@@ -383,12 +382,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
         </div>})}
       </div>}
     </section>
-    <section className="hka-person hka-deep-clean">
-      <div className="hka-person-head"><div><strong>Sidework</strong><small>Auto-assigned by scheduled role, with manager overrides</small></div></div>
-      <details><summary style={{padding:'12px 2px',cursor:'pointer',fontWeight:700}}>Review and reassign today's sidework</summary>
-        <SideworkBoard compact initialDate={date}/>
-      </details>
-    </section>
+
     </div>
     <style jsx>{`
       .hka-service-grid > .hka-planner-panel {min-width:0;margin:0;border:1px solid #acd5d4;border-radius:16px;background:linear-gradient(135deg,#e9f9f7 0%,#f3f7ff 58%,#eeeaff 100%);padding:12px;box-shadow:none}
