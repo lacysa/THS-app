@@ -134,7 +134,7 @@ export async function GET(req: NextRequest) {
     // for multi-role Hospitality Assistants. The standard operations response
     // remains unchanged for every existing caller.
     const assignedOnlyView =
-      req.nextUrl.searchParams.get('scope') === 'mine' ||
+      (req.nextUrl.searchParams.get('scope') === 'mine' && !access.isAdmin && !['manager','general_manager','operations_manager','owner'].some(cap=>currentCaps.has(cap))) ||
       (!access.isAdmin &&
       currentCaps.has('housekeeping') &&
       !currentCaps.has('hospitality_assistant') &&
