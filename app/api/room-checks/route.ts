@@ -104,6 +104,7 @@ export async function GET(req:NextRequest){
         issueNote:r.check_issue_note||'',
         correctionHistory:correctionNotesByRoom.get(String(r.room_id))||[],
         inspected:Boolean(r.inspected),
+        fohSignedBy:r.foh_signed_by||null,
         housekeeperName:r.housekeeper_attested_by?personMap.get(String(r.housekeeper_attested_by))||'Housekeeper':null,
         latestInspection:latest?{
           stage:latest.stage,
