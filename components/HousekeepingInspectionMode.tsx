@@ -26,8 +26,9 @@ type InspectionRoom={
 }
 type QueueFilter='queue'|'corrections'|'passed'
 
-function isRecheck(room:InspectionRoom){return roomCheckStage(room)==='recheck'}
-function requiresInspection(room:InspectionRoom){return roomCheckStage(room)==='ready'}
+function queueStage(room:InspectionRoom){return roomCheckStage({...room,readyForInspection:room.inspectionSubmitted})}
+function isRecheck(room:InspectionRoom){return queueStage(room)==='recheck'}
+function requiresInspection(room:InspectionRoom){return queueStage(room)==='ready'}
 function formatTime(value:string|undefined|null){
   if(!value)return ''
   const parsed=new Date(value)
@@ -100,8 +101,8 @@ export default function HousekeepingInspectionMode({date,onDateChange,initialRoo
   const ordered=useMemo(()=>[...rooms].sort((a,b)=>a.sortOrder-b.sortOrder||a.roomName.localeCompare(b.roomName)),[rooms])
   const rechecks=ordered.filter(isRecheck)
   const ready=ordered.filter(requiresInspection)
-  const awaiting=ordered.filter(room=>roomCheckStage(room)==='correction')
-  const passed=ordered.filter(room=>roomCheckStage(room)==='passed')
+  const awaiting=ordered.filter(room=>queueStage(room)==='correction')
+  const passed=ordered.filter(room=>queueStage(room)==='passed')
   const queue=[...rechecks,...ready]
   const deepLinkedRoom=initialRoomId&&loadedDate===date?ordered.find(room=>room.roomId===initialRoomId):undefined
   useEffect(()=>{
@@ -110,7 +111,7 @@ export default function HousekeepingInspectionMode({date,onDateChange,initialRoo
     if(deepLinkApplied.current===token)return
     deepLinkApplied.current=token
     setSelectedId(initialRoomId)
-    setFilter(roomCheckStage(deepLinkedRoom)==='passed'?'passed':roomCheckStage(deepLinkedRoom)==='correction'?'corrections':'queue')
+    setFilter(queueStage(deepLinkedRoom)==='passed'?'passed':queueStage(deepLinkedRoom)==='correction'?'corrections':'queue')
   },[deepLinkedRoom,initialRoomId,date])
   const shown=filter==='queue'?queue:filter==='corrections'?awaiting:passed
   const pendingFocus=filter==='queue'&&selectedId===initialRoomId&&deepLinkedRoom&&![...queue,...awaiting,...passed].some(room=>room.roomId===initialRoomId)?deepLinkedRoom:undefined
