@@ -23,7 +23,7 @@ export default function TodaysCleans(){
   }catch(e:any){setError(e.message||'Unable to load your rooms.')}finally{setLoading(false)}
  },[date])
  useEffect(()=>{void load()},[load])
- const mine=useMemo(()=>rows.filter(r=>{const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const full=staffName.trim().toLowerCase();return full&&assigned.some(n=>n===full||n===full.split(' ')[0])}),[rows,staffName])
+ const mine=useMemo(()=>rows.filter(r=>{if(r.reservationStatus.trim().toLowerCase()==='stayover' && !/^(RF|REFRESH)$/i.test((r.serviceType||'').trim()))return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const full=staffName.trim().toLowerCase();return full&&assigned.some(n=>n===full||n===full.split(' ')[0])}),[rows,staffName])
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
