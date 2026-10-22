@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckCircle2, ClipboardList, RefreshCw, Search, UsersRound } from 'lucide-react'
 import StaffAssignmentSelect from '@/components/StaffAssignmentSelect'
+import SideworkBoard from '@/components/SideworkBoard'
 import type { AssignmentStaff } from '@/lib/assignment-staff'
 
 type Staff = AssignmentStaff
@@ -309,6 +310,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
     </div>
+    <div className="hka-service-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,295px),1fr))',gap:12,alignItems:'start'}}>
     <section className="hka-person hka-deep-clean" aria-label="Tub-only assignments">
       <div className="hka-person-head">
         <div><strong>Tub-only cleaning</strong><small>Independent of full-room cleaning, refreshes, and room-check sign-offs</small></div>
@@ -349,6 +351,13 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
         </div>})}
       </div>}
     </section>
+    <section className="hka-person hka-deep-clean">
+      <div className="hka-person-head"><div><strong>Sidework</strong><small>Auto-assigned by scheduled role, with manager overrides</small></div></div>
+      <details><summary style={{padding:'12px 2px',cursor:'pointer',fontWeight:700}}>Review and reassign today's sidework</summary>
+        <SideworkBoard compact initialDate={date}/>
+      </details>
+    </section>
+    </div>
     <div className="hka-controls">
       <div className="hka-toggle" role="group" aria-label="Assignment board view">
         <button type="button" className={view === 'staff' ? 'active' : ''} aria-pressed={view === 'staff'} onClick={() => setView('staff')}><UsersRound size={16}/> Scheduled staff</button>
