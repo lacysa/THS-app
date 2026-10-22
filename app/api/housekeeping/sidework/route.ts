@@ -29,13 +29,15 @@ export async function GET(req:NextRequest){
   const {people,shifts,existing}=await context(date);const isManager=manage(access)
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
   const staff=shifts.map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:s.role_label||person.job_title||''}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
-  const assigned=(group:string)=>{
+  const assigned=(group:string,taskKey:string)=>{
    const eligible=staff.filter(p=>matches(p.role,group))
-   return eligible.length?eligible[0].id:null
+   if(!eligible.length)return null
+   const index=SIDEWORK_TASKS.filter(task=>task.group===group).findIndex(task=>task.key===taskKey)
+   return eligible[Math.max(0,index)%eligible.length].id
   }
   const items=SIDEWORK_TASKS.map(task=>{
    const saved=existing.find((x:any)=>x.task_key===task.key)
-   const assignedTo=saved?saved.assigned_to:assigned(task.group)
+   const assignedTo=saved?saved.assigned_to:assigned(task.group,task.key)
    return {...task,assignedTo,assignedName:staff.find(p=>p.id===assignedTo)?.name||people.find((p:any)=>p.id===assignedTo)?.name||'',completedAt:saved?.completed_at||null,notes:saved?.notes||''}
   }).filter(task=>isManager||!!self&&task.assignedTo===self.id)
   return NextResponse.json({items,staff: isManager?staff:[],manager:isManager,preview:Boolean(access.isPreviewMode),date})
@@ -52,7 +54,9 @@ export async function PATCH(req:NextRequest){
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
   const saved=existing.find((x:any)=>x.task_key===key)
   const scheduled=shifts.map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:s.role_label||p.job_title||''}:null}).filter(Boolean) as {id:string;role:string}[]
-  const auto=scheduled.find(p=>matches(p.role,task.group))?.id||null
+  const eligible=scheduled.filter(p=>matches(p.role,task.group))
+  const taskIndex=SIDEWORK_TASKS.filter(t=>t.group===task.group).findIndex(t=>t.key===key)
+  const auto=eligible.length?eligible[Math.max(0,taskIndex)%eligible.length].id:null
   const assignedTo=saved?saved.assigned_to:auto
   if(!isManager&&(!self||assignedTo!==self.id))return NextResponse.json({error:'This sidework is not assigned to you'},{status:403})
   if(body.action==='assign'&&!isManager)return NextResponse.json({error:'Managers assign sidework'},{status:403})
