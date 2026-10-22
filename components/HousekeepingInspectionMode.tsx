@@ -2,6 +2,7 @@
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import {AlertTriangle,Check,ChevronDown,ChevronLeft,ChevronRight,ClipboardCheck,RefreshCw,ShieldCheck,X} from 'lucide-react'
+import {roomCheckStage} from '@/lib/room-check-queue'
 
 type Correction={id:string;type:string;note:string;at:string}
 type InspectionRoom={
@@ -25,28 +26,8 @@ type InspectionRoom={
 }
 type QueueFilter='queue'|'corrections'|'passed'
 
-function lower(value:unknown){return String(value||'').trim().toLowerCase()}
-function cleanService(room:InspectionRoom){return /^OUT(?:-[A-Z]{2,4})?$/i.test(room.serviceType.trim())}
-function isRecheck(room:InspectionRoom){
-  return room.issueOpen&&room.complete&&room.inspectionSubmitted&&!room.inspected
-}
-function requiresInspection(room:InspectionRoom){
-  if(room.inspected||room.issueOpen)return false
-  const status=lower(room.reservationStatus)
-  const condition=lower(room.roomCondition)
-  if(['checkout','out/in'].includes(status)){
-    return cleanService(room)&&room.complete&&room.inspectionSubmitted
-  }
-  // Arrival-only rooms can receive a normal readiness check even without a
-  // full clean, but an unknown or physically dirty room is not inspectable.
-  if(status==='arrival'&&!cleanService(room)){
-    return room.inspectionSubmitted ||
-      ['ready','room ready','vacant (clean)','ready for room check','ready for guest'].includes(condition)
-  }
-  // A vacant day is not automatically an inspection task. It must have been
-  // explicitly submitted for a room check.
-  return room.complete&&room.inspectionSubmitted
-}
+function isRecheck(room:InspectionRoom){return roomCheckStage(room)==='recheck'}
+function requiresInspection(room:InspectionRoom){return roomCheckStage(room)==='ready'}
 function formatTime(value:string|undefined|null){
   if(!value)return ''
   const parsed=new Date(value)
@@ -119,8 +100,8 @@ export default function HousekeepingInspectionMode({date,onDateChange,initialRoo
   const ordered=useMemo(()=>[...rooms].sort((a,b)=>a.sortOrder-b.sortOrder||a.roomName.localeCompare(b.roomName)),[rooms])
   const rechecks=ordered.filter(isRecheck)
   const ready=ordered.filter(requiresInspection)
-  const awaiting=ordered.filter(room=>room.issueOpen&&!isRecheck(room))
-  const passed=ordered.filter(room=>room.inspected&&!room.issueOpen)
+  const awaiting=ordered.filter(room=>roomCheckStage(room)==='correction')
+  const passed=ordered.filter(room=>roomCheckStage(room)==='passed')
   const queue=[...rechecks,...ready]
   const deepLinkedRoom=initialRoomId&&loadedDate===date?ordered.find(room=>room.roomId===initialRoomId):undefined
   useEffect(()=>{
@@ -129,7 +110,7 @@ export default function HousekeepingInspectionMode({date,onDateChange,initialRoo
     if(deepLinkApplied.current===token)return
     deepLinkApplied.current=token
     setSelectedId(initialRoomId)
-    setFilter(deepLinkedRoom.inspected&&!deepLinkedRoom.issueOpen?'passed':deepLinkedRoom.issueOpen&&!isRecheck(deepLinkedRoom)?'corrections':'queue')
+    setFilter(roomCheckStage(deepLinkedRoom)==='passed'?'passed':roomCheckStage(deepLinkedRoom)==='correction'?'corrections':'queue')
   },[deepLinkedRoom,initialRoomId,date])
   const shown=filter==='queue'?queue:filter==='corrections'?awaiting:passed
   const pendingFocus=filter==='queue'&&selectedId===initialRoomId&&deepLinkedRoom&&![...queue,...awaiting,...passed].some(room=>room.roomId===initialRoomId)?deepLinkedRoom:undefined
