@@ -139,6 +139,20 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
   }
   const rooms = data?.rooms || []
   const staff = data?.staff || []
+  const stayovers = rooms.filter(room => room.activity.trim().toLowerCase()==='stayover' && !['RF','REFRESH'].includes(room.serviceType.trim().toUpperCase()))
+  const [coverageBusy,setCoverageBusy] = useState('')
+  async function updateStayover(room:Room,patch:Record<string,unknown>){
+    if(data?.readOnly||coverageBusy)return
+    setCoverageBusy(room.roomId);setError('');setMessage('')
+    try{
+      const response=await fetch('/api/housekeeping/day',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate:date,roomId:room.roomId,patch})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not update stayover coverage.')
+      setMessage(room.roomName+(patch.serviceType==='RF'?' refresh requested.':' coverage updated.'))
+      refresh()
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(e:any){setError(e.message||'Unable to update coverage.')}finally{setCoverageBusy('')}
+  }
   const onSite = staff.filter(person => person.onSite && (person.housekeepingEligible || (rooms.some(room => assigned(room, person.name)) || (data?.tubTasks||[]).some(t=>t.assignedTo.toLowerCase()===person.name.toLowerCase()))))
   const offSite = staff.filter(person => !person.onSite && (rooms.some(room => assigned(room, person.name)) || (data?.tubTasks||[]).some(t=>t.assignedTo.toLowerCase()===person.name.toLowerCase())))
   const assignable = staff.filter(person => person.onSite && person.housekeepingEligible)
@@ -310,8 +324,26 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       <div><strong>{unassigned.length}</strong><span>Unassigned</span></div>
       <div><strong>{completed.length}</strong><span>Completed</span></div>
     </div>
-    <div className="hka-service-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,295px),1fr))',gap:12,alignItems:'start'}}>
-    <section className="hka-person hka-deep-clean" aria-label="Tub-only assignments">
+    <div className="hka-service-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:12,alignItems:'start'}}>
+    <section className="rooms-stayover-planner hka-planner-panel">
+      <details>
+        <summary className="rooms-stayover-heading"><div><strong>Stayovers & refresh coverage</strong><span>Occupied rooms without a refresh request</span></div><span>{stayovers.length} stayovers</span></summary>
+        <div className="rooms-stayover-grid">
+          {stayovers.length===0?<p className="hka-empty-line">No unrequested stayovers for this date.</p>:stayovers.map(room=><div className="rooms-stayover-item" key={room.roomId}>
+            <div><strong>{room.roomName}</strong><small>Occupied · no refresh requested</small></div>
+            <label>Assigned coverage
+              <select aria-label={'Coverage for '+room.roomName} disabled={data?.readOnly||Boolean(coverageBusy)} value={room.assignedTo.split(',')[0]?.trim()||''} onChange={e=>void updateStayover(room,{assignedTo:e.target.value})}>
+                <option value="">Unassigned</option>
+                {staff.filter(person=>person.housekeepingEligible||person.name===room.assignedTo).map(person=><option key={person.id} value={person.name}>{person.name}</option>)}
+              </select>
+            </label>
+            <button type="button" disabled={data?.readOnly||Boolean(coverageBusy)} onClick={()=>void updateStayover(room,{serviceType:'RF',complete:false,readyForInspection:false,inspected:false})}>Request RF</button>
+          </div>)}
+        </div>
+      </details>
+    </section>
+
+    <section className="hka-person hka-deep-clean hka-planner-panel" aria-label="Tub-only assignments">
       <div className="hka-person-head">
         <div><strong>Tub-only cleaning</strong><small>Independent of full-room cleaning, refreshes, and room-check sign-offs</small></div>
         <span className="hka-deep-count">{(data?.tubTasks||[]).length} open</span>
@@ -323,7 +355,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
           <StaffAssignmentSelect staff={staff} housekeepingOnly label={'Assign tub-only cleaning for '+task.roomName} value={task.assignedTo} disabled={data?.readOnly||Boolean(tubBusy)} onChange={name=>void assignTub(task,name)} style={{maxWidth:220}}/>
         </div>)}</div>}
     </section>
-    <section className="hka-person hka-deep-clean">
+    <section className="hka-person hka-deep-clean hka-planner-panel">
       <div className="hka-person-head">
         <div><strong>Deep cleans</strong><small>Additional detailed cleaning, separate from regular room service</small></div>
         <span className="hka-deep-count">{deepCleans.filter(task=>!task.completed_at).length} open</span>
@@ -358,6 +390,23 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       </details>
     </section>
     </div>
+    <style jsx>{`
+      .hka-service-grid > .hka-planner-panel {min-width:0;margin:0;border:1px solid #acd5d4;border-radius:16px;background:linear-gradient(135deg,#e9f9f7 0%,#f3f7ff 58%,#eeeaff 100%);padding:12px;box-shadow:none}
+      .hka-service-grid .hka-planner-panel :global(.hka-person-head){background:transparent;border:0;padding:5px 2px 13px}
+      .hka-service-grid .hka-planner-panel :global(.hka-person-head strong),.hka-service-grid .rooms-stayover-heading strong{font-size:14px;color:#29495b}
+      .hka-service-grid .hka-planner-panel :global(.hka-person-head small),.hka-service-grid .rooms-stayover-heading span{font-size:11px;color:#668493}
+      .hka-service-grid .rooms-stayover-planner details{width:100%}
+      .hka-service-grid .rooms-stayover-heading{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none;padding:6px 2px 12px}
+      .hka-service-grid .rooms-stayover-heading div{display:grid;gap:4px}
+      .hka-service-grid .rooms-stayover-grid{display:grid;gap:9px}
+      .hka-service-grid .rooms-stayover-item{display:grid;gap:8px;padding:10px;border-radius:12px;background:#ffffffd9}
+      .hka-service-grid .rooms-stayover-item strong{font-size:13px}
+      .hka-service-grid .rooms-stayover-item small{display:block;font-size:11px;color:#627d8b}
+      .hka-service-grid .rooms-stayover-item label{font-size:11px;display:grid;gap:5px}
+      .hka-service-grid .rooms-stayover-item select,.hka-service-grid .rooms-stayover-item button{width:100%;max-width:100%;min-height:38px;border-radius:10px}
+      @media(max-width:1120px){.hka-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+      @media(max-width:620px){.hka-service-grid{grid-template-columns:minmax(0,1fr)!important}}
+    `}</style>
     <div className="hka-controls">
       <div className="hka-toggle" role="group" aria-label="Assignment board view">
         <button type="button" className={view === 'staff' ? 'active' : ''} aria-pressed={view === 'staff'} onClick={() => setView('staff')}><UsersRound size={16}/> Scheduled staff</button>
