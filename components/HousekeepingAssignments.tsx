@@ -416,7 +416,10 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
     </section>
 
     </div>
+
+    </details>
     <style jsx>{`
+
       .hka-service-grid > .hka-planner-panel {min-width:0;margin:0;border:1px solid #acd5d4;border-radius:16px;background:linear-gradient(135deg,#e9f9f7 0%,#f3f7ff 58%,#eeeaff 100%);padding:12px;box-shadow:none}
       .hka-service-grid .hka-planner-panel :global(.hka-person-head){background:transparent;border:0;padding:5px 2px 13px}
       .hka-service-grid .hka-planner-panel :global(.hka-person-head strong),.hka-service-grid .rooms-stayover-heading strong{font-size:14px;color:#29495b}
@@ -432,9 +435,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
       .hka-service-grid .rooms-stayover-item select,.hka-service-grid .rooms-stayover-item button{width:100%;max-width:100%;min-height:38px;border-radius:10px}
       @media(max-width:1120px){.hka-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
       @media(max-width:620px){.hka-service-grid{grid-template-columns:minmax(0,1fr)!important}}
-    `}</style>
-    </details>
-    <style jsx>{`
+    
       .hka-assignment-tabs{display:flex;gap:4px;width:fit-content;padding:4px;margin:0 0 14px;border:1px solid #d6e3e8;border-radius:12px;background:#f1f5f8}
       .hka-assignment-tabs a{font-size:13px;font-weight:700;padding:9px 15px;border-radius:9px;text-decoration:none;color:#56717f}
       .hka-assignment-tabs a[aria-current="page"]{background:#fff;color:#234b5b;box-shadow:0 1px 5px #263c501b}
