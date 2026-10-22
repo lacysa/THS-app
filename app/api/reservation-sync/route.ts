@@ -4,7 +4,7 @@ import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import {conditionForDay,isAutoOccupiedPlaceholder} from '@/lib/room-condition-carry'
 import {ymdInHotelTz} from '@/lib/time'
 import { getStaffAccess } from '@/lib/access'
-import { normalizeEditedReservation, parseArrivalReportPages } from '@/lib/reservations/import'
+import { accompanyingGuestFromReport, normalizeEditedReservation, parseArrivalReportPages } from '@/lib/reservations/import'
 
 export const dynamic = 'force-dynamic'
 
@@ -363,6 +363,7 @@ export async function POST(req:NextRequest){
         reservationKey:String(row.reservationKey||''),
         reservationNumber:row.reservationNumber?String(row.reservationNumber):null,
         guestName:String(row.guestName||'').trim(),
+        accompanyingGuest:Object.prototype.hasOwnProperty.call(row,'accompanyingGuest')?(String(row.accompanyingGuest||'').trim()||null):accompanyingGuestFromReport(String(row.rawText||''),String(row.guestName||'')),
         doorCode:String(row.doorCode||'').replace(/\D/g,'').slice(-4)||null,
         arrivalDate:validDate(row.arrivalDate)?row.arrivalDate:null,
         checkoutDate:validDate(row.checkoutDate)?row.checkoutDate:null,
@@ -387,14 +388,14 @@ export async function POST(req:NextRequest){
       let existing:any[]=[]
       if(keys.length){
         const existingResult=await admin.from('reservation_stays')
-          .select('reservation_key,room_id,guest_name,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
+          .select('reservation_key,room_id,guest_name,accompanying_guest,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
           .in('reservation_key',keys)
         if(existingResult.error) throw new Error(existingResult.error.message)
         existing=existingResult.data||[]
       }
 
       const oldByKey=new Map<string,any>(existing.map((row:any)=>[String(row.reservation_key),row] as [string,any]))
-      const tracked:any={guestName:'guest_name',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',occupancy:'occupancy',ratePlan:'rate_plan',checkInTime:'check_in_time',productsRaw:'products_raw',dietaryRestrictions:'dietary_restrictions',referralSource:'referral_source',reasonForVisit:'reason_for_visit',guestComments:'guest_comments',innkeeperNotes:'innkeeper_notes'}
+      const tracked:any={guestName:'guest_name',accompanyingGuest:'accompanying_guest',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',occupancy:'occupancy',ratePlan:'rate_plan',checkInTime:'check_in_time',productsRaw:'products_raw',dietaryRestrictions:'dietary_restrictions',referralSource:'referral_source',reasonForVisit:'reason_for_visit',guestComments:'guest_comments',innkeeperNotes:'innkeeper_notes'}
 
       const compared=reservations.map((row:any)=>{
         const old:any=oldByKey.get(row.reservationKey)
@@ -432,7 +433,7 @@ export async function POST(req:NextRequest){
 
       if(keys.length){
         const existingResult=await admin.from('reservation_stays')
-          .select('reservation_key,room_id,guest_name,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
+          .select('reservation_key,room_id,guest_name,accompanying_guest,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
           .in('reservation_key',keys)
         if(existingResult.error) throw new Error(existingResult.error.message)
         existing=existingResult.data||[]
@@ -441,7 +442,7 @@ export async function POST(req:NextRequest){
       const oldByKey=new Map<string,any>(existing.map((row:any)=>[String(row.reservation_key),row] as [string,any]))
       const roomIdByName=new Map<string,string>(rooms.map((room:any)=>[String(room.name),String(room.id)] as [string,string]))
       const tracked:any={
-        guestName:'guest_name',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',
+        guestName:'guest_name',accompanyingGuest:'accompanying_guest',doorCode:'door_code',arrivalDate:'arrival_date',checkoutDate:'checkout_date',
         occupancy:'occupancy',ratePlan:'rate_plan',checkInTime:'check_in_time',productsRaw:'products_raw',
         dietaryRestrictions:'dietary_restrictions',referralSource:'referral_source',reasonForVisit:'reason_for_visit',
         guestComments:'guest_comments',innkeeperNotes:'innkeeper_notes'
@@ -524,6 +525,7 @@ export async function POST(req:NextRequest){
         reservation_key:row.reservationKey,
         reservation_number:row.reservationNumber,
         guest_name:row.guestName,
+        accompanying_guest:row.accompanyingGuest,
         guest_phone:row.phone,
         door_code:row.doorCode,
         arrival_date:row.arrivalDate,
