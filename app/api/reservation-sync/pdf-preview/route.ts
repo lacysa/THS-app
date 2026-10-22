@@ -124,7 +124,7 @@ export async function POST(req:NextRequest){
     let existing:any[]=[]
     if(keys.length){
       const existingResult=await admin.from('reservation_stays')
-        .select('reservation_key,room_id,guest_name,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
+        .select('reservation_key,room_id,guest_name,accompanying_guest,door_code,arrival_date,checkout_date,occupancy,rate_plan,check_in_time,products_raw,dietary_restrictions,referral_source,reason_for_visit,guest_comments,innkeeper_notes')
         .in('reservation_key',keys)
       if(existingResult.error) throw new Error(existingResult.error.message)
       existing=existingResult.data||[]
@@ -134,6 +134,7 @@ export async function POST(req:NextRequest){
     const roomIdByName=new Map(rooms.map((room:any)=>[String(room.name),String(room.id)]))
     const tracked:any={
       guestName:'guest_name',
+      accompanyingGuest:'accompanying_guest',
       doorCode:'door_code',
       arrivalDate:'arrival_date',
       checkoutDate:'checkout_date',
