@@ -20,6 +20,6 @@ export default async function Page({searchParams}:{searchParams:Promise<{filter?
   const allowInspections=gate.access.isAdmin || (gate.access.permissions||[]).includes('room_checks.perform') ||
     caps.some(cap=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(cap))
   const initialView=!initialRoomId&&params?.view==='inspections'&&allowInspections?'inspections':
-    allowAssignments&&!initialRoomId&&params?.view==='assignments'?'assignments':'rooms'
+    allowAssignments&&!initialRoomId&&params?.view==='rooms'?'rooms':allowAssignments?'assignments':allowInspections?'inspections':'rooms'
   return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate} initialView={initialView} allowAssignments={allowAssignments}/></StaffShell>
 }
