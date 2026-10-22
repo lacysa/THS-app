@@ -130,11 +130,15 @@ export async function GET(req: NextRequest) {
       ? peopleData.byMember.get(String(currentPerson.id)) || new Set<string>()
       : new Set<string>()
 
+    // Dedicated personal-clean screen requests a server-filtered payload even
+    // for multi-role Hospitality Assistants. The standard operations response
+    // remains unchanged for every existing caller.
     const assignedOnlyView =
-      !access.isAdmin &&
+      req.nextUrl.searchParams.get('scope') === 'mine' ||
+      (!access.isAdmin &&
       currentCaps.has('housekeeping') &&
       !currentCaps.has('hospitality_assistant') &&
-      !['manager','general_manager','operations_manager','owner'].some(cap => currentCaps.has(cap))
+      !['manager','general_manager','operations_manager','owner'].some(cap => currentCaps.has(cap)))
 
     const allStaffOptions = peopleData.people
       .filter((person: any) => person.active !== false)
