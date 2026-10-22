@@ -601,19 +601,33 @@ export async function PATCH(req: NextRequest) {
         if(blocked||occupied)return NextResponse.json({error:'Confirm the room is vacant and not blocked before marking it ready.'},{status:409})
         if(existing.check_issue_open)return NextResponse.json({error:'Resolve the outstanding inspection correction before marking this room clean.'},{status:409})
         if(!currentPerson?.id)return NextResponse.json({error:'A linked management staff profile is required to approve a clean room.'},{status:403})
-        // Record a manager final-verification override, never a fabricated
-        // housekeeping completion or independent inspection by another staffer.
-        dbPatch.complete=true
-        dbPatch.completed_at=existing.completed_at||now
-        dbPatch.ready_for_inspection=false
-        dbPatch.foh_signed_by=currentPerson.id
-        dbPatch.foh_signed_at=now
+        // A precleaned arrival is physically ready, not a brand-new clean.
+        // Staff must still be able to perform its independent inspection.
+        const arrivalOnly=activity.toLowerCase()==='arrival'&&!/^OUT(?:-[A-Z]{2,4})?$/i.test(service.trim())
+        if(arrivalOnly&&!existing.inspected){
+          dbPatch.ready_for_inspection=true
+          dbPatch.foh_signed_by=null
+          dbPatch.foh_signed_at=null
+          // Do not manufacture complete or completed_at.
+        }else{
+          // Preserve manager final-verification for non-arrival service.
+          dbPatch.complete=true
+          dbPatch.completed_at=existing.completed_at||now
+          dbPatch.ready_for_inspection=false
+          dbPatch.foh_signed_by=currentPerson.id
+          dbPatch.foh_signed_at=now
+        }
         dbPatch.room_condition=chosen
       }else if(chosen==='Ready for Room Check'){
         if(blocked||occupied)return NextResponse.json({error:'This room must be vacant and unblocked before inspection.'},{status:409})
         if(existing.check_issue_open&&!existing.ready_for_inspection)return NextResponse.json({error:'Document the correction before resubmitting this room for inspection.'},{status:409})
-        dbPatch.complete=true
-        dbPatch.completed_at=existing.completed_at||now
+        // Do not create a fake cleaning completion for an already-clean
+        // arrival that never had an OUT/turnover this day.
+        const arrivalOnly=activity.toLowerCase()==='arrival'&&!/^OUT(?:-[A-Z]{2,4})?$/i.test(service.trim())
+        if(!arrivalOnly){
+          dbPatch.complete=true
+          dbPatch.completed_at=existing.completed_at||now
+        }
         dbPatch.ready_for_inspection=true
         dbPatch.inspected=false
         dbPatch.inspected_at=null
