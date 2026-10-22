@@ -92,7 +92,7 @@ export async function GET(req:NextRequest){
       admin.from('staff_members').select('id,name,auth_user_id,job_title').eq('active',true),
       admin.from('room_check_items').select('id,zone,label').eq('active',true),
       admin.from('housekeeping_correction_events').select('id,service_date,room_id,event_type,note,created_at').gte('service_date',start).lte('service_date',end).order('created_at',{ascending:false}).limit(1000),
-      admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,updated_by').gte('service_date',start).lte('service_date',end),
+      admin.from('housekeeping_daily_rooms').select('service_date,room_id,assigned_to,notes,updated_by,created_at,completed_at,complete,reservation_status,service_type,room_condition,strip_hold').gte('service_date',start).lte('service_date',end),
       admin.from('rooms').select('id,name')
     ])
     const error=checkErr||discErr||peopleErr||itemErr||correctionErr||assignErr||roomErr
@@ -167,6 +167,35 @@ export async function GET(req:NextRequest){
 
     const nameById=new Map((people||[]).map((p:any)=>[String(p.id),String(p.name||'Staff')]))
     const itemById=new Map((items||[]).map((i:any)=>[String(i.id),{label:String(i.label||'Checklist item'),zone:String(i.zone||'Other')}]))
+
+    // Beginning 2026-10-22, report record-to-completion elapsed time, not
+    // hands-on cleaning duration (the app does not store a clean-start event).
+    // Exclude refreshes, shared assignments, and records made before service day.
+    const turnaroundStart=start>'2026-10-22'?start:'2026-10-22'
+    const turnaroundByPerson=new Map<string,number[]>()
+    for(const room of dailyAssignments||[]){
+      if(String(room.service_date)<turnaroundStart||!room.complete||!room.completed_at||!room.created_at)continue
+      const activity=String(room.reservation_status||'').toLowerCase()
+      const service=String(room.service_type||'').toUpperCase()
+      const condition=String(room.room_condition||'').toLowerCase()
+      if(activity==='stayover'||activity==='blocked'||String(room.strip_hold||'').toLowerCase().includes('hold'))continue
+      const isFull=['checkout','out/in','dirty'].includes(activity)||/^OUT(?:-[A-Z]{2,4})?$/.test(service)||(activity==='arrival'||activity==='vacant')&&/dirty|cleaning/.test(condition)
+      if(!isFull)continue
+      const assignment=String(room.assigned_to||'').trim()
+      if(!assignment||/[,&;/]|\s+\+\s+/.test(assignment))continue
+      const ids=idsByName.get(assignment.toLowerCase())||[]
+      if(ids.length!==1)continue
+      const created=Date.parse(String(room.created_at)),finished=Date.parse(String(room.completed_at))
+      if(!Number.isFinite(created)||!Number.isFinite(finished)||String(room.created_at).slice(0,10)<String(room.service_date))continue
+      const minutes=(finished-created)/60000
+      if(minutes<=0||minutes>1080)continue
+      turnaroundByPerson.set(ids[0],[...(turnaroundByPerson.get(ids[0])||[]),minutes])
+    }
+    const turnaround=[...turnaroundByPerson.entries()].map(([housekeeperId,values])=>({
+      housekeeperId,name:nameById.get(housekeeperId)||'Former staff member',
+      rooms:values.length,averageMinutes:Math.round(values.reduce((a,b)=>a+b,0)/values.length),
+      minMinutes:Math.round(Math.min(...values)),maxMinutes:Math.round(Math.max(...values))
+    })).sort((a,b)=>a.averageMinutes-b.averageMinutes||a.name.localeCompare(b.name))
 
     const firstInspections=(checks||[]).filter((c:any)=>c.stage==='inspection')
     const rechecks=(checks||[]).filter((c:any)=>c.stage==='recheck')
@@ -253,6 +282,7 @@ export async function GET(req:NextRequest){
       range:{days,start,end},
       department,
       weekly,
+      turnaround:{start:turnaroundStart,end,rows:turnaround},
       individuals,
       commonMisses,
       documentedCorrections,
