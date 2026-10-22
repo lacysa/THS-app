@@ -28,7 +28,7 @@ export async function GET(req:NextRequest){
  try{
   const {people,shifts,existing}=await context(date);const isManager=manage(access)
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
-  const staff=shifts.map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:s.role_label||person.job_title||''}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
+  const staff=shifts.filter((s:any)=>!['unavailable','off','absent'].includes(String(s.work_mode||'').toLowerCase())&&!/^(off|unavailable)$/i.test(String(s.role_label||''))).map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:s.role_label||person.job_title||''}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
   const assigned=(group:string,taskKey:string)=>{
    const eligible=staff.filter(p=>matches(p.role,group))
    if(!eligible.length)return null
@@ -53,7 +53,7 @@ export async function PATCH(req:NextRequest){
   const task=SIDEWORK_TASKS.find(t=>t.key===key)!
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
   const saved=existing.find((x:any)=>x.task_key===key)
-  const scheduled=shifts.map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:s.role_label||p.job_title||''}:null}).filter(Boolean) as {id:string;role:string}[]
+  const scheduled=shifts.filter((s:any)=>!['unavailable','off','absent'].includes(String(s.work_mode||'').toLowerCase())&&!/^(off|unavailable)$/i.test(String(s.role_label||''))).map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:s.role_label||p.job_title||''}:null}).filter(Boolean) as {id:string;role:string}[]
   const eligible=scheduled.filter(p=>matches(p.role,task.group))
   const taskIndex=SIDEWORK_TASKS.filter(t=>t.group===task.group).findIndex(t=>t.key===key)
   const auto=eligible.length?eligible[Math.max(0,taskIndex)%eligible.length].id:null
