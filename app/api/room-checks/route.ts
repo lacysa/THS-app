@@ -1,11 +1,25 @@
 import { NextRequest,NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
+import {roomCheckStage,roomCheckRequired} from '@/lib/room-check-queue'
 
 export const dynamic='force-dynamic'
 
 function validDate(v:string|null){return Boolean(v&&/^\d{4}-\d{2}-\d{2}$/.test(v))}
 function names(v:string){return String(v||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)}
+function roomCandidate(r:any){
+ return {
+  reservationStatus:r.reservation_status,
+  serviceType:r.service_type,
+  stripHold:r.strip_hold,
+  roomCondition:r.room_condition,
+  complete:Boolean(r.complete),
+  readyForInspection:Boolean(r.ready_for_inspection),
+  inspected:Boolean(r.inspected),
+  checkIssueOpen:Boolean(r.check_issue_open),
+  fohSignedBy:r.foh_signed_by
+ }
+}
 
 async function context(){
   const access=await getStaffAccess()
@@ -63,12 +77,7 @@ export async function GET(req:NextRequest){
   }
 
   const checkRooms=(daily||[])
-    .filter((r:any)=>{
-      const status=String(r.reservation_status||'').trim().toLowerCase()
-      const stripHold=String(r.strip_hold||'').trim().toLowerCase()
-      const service=String(r.service_type||'').trim().toUpperCase()
-      return status!=='blocked' && status!=='stayover' && !stripHold.includes('hold') && service!=='RF' && String(r.room_condition||'').trim().toLowerCase()!=='blocked'
-    })
+    .filter((r:any)=>roomCheckRequired(roomCandidate(r)))
     .map((r:any)=>{
       const latest=latestQualityByRoom.get(String(r.room_id))
       const status=String(r.reservation_status||'').trim().toLowerCase()
@@ -156,6 +165,10 @@ export async function POST(req:NextRequest){
       const service=String(room.service_type||'').trim().toUpperCase()
       if(status==='blocked'||status==='stayover'||String(room.strip_hold||'').toLowerCase().includes('hold')||service==='RF'||String(room.room_condition||'').trim().toLowerCase()==='blocked')return NextResponse.json({error:'Room is not eligible for inspection.'},{status:400})
       if(room.check_issue_open&&(!room.complete||!room.ready_for_inspection))return NextResponse.json({error:'Housekeeping must submit the correction before reinspection.'},{status:409})
+       const queueState=roomCheckStage(roomCandidate(room))
+       if(!['ready','recheck'].includes(queueState)&&!(failed&&manager&&queueState==='passed')){
+         return NextResponse.json({error:'This room is not ready for inspection. Confirm OUT and housekeeping completion first, or use the arrival check queue.'},{status:409})
+       }
       const needsClean=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(room.check_issue_open)
       // Authorized inspectors may inspect even before housekeeping has app access.
       // An open correction can be reinspected only once marked fixed.
