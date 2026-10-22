@@ -670,6 +670,22 @@ export default function StaffShell({
             </div>
           )}
 
+          {Boolean(access && (access.isAdmin || (access.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant','runner','laundry'].includes(cap)))) && (
+            <div className="ops-nav-section">
+              <div className="ops-nav-label">Housekeeping</div>
+              {(access?.isAdmin || (access?.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant'].includes(cap))) && (
+                <Link href="/housekeeping/today" className={pathname==='/housekeeping/today'?'active':''}>
+                  <span className="sidebar-link-icon"><BedDouble size={17}/></span>
+                  <span className="sidebar-link-label">Today's Cleans</span>
+                </Link>
+              )}
+              <Link href="/housekeeping/sidework" className={pathname==='/housekeeping/sidework'?'active':''}>
+                <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
+                <span className="sidebar-link-label">Today's Sidework</span>
+              </Link>
+            </div>
+          )}
+
           {operationsNav.length > 0 && (
             <div className="ops-nav-section">
               <div className="ops-nav-label">
