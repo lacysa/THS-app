@@ -2,6 +2,7 @@
 
 import { getStaffSession } from '@/lib/client/staff-session'
 import HousekeepingAssignments from '@/components/HousekeepingAssignments'
+import Link from 'next/link'
 import HousekeepingInspectionMode from '@/components/HousekeepingInspectionMode'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
@@ -806,7 +807,7 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialInsp
   const showAssignmentView=mayAssign&&workspaceView==='assignments'&&!initialRoomId
   const showInspectionView=mayInspect&&workspaceView==='inspections'&&!initialRoomId
   const workspaceTabs=(mayAssign||mayInspect)?<nav className="rooms-workspace-tabs" aria-label="Housekeeping workspace">
-    {mayAssign&&<a href="/housekeeping/assignments">Room Assignments</a>}
+    {mayAssign&&<Link href="/housekeeping/assignments">Room Assignments</Link>}
     {mayInspect&&<button type="button" className={showInspectionView?'active':''} aria-current={showInspectionView?'page':undefined} onClick={()=>setWorkspaceView('inspections')}>Inspections</button>}
   </nav>:null
   if(showAssignmentView)return <div className="rooms-workspace module-pretty-page">
