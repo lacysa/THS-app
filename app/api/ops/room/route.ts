@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 import {conditionForDay,previousVacantConditions} from '@/lib/room-condition-carry'
+import {roomCheckStage} from '@/lib/room-check-queue'
 import {loadAssignmentStaff} from '@/lib/assignment-staff'
 
 export const dynamic='force-dynamic'
@@ -147,7 +148,19 @@ export async function GET(req:NextRequest){
  const tubCleanDue=!serviceDetails?.tub_clean_completed_at&&(Boolean(serviceDetails?.tub_clean_requested_at)||autoTubDue)
  const status=String(daily?.reservation_status||'').toLowerCase()
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
- const eligible=Boolean(daily)&&!blocked&&status!=='stayover'&&String(daily?.service_type||'').toUpperCase()!=='RF'
+ // Keep the popup in sync with the actual inspection API and queue.
+ const checkState=daily?roomCheckStage({
+   reservationStatus:daily.reservation_status,
+   serviceType:daily.service_type,
+   stripHold:daily.strip_hold,
+   roomCondition:daily.room_condition,
+   complete:daily.complete,
+   readyForInspection:daily.ready_for_inspection,
+   inspected:daily.inspected,
+   checkIssueOpen:daily.check_issue_open,
+   fohSignedBy:daily.foh_signed_by
+ }):'not-required'
+ const eligible=checkState!=='not-required'
  // Show all notes associated with a room inspection where people actually
  // work: daily HA/housekeeping notes, historical edits, formal issues/fixes,
  // and written checklist notes from past inspection attempts.
@@ -200,6 +213,6 @@ export async function GET(req:NextRequest){
   permissions:{canManage,canInspect},staffNames,staff,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
   serviceDetails,autoTubDue,vacancyDays,tubCleanDue,correctionHistory,roomNoteHistory,checklistNotes,
   inspectionEligible:eligible,
-  inspectionReady:eligible&&(!daily?.check_issue_open||Boolean(daily?.ready_for_inspection))
+  inspectionReady:checkState==='ready'||checkState==='recheck'
  },{headers:{'cache-control':'private, no-store'}})
 }
