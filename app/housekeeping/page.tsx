@@ -15,11 +15,11 @@ export default async function Page({searchParams}:{searchParams:Promise<{filter?
   const initialInspectionRoomId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(params?.inspectionRoom||'')?params.inspectionRoom:undefined
   const initialDate=/^20\d{2}-\d{2}-\d{2}$/.test(params?.date||'')?params.date:undefined
   const manager=gate.access.isAdmin || (gate.access.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap))
-  if(!manager) redirect('/housekeeping/today')
+  if(!manager && !(gate.access.capabilities||[]).includes('hospitality_assistant')) redirect('/housekeeping/today')
   const allowAssignments=Boolean(assignmentGate.allowed&&manager)
   const caps=gate.access.capabilities||[]
   const allowInspections=gate.access.isAdmin || (gate.access.permissions||[]).includes('room_checks.perform') ||
-    caps.some(cap=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(cap))
+    caps.some(cap=>['hospitality_assistant','room_checks','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(cap))
   const initialView=!initialRoomId&&params?.view==='inspections'&&allowInspections?'inspections':
     params?.view==='rooms'?'rooms':params?.view==='assignments'&&allowAssignments?'assignments':allowInspections?'inspections':allowAssignments?'assignments':'rooms'
   return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate} initialView={initialView} initialInspectionRoomId={initialView==='inspections'?initialInspectionRoomId:undefined} allowAssignments={allowAssignments}/></StaffShell>
