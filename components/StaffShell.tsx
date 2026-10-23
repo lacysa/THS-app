@@ -721,12 +721,6 @@ export default function StaffShell({
                 <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
                 <span className="sidebar-link-label">Today's Sidework</span>
               </Link>}
-              {(access?.isAdmin||(access?.capabilities||[]).some(c=>['manager','general_manager','operations_manager','owner'].includes(c)))&&<>
-                <Link href="/housekeeping/assignments" className={['/housekeeping/assignments','/housekeeping/sidework-assignments'].includes(pathname)?'active':''}>
-                  <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
-                  <span className="sidebar-link-label">Assignments</span>
-                </Link>
-              </>}
             </div>
           )}
 
