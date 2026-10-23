@@ -15,6 +15,7 @@ import {
   ConciergeBell,
   UtensilsCrossed,
   ClipboardList,
+  ClipboardCheck,
   FileText,
   BedDouble,
   Wrench,
