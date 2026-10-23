@@ -407,8 +407,8 @@ export default function StaffShell({
 
   const nestedChildrenByParent: Record<string, string[]> = {
     reservations: managementWorkspace
-      ? ['ops', 'reservation_sync', 'housekeeping', 'room_checks']
-      : ['ops', 'reservation_sync'],
+      ? ['reservation_sync', 'housekeeping', 'room_checks']
+      : ['reservation_sync'],
     housekeeping: managementWorkspace ? [] : ['room_checks', 'housekeeping_quality']
   }
 
