@@ -757,9 +757,8 @@ export default function StaffShell({
         <nav className="ops-nav staff-ops-nav">
 
           <div className="ops-nav-section">
-            <div className="ops-nav-label">
-              Overview
-            </div>
+            {navSectionHeading('overview','Overview')}
+            <div id="ths-nav-overview" className="ops-nav-section-items" hidden={!navOpen.overview}>
 
             {dashboardItem ? (
               renderNavLink(dashboardItem)
@@ -787,37 +786,34 @@ export default function StaffShell({
               <span className="sidebar-link-label">Notifications</span>
               {unreadCount>0&&<span className="staff-nav-notification-count">{unreadCount>99?'99+':unreadCount}</span>}
             </Link>
+            </div>
           </div>
 
           {breakfastNav.length > 0 && (
             <div className="ops-nav-section">
-              <div className="ops-nav-label">
-                Breakfast
+              {navSectionHeading('breakfast','Breakfast')}
+              <div id="ths-nav-breakfast" className="ops-nav-section-items" hidden={!navOpen.breakfast}>
+                {breakfastNav.map(item=>renderNavLink(item))}
               </div>
-
-              {breakfastNav.map(item=>renderNavLink(item))}
             </div>
           )}
 
           {operationsNav.length > 0 && (
             <div className="ops-nav-section">
-              <div className="ops-nav-label">
-                Operations
+              {navSectionHeading('operations','Operations',inspectionCounts.ready)}
+              <div id="ths-nav-operations" className="ops-nav-section-items" hidden={!navOpen.operations}>
+                {operationRoots.map(item=><Fragment key={item.module_key}>
+                  {renderOperationItem(item)}
+                </Fragment>)}
+                {orphanedNestedChildren.map(item => renderNavLink(item))}
               </div>
-
-              {operationRoots.map(item=><Fragment key={item.module_key}>
-                {renderOperationItem(item)}
-
-              </Fragment>)}
-              {orphanedNestedChildren.map(item =>
-                renderNavLink(item)
-              )}
             </div>
           )}
 
           {modules.some(m=>['housekeeping_today_cleans','housekeeping_today_refreshes','housekeeping_today_sidework'].includes(m.module_key)) && (
             <div className="ops-nav-section">
-              <div className="ops-nav-label">Housekeeping</div>
+              {navSectionHeading('housekeeping','Housekeeping',inspectionCounts.arrivals)}
+              <div id="ths-nav-housekeeping" className="ops-nav-section-items" hidden={!navOpen.housekeeping}>
               {modules.some(m=>m.module_key==='housekeeping_today_cleans') && (
                 <Link href="/housekeeping/today" className={pathname==='/housekeeping/today'?'active':''}>
                   <span className="sidebar-link-icon"><BedDouble size={17}/></span>
@@ -828,6 +824,7 @@ export default function StaffShell({
                 <Link href="/housekeeping/arrivals" className={pathname==='/housekeeping/arrivals'?'active':''}>
                   <span className="sidebar-link-icon"><ClipboardCheck size={17}/></span>
                   <span className="sidebar-link-label">Today's Arrivals</span>
+                  {navActionBadge(inspectionCounts.arrivals,'arrival walkthroughs due')}
                 </Link>
               )}
               {(access?.isAdmin || (access?.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant'].includes(cap))) && (
@@ -840,23 +837,25 @@ export default function StaffShell({
                 <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
                 <span className="sidebar-link-label">Today's Sidework</span>
               </Link>}
+              </div>
             </div>
           )}
 
           {administrationNav.length > 0 && (
             <div className="ops-nav-section">
-              <div className="ops-nav-label">Administration</div>
-              {administrationNav.map(item => renderNavLink(item))}
+              {navSectionHeading('administration','Administration')}
+              <div id="ths-nav-administration" className="ops-nav-section-items" hidden={!navOpen.administration}>
+                {administrationNav.map(item => renderNavLink(item))}
+              </div>
             </div>
           )}
 
           {otherNav.length > 0 && (
             <div className="ops-nav-section">
-              <div className="ops-nav-label">
-                Tools
+              {navSectionHeading('tools','Tools')}
+              <div id="ths-nav-tools" className="ops-nav-section-items" hidden={!navOpen.tools}>
+                {otherNav.map(item=>renderNavLink(item))}
               </div>
-
-              {otherNav.map(item=>renderNavLink(item))}
             </div>
           )}
 
