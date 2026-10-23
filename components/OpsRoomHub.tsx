@@ -504,6 +504,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
        {isStayover&&serviceCode==='RF'&&<button type="button" className={'ops-hub-quick-action'+(daily?.complete?' ops-hub-complete-card':'')} aria-pressed={Boolean(daily?.complete)} disabled={!canManage||!daily||busy||blocked||Boolean(daily?.complete)} onClick={()=>void markRefreshComplete()} aria-label={daily?.complete?'Refresh complete':'Mark refresh complete'}>
         <span className="ops-hub-quick-icon"><Check size={18}/></span><span className="ops-hub-quick-name">{daily?.complete?'RF complete'+(refreshInitials?'-'+refreshInitials:''):'RF complete'}</span><small>{daily?.complete?'Completed':'Tap to complete'}</small>
        </button>}
+       {isStayover&&<button type="button" className={'ops-hub-quick-action'+(serviceCode==='RF'?' ops-hub-complete-card':'')} disabled={!canManage||!daily||busy||blocked} onClick={()=>void setService(serviceCode==='RF'?'':'RF')} aria-label={serviceCode==='RF'?'Remove RF request':'Request RF'}><span className="ops-hub-quick-icon"><RefreshCw size={18}/></span><span className="ops-hub-quick-name">RF</span><small>{serviceCode==='RF'?'Requested · undo':'Request refresh'}</small></button>}
        <button type="button" className={'ops-hub-quick-action'+(daily?.late_arrival?' selected':'')} aria-pressed={Boolean(daily?.late_arrival)} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('lateArrival')}>
         <span className="ops-hub-quick-icon"><Clock3 size={18}/></span><span className="ops-hub-quick-name">Late arrival</span>{daily?.late_arrival&&<Check size={15} className="ops-hub-quick-check"/>}
        </button>
@@ -520,7 +521,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
        <div className="ops-hub-secondary-actions" aria-label="Additional room actions" style={{display:'flex',gap:7,flexWrap:'wrap',marginTop:9}}>
         {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>Room notes{daily?.notes?.trim()?' · Added':''}</button>}
         {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>Packages{selectedPackageNames.length?' · '+selectedPackageNames.length:''}</button>}
-        {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='service'?null:'service')}>Service · {daily?.service_type||'None'}</button>}
+
        </div>
       </div>
       <div className="ops-hub-quick-section" style={{display:'flex',gap:9,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
