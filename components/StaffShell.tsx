@@ -399,12 +399,24 @@ export default function StaffShell({
     item => item.module_key === 'dashboard'
   )
 
+  const shiftReportsItem = nav.find(
+    item => item.module_key === 'shift_reports'
+  )
+
+  // Keep sidebar placement separate from module permissions and destinations.
+  const administrativeKeys = new Set(['housekeeping_quality', 'staff'])
+  const administrationNav = nav.filter(item =>
+    administrativeKeys.has(item.module_key)
+  )
+
   const breakfastNav = nav.filter(item =>
     breakfastModules.has(item.module_key)
   )
 
   const operationsNav = nav.filter(item =>
-    operationsModules.has(item.module_key)
+    operationsModules.has(item.module_key) &&
+    item.module_key !== 'shift_reports' &&
+    !administrativeKeys.has(item.module_key)
   )
 
   const nestedChildrenByParent: Record<string, string[]> = {
@@ -438,6 +450,8 @@ export default function StaffShell({
   const otherNav = nav.filter(
     item =>
       item.module_key !== 'dashboard' &&
+      item.module_key !== 'shift_reports' &&
+      !administrativeKeys.has(item.module_key) &&
       !breakfastModules.has(item.module_key) &&
       !operationsModules.has(item.module_key)
   )
@@ -663,6 +677,7 @@ export default function StaffShell({
                 </span>
               </Link>
             )}
+            {shiftReportsItem && renderNavLink(shiftReportsItem)}
             <Link href="/notifications" className={pathname==='/notifications'?'active':''} aria-current={pathname==='/notifications'?'page':undefined}>
               <span className="sidebar-link-icon"><Bell size={17}/></span>
               <span className="sidebar-link-label">Notifications</span>
@@ -721,6 +736,13 @@ export default function StaffShell({
                 <span className="sidebar-link-icon"><ClipboardList size={17}/></span>
                 <span className="sidebar-link-label">Today's Sidework</span>
               </Link>}
+            </div>
+          )}
+
+          {administrationNav.length > 0 && (
+            <div className="ops-nav-section">
+              <div className="ops-nav-label">Administration</div>
+              {administrationNav.map(item => renderNavLink(item))}
             </div>
           )}
 
