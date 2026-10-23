@@ -3,6 +3,7 @@
 import { getStaffSession } from '@/lib/client/staff-session'
 import { staffModuleLabel } from '@/lib/module-labels'
 import { staffInitials } from '@/lib/staff-initials'
+import {roomCheckStage} from '@/lib/room-check-queue'
 import {notificationHref,type RoomNotification} from '@/lib/notification-links'
 import StaffShiftNote from '@/components/StaffShiftNote'
 import { NON_DESKTOP_WORKSPACE_MEDIA, TABLET_RAIL_MEDIA } from '@/lib/layout-breakpoints'
@@ -37,7 +38,8 @@ import {
   BookOpen,
   Menu,
   X,
-  UsersRound
+  UsersRound,
+  ChevronDown
 } from 'lucide-react'
 
 type ModuleRow = {
@@ -141,6 +143,25 @@ const hrefFallback: Record<string, string> = {
   staff: '/staff'
 }
 
+type NavSectionKey='overview'|'breakfast'|'operations'|'housekeeping'|'administration'|'tools'
+const activeNavSection=(route:string):NavSectionKey=>{
+  if(route.startsWith('/housekeeping/quality')||route.startsWith('/staff'))return 'administration'
+  if(route.startsWith('/breakfast')||route.startsWith('/front-desk')||route.startsWith('/kitchen'))return 'breakfast'
+  if(route==='/housekeeping/today'||route.startsWith('/housekeeping/arrivals')||route.startsWith('/housekeeping/refreshes')||route.startsWith('/housekeeping/sidework'))return 'housekeeping'
+  if(route.startsWith('/reservations')||route.startsWith('/room-checks')||route.startsWith('/reservation-sync')||route==='/housekeeping'||route.startsWith('/housekeeping/assignments')||route.startsWith('/ops'))return 'operations'
+  if(route==='/dashboard'||route==='/notifications'||route.startsWith('/shift-reports'))return 'overview'
+  return 'tools'
+}
+const initialNavOpen=(route:string):Record<NavSectionKey,boolean>=>({
+  overview:true,
+  breakfast:activeNavSection(route)==='breakfast',
+  operations:activeNavSection(route)==='operations',
+  housekeeping:activeNavSection(route)==='housekeeping',
+  administration:activeNavSection(route)==='administration',
+  tools:activeNavSection(route)==='tools'
+})
+const hotelDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+
 const breakfastModules = new Set([
   'front_desk',
   'kitchen',
@@ -200,6 +221,8 @@ export default function StaffShell({
   const [searchOpen, setSearchOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [navOpen,setNavOpen]=useState<Record<NavSectionKey,boolean>>(()=>initialNavOpen(pathname))
+  const [inspectionCounts,setInspectionCounts]=useState({ready:0,arrivals:0})
 
   const [notifications, setNotifications] =
     useState<NotificationRow[]>([])
@@ -251,7 +274,36 @@ export default function StaffShell({
   useEffect(() => {
     setMobileNavOpen(false)
     setNotificationsOpen(false)
+    // The current page must always be discoverable, even if its group was collapsed.
+    const section=activeNavSection(pathname)
+    setNavOpen(prev=>prev[section]?prev:{...prev,[section]:true})
   }, [pathname])
+
+  useEffect(()=>{
+    try{
+      const saved=window.localStorage.getItem('ths-nav-sections')
+      if(!saved)return
+      const parsed=JSON.parse(saved)
+      if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return
+      setNavOpen(prev=>{
+        const next={...prev}
+        for(const key of Object.keys(next) as NavSectionKey[]){
+          if(typeof parsed[key]==='boolean')next[key]=parsed[key]
+        }
+        next[activeNavSection(pathname)]=true
+        return next
+      })
+    }catch{}
+    // Restore once; later clicks update storage without full navigation.
+  },[])
+
+  const toggleNavSection=(key:NavSectionKey)=>{
+    setNavOpen(prev=>{
+      const next={...prev,[key]:!prev[key]}
+      try{window.localStorage.setItem('ths-nav-sections',JSON.stringify(next))}catch{}
+      return next
+    })
+  }
 
   useEffect(() => {
     if(access?.requiresPasswordChange && pathname !== '/settings') router.replace('/settings')
@@ -354,6 +406,56 @@ export default function StaffShell({
 
     setUnreadCount(0)
   }
+
+  const maySeeInspections=Boolean(access&&(access.isAdmin||(access.permissions||[]).includes('room_checks.perform')||(access.capabilities||[]).some(cap=>['hospitality_assistant','room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(cap))))
+
+  useEffect(()=>{
+    if(!maySeeInspections){setInspectionCounts({ready:0,arrivals:0});return}
+    let active=true
+    let inFlight=false
+    const refresh=async()=>{
+      if(!active||inFlight||document.visibilityState==='hidden')return
+      inFlight=true
+      try{
+        const response=await fetch('/api/room-checks?date='+encodeURIComponent(hotelDay()),{cache:'no-store'})
+        if(!response.ok)throw new Error('Inspection queue unavailable')
+        const data=await response.json()
+        if(!active)return
+        let ready=0,arrivals=0
+        for(const room of Array.isArray(data.rooms)?data.rooms:[]){
+          const stage=roomCheckStage({...room,checkIssueOpen:room.issueOpen,readyForInspection:room.inspectionSubmitted})
+          if(stage!=='ready'&&stage!=='recheck')continue
+          ready++
+          if(String(room.reservationStatus||'').trim().toLowerCase()==='arrival')arrivals++
+        }
+        setInspectionCounts({ready,arrivals})
+      }catch{
+        if(active)setInspectionCounts({ready:0,arrivals:0})
+      }finally{inFlight=false}
+    }
+    void refresh()
+    const timer=window.setInterval(()=>{void refresh()},45000)
+    const onRefresh=()=>{void refresh()}
+    window.addEventListener('ths:live-data-refresh',onRefresh)
+    window.addEventListener('focus',onRefresh)
+    document.addEventListener('visibilitychange',onRefresh)
+    return()=>{
+      active=false
+      window.clearInterval(timer)
+      window.removeEventListener('ths:live-data-refresh',onRefresh)
+      window.removeEventListener('focus',onRefresh)
+      document.removeEventListener('visibilitychange',onRefresh)
+    }
+  },[maySeeInspections])
+
+  const navActionBadge=(count:number,label:string)=>count>0?<span className="staff-nav-action-count" aria-label={count+' '+label} title={count+' '+label}>{count>99?'99+':count}</span>:null
+  const navSectionHeading=(key:NavSectionKey,label:string,count=0)=>(
+    <button type="button" className="ops-nav-heading" aria-expanded={navOpen[key]} aria-controls={'ths-nav-'+key} onClick={()=>toggleNavSection(key)}>
+      <span>{label}</span>
+      {!navOpen[key]&&navActionBadge(count,'pending actions')}
+      <ChevronDown size={13} className={navOpen[key]?'is-open':''} aria-hidden="true"/>
+    </button>
+  )
 
   const managementWorkspace=Boolean(access?.isAdmin || access?.capabilities?.some(cap=>['manager','general_manager','operations_manager','owner','hospitality_assistant'].includes(cap)))
   const hasReservations=modules.some(module=>module.module_key==='reservations'&&module.active!==false&&module.enabled!==false)
@@ -551,6 +653,7 @@ export default function StaffShell({
           {staffModuleLabel(item)}
         </span>
 
+        {item.module_key==='reservations' && navActionBadge(inspectionCounts.ready,'rooms ready for inspection')}
         {preview && (
           <em className="preview-badge">
             Preview
@@ -566,8 +669,8 @@ export default function StaffShell({
 
     // Hospitality Assistants need a direct Inspections entry even when
     // module filtering leaves Reservations without other nested children.
-    const showHaInspections=item.module_key==='reservations' && (access?.capabilities||[]).includes('hospitality_assistant')
-    if (!children.length && !showHaInspections) {
+    const showInspectionLink=item.module_key==='reservations' && maySeeInspections
+    if (!children.length && !showInspectionLink) {
       return renderNavLink(item)
     }
 
@@ -581,9 +684,10 @@ export default function StaffShell({
           {children.map(child =>
             renderNavLink(child, { nested: true })
           )}
-          {item.module_key==='reservations' && (access?.capabilities||[]).includes('hospitality_assistant') && <Link href="/room-checks" className={pathname==='/room-checks'?'active sidebar-nested-link':'sidebar-nested-link'}>
+          {showInspectionLink && <Link href="/room-checks" className={pathname==='/room-checks'?'active sidebar-nested-link':'sidebar-nested-link'}>
             <span className="sidebar-link-icon"><ShieldCheck size={17}/></span>
             <span className="sidebar-link-label">Inspections</span>
+            {navActionBadge(inspectionCounts.ready,'rooms ready for inspection')}
           </Link>}
         </div>
       </div>
