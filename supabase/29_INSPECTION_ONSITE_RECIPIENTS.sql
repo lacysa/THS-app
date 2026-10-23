@@ -42,18 +42,37 @@ begin
   where staff.active
     and staff.auth_user_id is not null
     and (
+      -- Managers remain eligible when covering a front-desk shift.
       lower(coalesce(role.name,'')) in (
-        'manager','general manager','operations manager','foh manager',
-        'hospitality assistant','hospitality asst'
+        'manager','general manager','operations manager','foh manager'
       )
       or exists (
         select 1
         from public.staff_member_capabilities capability
         where capability.staff_member_id = staff.id
           and capability.capability_key in (
-            'manager','general_manager','operations_manager','foh_manager',
-            'hospitality_assistant'
+            'manager','general_manager','operations_manager','foh_manager'
           )
+      )
+      or (
+        (
+          lower(coalesce(role.name,'')) in (
+            'hospitality assistant','hospitality asst'
+          )
+          or exists (
+            select 1
+            from public.staff_member_capabilities capability
+            where capability.staff_member_id = staff.id
+              and capability.capability_key = 'hospitality_assistant'
+          )
+        )
+        -- Dual-role staff working a Runner/Housekeeping shift are not
+        -- notified merely because they also hold HA app capabilities.
+        and (
+          nullif(btrim(shift.role_label),'') is null
+          or lower(shift.role_label) like '%hospitality assistant%'
+          or lower(shift.role_label) like '%hospitality asst%'
+        )
       )
     );
 
