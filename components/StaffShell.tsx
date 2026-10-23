@@ -691,6 +691,16 @@ export default function StaffShell({
           {modules.some(m=>['housekeeping_today_cleans','housekeeping_today_refreshes','housekeeping_today_sidework'].includes(m.module_key)) && (
             <div className="ops-nav-section">
               <div className="ops-nav-label">Housekeeping</div>
+              {(access?.capabilities||[]).includes("hospitality_assistant") && <>
+                <Link href="/housekeeping?view=rooms" className={pathname==="/housekeeping" ? "active" : ""}>
+                  <span className="sidebar-link-icon"><BedDouble size={17}/></span>
+                  <span className="sidebar-link-label">Housekeeping Board</span>
+                </Link>
+                <Link href="/housekeeping?view=inspections" className={pathname==="/housekeeping" ? "active" : ""}>
+                  <span className="sidebar-link-icon"><ShieldCheck size={17}/></span>
+                  <span className="sidebar-link-label">Inspections</span>
+                </Link>
+              </>}
               {modules.some(m=>m.module_key==='housekeeping_today_cleans') && (
                 <Link href="/housekeeping/today" className={pathname==='/housekeeping/today'?'active':''}>
                   <span className="sidebar-link-icon"><BedDouble size={17}/></span>
