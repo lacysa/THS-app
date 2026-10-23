@@ -704,6 +704,12 @@ export default function StaffShell({
                   <span className="sidebar-link-label">Today's Cleans</span>
                 </Link>
               )}
+              {(access?.isAdmin || (access?.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','foh_manager','hospitality_assistant'].includes(cap))) && (
+                <Link href="/housekeeping/arrivals" className={pathname==='/housekeeping/arrivals'?'active':''}>
+                  <span className="sidebar-link-icon"><ClipboardCheck size={17}/></span>
+                  <span className="sidebar-link-label">Today's Arrivals</span>
+                </Link>
+              )}
               {(access?.isAdmin || (access?.capabilities||[]).some(cap=>['manager','general_manager','operations_manager','owner','housekeeping','hospitality_assistant'].includes(cap))) && (
                 <Link href="/housekeeping/refreshes" className={pathname==='/housekeeping/refreshes'?'active':''}>
                   <span className="sidebar-link-icon"><BedDouble size={17}/></span>
