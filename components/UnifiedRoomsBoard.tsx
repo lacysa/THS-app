@@ -159,7 +159,7 @@ function isBlocked(row:RoomRow){return normalize(row.reservationStatus)==='block
 function requiresRoomCheck(row:RoomRow){return !isStayover(row)&&!isBlocked(row)}
 function isArrivalOnly(row:RoomRow){return normalize(row.reservationStatus)==='arrival'&&!String(row.serviceType||'').toUpperCase().startsWith('OUT')}
 function requiresSelfCheck(row:RoomRow){return requiresHousekeeperSelfCheck(row)}
-export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialInspectionRoomId,initialFilter='all',initialView='rooms',allowAssignments=false}:{initialDate?:string;initialRoomId?:string;initialInspectionRoomId?:string;initialFilter?:Filter;initialView?:'rooms'|'assignments'|'inspections';allowAssignments?:boolean}={}){
+export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialInspectionRoomId,initialFilter='all',initialView='rooms',allowAssignments=false,allowInspections=false}:{initialDate?:string;initialRoomId?:string;initialInspectionRoomId?:string;initialFilter?:Filter;initialView?:'rooms'|'assignments'|'inspections';allowAssignments?:boolean;allowInspections?:boolean}={}){
   const [date,setDate]=useState(initialDate||todayDetroit())
   const [workspaceView,setWorkspaceView]=useState<'rooms'|'assignments'|'inspections'>(!initialRoomId?initialView:'rooms')
   const [access,setAccess]=useState<Access|null>(null)
@@ -200,6 +200,8 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialInsp
   useEffect(()=>{dateRef.current=date},[date])
   // Allow dashboard shortcuts to select the relevant tab, including client-side navigation.
   useEffect(()=>{setFilter(initialFilter)},[initialFilter])
+  // Keep deep links in sync when the query changes without unmounting the workspace.
+  useEffect(()=>{if(!initialRoomId)setWorkspaceView(initialView)},[initialView,initialRoomId])
   useEffect(()=>{
     const query=window.matchMedia(NON_DESKTOP_WORKSPACE_MEDIA)
     const tablet=window.matchMedia(TABLET_WORKSPACE_MEDIA)
@@ -802,12 +804,14 @@ export default function UnifiedRoomsBoard({initialDate,initialRoomId,initialInsp
   // Task-focused views share the same dated room records and inspection API.
   // Role capabilities determine which options exist; housekeeping-only staff
   // stay in My Assignments without gaining inspection or staffing access.
-  const mayInspect=canInspect(access)
-  const mayAssign=allowAssignments&&isManager(access)
+  // The server has already authorized these tabs. Render them on the first paint
+  // rather than flashing the Rooms view while the client session is loading.
+  const mayInspect=allowInspections||canInspect(access)
+  const mayAssign=allowAssignments
   const showAssignmentView=mayAssign&&workspaceView==='assignments'&&!initialRoomId
   const showInspectionView=mayInspect&&workspaceView==='inspections'&&!initialRoomId
   const workspaceTabs=(mayAssign||mayInspect)?<nav className="rooms-workspace-tabs" aria-label="Housekeeping workspace">
-    {mayAssign&&<Link href="/housekeeping/assignments">Room Assignments</Link>}
+    {mayAssign&&<button type="button" className={showAssignmentView?'active':''} aria-current={showAssignmentView?'page':undefined} onClick={()=>setWorkspaceView('assignments')}>Room Assignments</button>}
     {mayInspect&&<button type="button" className={showInspectionView?'active':''} aria-current={showInspectionView?'page':undefined} onClick={()=>setWorkspaceView('inspections')}>Inspections</button>}
   </nav>:null
   if(showAssignmentView)return <div className="rooms-workspace module-pretty-page">
