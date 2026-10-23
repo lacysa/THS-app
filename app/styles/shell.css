@@ -48,9 +48,11 @@ body{overflow-x:hidden;}
 .ops-logo-copy strong{color:#fff!important;font-size:11px!important;font-weight:800;line-height:1.1;letter-spacing:.045em;text-transform:uppercase;}
 .ops-logo-copy span{margin-top:3px;color:#8f8c84!important;font-size:9px!important;}
 
-.staff-ops-nav{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;}
+/* The generic .ops-nav uses CSS Grid. Here that grid stretches collapsed
+   sections to fill the sidebar's full height; use a normal content stack. */
+.staff-ops-nav{display:block;flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;align-content:start;}
 .staff-ops-nav::-webkit-scrollbar{width:0;height:0;}
-.ops-nav-section{margin-top:17px;}
+.staff-ops-nav .ops-nav-section{margin-top:12px;}
 .ops-nav-section:first-child{margin-top:0;}
 .ops-nav-label{margin-bottom:5px;padding:0 10px;color:#77746d!important;font-size:8px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;}
 
