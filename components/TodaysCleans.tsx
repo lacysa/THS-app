@@ -27,11 +27,20 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   }catch(e:any){setError(e.message||'Unable to load your rooms.')}finally{setLoading(false)}
  },[date])
  useEffect(()=>{void load()},[load])
+ const available=useMemo(()=>mode==='refreshes'?rows.filter(r=>r.reservationStatus.trim().toLowerCase()==='stayover'&&!r.assignedTo.trim()&&['','RF','REFRESH'].includes(r.serviceType.trim().toUpperCase())):[],[rows,mode])
  const mine=useMemo(()=>rows.filter(r=>{const refresh=r.reservationStatus.trim().toLowerCase()==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim());if(mode==='refreshes'&&!refresh)return false;if(mode==='cleans'&&r.reservationStatus.trim().toLowerCase()==='stayover')return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase()).filter(Boolean);const full=staffName.trim().toLowerCase();return assigned.length>0 && (manager || Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0])))}),[rows,staffName,mode,manager])
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
  const locked=(r:Room)=>!manager&&mode==='cleans'&&!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
+ async function claim(room:Room){
+  setBusy(room.roomId);setMessage('');setError('')
+  try{
+   const response=await fetch('/api/housekeeping/claim-refresh',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate:date,roomId:room.roomId})})
+   const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Unable to claim refresh.')
+   setMessage(room.roomName+' · RF requested and assigned to you.');await load()
+  }catch(e:any){setError(e.message||'Unable to claim refresh.');await load()}finally{setBusy('')}
+ }
  async function begin(room:Room){
   setBusy(room.roomId);setMessage('');setError('')
   try{
@@ -52,6 +61,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'Assigned full cleans, in cleaning order.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
   <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
+  {mode==='refreshes'&&!loading&&<section aria-label="Available stayover refreshes" style={{marginBottom:20}}><h2 style={{fontSize:18,margin:'8px 0 12px'}}>Available stayovers</h2>{available.length===0?<p className="ths-cleans-empty">No unassigned stayovers available to claim.</p>:<div className="ths-refresh-claim-list">{available.map(room=><div key={room.roomId} className="ths-refresh-claim-row"><strong>{room.roomName}</strong><button type="button" disabled={Boolean(busy)} onClick={()=>void claim(room)}>{busy===room.roomId?'Claiming…':'Start RF'}</button></div>)}</div>}</section>}
   {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned for this date.':'No full room cleans assigned for this date.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
    const waiting=isWaiting(r),orderLocked=locked(r),done=r.complete
    return <article className={'ths-clean-card '+(done?'done':waiting||orderLocked?'locked':'available')+(manager?' inspection-entry':'')} key={r.roomId}>
@@ -64,6 +74,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    </article>
   })}</div>}
   <style jsx>{`
+   .ths-refresh-claim-list{display:grid;gap:9px}.ths-refresh-claim-row{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#fff;border:1px solid #dce5e9;border-radius:12px;padding:12px 15px}.ths-refresh-claim-row button{background:#34566a;color:white;border:0;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer;white-space:nowrap}.ths-refresh-claim-row button:disabled{opacity:.55}
    .ths-cleans{max-width:1100px;margin:auto;padding:20px 18px 64px;color:#263b47}
    .ths-cleans-hero{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;padding:24px;border-radius:20px;background:linear-gradient(115deg,#e2f5f4,#edf3fd,#e9e1fb)}
    .ths-cleans-hero small,.ths-clean-head small{letter-spacing:.1em;font-size:11px;font-weight:800;color:#67818e}.ths-cleans-hero h1{font-size:clamp(25px,4vw,34px);margin:7px 0}.ths-cleans-hero p{margin:0;color:#66808b}.ths-cleans-actions{display:flex;gap:8px}.ths-cleans-actions input,.ths-cleans-actions button{background:white;border:1px solid #d4dfe5;border-radius:12px;padding:12px;color:#263b47}
