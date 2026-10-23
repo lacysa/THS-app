@@ -151,7 +151,7 @@ function canInspect(access:Access|null){
   if(!access)return false
   const caps=access.capabilities||[]
   const perms=access.permissions||[]
-  return Boolean(access.isAdmin||perms.includes('room_checks.perform')||caps.some(c=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(c)))
+  return Boolean(access.isAdmin||perms.includes('room_checks.perform')||caps.some(c=>['hospitality_assistant','room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(c)))
 }
 function isStayover(row:RoomRow){return normalize(row.reservationStatus)==='stayover'}
 function isRefresh(row:RoomRow){return isStayover(row)&&String(row.serviceType||'').trim().toUpperCase()==='RF'}
