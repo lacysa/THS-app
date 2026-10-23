@@ -14,12 +14,15 @@ export type RoomNotification = {
 export function notificationHref(n:RoomNotification,canOpenRooms:boolean):string{
  const validRoom=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(n.room_id||'')
  const validDate=/^20\d{2}-\d{2}-\d{2}$/.test(n.service_date||'')
+ if(canOpenRooms && validRoom && validDate && n.notification_type==='room_ready_for_inspection')
+  return '/room-checks?room='+encodeURIComponent(n.room_id!)+'&date='+encodeURIComponent(n.service_date!)
  if(canOpenRooms && validRoom && validDate)
   return '/housekeeping?room='+encodeURIComponent(n.room_id!)+'&date='+encodeURIComponent(n.service_date!)
  return '/notifications?focus='+encodeURIComponent(n.id)
 }
 export function notificationKind(n:RoomNotification){
  switch(n.notification_type){
+  case 'room_ready_for_inspection':return 'Ready for inspection'
   case 'room_mention':return 'Mention'
   case 'housekeeping_correction':return 'Room correction'
   case 'housekeeping_recheck_passed':return 'Room re-check'
