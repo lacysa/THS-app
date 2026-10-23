@@ -381,6 +381,7 @@ export default function StaffShell({
             !['housekeeping_today_cleans','housekeeping_today_refreshes','housekeeping_today_sidework'].includes(m.module_key) &&
             m.module_key !== 'breakfast_menu_manager' &&
             m.module_key !== 'room_board' &&
+            !(hasReservations && m.module_key==='ops') &&
             m.module_key !== 'housekeeping_assignments' &&
             m.module_key !== 'room_checks' &&
             !(managementWorkspace && hasReservations && m.module_key==='housekeeping') &&
