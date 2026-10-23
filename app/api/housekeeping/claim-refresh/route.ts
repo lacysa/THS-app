@@ -35,15 +35,23 @@ export async function POST(req:NextRequest){
   if(status!=='stayover'||!['','RF','REFRESH'].includes(service)) return NextResponse.json({error:'Only available Stayover rooms can be claimed.'},{status:400})
   if(existing) return NextResponse.json({error:'This refresh is already assigned to '+existing+'.',alreadyAssigned:true},{status:409})
 
+  // Preserve atomic first-claim-wins behavior for both NULL and empty-string
+  // representations of an unassigned housekeeper.
   const now=new Date().toISOString()
+  const assignmentFilter='assigned_to.is.null,assigned_to.eq.'
   const {data:claimed,error:claimErr}=await admin.from('housekeeping_daily_rooms')
     .update({assigned_to:person.name,service_type:'RF',updated_at:now})
-    .eq('service_date',serviceDate).eq('room_id',roomId).eq('assigned_to','')
-    .select('room_id,assigned_to').maybeSingle()
+    .eq('service_date',serviceDate)
+    .eq('room_id',roomId)
+    .or(assignmentFilter)
+    .eq('reservation_status',row.reservation_status)
+    .select('room_id,assigned_to,service_type').maybeSingle()
   if(claimErr) return NextResponse.json({error:claimErr.message},{status:500})
   if(!claimed){
-    const {data:latest}=await admin.from('housekeeping_daily_rooms').select('assigned_to').eq('service_date',serviceDate).eq('room_id',roomId).maybeSingle()
-    return NextResponse.json({error:'This refresh is already assigned'+(latest?.assigned_to?' to '+latest.assigned_to:'')+'.',alreadyAssigned:true},{status:409})
+    const {data:latest}=await admin.from('housekeeping_daily_rooms')
+      .select('assigned_to,reservation_status').eq('service_date',serviceDate).eq('room_id',roomId).maybeSingle()
+    if(latest?.assigned_to) return NextResponse.json({error:'This refresh is already assigned to '+latest.assigned_to+'.',alreadyAssigned:true},{status:409})
+    return NextResponse.json({error:'The room changed before the refresh could be claimed. Please refresh and try again.'},{status:409})
   }
-  return NextResponse.json({ok:true,assignedTo:person.name})
+  return NextResponse.json({ok:true,assignedTo:claimed.assigned_to,serviceType:claimed.service_type})
 }
