@@ -14,5 +14,5 @@ export default async function RoomInspectionsPage({searchParams}:{searchParams:P
  const initialDate=/^20\d{2}-\d{2}-\d{2}$/.test(params?.date||'')?params.date:undefined
  const room=params?.inspectionRoom||params?.room||''
  const initialRoomId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(room)?room:undefined
- return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialDate={initialDate} initialInspectionRoomId={initialRoomId} initialView="inspections" allowAssignments={Boolean(access.isAdmin||caps.some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap)))}/></StaffShell>
+ return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialDate={initialDate} initialInspectionRoomId={initialRoomId} initialView="inspections" allowInspections={true} allowAssignments={Boolean(access.isAdmin||caps.some(cap=>['manager','general_manager','operations_manager','owner'].includes(cap)))}/></StaffShell>
 }
