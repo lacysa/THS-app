@@ -22,5 +22,5 @@ export default async function Page({searchParams}:{searchParams:Promise<{filter?
     caps.some(cap=>['hospitality_assistant','room_checks','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(cap))
   const initialView=!initialRoomId&&params?.view==='inspections'&&allowInspections?'inspections':
     params?.view==='rooms'?'rooms':params?.view==='assignments'&&allowAssignments?'assignments':allowInspections?'inspections':allowAssignments?'assignments':'rooms'
-  return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate} initialView={initialView} initialInspectionRoomId={initialView==='inspections'?initialInspectionRoomId:undefined} allowAssignments={allowAssignments}/></StaffShell>
+  return <StaffShell title="Housekeeping"><UnifiedRoomsBoard initialFilter={initialRoomId?'all':initialFilter} initialRoomId={initialRoomId} initialDate={initialDate} initialView={initialView} initialInspectionRoomId={initialView==='inspections'?initialInspectionRoomId:undefined} allowAssignments={allowAssignments} allowInspections={Boolean(allowInspections)}/></StaffShell>
 }
