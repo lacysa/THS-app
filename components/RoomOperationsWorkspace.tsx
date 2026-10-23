@@ -6,6 +6,7 @@ import { derivedLiveCondition, roomServiceTask } from '@/lib/room-state'
 import {CalendarDays,ChevronRight,Search,SlidersHorizontal,X} from 'lucide-react'
 import type ReservationsBoard from '@/components/ReservationsBoard'
 import OpsRoomHub from '@/components/OpsRoomHub'
+import ReservationCalendar from '@/components/ReservationCalendar'
 import { NON_DESKTOP_WORKSPACE_MEDIA } from '@/lib/layout-breakpoints'
 
 type ReservationRow=Parameters<typeof ReservationsBoard>[0]['rows'][number]
@@ -85,7 +86,7 @@ function arrivalServiceLabel(type:string,row:OpsRow,guest:ReturnType<typeof acti
  // Arrival notes override all, explicit room times override imported booking times,
  // and a manager-edited guest time beats an old default 4pm.
  const staffCheckIn=guest?.checkInTimeManuallyEdited?checkIn:null
- const time=arrivalNoteTime(guest)||(staffCheckIn&&(!expected||expected==='4pm')?staffCheckIn:null)||expected||checkIn||'4pm'
+ const time=staffCheckIn||arrivalNoteTime(guest)||((expected&&expected!=='4pm')?expected:null)||checkIn||expected||'4pm'
  return type+' ('+time+')'
 }
 function shiftDate(day:string,days:number){
@@ -114,11 +115,12 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  const router=useRouter()
  const [isChangingDate,startDateTransition]=useTransition()
  const [dateInput,setDateInput]=useState(serviceDate)
- const [selected,setSelected]=useState<{roomId:string;reservationId?:string;view?:'room'|'log';action?:string;editor?:'room_notes'|'packages'|'inspection'|'tub_assignee'}|null>(null)
+ const [selected,setSelected]=useState<{roomId:string;reservationId?:string;view?:'room'|'guest'|'log';action?:string;editor?:'room_notes'|'packages'|'inspection'|'tub_assignee'}|null>(null)
  const [category,setCategory]=useState<Category>('all')
  const [showFilters,setShowFilters]=useState(false)
  const [query,setQuery]=useState('')
  const [conditionsOnly,setConditionsOnly]=useState(false)
+ const [boardView,setBoardView]=useState<'rooms'|'calendar'>('rooms')
  const [displayMode,setDisplayMode]=useState<'table'|'cards'>('cards')
  const effectiveDisplayMode=embeddedCards?'cards':displayMode
  const [isCompact,setIsCompact]=useState(false)
@@ -247,6 +249,8 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   return !query.trim()||[row.roomName,guest,row.roomNotes||'',row.assignedTo||'',...(correctionNotes[row.roomId]||[]).map(note=>note.note)].some(value=>String(value).toLowerCase().includes(query.trim().toLowerCase()))
  }),[liveRows,category,conditionsOnly,query,serviceDate,correctionNotes])
  return <div className={'ths-unified-operations ths-operations-simplified'+(isChangingDate?' is-date-loading':'')}>
+   {!embeddedCards&&<div role="tablist" aria-label="Room boards" style={{display:'flex',gap:6,marginBottom:14}}><button type="button" role="tab" aria-selected={boardView==='rooms'} onClick={()=>setBoardView('rooms')} style={{padding:'9px 16px',borderRadius:10,border:'1px solid #d6e4e8',background:boardView==='rooms'?'#dcefeb':'#fff',fontWeight:700,cursor:'pointer'}}>Rooms & guests</button><button type="button" role="tab" aria-selected={boardView==='calendar'} onClick={()=>setBoardView('calendar')} style={{padding:'9px 16px',borderRadius:10,border:'1px solid #d6e4e8',background:boardView==='calendar'?'#dcefeb':'#fff',fontWeight:700,cursor:'pointer'}}>Reservation calendar</button></div>}
+   {boardView==='calendar'&&!embeddedCards?<ReservationCalendar serviceDate={serviceDate}/>:<>
    {!embeddedCards&&<>
    <div className="ths-calendar-date ths-room-operations-date" aria-label="Choose room operations date">
     <CalendarDays size={18} aria-hidden="true"/>
@@ -287,7 +291,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
       const condition=roomCondition(row)
       const tone=conditionTone(condition)
       const guest=activeGuest(row,serviceDate)
-      const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})
+      const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:guest?'guest':'room'})
       const navigate=(event:React.MouseEvent,view:'room'|'log',action?:string,editor?:'room_notes'|'packages'|'inspection'|'tub_assignee')=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view,action,editor})}
       const history=(action:string)=>(event:React.MouseEvent)=>navigate(event,'log',action)
       const editor=(name:'room_notes'|'packages'|'inspection'|'tub_assignee')=>(event:React.MouseEvent)=>navigate(event,'room',undefined,name)
@@ -331,7 +335,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
      const guest=activeGuest(row,serviceDate)
      const service=String(row.serviceType||'').trim().toUpperCase()
      const tone=conditionTone(condition)
-     return <button className={`ths-ops-room-row ths-ops-room-card tone-${tone}`} type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined})}>
+     return <button className={`ths-ops-room-row ths-ops-room-card tone-${tone}`} type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:guest?'guest':'room'})}>
       <span className="ths-ops-room-info">
        <span className="ths-ops-card-top">
         <span className="ths-ops-room-name">{row.roomName}{roomOutLabel(row)&&<sup className="ths-ops-out-sup" title="Room marked OUT; initials if recorded" aria-label={'Room marked '+roomOutLabel(row)}>{roomOutLabel(row)}</sup>}<span className="ths-ops-activity">{arrivalServiceLabel(type,row,guest)}{service==='RF'?' · RF':''}</span></span>
@@ -369,5 +373,6 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     {!filtered.length&&<div className="ths-ops-empty">No rooms match these filters. Clear search or select another category.</div>}
    </div>}
    {selected&&<OpsRoomHub key={[selected.roomId,selected.view||'room',selected.action||'all',selected.editor||''].join(':')} roomId={selected.roomId} date={serviceDate} reservationId={selected.reservationId} onClose={()=>setSelected(null)} initialView={selected.view||"room"} initialAction={selected.action||"all"} initialEditor={selected.editor||null}/>}
+   </>}
   </div>
 }
