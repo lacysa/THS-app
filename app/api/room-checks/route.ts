@@ -25,7 +25,7 @@ function roomCandidate(r:any){
 async function context(){
   const access=await getStaffAccess()
   if(!access) return {error:NextResponse.json({error:'Unauthorized'},{status:401})}
-  const allowed=access.isAdmin||access.permissions.includes('room_checks.perform')||access.capabilities.some(c=>['room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(c))
+  const allowed=access.isAdmin||access.permissions.includes('room_checks.perform')||access.capabilities.some(c=>['hospitality_assistant','room_checks','ha_signoff','ha_signoff_override','manager','general_manager','operations_manager','owner'].includes(c))
   if(!allowed) return {error:NextResponse.json({error:'Room-check access required.'},{status:403})}
   return {access}
 }
