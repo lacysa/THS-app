@@ -547,9 +547,12 @@ export default function StaffShell({
 
   const renderOperationItem = (item: ModuleRow) => {
     const children = nestedChildrenFor(item.module_key)
-    const childActive = children.some(itemIsActive)
+    const childActive = children.some(itemIsActive) || (item.module_key==='reservations' && pathname==='/room-checks')
 
-    if (!children.length) {
+    // Hospitality Assistants need a direct Inspections entry even when
+    // module filtering leaves Reservations without other nested children.
+    const showHaInspections=item.module_key==='reservations' && (access?.capabilities||[]).includes('hospitality_assistant')
+    if (!children.length && !showHaInspections) {
       return renderNavLink(item)
     }
 
