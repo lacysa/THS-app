@@ -312,7 +312,6 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         {row.tubCleanCompleted&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={editor("tub_assignee")}>Tub cleaned</button>}
          {(packageNamesByRoom[row.roomId]||[]).map(name=><button key={name} type="button" className="ths-tag-package ths-ops-pill-action" title={name} aria-label={'Edit package: '+name} onClick={editor("packages")}>{name}</button>)}
          {/^OUT$/i.test(String(row.serviceType||'').trim())&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("out_marked")}>OUT</button>}
-         {/OUT-([A-Z]{2,4})/i.test(String(row.serviceType||''))&&<button type="button" className="ths-tag-complete ths-ops-pill-action" onClick={history("tip_envelope_collected")}>Tips · {String(row.serviceType).split('-')[1]}</button>}
         </span>
         {(Boolean(row.roomNotes?.trim())||(correctionNotes[row.roomId]||[]).length>0)&&<div className="ths-ops-note-preview ths-ops-note-stack">
            {row.roomNotes?.trim()&&<button type="button" className="ths-ops-note-inline-action" title="Open room notes" aria-label={'Open room note: '+row.roomNotes} onClick={editor('room_notes')}>{row.roomNotes}</button>}
@@ -357,7 +356,6 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         {row.tubCleanDue&&<span className="alert ths-tag-alert">Tub only{row.tubAssignedTo?` · ${row.tubAssignedTo}`:' · Unassigned'}</span>}
         {service==='RF'&&<span className="ths-tag-refresh">Refresh</span>}
         {/^OUT(?:-[A-Z]{2,4})?$/i.test(service)&&<span className="ths-tag-complete">OUT</span>}
-        {/^OUT-([A-Z]{2,4})$/i.test(service)&&<span className="ths-tag-complete">Tips collected · {service.split('-')[1]}</span>}
        </span>
         {(Boolean(row.roomNotes?.trim())||(correctionNotes[row.roomId]||[]).length>0)&&<span className="ths-ops-card-note">
           <strong>{(correctionNotes[row.roomId]||[]).length?'Room notes & fixes':'Room note'}</strong>
