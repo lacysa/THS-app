@@ -356,6 +356,7 @@ export default function DailyDashboard({
       </div>}
 
       {!commandMode && <div className="daily-visual-overview">
+        <div className="daily-overview-two-column">
         <section className="daily-snapshot-card">
           <div className="daily-snapshot-head">
             <div>
@@ -396,8 +397,6 @@ export default function DailyDashboard({
           </div>
         </section>
 
-        <div style={{margin:'4px 0 16px'}}><Link href="/daily-sheet" className="ops-secondary-btn" style={{display:'inline-flex',alignItems:'center',gap:8,textDecoration:'none',padding:'11px 16px'}}>Print Daily Operations Sheet ↗</Link></div>
-
         {metrics.length > 0 && (
           <div className="daily-metric-grid daily-metric-stack">
             {metrics.map(({label,value,sub,icon:Icon,href,tone})=>(
@@ -412,6 +411,17 @@ export default function DailyDashboard({
             ))}
           </div>
         )}
+        </div>
+        <div className="daily-overview-print"><Link href="/daily-sheet" className="ops-secondary-btn" style={{display:'inline-flex',alignItems:'center',gap:8,textDecoration:'none',padding:'11px 16px'}}>Print Daily Operations Sheet ↗</Link></div>
+        <style>{`
+          .daily-dashboard .daily-overview-two-column{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(270px,.85fr);gap:18px;align-items:start}
+          .daily-dashboard .daily-overview-two-column>.daily-snapshot-card{min-width:0;width:100%;max-width:none}
+          .daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:flex;flex-direction:column;gap:12px;min-width:0;width:100%;margin:0}
+          .daily-dashboard .daily-overview-two-column .daily-metric-card{width:100%;min-width:0;box-sizing:border-box}
+          .daily-dashboard .daily-overview-print{margin:14px 0 16px}
+          @media(max-width:900px){.daily-dashboard .daily-overview-two-column{grid-template-columns:1fr}.daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
+          @media(max-width:560px){.daily-dashboard .daily-overview-two-column>.daily-metric-grid{grid-template-columns:1fr}}
+        `}</style>
       </div>}
 
       {commandMode && <div className="ops-command-secondary-heading"><div><span>DAILY DETAILS</span><h2>Hotel overview</h2></div><p>Room-by-room status, breakfast, staffing and maintenance</p></div>}
