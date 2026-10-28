@@ -343,6 +343,7 @@ export default function DailyDashboard({
 
   return (
     <div className="daily-dashboard">
+      {!commandMode && <div className="daily-dashboard-print-header"><Link href="/daily-sheet" className="ops-secondary-btn">Print Daily Operations Sheet ↗</Link></div>}
       {!commandMode && <div className="daily-dashboard-hero">
         <div>
           <div className="ops-kicker">The Hotel Saugatuck</div>
@@ -412,13 +413,12 @@ export default function DailyDashboard({
           </div>
         )}
         </div>
-        <div className="daily-overview-print"><Link href="/daily-sheet" className="ops-secondary-btn" style={{display:'inline-flex',alignItems:'center',gap:8,textDecoration:'none',padding:'11px 16px'}}>Print Daily Operations Sheet ↗</Link></div>
         <style>{`
-          .daily-dashboard .daily-overview-two-column{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(270px,.85fr);gap:18px;align-items:start}
+          .daily-dashboard .daily-overview-two-column{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:18px;align-items:stretch}
           .daily-dashboard .daily-overview-two-column>.daily-snapshot-card{min-width:0;width:100%;max-width:none}
-          .daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:flex;flex-direction:column;gap:12px;min-width:0;width:100%;margin:0}
+          .daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0;width:100%;margin:0;align-content:start}
           .daily-dashboard .daily-overview-two-column .daily-metric-card{width:100%;min-width:0;box-sizing:border-box}
-          .daily-dashboard .daily-overview-print{margin:14px 0 16px}
+          .daily-dashboard .daily-dashboard-print-header{display:flex;justify-content:flex-end;margin:0 0 12px}.daily-dashboard .daily-dashboard-print-header>a{display:inline-flex;align-items:center;min-height:42px;padding:10px 16px;text-decoration:none;font-weight:700;border-radius:12px}.daily-dashboard .daily-overview-two-column .daily-metric-card{min-height:106px}
           @media(max-width:900px){.daily-dashboard .daily-overview-two-column{grid-template-columns:1fr}.daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
           @media(max-width:560px){.daily-dashboard .daily-overview-two-column>.daily-metric-grid{grid-template-columns:1fr}}
         `}</style>
