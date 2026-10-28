@@ -348,7 +348,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
       <div className="ops-hub-priority">
        <div className="ops-hub-subheading"><strong>Room readiness</strong><small>Tap a value to change it</small></div>
        <div className="ops-hub-primary-cards">
-       <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy||isStayover||isCheckoutAwaitingOut({reservationStatus:daily?.reservation_status,serviceType:daily?.service_type})} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
+       <button type="button" className={'ops-hub-primary-tile '+'ops-hub-field ops-hub-action-card'+(activeEditor==='condition'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='condition'?null:'condition')}>
         <span>Condition</span><span className="ops-hub-action-value"><strong>{present(liveCondition)}</strong>{canManage&&daily&&<Pencil size={15}/>}</span>
        </button>
        <div className="ops-hub-housekeeper-slot" style={{position:'relative',minWidth:0}}>
