@@ -508,8 +508,45 @@ export default function ShiftReportBoard() {
   })).filter(group=>group.items.length>0),[actionItems])
   const printableHandoffGroups = handoffGroups.map(group=>({
     ...group,
-    items:group.items.filter(item=>item.key!=='breakfast-missing')
+    items:group.items.filter(item=>item.key!=='breakfast-missing' && !item.key.startsWith('room-') && !(item.key.startsWith('maintenance-') && summary.maintenanceOpen.some((m:any)=>item.key===`maintenance-${m.id}` && Boolean(m.roomName))))
   })).filter(group=>group.items.length>0)
+
+  // Consolidate cross-department updates by physical room for printing.
+  // Keep independent staff notes and their provenance, but suppress exact repeats.
+  const printableRoomSections = (()=>{
+    type Entry={department:string;text:string}
+    const map=new Map<string,{roomName:string;entries:Entry[]}>()
+    const add=(roomNameRaw:unknown,department:string,textRaw:unknown)=>{
+      const roomName=String(roomNameRaw||'').trim()
+      const text=String(textRaw||'').trim()
+      if(!roomName||!text)return
+      const key=roomName.toLocaleLowerCase()
+      const room=map.get(key)||{roomName,entries:[]}
+      // One occurrence per identical room update, regardless of which source echoed it.
+      const normalize=(value:string)=>value.replace(/\\s+/g,' ').trim().toLocaleLowerCase()
+      if(!room.entries.some(e=>normalize(e.text)===normalize(text)))room.entries.push({department,text})
+      map.set(key,room)
+    }
+    for(const room of roomHandoff){
+      for(const detail of room.details)add(room.roomName,'Room update',detail)
+    }
+    for(const item of auto.housekeepingObservations||[]){
+      add(item.roomName,'Housekeeping / Hospitality',item.note)
+    }
+    for(const note of roomNotes.filter(n=>n.include_in_shift_report)){
+      add(note.roomName,'Guest note',String(note.createdByInitials||authorName(note.createdByName)||'')+': '+String(note.note||''))
+    }
+    for(const item of summary.maintenanceOpen||[]){
+      if(item.roomName)add(item.roomName,'Maintenance · open',item.title)
+    }
+    for(const item of summary.maintenanceComplete||[]){
+      if(item.roomName && item.include_in_shift_report!==false)add(item.roomName,'Maintenance · completed',item.title)
+    }
+    for(const fix of auto.housekeepingFixes||[]){
+      add(fix.roomName,fix.resolved?'Quality · fixed':'Quality · needs correction',fix.note||fix.issue||fix.description||'Inspection correction')
+    }
+    return [...map.values()].sort((a,b)=>a.roomName.localeCompare(b.roomName))
+  })()
 
   function textarea(key:keyof typeof draft,label:string,placeholder:string,authorKey?:keyof NonNullable<Report['note_authors']>) {
     const section=String(authorKey||key.replace('Notes','')).toLowerCase()
@@ -626,20 +663,25 @@ export default function ShiftReportBoard() {
         </div>
       </section>}
 
-      {(auto.housekeepingObservations||[]).length>0&&<section className="shift-print-section shift-print-room-notes">
-        <div className="shift-print-section-title"><h3>Housekeeping &amp; Hospitality room notes</h3><span>{(auto.housekeepingObservations||[]).length} room notes</span></div>
-        <div className="shift-print-list">
-          {(auto.housekeepingObservations||[]).map(item=><div className="shift-print-row" key={'staff-note-'+item.roomId}>
-            <strong>{item.roomName}</strong><span style={{whiteSpace:'pre-wrap'}}>{item.note}</span>
-            {item.lastUpdatedBy&&<small>Room record last updated by {item.lastUpdatedBy}</small>}
-          </div>)}
+      {printableRoomSections.length>0&&<section className="shift-print-section shift-print-room-notes">
+        <div className="shift-print-section-title"><h3>Room-by-room handoff</h3><span>{printableRoomSections.length} rooms</span></div>
+        <div className="shift-print-room-grid">
+          {printableRoomSections.map(room=><article className="shift-print-room-card" key={room.roomName}>
+            <h4>{room.roomName}</h4>
+            <div className="shift-print-room-entries">
+              {room.entries.map((entry,index)=><div className="shift-print-room-entry" key={index}>
+                <span className="shift-print-department">{entry.department}</span>
+                <span className="shift-print-room-detail">{entry.text}</span>
+              </div>)}
+            </div>
+          </article>)}
         </div>
       </section>}
 
       <section className="shift-print-section shift-print-maintenance">
-        <div className="shift-print-section-title"><h3>Maintenance Handled Today</h3><span>{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).length} completed</span></div>
-        {summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).length
-        ? <div className="shift-print-list">{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false).map((m:any)=><div className="shift-print-row" key={m.id}>
+        <div className="shift-print-section-title"><h3>Maintenance Handled Today</h3><span>{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false&&!m.roomName).length} property items</span></div>
+        {summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false&&!m.roomName).length
+        ? <div className="shift-print-list">{summary.maintenanceComplete.filter((m:any)=>m.include_in_shift_report!==false&&!m.roomName).map((m:any)=><div className="shift-print-row" key={m.id}>
            <strong>{m.roomName||m.area||'Property'}</strong>
            <span>{m.title}{m.completedByName?' · Completed by '+m.completedByName:''}</span>
           </div>)}</div>
@@ -672,14 +714,6 @@ export default function ShiftReportBoard() {
         {summary.tomorrowStaff.length>0 && <p className="shift-print-narrative"><strong>Scheduled</strong> {summary.tomorrowStaff.map((s:any)=>`${s.name}${s.roleLabel?` (${s.roleLabel})`:''}`).join(', ')}</p>}
       </section>
 
-      {roomNotes.filter(n=>n.include_in_shift_report).length>0 && <section className="shift-print-section shift-print-room-notes">
-        <div className="shift-print-section-title"><h3>Room / guest notes</h3><span>Guest-facing context</span></div>
-        <div className="shift-print-list">
-          {roomNotes.filter(n=>n.include_in_shift_report).map(n=><div key={`print-note-${n.id}`} className="shift-print-row">
-            <strong>{n.roomName}</strong><span><b>{n.createdByInitials || authorName(n.createdByName)}:</b> {n.note}</span>
-          </div>)}
-        </div>
-      </section>}
       {printNotes('guest','Additional guest notes',draft.guestNotes,'guest')}
       {printNotes('staff','Staff notes',draft.staffNotes,'staff')}
       {printNotes('supplies','Supplies / inventory',draft.suppliesNotes,'supplies')}
@@ -687,6 +721,25 @@ export default function ShiftReportBoard() {
       {printNotes('general','General notes',draft.generalNotes,'general')}
 
       {canManage&&printNotes('management','Management notes',draft.managementNotes,'management')}
+      <style>{`
+        @media print {
+          .shift-print-document .shift-print-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:start}
+          .shift-print-document .shift-print-room-card{break-inside:avoid;page-break-inside:avoid;border:1px solid #dae2e6;border-radius:7px;padding:9px 10px;background:white}
+          .shift-print-document .shift-print-room-card h4{margin:0 0 6px;font-size:11px;color:#243b4b}
+          .shift-print-document .shift-print-room-entry{display:grid;grid-template-columns:82px minmax(0,1fr);gap:7px;padding:5px 0;border-top:1px solid #edf0f2;font-size:9px;line-height:1.35}
+          .shift-print-document .shift-print-department{font-weight:700;color:#627c89}
+          .shift-print-document .shift-print-room-detail{white-space:pre-wrap;overflow-wrap:anywhere}
+          .shift-print-document .shift-print-room-notes{break-before:auto}
+        }
+        @media screen {
+          .shift-print-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+          .shift-print-room-card{border:1px solid #d9e5ea;border-radius:9px;padding:12px}
+          .shift-print-room-card h4{margin:0 0 7px}
+          .shift-print-room-entry{display:grid;grid-template-columns:100px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid #e9edf0}
+          .shift-print-department{font-weight:700;color:#547387}
+          .shift-print-room-detail{white-space:pre-wrap;overflow-wrap:anywhere}
+        }
+      `}</style>
       <footer className="shift-print-footer"><span>THE HOTEL SAUGATUCK · INTERNAL OPERATIONS</span><span>{date} · {shift}</span></footer>
     </div>
   )
