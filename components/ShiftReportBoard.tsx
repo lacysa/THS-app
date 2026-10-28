@@ -543,7 +543,7 @@ export default function ShiftReportBoard() {
       if(item.roomName && item.include_in_shift_report!==false)add(item.roomName,'Maintenance · completed',item.title)
     }
     for(const fix of auto.housekeepingFixes||[]){
-      add(fix.roomName,fix.resolved?'Quality · fixed':'Quality · needs correction',fix.note||fix.issue||fix.description||'Inspection correction')
+      add(fix.roomName,fix.resolved?'Quality · fixed':'Quality · needs correction',[fix.note||fix.issue||fix.description||'Inspection correction',fix.assignedTo?'Assigned: '+fix.assignedTo:'',fix.fixNote?'Fix: '+fix.fixNote:''].filter(Boolean).join(' · '))
     }
     return [...map.values()].sort((a,b)=>a.roomName.localeCompare(b.roomName))
   })()
@@ -642,25 +642,6 @@ export default function ShiftReportBoard() {
             </div>)}
           </div>
         </div>)}
-      </section>}
-
-      {(auto.housekeepingFixes||[]).length>0 && <section className="shift-print-section shift-print-corrections">
-        <div className="shift-print-section-title">
-          <h3>Housekeeping corrections</h3>
-          <span>{(auto.housekeepingFixes||[]).filter(f=>!f.resolved).length
-            ? `${(auto.housekeepingFixes||[]).filter(f=>!f.resolved).length} open`
-            : 'All fixed'}</span>
-        </div>
-        <div className="shift-print-corrections-list">
-          {(auto.housekeepingFixes||[]).map(f=><div key={f.id} className="shift-print-correction">
-            <div className="shift-print-correction-head">
-              <strong>{f.roomName}</strong><span className="shift-print-assignee">{f.assignedTo||'Unassigned'}</span>
-              <span className={`shift-print-fix-status ${f.resolved?'resolved':'open'}`}>{f.resolved?'Fixed':'Needs correction'}</span>
-            </div>
-            <p>{f.note}</p>
-            {f.fixNote&&<p><strong>Fix recorded:</strong> {f.fixNote}</p>}
-          </div>)}
-        </div>
       </section>}
 
       {printableRoomSections.length>0&&<section className="shift-print-section shift-print-room-notes">
