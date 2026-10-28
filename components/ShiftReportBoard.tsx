@@ -395,7 +395,13 @@ export default function ShiftReportBoard() {
 
     const isFullRoomClean = (row:any) => {
       const status=String(row.reservationStatus||'').trim().toLowerCase()
-      return status==='checkout' || status==='out/in'
+      const service=String(row.serviceType||'').trim().toUpperCase()
+      const assigned=String(row.assignedTo||'').trim()
+      // Actual assigned full cleans include vacant-room work. Stayover
+      // refreshes are a separate service and must not inflate clean counts.
+      if(status==='stayover'||service==='RF'||service==='REFRESH')return false
+      if(status==='blocked')return false
+      return Boolean(assigned) || status==='checkout' || status==='out/in'
     }
 
     const isRefresh = (row:any) =>
