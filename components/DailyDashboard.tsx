@@ -414,12 +414,12 @@ export default function DailyDashboard({
         )}
         </div>
         <style>{`
-          .daily-dashboard .daily-overview-two-column{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:18px;align-items:stretch}
+          .daily-dashboard .daily-visual-overview{display:block!important;width:100%;min-width:0}.daily-dashboard .daily-overview-two-column{display:grid!important;grid-column:1/-1;width:100%!important;max-width:none!important;min-width:0;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:18px;align-items:stretch}
           .daily-dashboard .daily-overview-two-column>.daily-snapshot-card{min-width:0;width:100%;max-width:none}
           .daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px;min-width:0;width:100%;margin:0;align-content:stretch;align-self:stretch}
           .daily-dashboard .daily-overview-two-column .daily-metric-card{width:100%!important;max-width:none!important;min-width:0!important;min-height:0!important;box-sizing:border-box;border-radius:18px!important;display:flex!important;align-items:center;justify-content:flex-start;gap:14px;padding:14px 18px!important;aspect-ratio:auto!important;white-space:normal!important}.daily-dashboard .daily-overview-two-column .daily-metric-card>div{min-width:0;flex:1}.daily-dashboard .daily-overview-two-column .daily-metric-card small{white-space:normal;overflow:visible;text-overflow:clip}
           .daily-dashboard .daily-dashboard-print-header{display:flex;justify-content:flex-end;margin:0 0 12px}.daily-dashboard .daily-dashboard-print-header>a{display:inline-flex;align-items:center;min-height:42px;padding:10px 16px;text-decoration:none;font-weight:700;border-radius:12px}.daily-dashboard .daily-overview-two-column .daily-metric-card{height:auto!important}
-          @media(max-width:900px){.daily-dashboard .daily-overview-two-column{grid-template-columns:1fr}.daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:grid;grid-template-columns:1fr!important}}
+          @media(max-width:900px){.daily-dashboard .daily-overview-two-column{grid-template-columns:1fr!important}.daily-dashboard .daily-overview-two-column>.daily-metric-grid{display:grid;grid-template-columns:1fr!important}}
           @media(max-width:560px){.daily-dashboard .daily-overview-two-column>.daily-metric-grid{grid-template-columns:1fr}}
         `}</style>
       </div>}
