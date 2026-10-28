@@ -543,7 +543,7 @@ export default function ShiftReportBoard() {
       if(item.roomName && item.include_in_shift_report!==false)add(item.roomName,'Maintenance · completed',item.title)
     }
     for(const fix of auto.housekeepingFixes||[]){
-      add(fix.roomName,fix.resolved?'Quality · fixed':'Quality · needs correction',[fix.note||fix.issue||fix.description||'Inspection correction',fix.assignedTo?'Assigned: '+fix.assignedTo:'',fix.fixNote?'Fix: '+fix.fixNote:''].filter(Boolean).join(' · '))
+      add(fix.roomName,fix.resolved?'Quality · fixed':'Quality · needs correction',[fix.note||'Inspection correction',fix.assignedTo?'Assigned: '+fix.assignedTo:'',fix.fixNote?'Fix: '+fix.fixNote:''].filter(Boolean).join(' · '))
     }
     return [...map.values()].sort((a,b)=>a.roomName.localeCompare(b.roomName))
   })()
