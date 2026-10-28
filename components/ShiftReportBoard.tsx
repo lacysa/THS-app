@@ -647,7 +647,7 @@ export default function ShiftReportBoard() {
       {printableRoomSections.length>0&&<section className="shift-print-section shift-print-room-notes">
         <div className="shift-print-section-title"><h3>Room-by-room handoff</h3><span>{printableRoomSections.length} rooms</span></div>
         <div className="shift-print-room-grid">
-          {printableRoomSections.map(room=><article className="shift-print-room-card" key={room.roomName}>
+          {printableRoomSections.map(room=><article className={`shift-print-room-card ${room.entries.some(e=>/needs correction|maintenance · open|blocked|hold|urgent/i.test(e.department+" "+e.text))?"has-attention":room.entries.every(e=>/completed|fixed|refresh complete/i.test(e.department+" "+e.text))?"is-complete":""}`} key={room.roomName}>
             <h4>{room.roomName}</h4>
             <div className="shift-print-room-entries">
               {room.entries.map((entry,index)=><div className="shift-print-room-entry" key={index}>
@@ -703,6 +703,28 @@ export default function ShiftReportBoard() {
 
       {canManage&&printNotes('management','Management notes',draft.managementNotes,'management')}
       <style>{`
+        @media print {
+          .shift-print-document{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important;color:#243747}
+          .shift-print-document .shift-print-section-title{background:#e8f3f5!important;border-left:4px solid #5e9ead!important;padding:5px 9px!important;border-radius:3px}
+          .shift-print-document .shift-print-section-title h3{color:#25485b!important}
+          .shift-print-document .shift-print-summary-grid>div{background:#edf5f7!important;border:1px solid #d1e4e9!important}
+          .shift-print-document .shift-print-summary-grid>div strong{color:#254b63!important}
+          .shift-print-document .shift-print-room-card{background:#f7fafc!important;border-color:#d4e4e9!important;border-left:3px solid #78acb9!important}
+          .shift-print-document .shift-print-room-card.has-attention{background:#fff8ee!important;border-left-color:#c78a44!important}
+          .shift-print-document .shift-print-room-card.is-complete{background:#f1f8f3!important;border-left-color:#6a9d7b!important}
+          .shift-print-document .shift-print-room-card h4{color:#244960!important}
+          .shift-print-document .shift-print-department{color:#436a7c!important}
+          .shift-print-document .shift-print-room-entry:nth-child(even){background:#edf4f7!important}
+          .shift-print-document .shift-print-room-card.has-attention .shift-print-room-entry:nth-child(even){background:#fbefdf!important}
+          .shift-print-document .shift-print-note-section .shift-print-note{border-left:2px solid #9bbdc8!important;padding-left:8px!important}
+        }
+        @media screen {
+          .shift-print-document .shift-print-section-title{background:#e8f3f5;border-left:4px solid #5e9ead;padding:5px 9px;border-radius:3px}
+          .shift-print-room-card{background:#f7fafc;border-left:3px solid #78acb9!important}
+          .shift-print-room-card.has-attention{background:#fff8ee;border-left-color:#c78a44!important}
+          .shift-print-room-card.is-complete{background:#f1f8f3;border-left-color:#6a9d7b!important}
+          .shift-print-room-entry:nth-child(even){background:#edf4f7}
+        }
         @media print {
           .shift-print-document .shift-print-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:start}
           .shift-print-document .shift-print-room-card{break-inside:avoid;page-break-inside:avoid;border:1px solid #dae2e6;border-radius:7px;padding:9px 10px;background:white}
