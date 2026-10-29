@@ -99,7 +99,7 @@ export default async function DashboardPage() {
       moduleKeys.has('daily_overview') ||
       moduleKeys.has('breakfast_guest')
     )
-      ? admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped,breakfast_skipped_at').eq('service_date',breakfastDate).eq('breakfast_tag',true)
+      ? admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped,breakfast_skipped_at').eq('service_date',previousDate(breakfastDate)).eq('breakfast_tag',true)
       : Promise.resolve({data:[],error:null}),
     moduleKeys.has('maintenance')
       ? admin.from('maintenance_work_orders').select('id,room_id,area,title,priority,status').neq('status','complete').order('created_at',{ascending:false})
@@ -306,7 +306,7 @@ export default async function DashboardPage() {
   if(breakfastDate!==tomorrow){
     const [tomorrowBookings,tomorrowTags]=await Promise.all([
       admin.from('breakfast_bookings').select('room_id,status').eq('service_date',tomorrow).in('status',['scheduled','declined']),
-      admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date',tomorrow).eq('breakfast_tag',true)
+      admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date',today).eq('breakfast_tag',true)
     ])
     const expected=new Set<string>()
     for(const item of (tomorrowBookings.data||[])){
