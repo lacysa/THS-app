@@ -51,7 +51,7 @@ async function autoData(admin: ReturnType<typeof createSupabaseAdmin>, date: str
     admin.from('maintenance_work_orders').select('*').order('created_at', { ascending: false }),
     admin.from('room_notes').select('*').or(`service_date.eq.${date},note_type.eq.persistent`).order('created_at', { ascending: false }),
     admin.from('staff_members').select('id,name,username,auth_user_id,job_title'),
-    admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', breakfastDate).eq('breakfast_tag', true),
+    admin.from('housekeeping_daily_rooms').select('room_id,breakfast_skipped').eq('service_date', date).eq('breakfast_tag', true),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',date).eq('work_mode','onsite'),
     admin.from('staff_daily_schedule').select('staff_member_id,shift_start,shift_end,role_label,work_mode').eq('schedule_date',breakfastDate).eq('work_mode','onsite'),
     admin.from('housekeeping_daily_rooms').select('room_id,reservation_status,service_type,strip_hold,check_issue_open').eq('service_date',breakfastDate),
