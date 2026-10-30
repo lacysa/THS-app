@@ -11,7 +11,7 @@ import { useEffect } from 'react'
  * move the screen. Consumers that want live updates can listen for
  * `ths:live-data-refresh` and merge fresh data into local state.
  */
-export default function LiveDataRefresh({intervalMs=30000}:{intervalMs?:number}){
+export default function LiveDataRefresh({intervalMs=10000}:{intervalMs?:number}){
   useEffect(()=>{
     const notify=()=>{
       if(document.visibilityState!=='visible')return
