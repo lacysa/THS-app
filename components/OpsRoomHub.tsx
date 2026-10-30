@@ -74,19 +74,11 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  },[roomId,date,reservationId,reload])
  // Keep an open room popup consistent with edits made on other boards. Never
  // replace an in-progress note, edit form, or unsaved action with a poll.
- // Coalesce background refresh signals while the modal is open. Mutations
- // still call refresh() immediately; only passive polling is throttled.
- const lastPassiveRefresh=useRef(0)
- useEffect(()=>{lastPassiveRefresh.current=Date.now()},[roomId,date,reservationId])
  useEffect(()=>{
   const handle=(event:Event)=>{
    const eventDate=(event as CustomEvent<{date?:string}>).detail?.date
    if(eventDate&&eventDate!==date)return
-   if(busy||activeEditor||document.visibilityState!=='visible')return
-   const now=Date.now()
-   if(now-lastPassiveRefresh.current<30000)return
-   lastPassiveRefresh.current=now
-   refresh()
+   if(!busy&&!activeEditor&&document.visibilityState==='visible')refresh()
   }
   window.addEventListener('ths:live-data-refresh',handle)
   return()=>window.removeEventListener('ths:live-data-refresh',handle)
