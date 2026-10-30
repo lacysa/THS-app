@@ -1,15 +1,29 @@
-/* THS Operations Hub PWA.
- * Installable shell only. Never intercept page, auth, or asset requests.
- * Navigation and authentication must always use the live server.
- */
-const VERSION = 'ths-pwa-v2-no-fetch-interception'
+/* THS Operations Hub service worker.
+   Intentionally network-first with no operational-data cache.
+   This enables installability without risking stale housekeeping,
+   room-check, breakfast, or maintenance data. */
 
-self.addEventListener('install', () => self.skipWaiting())
+const VERSION = 'ths-pwa-v1'
+
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
 
 self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys()
-    await Promise.all(keys.map(key => caches.delete(key)))
-    await self.clients.claim()
-  })())
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then(keys =>
+        Promise.all(keys.filter(key => key !== VERSION).map(key => caches.delete(key)))
+      ),
+      self.clients.claim()
+    ])
+  )
+})
+
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return
+
+  // Operational pages and API data should always come from the network.
+  // Static framework assets are already efficiently cached by the browser/CDN.
+  event.respondWith(fetch(event.request))
 })
