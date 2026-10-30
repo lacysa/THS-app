@@ -45,24 +45,25 @@ async function loadAccessForUser(userId:string):Promise<StaffAccess|null> {
   let capabilities:string[]=[]
   let moduleOverrides:Record<string,boolean>={}
 
-  if((profile as any).role_id){
-    const {data:rows}=await admin
-      .from('role_permissions')
-      .select('allowed,app_permissions(permission_key)')
-      .eq('role_id',(profile as any).role_id)
-      .eq('allowed',true)
-
-    permissions=(rows||[]).map((row:any)=>{
-      const ap=Array.isArray(row.app_permissions)?row.app_permissions[0]:row.app_permissions
-      return ap?.permission_key
-    }).filter(Boolean)
-  }
-
-  const {data:member}=await admin
-    .from('staff_members')
-    .select('id,username')
-    .eq('auth_user_id',userId)
-    .maybeSingle()
+  // Resolve independent role permissions and staff-member identity together.
+  // Permissions are always re-read per server request (no cross-user auth cache).
+  const [roleResult,memberResult]=await Promise.all([
+    (profile as any).role_id
+      ? admin.from('role_permissions')
+          .select('allowed,app_permissions(permission_key)')
+          .eq('role_id',(profile as any).role_id)
+          .eq('allowed',true)
+      : Promise.resolve({data:[]}),
+    admin.from('staff_members')
+      .select('id,username')
+      .eq('auth_user_id',userId)
+      .maybeSingle()
+  ])
+  permissions=(roleResult.data||[]).map((row:any)=>{
+    const ap=Array.isArray(row.app_permissions)?row.app_permissions[0]:row.app_permissions
+    return ap?.permission_key
+  }).filter(Boolean)
+  const member=memberResult.data
 
   if(member?.id){
     const [{data:capRows},{data:overrideRows}]=await Promise.all([
