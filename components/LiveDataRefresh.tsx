@@ -11,10 +11,15 @@ import { useEffect } from 'react'
  * move the screen. Consumers that want live updates can listen for
  * `ths:live-data-refresh` and merge fresh data into local state.
  */
-export default function LiveDataRefresh({intervalMs=10000}:{intervalMs?:number}){
+export default function LiveDataRefresh({intervalMs=30000}:{intervalMs?:number}){
   useEffect(()=>{
+    let lastNotify=0
     const notify=()=>{
       if(document.visibilityState!=='visible')return
+      const now=Date.now()
+      // Focus and visibilitychange fire together; never fan out duplicate fetches.
+      if(now-lastNotify<3000)return
+      lastNotify=now
       window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
     }
 
