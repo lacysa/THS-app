@@ -8,8 +8,11 @@ export async function middleware(request:NextRequest){
   if(!url||!key){const login=request.nextUrl.clone();login.pathname='/login';login.searchParams.set('config','missing');return NextResponse.redirect(login)}
   let response=NextResponse.next({request})
   const supabase=createServerClient(url,key,{cookies:{getAll(){return request.cookies.getAll()},setAll(cookiesToSet:any[]){cookiesToSet.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookiesToSet.forEach(({name,value,options})=>response.cookies.set(name,value,options))}}})
-  const {data:{user}}=await supabase.auth.getUser()
-  if(!user){const login=request.nextUrl.clone();login.pathname='/login';return NextResponse.redirect(login)}
+  // Validate the signed session locally when possible. getUser() on every
+  // navigation was triggering overlapping /token refresh requests (409),
+  // especially when multiple tabs or staff dashboards were active.
+  const {data:claims,error:authError}=await supabase.auth.getClaims()
+  if(authError||!claims?.claims?.sub){const login=request.nextUrl.clone();login.pathname='/login';return NextResponse.redirect(login)}
   return response
 }
 export const config={matcher:['/dashboard/:path*','/front-desk/:path*','/kitchen/:path*','/breakfast/menu-manager/:path*','/breakfast/overview/:path*','/settings/:path*','/housekeeping/:path*','/room-checks/:path*','/projects/:path*','/maintenance/:path*']}
