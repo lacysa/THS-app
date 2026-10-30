@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { supabaseUrl, supabasePublicKey } from '@/lib/supabase/env'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 
 function normalizePhone(value:string) {
@@ -86,35 +85,19 @@ export async function POST(req: NextRequest) {
 
   if (!identifier || !password) return loginRedirect(req, 'missing_fields')
 
-  // Attach session cookies to the exact redirect response returned to the browser.
-  const successResponse = NextResponse.redirect(new URL('/dashboard',req.url),303)
-  const supabase = createServerClient(supabaseUrl(),supabasePublicKey(),{
-    cookies:{
-      getAll(){return req.cookies.getAll()},
-      setAll(cookiesToSet: Array<{name:string;value:string;options?:any}>){
-        for(const {name,value,options} of cookiesToSet){
-          req.cookies.set(name,value)
-          successResponse.cookies.set(name,value,options)
-        }
-      }
-    }
-  })
-  const signedInResponse=(user:any)=>{
-    successResponse.headers.set('Location',new URL(signedInDestination(user),req.url).toString())
-    return successResponse
-  }
+  const supabase = await createSupabaseServerClient()
 
   // Preserve canonical Supabase email/password login exactly as before.
   if (identifier.includes('@')) {
     const direct = await supabase.auth.signInWithPassword({ email:identifier, password })
-    if (!direct.error) return signedInResponse(direct.data.user)
+    if (!direct.error) return NextResponse.redirect(new URL(signedInDestination(direct.data.user), req.url), 303)
 
     // staff_profiles.email may be a contact/login alias that differs from auth.users.email.
     try {
       const authEmail = await resolveAuthEmailFromStaffProfile(identifier)
       if (authEmail && authEmail.toLowerCase() !== identifier.toLowerCase()) {
         const alias = await supabase.auth.signInWithPassword({ email:authEmail, password })
-        if (!alias.error) return signedInResponse(alias.data.user)
+        if (!alias.error) return NextResponse.redirect(new URL(signedInDestination(alias.data.user), req.url), 303)
       }
     } catch {
       // Direct email login remains usable even if the server admin key is missing.
@@ -134,7 +117,7 @@ export async function POST(req: NextRequest) {
     const alias = await supabase.auth.signInWithPassword({ email:authEmail, password })
     if (alias.error) return loginRedirect(req, 'invalid_credentials')
 
-    return signedInResponse(alias.data.user)
+    return NextResponse.redirect(new URL(signedInDestination(alias.data.user), req.url), 303)
   } catch {
     return loginRedirect(req, 'phone_config')
   }
