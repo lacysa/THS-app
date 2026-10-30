@@ -335,9 +335,11 @@ export default function StaffShell({
   useEffect(() => {
     let active=true
     let running=false
+    let lastRefresh=0
     const refresh=async()=>{
-      if(!active || document.visibilityState!=='visible' || running)return
+      if(!active || document.visibilityState!=='visible' || running || Date.now()-lastRefresh<15000)return
       running=true
+      lastRefresh=Date.now()
       try{await loadNotifications()}finally{running=false}
     }
     void refresh()
@@ -413,9 +415,12 @@ export default function StaffShell({
     if(!maySeeInspections){setInspectionCounts({ready:0,arrivals:0});return}
     let active=true
     let inFlight=false
-    const refresh=async()=>{
+    let lastRefresh=0
+    const refresh=async(force=false)=>{
       if(!active||inFlight||document.visibilityState==='hidden')return
+      if(!force&&Date.now()-lastRefresh<15000)return
       inFlight=true
+      lastRefresh=Date.now()
       try{
         const response=await fetch('/api/room-checks?date='+encodeURIComponent(hotelDay()),{cache:'no-store'})
         if(!response.ok)throw new Error('Inspection queue unavailable')
@@ -435,14 +440,16 @@ export default function StaffShell({
     }
     void refresh()
     const timer=window.setInterval(()=>{void refresh()},45000)
+    // Explicit operational updates bypass the passive polling cooldown.
+    const onDataChange=()=>{void refresh(true)}
     const onRefresh=()=>{void refresh()}
-    window.addEventListener('ths:live-data-refresh',onRefresh)
+    window.addEventListener('ths:live-data-refresh',onDataChange)
     window.addEventListener('focus',onRefresh)
     document.addEventListener('visibilitychange',onRefresh)
     return()=>{
       active=false
       window.clearInterval(timer)
-      window.removeEventListener('ths:live-data-refresh',onRefresh)
+      window.removeEventListener('ths:live-data-refresh',onDataChange)
       window.removeEventListener('focus',onRefresh)
       document.removeEventListener('visibilitychange',onRefresh)
     }
