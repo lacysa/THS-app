@@ -12,7 +12,13 @@ type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;ac
 type PackageOption={id:string;name:string;available:boolean}
 type Data={roomNoteHistory?:{id:string;note:string;type:string;at:string;author:string}[];checklistNotes?:{id:string;label:string;note:string;stage:string;at:string}[];correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];staff:AssignmentStaff[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
 type View='room'|'guest'|'log'
-type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|'tub_assignee'|null
+type Editor='quiet_season'|'condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|'tub_assignee'|null
+type QSPromo={active:boolean;restaurant:string;welcomeGift:string;beerPreference:string;nutAllergy:string;scentPreference:string;notes:string}
+const emptyQS:QSPromo={active:false,restaurant:'',welcomeGift:'',beerPreference:'',nutAllergy:'',scentPreference:'',notes:''}
+const qsRestaurants=["Phil's Bar & Grill",'Singapore Room','Everyday People Cafe']
+const qsGifts=['Local Pour','Something Sweet','Quiet Ritual']
+const qsBeer=['Light, crisp, or fruity','Hoppy or IPA-style','Darker or richer']
+const qsScents=['Bright, fresh or floral','Warm, sweet or cozy','Earthy, amber or musky']
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
 const activities=['Arrival','Stayover','Checkout','Out/In','Vacant','Dirty','Blocked']
 function present(value:unknown){return String(value??'').trim()||'Not recorded'}
@@ -48,6 +54,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  const [sections,setSections]=useState<Record<View,boolean>>({room:initialView==='room',guest:initialView==='guest',log:initialView==='log'})
  const toggleSection=(key:View)=>{setSections({room:key==='room',guest:key==='guest',log:key==='log'});setActiveEditor(null)}
  const [activeEditor,setActiveEditor]=useState<Editor>(initialEditor)
+ const [qsSaved,setQsSaved]=useState<QSPromo>(emptyQS)
+ const [qsDraft,setQsDraft]=useState<QSPromo>(emptyQS)
+ const [qsLoading,setQsLoading]=useState(false)
  const [roomNotes,setRoomNotes]=useState('')
  const [mentionSearch,setMentionSearch]=useState<string|null>(null)
  const roomNoteInput=useRef<HTMLTextAreaElement|null>(null)
@@ -58,6 +67,35 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  const [roomOrder,setRoomOrder]=useState('')
  const [times,setTimes]=useState({expectedArrivalTime:'',actualArrivalTime:'',lateCheckoutTime:''})
  const refresh=useCallback(()=>setReload(n=>n+1),[])
+ const qsUrl=(stayId:string)=>'/api/ops/quiet-season?roomId='+encodeURIComponent(roomId)+'&reservationId='+encodeURIComponent(stayId)+'&date='+encodeURIComponent(date)
+ useEffect(()=>{
+  const stayId=data?.stay?.id
+  if(!stayId){setQsSaved(emptyQS);setQsDraft(emptyQS);return}
+  const controller=new AbortController()
+  setQsLoading(true)
+  fetch(qsUrl(stayId),{cache:'no-store',signal:controller.signal})
+   .then(async r=>{const v=await r.json();if(!r.ok)throw new Error(v.error||'Unable to load QS');return v})
+   .then(v=>{if(controller.signal.aborted)return;const p=v.promotion;const next:QSPromo=p?{active:!!p.active,restaurant:p.restaurant||'',welcomeGift:p.welcome_gift||'',beerPreference:p.beer_preference||'',nutAllergy:p.nut_allergy||'',scentPreference:p.scent_preference||'',notes:p.notes||''}:emptyQS;setQsSaved(next);setQsDraft(next)})
+   .catch(e=>{if(!controller.signal.aborted)setError(String(e.message||e))})
+   .finally(()=>{if(!controller.signal.aborted)setQsLoading(false)})
+  return()=>controller.abort()
+ },[data?.stay?.id,date,roomId])
+ async function saveQS(active:boolean){
+  const stayId=data?.stay?.id
+  if(!stayId||busy)return
+  setBusy(true);setError('');setMessage('')
+  try{
+   const response=await fetch(qsUrl(stayId),{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({...qsDraft,active})})
+   const payload=await response.json()
+   if(!response.ok)throw new Error(payload.error||'Unable to save Quiet Season')
+   const next={...qsDraft,active}
+   setQsSaved(next);setQsDraft(next);setActiveEditor(null)
+   setMessage(active?'QS promotion saved':'QS promotion removed')
+   window.dispatchEvent(new CustomEvent('ths:live-data-refresh',{detail:{roomId,date}}))
+   onUpdate?.()
+  }catch(e:any){setError(String(e.message||e))}
+  finally{setBusy(false)}
+ }
  useEffect(()=>{let active=true;fetch('/api/ops/inspection-signoff?date='+encodeURIComponent(date),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{if(active)setApproval(v?.rooms?.[roomId]||null)}).catch(()=>{});return()=>{active=false}},[date,roomId,reload])
  async function approveInspection(){if(busy)return;setBusy(true);setError('');try{const r=await fetch('/api/ops/inspection-signoff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId})});const value=await r.json();if(!r.ok)throw new Error(value.error||'Unable to sign off');refresh();window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))}catch(e:any){setError(String(e.message||e))}finally{setBusy(false)}}
  useEffect(()=>{setSections({room:initialView==='room',guest:initialView==='guest',log:initialView==='log'});setActiveEditor(initialEditor);setMessage('')},[roomId,date,reservationId])
@@ -298,7 +336,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  return <div className="ops-hub-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
   <section className="ops-hub-sheet ops-hub-compact" role="dialog" aria-modal="true" aria-label="Room operations hub">
    <header className="ops-hub-head">
-    <div><small>Ops · {dateLabel(date)}</small><h2>{data?.room.name||'Room operations'}</h2><span>{data?.stay?.guest_name||'No reservation'}{data?.stay?.reservation_number?' · #'+data.stay.reservation_number:''}</span></div>
+    <div><small>Ops · {dateLabel(date)}</small><h2>{data?.room.name||'Room operations'}</h2><span>{data?.stay?.guest_name||'No reservation'}{data?.stay?.reservation_number?' · #'+data.stay.reservation_number:''}{qsSaved.active?' · QS':''}</span></div>
     <button type="button" aria-label="Close room operations" onClick={onClose}><X size={20}/></button>
    </header>
    <div className="ops-hub-content">
@@ -440,7 +478,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
        {!daily.inspected&&!data.inspectionReady&&!daily.check_issue_open&&<small className="ops-hub-muted">The room must be submitted for inspection before it can pass or fail.</small>}
       </div>}
       {activeEditor&&daily&&<section className="ops-hub-quick-editor" aria-label="Room card editor">
-       <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',tub_assignee:'Assign tub-only cleaning',inspection:'Room inspection',service:'Choose service',out:'OUT status',tip_envelope:'Tip envelope collection',packages:'Room packages',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
+       <div className="ops-hub-quick-head"><strong>{({condition:'Change condition',activity:'Change activity',housekeeper:'Assign housekeeper',tub_assignee:'Assign tub-only cleaning',inspection:'Room inspection',service:'Choose service',out:'OUT status',tip_envelope:'Tip envelope collection',packages:'Room packages',quiet_season:'QS · Quiet Season promotion',clean_order:'Cleaning order',room_notes:'Room notes'} as Record<string,string>)[activeEditor]}</strong><button type="button" aria-label="Close editor" onClick={()=>setActiveEditor(null)}><X size={17}/></button></div>
        {activeEditor==='condition'&&canManage&&<><div className="ops-hub-choices">{conditions.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.room_condition===value} className={daily.room_condition===value?'is-current':''} onClick={()=>void changeCondition(value)}><span>{value}</span>{daily.room_condition===value&&<Check size={16}/>}</button>)}</div><small className="ops-hub-muted">Selecting Ready or Vacant (Clean) records your management approval. Ready for Room Check sends the room for inspection. Dirty and Cleaning reopen cleaning without deleting correction notes.</small></>}
        {activeEditor==='activity'&&canManage&&<><div className="ops-hub-choices">{activities.map(value=><button type="button" key={value} disabled={busy} aria-pressed={daily.reservation_status===value} className={daily.reservation_status===value?'is-current':''} onClick={()=>void changeActivity(value)}><span>{value}</span>{daily.reservation_status===value&&<Check size={16}/>}</button>)}</div><small>Operational status only; the PMS booking is unchanged.</small></>}
        {activeEditor==='tub_assignee'&&canManage&&data.tubCleanDue&&<div className="ops-hub-inline-form">
@@ -459,6 +497,19 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
          <><p className="ops-hub-muted">Only mark this collected after the envelope has physically been collected by management.</p><button type="button" className="ops-hub-primary" disabled={busy||!/^[A-Z]{2,4}$/.test(data.managerInitials||'')} onClick={()=>void markEnvelopeCollected()}><Check size={16}/> Envelope collected · {data.managerInitials||'Manager'}</button>{!/^[A-Z]{2,4}$/.test(data.managerInitials||'')&&<p className="ops-hub-error">Manager initials are unavailable. Check your staff profile.</p>}</>}
        </div>}
        {activeEditor==='service'&&canManage&&<div className="ops-hub-choices">{[{label:'No service',value:''},{label:'OUT',value:'OUT'},{label:'Refresh · RF',value:'RF'}].map(item=><button type="button" key={item.label} disabled={busy||(item.value==='RF'&&!isStayover)} aria-pressed={(daily.service_type||'')===item.value} className={(daily.service_type||'')===item.value?'is-current':''} onClick={()=>void setService(item.value)}><span>{item.label}</span>{(daily.service_type||'')===item.value&&<Check size={16}/>}</button>)}</div>}
+       {activeEditor==='quiet_season'&&canManage&&data.stay&&<div className="ops-hub-inline-form" style={{display:'grid',gap:12}}>
+         <p className="ops-hub-muted">Promo code QUIETSEASON · $50 restaurant credit and a personalized welcome. This is a promotion, not a room package.</p>
+         <label>Restaurant choice<select value={qsDraft.restaurant} onChange={e=>setQsDraft(p=>({...p,restaurant:e.target.value}))} disabled={busy||qsLoading}><option value="">Choose restaurant</option>{qsRestaurants.map(v=><option key={v} value={v}>{v}</option>)}</select></label>
+         <label>Welcome gift choice<select value={qsDraft.welcomeGift} onChange={e=>setQsDraft(p=>({...p,welcomeGift:e.target.value,beerPreference:'',nutAllergy:'',scentPreference:''}))} disabled={busy||qsLoading}><option value="">Choose gift</option>{qsGifts.map(v=><option key={v} value={v}>{v}</option>)}</select></label>
+         {qsDraft.welcomeGift==='Local Pour'&&<label>Beer preference<select value={qsDraft.beerPreference} onChange={e=>setQsDraft(p=>({...p,beerPreference:e.target.value}))} disabled={busy}><option value="">Choose preference</option>{qsBeer.map(v=><option key={v} value={v}>{v}</option>)}</select></label>}
+         {qsDraft.welcomeGift==='Something Sweet'&&<label>Nut allergy?<select value={qsDraft.nutAllergy} onChange={e=>setQsDraft(p=>({...p,nutAllergy:e.target.value}))} disabled={busy}><option value="">Choose answer</option><option>Yes</option><option>No</option></select></label>}
+         {qsDraft.welcomeGift==='Quiet Ritual'&&<label>Scent preference<select value={qsDraft.scentPreference} onChange={e=>setQsDraft(p=>({...p,scentPreference:e.target.value}))} disabled={busy}><option value="">Choose preference</option>{qsScents.map(v=><option key={v} value={v}>{v}</option>)}</select></label>}
+         <label>Additional notes<textarea rows={2} value={qsDraft.notes} onChange={e=>setQsDraft(p=>({...p,notes:e.target.value}))} disabled={busy} placeholder="Optional guest preferences or fulfillment details"/></label>
+         {qsDraft.restaurant==='Everyday People Cafe'&&<small className="ops-hub-muted">Gift certificate purchased by phone or in person.</small>}
+         <small className="ops-hub-muted">Restaurant gift certificates should be sent only on arrival day, after check-in.</small>
+         <button type="button" className="ops-hub-primary" disabled={busy||qsLoading||!qsDraft.restaurant||!qsDraft.welcomeGift} onClick={()=>void saveQS(true)}><Save size={15}/> Save QS promotion</button>
+         {qsSaved.active&&<button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void saveQS(false)}>Remove QS from reservation</button>}
+        </div>}
        {activeEditor==='packages'&&canManage&&<><div className="ops-hub-package-options">{data.packageOptions.filter(p=>p.available||data.importedPackageIds.includes(p.id)||manualPackageDraft.includes(p.id)).map(p=>{
          const isImported=data.importedPackageIds.includes(p.id)
          const checked=isImported||manualPackageDraft.includes(p.id)
@@ -521,6 +572,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
        <div className="ops-hub-secondary-actions" aria-label="Additional room actions" style={{display:'flex',gap:7,flexWrap:'wrap',marginTop:9}}>
         {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='room_notes'?null:'room_notes')}>Room notes{daily?.notes?.trim()?' · Added':''}</button>}
         {canManage&&<button type="button" className="ops-hub-secondary" disabled={busy||!daily} onClick={()=>setActiveEditor(v=>v==='packages'?null:'packages')}>Packages{selectedPackageNames.length?' · '+selectedPackageNames.length:''}</button>}
+        {data.stay&&<button type="button" className="ops-hub-secondary" title="Quiet Season Promotion" disabled={busy||qsLoading||!canManage} onClick={()=>setActiveEditor(v=>v==='quiet_season'?null:'quiet_season')}>QS{qsSaved.active?' · Applied':''}</button>}
 
        </div>
       </div>
