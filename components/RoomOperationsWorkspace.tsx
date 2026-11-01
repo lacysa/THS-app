@@ -94,6 +94,15 @@ function shiftDate(day:string,days:number){
  date.setUTCDate(date.getUTCDate()+days)
  return date.toISOString().slice(0,10)
 }
+function qsReservations(row:ReservationRow,activeIds:ReadonlySet<string>):Array<{id:string;guestName:string}>{
+ const seen=new Set<string>()
+ return [row.arriving,row.staying,row.primary,row.departing].flatMap(stay=>{
+  const id=String(stay?.id||'')
+  if(!id||!activeIds.has(id)||seen.has(id))return []
+  seen.add(id)
+  return [{id,guestName:String(stay?.guest_name||'Guest')}]
+ })
+}
 function hasUnassignedService(row:ReservationRow){
  const task=roomServiceTask({
   reservationStatus:row.operationalStatus||row.status,
@@ -111,11 +120,11 @@ function conditionTone(condition:string){
  if(/occupied/.test(value))return 'occupied'
  return 'neutral'
 }
-export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canManageRooms,embeddedCards=false}:{serviceDate:string;todayDate:string;rows:ReservationRow[];canEdit?:boolean;canManageRooms:boolean;embeddedCards?:boolean}){
+export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canManageRooms,embeddedCards=false,quietSeasonReservationIds=[]}:{serviceDate:string;todayDate:string;rows:ReservationRow[];canEdit?:boolean;canManageRooms:boolean;embeddedCards?:boolean;quietSeasonReservationIds?:string[]}){
  const router=useRouter()
  const [isChangingDate,startDateTransition]=useTransition()
  const [dateInput,setDateInput]=useState(serviceDate)
- const [selected,setSelected]=useState<{roomId:string;reservationId?:string;view?:'room'|'guest'|'log';action?:string;editor?:'room_notes'|'packages'|'inspection'|'tub_assignee'}|null>(null)
+ const [selected,setSelected]=useState<{roomId:string;reservationId?:string;view?:'room'|'guest'|'log';action?:string;editor?:'room_notes'|'packages'|'inspection'|'tub_assignee'|'quiet_season'}|null>(null)
  const [category,setCategory]=useState<Category>('all')
  const [showFilters,setShowFilters]=useState(false)
  const [query,setQuery]=useState('')
@@ -148,6 +157,18 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
   try{window.localStorage.setItem(isCompact?'ths-room-ops-view-mobile':'ths-room-ops-view-desktop',mode)}catch{}
  }
 
+ const [qsIds,setQsIds]=useState<string[]>(quietSeasonReservationIds)
+ const qsIdSet=useMemo(()=>new Set(qsIds),[qsIds])
+ useEffect(()=>{setQsIds(quietSeasonReservationIds)},[quietSeasonReservationIds])
+ useEffect(()=>{
+  const onChange=(event:Event)=>{
+   const detail=(event as CustomEvent<{date?:string;reservationId?:string;active?:boolean}>).detail
+   if(detail?.date!==serviceDate||!detail.reservationId||typeof detail.active!=='boolean')return
+   setQsIds(current=>detail.active?[...new Set([...current,detail.reservationId!])]:current.filter(id=>id!==detail.reservationId))
+  }
+  window.addEventListener('ths:qs-promotion-changed',onChange)
+  return()=>window.removeEventListener('ths:qs-promotion-changed',onChange)
+ },[serviceDate])
  const [packageNamesByRoom,setPackageNamesByRoom]=useState<Record<string,string[]>>({})
  const [correctionNotes,setCorrectionNotes]=useState<Record<string,CorrectionNote[]>>({})
  const [correctionNotesError,setCorrectionNotesError]=useState(false)
@@ -220,6 +241,9 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     if(!response.ok)return
     const result=await response.json()
     if(active&&Array.isArray(result.rooms)){
+     if(Array.isArray(result.quietSeasonReservationIds)){
+      setQsIds(result.quietSeasonReservationIds.filter((id:unknown):id is string=>typeof id==='string'))
+     }
      setLiveRows(previous=>{
       const updates=new Map<string,Partial<OpsRow>>(result.rooms.map((room:OpsRow)=>[room.roomId,room]))
       // Guest edits are stored separately from room state. Merge them without remounting the table or popup.
@@ -291,10 +315,11 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
       const condition=roomCondition(row)
       const tone=conditionTone(condition)
       const guest=activeGuest(row,serviceDate)
+      const qsStays=qsReservations(row,qsIdSet)
       const open=()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:guest?'guest':'room'})
-      const navigate=(event:React.MouseEvent,view:'room'|'log',action?:string,editor?:'room_notes'|'packages'|'inspection'|'tub_assignee')=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view,action,editor})}
+      const navigate=(event:React.MouseEvent,view:'room'|'log',action?:string,editor?:'room_notes'|'packages'|'inspection'|'tub_assignee'|'quiet_season')=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view,action,editor})}
       const history=(action:string)=>(event:React.MouseEvent)=>navigate(event,'log',action)
-      const editor=(name:'room_notes'|'packages'|'inspection'|'tub_assignee')=>(event:React.MouseEvent)=>navigate(event,'room',undefined,name)
+      const editor=(name:'room_notes'|'packages'|'inspection'|'tub_assignee'|'quiet_season')=>(event:React.MouseEvent)=>navigate(event,'room',undefined,name)
       const breakfast=(event:React.MouseEvent)=>{event.stopPropagation();router.push('/front-desk?date='+encodeURIComponent(shiftDate(serviceDate,1))+'&roomId='+encodeURIComponent(row.roomId))}
 
       return <tr key={row.roomId} tabIndex={0} role="button" aria-label={`Open ${row.roomName} room interactions`} onClick={open} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open()}}} style={{borderBottom:'1px solid #e7edf0',cursor:'pointer'}}>
@@ -305,6 +330,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <td style={{padding:'12px 14px'}}><button type="button" className={`ths-ops-condition ths-ops-pill-action ${conditionTone(condition)}`} onClick={history("condition_changed")} title="View room condition history">{condition}</button></td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
+         {qsStays.map(stay=><button key={stay.id} type="button" className="ths-tag-qs ths-ops-pill-action" title={'Quiet Season Promotion · '+stay.guestName} aria-label={'Edit QS promotion for '+stay.guestName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:stay.id,view:'room',editor:'quiet_season'})}}>QS</button>)}
          {row.breakfastTag&&<button type="button" className="ths-tag-service ths-ops-pill-action" onClick={breakfast}>Breakfast</button>}
          {row.lateArrival&&<button type="button" className="ths-tag-arrival ths-ops-pill-action" onClick={(event)=>navigate(event,"room")}>Late arrival</button>}
          {row.checkIssueOpen&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={history("issue_reported")}>Inspection issue</button>}
@@ -332,6 +358,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
      const type=reservationType(row)
      const condition=roomCondition(row)
      const guest=activeGuest(row,serviceDate)
+     const qsStays=qsReservations(row,qsIdSet)
      const service=String(row.serviceType||'').trim().toUpperCase()
      const tone=conditionTone(condition)
      return <button className={`ths-ops-room-row ths-ops-room-card tone-${tone}`} type="button" key={row.roomId} onClick={()=>setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:guest?'guest':'room'})}>
@@ -345,6 +372,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</span></span>
        </span>
        <span className="ths-ops-tags">
+        {qsStays.map(stay=><span key={stay.id} className="ths-tag-qs" title={'Quiet Season Promotion · '+stay.guestName}>QS</span>)}
         {canManageRooms&&row.inspected&&!row.checkIssueOpen&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Review inspection for '+row.roomName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}}}>Review inspection</span>}
         {row.inspected&&!row.checkIssueOpen&&<span className="ths-tag-complete">Inspection passed{inspectionSigns[row.roomId]?.signed?' · '+inspectionSigns[row.roomId].initials:''}</span>}
         {row.inspected&&!row.checkIssueOpen&&!inspectionSigns[row.roomId]?.signed&&canManageRooms&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Sign off inspection for '+row.roomName} onClick={event=>void signInspection(event,row.roomId)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();void signInspection(event,row.roomId)}}}>{inspectionSigning===row.roomId?'Signing…':'Sign off'}</span>}
