@@ -32,12 +32,15 @@ export async function GET(req:NextRequest){
    link.arriving_reservation_id,link.stay_reservation_id,link.primary_reservation_id,link.departing_reservation_id
   ]).filter(Boolean).map(String))]
   let stays:any[]=[]
+  let quietSeasonReservationIds:string[]=[]
   if(stayIds.length){
-   const [staysResult,overridesResult]=await Promise.all([
+   const [staysResult,overridesResult,qsResult]=await Promise.all([
     admin.from('reservation_stays').select('id,guest_name,arrival_date,checkout_date,check_in_time,innkeeper_notes,guest_comments').in('id',stayIds),
-    admin.from('reservation_staff_overrides').select('reservation_id,fields').in('reservation_id',stayIds)
+    admin.from('reservation_staff_overrides').select('reservation_id,fields').in('reservation_id',stayIds),
+    admin.from('reservation_quiet_season').select('reservation_id').eq('active',true).in('reservation_id',stayIds)
    ])
-   if(staysResult.error||overridesResult.error)return NextResponse.json({error:'Could not refresh arrival information'},{status:500})
+   if(staysResult.error||overridesResult.error||qsResult.error)return NextResponse.json({error:'Could not refresh reservation information'},{status:500})
+   quietSeasonReservationIds=(qsResult.data||[]).map((item:any)=>String(item.reservation_id))
    const editedIds=new Set<string>((overridesResult.data||[]).filter((item:any)=>Object.prototype.hasOwnProperty.call(item.fields||{},'check_in_time')).map((item:any)=>String(item.reservation_id)))
    stays=(staysResult.data||[]).map((stay:any)=>({...stay,checkInTimeManuallyEdited:editedIds.has(String(stay.id))}))
   }
@@ -48,5 +51,5 @@ export async function GET(req:NextRequest){
   inspected:Boolean(r.inspected),housekeeperAttested:Boolean(r.housekeeper_attested_by),
   haChecked:Boolean(r.ha_signed_by),fohChecked:Boolean(r.foh_signed_by),
   checkIssueOpen:Boolean(r.check_issue_open),tubCleanDue:Boolean(tubStates.get(String(r.room_id))?.due),tubAssignedTo:String(tubStates.get(String(r.room_id))?.assignedTo||''),tubCleanCompleted:Boolean(tubStates.get(String(r.room_id))?.completed)
- })),stays},{headers:{'cache-control':'private, no-store'}})
+ })),stays,quietSeasonReservationIds},{headers:{'cache-control':'private, no-store'}})
 }
