@@ -91,6 +91,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
    const next={...qsDraft,active}
    setQsSaved(next);setQsDraft(next);setActiveEditor(null)
    setMessage(active?'QS promotion saved':'QS promotion removed')
+   // Update the visible QS pill immediately, then let the existing room refresh
+   // synchronize it with other views without a full page navigation.
+   window.dispatchEvent(new CustomEvent('ths:qs-promotion-changed',{detail:{roomId,date,reservationId:stayId,active}}))
    window.dispatchEvent(new CustomEvent('ths:live-data-refresh',{detail:{roomId,date}}))
    onUpdate?.()
   }catch(e:any){setError(String(e.message||e))}
