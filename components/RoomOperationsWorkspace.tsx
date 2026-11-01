@@ -330,7 +330,9 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <td style={{padding:'12px 14px'}}><button type="button" className={`ths-ops-condition ths-ops-pill-action ${conditionTone(condition)}`} onClick={history("condition_changed")} title="View room condition history">{condition}</button></td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
-         {qsStays.map(stay=><button key={stay.id} type="button" className="ths-tag-qs ths-ops-pill-action" title={'Quiet Season Promotion · '+stay.guestName} aria-label={'Edit QS promotion for '+stay.guestName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:stay.id,view:'room',editor:'quiet_season'})}}>QS</button>)}
+         {qsStays.map(stay=>canManageRooms
+          ? <button key={stay.id} type="button" className="ths-tag-qs ths-ops-pill-action" title={'Quiet Season Promotion · '+stay.guestName} aria-label={'Edit QS promotion for '+stay.guestName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:stay.id,view:'room',editor:'quiet_season'})}}>QS</button>
+          : <span key={stay.id} className="ths-tag-qs" title={'Quiet Season Promotion · '+stay.guestName}>QS</span>)}
          {row.breakfastTag&&<button type="button" className="ths-tag-service ths-ops-pill-action" onClick={breakfast}>Breakfast</button>}
          {row.lateArrival&&<button type="button" className="ths-tag-arrival ths-ops-pill-action" onClick={(event)=>navigate(event,"room")}>Late arrival</button>}
          {row.checkIssueOpen&&<button type="button" className="alert ths-tag-alert ths-ops-pill-action" onClick={history("issue_reported")}>Inspection issue</button>}
