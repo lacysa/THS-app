@@ -46,11 +46,18 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   ]).filter(Boolean).map(String))]
 
   let stays:any[]=[]
+  let quietSeasonReservationIds:string[]=[]
   if(ids.length){
-    const result=await admin.from('reservation_stays').select('*').in('id',ids)
-    const overridesResult=await admin.from('reservation_staff_overrides').select('reservation_id,fields').in('reservation_id',ids)
-     const editedCheckIns=new Set<string>((overridesResult.data||[]).filter((item:any)=>Object.prototype.hasOwnProperty.call(item.fields||{},'check_in_time')).map((item:any)=>String(item.reservation_id)))
-     stays=(result.data||[]).map((stay:any)=>({...stay,checkInTimeManuallyEdited:editedCheckIns.has(String(stay.id))}))
+    // Fetch QS flags alongside reservation details: one lightweight batch, never per room.
+    const [result,overridesResult,qsResult]=await Promise.all([
+      admin.from('reservation_stays').select('*').in('id',ids),
+      admin.from('reservation_staff_overrides').select('reservation_id,fields').in('reservation_id',ids),
+      admin.from('reservation_quiet_season').select('reservation_id').eq('active',true).in('reservation_id',ids)
+    ])
+    if(qsResult.error)console.error('Could not load Quiet Season tags',qsResult.error.message)
+    quietSeasonReservationIds=(qsResult.data||[]).map((item:any)=>String(item.reservation_id))
+    const editedCheckIns=new Set<string>((overridesResult.data||[]).filter((item:any)=>Object.prototype.hasOwnProperty.call(item.fields||{},'check_in_time')).map((item:any)=>String(item.reservation_id)))
+    stays=(result.data||[]).map((stay:any)=>({...stay,checkInTimeManuallyEdited:editedCheckIns.has(String(stay.id))}))
   }
   const stayById=new Map<string,any>(stays.map((stay:any)=>[String(stay.id),stay]))
 
@@ -92,5 +99,5 @@ export default async function ReservationsPage({searchParams}:{searchParams:Prom
   const canEdit=!gate.access.isPreviewMode && Boolean(gate.access.isAdmin || gate.access.capabilities?.some((cap:string)=>['manager','general_manager','operations_manager','owner'].includes(cap)))
   const roomGate=await canUseModule('housekeeping')
   const canManageRooms=canEdit && Boolean(roomGate.allowed)
-  return <StaffShell title="Rooms & Reservations"><LiveDataRefresh intervalMs={10000}/><RoomOperationsWorkspace serviceDate={serviceDate} todayDate={todayDate} rows={rows} canEdit={canEdit} canManageRooms={canManageRooms}/></StaffShell>
+  return <StaffShell title="Rooms & Reservations"><LiveDataRefresh intervalMs={10000}/><RoomOperationsWorkspace serviceDate={serviceDate} todayDate={todayDate} rows={rows} canEdit={canEdit} canManageRooms={canManageRooms} quietSeasonReservationIds={quietSeasonReservationIds}/></StaffShell>
 }
