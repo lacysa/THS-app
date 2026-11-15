@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { loadTubTaskStates } from '@/lib/ops-tub'
+import { inheritedStripStatuses } from '@/lib/room-strip-carry'
 import { conditionForDay,previousVacantConditions } from '@/lib/room-condition-carry'
 import { isCheckoutAwaitingOut, isStayoverRoom, roomServiceTask } from '@/lib/room-state'
 
@@ -187,7 +188,44 @@ export async function GET(req: NextRequest) {
     const linkedByRoom = new Map((linked || []).map((row:any) => [String(row.room_id),String(row.reservation_status||'')]))
     const conditionRows = [...(saved || []), ...(rooms || []).filter((room:any) => !recordedIds.has(String(room.id))).map((room:any) => ({room_id:room.id,reservation_status:linkedByRoom.get(String(room.id))||'Vacant'}))]
     const carryConditions=await previousVacantConditions(admin,serviceDate,conditionRows)
-    const savedByRoom = new Map<string, any>()
+    const carriedStrips=await inheritedStripStatuses(admin,serviceDate)
+    // Materialize pending room cleans and inherited strips on the first eligible
+    // date without overwriting a room confirmed blocked, occupied or complete.
+    const savedIndex=new Map<string,any>((saved||[]).map((item:any)=>[String(item.room_id),item]))
+    for(const room of rooms||[]){
+      const id=String((room as any).id)
+      const existing:any=savedIndex.get(id)
+      const linkedStatus=String(linkedByRoom.get(id)||'')
+      const status=String(existing?.reservation_status||linkedStatus||'Vacant').toLowerCase()
+      const blocked=status==='blocked'||String(existing?.strip_hold||'').toLowerCase().includes('hold')||String(existing?.room_condition||'').toLowerCase()==='blocked'
+      const patch:Record<string,unknown>={}
+      if(!blocked&&!existing?.complete&&!existing?.updated_by&&!String(existing?.room_condition||'').trim()&&
+        ['vacant','dirty','arrival',''].includes(status)&&carryConditions.get(id)==='Vacant (Dirty)'){
+        patch.room_condition='Vacant (Dirty)'
+      }
+      const previousStrip=carriedStrips.get(id)
+      if(previousStrip&&!existing?.complete&&!['needed','stripped','cleared'].includes(String(existing?.strip_status||''))){
+        patch.strip_status=previousStrip.status
+        patch.strip_requested_at=previousStrip.requestedAt
+        patch.strip_requested_by=previousStrip.requestedBy
+        patch.stripped_at=previousStrip.strippedAt
+        patch.stripped_by=previousStrip.strippedBy
+      }
+      if(!Object.keys(patch).length)continue
+      if(existing){
+        const {data:updated,error:updateError}=await admin.from('housekeeping_daily_rooms')
+         .update(patch).eq('service_date',serviceDate).eq('room_id',id).select('*').maybeSingle()
+        if(updateError)throw new Error(updateError.message)
+        if(updated)Object.assign(existing,updated)
+      }else{
+        const {data:inserted,error:insertError}=await admin.from('housekeeping_daily_rooms')
+         .upsert({service_date:serviceDate,room_id:id,reservation_status:linkedStatus||'Vacant',...patch},
+           {onConflict:'service_date,room_id',ignoreDuplicates:true}).select('*').maybeSingle()
+        if(insertError)throw new Error(insertError.message)
+        if(inserted)savedIndex.set(id,inserted)
+      }
+    }
+    const savedByRoom = savedIndex
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
 
     const packageIdsByRoom = new Map<string,string[]>()
@@ -249,7 +287,7 @@ export async function GET(req: NextRequest) {
           ['checkout','out/in'].includes(String(savedRow.reservation_status||'').trim().toLowerCase()) ||
           String(savedRow.service_type||'').trim().toUpperCase().startsWith('OUT'),
         stripHold: savedRow.strip_hold || '',
-        stripStatus: savedRow.strip_status || '',
+        stripStatus: savedRow.strip_status === 'cleared' ? '' : (savedRow.strip_status || ''),
         stripRequestedAt: savedRow.strip_requested_at || null,
         strippedBy: savedRow.stripped_by || null,
         strippedByName: savedRow.stripped_by
@@ -567,6 +605,7 @@ export async function PATCH(req: NextRequest) {
       if(isRefresh && complete && !currentPerson?.id) return NextResponse.json({error:'An active staff profile is required to complete a refresh.'},{status:403})
       const requiresQuality=['checkout','out/in'].includes(status)||service.startsWith('OUT')||Boolean(existing.check_issue_open)
       dbPatch.complete=complete
+      if(complete&&!isRefresh)dbPatch.strip_status='cleared'
       if(isRefresh){
         const staffName=String(currentPerson?.name||'').trim()
         const parts=staffName.split(/\s+/).filter(Boolean)
