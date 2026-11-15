@@ -722,6 +722,7 @@ export default function HousekeepingBoard() {
     const orderActive=isFullRoomClean(row)
     const hasOrder=Number.isFinite(row.cleanOrder as number)&&Number(row.cleanOrder)>0
     const stripStatus=String(row.stripStatus||'')
+    const stripWork=stripStatus==='needed' && (String(row.stripHold||'').toLowerCase().includes('hold')||String(row.reservationStatus||'').toLowerCase()==='blocked'||String(row.roomCondition||'').toLowerCase()==='blocked')
     const isOut=outRf.startsWith('OUT')
     const isRefresh=outRf==='RF'
     const envelopeInitialed=/^OUT-[A-Z]{2,4}$/.test(outRf)
@@ -791,9 +792,9 @@ export default function HousekeepingBoard() {
           <button
             type="button"
             className={row.complete?'hsk-mobile-action success':'hsk-mobile-action primary'}
-            onClick={()=>toggleComplete(row,!row.complete)}
+            onClick={()=>stripWork?void setStripTask(row,'complete'):toggleComplete(row,!row.complete)}
           >
-            <Check size={16}/>{row.complete?(isRefresh?'Refresh complete ✓':'Complete ✓'):(isRefresh?'Mark refresh complete':'Mark complete')}
+            <Check size={16}/>{stripWork?'Strip Room':row.complete?(isRefresh?'Refresh complete ✓':'Complete ✓'):(isRefresh?'Mark refresh complete':'Mark complete')}
           </button>
         </div>
 
@@ -1072,9 +1073,9 @@ export default function HousekeepingBoard() {
                 <button
                   type="button"
                   className={row.complete ? 'ops-secondary-btn hsk-complete-btn' : 'ops-primary-btn hsk-complete-btn'}
-                  onClick={() => toggleComplete(row, !row.complete)}
+                  onClick={() => (row.stripStatus==='needed' && (String(row.stripHold||'').toLowerCase().includes('hold')||String(row.reservationStatus||'').toLowerCase()==='blocked'||String(row.roomCondition||'').toLowerCase()==='blocked'))?void setStripTask(row,'complete'):toggleComplete(row, !row.complete)}
                   disabled={
-                    !row.complete &&
+                    !row.complete && row.stripStatus!=='needed' &&
                     (
                       (Boolean(row.requiresQualityCheck) && !row.housekeeperAttested) ||
                       Boolean(blockingRoomId && blockingRoomId !== row.roomId) ||
@@ -1083,7 +1084,7 @@ export default function HousekeepingBoard() {
                   }
                 >
                   <Check size={16} />
-                  {row.checkIssueOpen
+                  {row.stripStatus==='needed' && (String(row.stripHold||'').toLowerCase().includes('hold')||String(row.reservationStatus||'').toLowerCase()==='blocked'||String(row.roomCondition||'').toLowerCase()==='blocked') ? 'Strip Room' : row.checkIssueOpen
                     ? 'Ready for re-check'
                     : row.complete
                       ? (String(row.serviceType||'').toUpperCase()==='RF' ? 'Mark refresh incomplete' : 'Mark incomplete')
