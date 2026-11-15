@@ -85,6 +85,7 @@ export async function GET(req: NextRequest) {
     const [
       { data: rooms, error: roomError },
       { data: saved, error: savedError },
+      { data: linked, error: linkedError },
       peopleData,
       { data: packageCatalog, error: packageCatalogError },
       { data: roomPackageRows, error: roomPackageError },
@@ -99,6 +100,7 @@ export async function GET(req: NextRequest) {
         .from('housekeeping_daily_rooms')
         .select('*')
         .eq('service_date', serviceDate),
+      admin.from('reservation_daily_links').select('room_id,reservation_status').eq('service_date',serviceDate),
       getPeopleAndCapabilities(admin),
       admin
         .from('room_package_catalog')
@@ -116,6 +118,7 @@ export async function GET(req: NextRequest) {
 
     if (roomError) throw new Error(roomError.message)
     if (savedError) throw new Error(savedError.message)
+    if (linkedError) throw new Error(linkedError.message)
     if (packageCatalogError) throw new Error(packageCatalogError.message)
     if (roomPackageError) throw new Error(roomPackageError.message)
     if (scheduleError) throw new Error(scheduleError.message)
@@ -181,7 +184,8 @@ export async function GET(req: NextRequest) {
     // those rooms when resolving the last physical room condition so a blocked
     // room becomes Vacant (Dirty) on its first unblocked date.
     const recordedIds = new Set((saved || []).map((row:any) => String(row.room_id)))
-    const conditionRows = [...(saved || []), ...(rooms || []).filter((room:any) => !recordedIds.has(String(room.id))).map((room:any) => ({room_id:room.id,reservation_status:'Vacant'}))]
+    const linkedByRoom = new Map((linked || []).map((row:any) => [String(row.room_id),String(row.reservation_status||'')]))
+    const conditionRows = [...(saved || []), ...(rooms || []).filter((room:any) => !recordedIds.has(String(room.id))).map((room:any) => ({room_id:room.id,reservation_status:linkedByRoom.get(String(room.id))||'Vacant'}))]
     const carryConditions=await previousVacantConditions(admin,serviceDate,conditionRows)
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
@@ -218,7 +222,10 @@ export async function GET(req: NextRequest) {
     const deepByRoom = new Map((deepTasks || []).map((task:any)=>[String(task.room_id),task]))
     const tubStates = await loadTubTaskStates(admin,serviceDate)
     const rows = (rooms || []).map((room: any) => {
-      const savedRow = savedByRoom.get(String(room.id)) || {}
+      // Reservation imports may identify a future blocked date before the
+      // housekeeping daily row is created. Never display it as cleanable.
+      const linkedStatus = String(linkedByRoom.get(String(room.id))||'')
+      const savedRow = savedByRoom.get(String(room.id)) || {reservation_status:linkedStatus,room_condition:linkedStatus.toLowerCase()==='blocked'?'Blocked':''}
       const deep:any = deepByRoom.get(String(room.id))
       const breakfast = breakfastByRoom.get(String(room.id))
 
