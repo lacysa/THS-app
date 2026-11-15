@@ -38,7 +38,11 @@ export async function GET(req: NextRequest) {
     for (const result of [roomsResult, dailyResult, linksResult]) {
       if (result.error) throw new Error(result.error.message)
     }
-    const carriedConditions = await previousVacantConditions(admin, date as string, dailyResult.data || [])
+    // Include rooms with no pre-created daily row, particularly rooms coming
+    // out of a block. Their last confirmed physical condition still matters.
+    const recordedIds = new Set((dailyResult.data || []).map((row:any) => String(row.room_id)))
+    const conditionRows = [...(dailyResult.data || []), ...(roomsResult.data || []).filter((room:any) => !recordedIds.has(String(room.id))).map((room:any) => ({room_id:room.id,reservation_status:'Vacant'}))]
+    const carriedConditions = await previousVacantConditions(admin, date as string, conditionRows)
     const dailyByRoom = new Map((dailyResult.data || []).map((row: any) => [String(row.room_id), row]))
     const linkedByRoom = new Map((linksResult.data || []).map((row: any) => [String(row.room_id), row]))
     const tubStates = await loadTubTaskStates(admin,date as string)
