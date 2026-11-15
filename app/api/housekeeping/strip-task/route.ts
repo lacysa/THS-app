@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
+import { loadCarriedStripStates } from '@/lib/room-strip-carry'
 
 export const dynamic='force-dynamic'
 
@@ -38,10 +39,13 @@ export async function PATCH(req:NextRequest){
   const {data:room,error:roomError}=await admin.from('housekeeping_daily_rooms')
     .select('strip_status,assigned_to').eq('service_date',serviceDate).eq('room_id',roomId).maybeSingle()
   if(roomError)return NextResponse.json({error:roomError.message},{status:500})
-  if(!room)return NextResponse.json({error:'Room day record does not exist.'},{status:404})
+  const inherited=(await loadCarriedStripStates(admin,serviceDate)).get(roomId)
+  const effectiveStatus=String(room?.strip_status||inherited?.status||'')
+  const effectiveAssignment=String(room?.assigned_to||inherited?.assignedTo||'')
+  if(!room&&action==='request')return NextResponse.json({error:'Create the room day record before requesting a strip.'},{status:404})
   if(action==='complete'){
-    if(room.strip_status!=='needed')return NextResponse.json({error:'No pending strip task for this room.'},{status:409})
-    const assigned=String(room.assigned_to||'').split(',').some((name:string)=>
+    if(effectiveStatus!=='needed')return NextResponse.json({error:'No pending strip task for this room.'},{status:409})
+    const assigned=effectiveAssignment.split(',').some((name:string)=>
       name.trim().toLowerCase()===String(person.name||'').trim().toLowerCase())
     if(!isManager&&!assigned)
       return NextResponse.json({error:'This strip is not assigned to you.'},{status:403})
@@ -66,13 +70,19 @@ export async function PATCH(req:NextRequest){
     update.stripped_at=null
   }
 
-  const {data,error}=await admin
-    .from('housekeeping_daily_rooms')
-    .update(update)
-    .eq('service_date',serviceDate)
-    .eq('room_id',roomId)
-    .select('room_id,strip_status,stripped_at')
-    .single()
+  // A task requested yesterday may be completed today even when the daily
+  // housekeeping row has not been generated yet.
+  const mutation=room
+    ? admin.from('housekeeping_daily_rooms').update(update)
+        .eq('service_date',serviceDate).eq('room_id',roomId)
+    : admin.from('housekeeping_daily_rooms').upsert({
+        service_date:serviceDate,room_id:roomId,
+        reservation_status:'Dirty',room_condition:'Vacant (Dirty)',
+        assigned_to:effectiveAssignment,
+        strip_requested_at:inherited?.requestedAt||now,
+        ...update
+      },{onConflict:'service_date,room_id'})
+  const {data,error}=await mutation.select('room_id,strip_status,stripped_at').single()
 
   if(error) return NextResponse.json({error:error.message},{status:500})
 
