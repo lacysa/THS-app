@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase/admin'
 import { getStaffAccess } from '@/lib/access'
 import { loadTubTaskStates } from '@/lib/ops-tub'
+import { loadCarriedStripStates } from '@/lib/room-strip-carry'
 import { conditionForDay,previousVacantConditions } from '@/lib/room-condition-carry'
 import { isCheckoutAwaitingOut, isStayoverRoom, roomServiceTask } from '@/lib/room-state'
 
@@ -212,8 +213,10 @@ export async function GET(req: NextRequest) {
     if (deepError) throw new Error(deepError.message)
     const deepByRoom = new Map((deepTasks || []).map((task:any)=>[String(task.room_id),task]))
     const tubStates = await loadTubTaskStates(admin,serviceDate)
+    const carriedStrips = await loadCarriedStripStates(admin,serviceDate)
     const rows = (rooms || []).map((room: any) => {
       const savedRow = savedByRoom.get(String(room.id)) || {}
+      const strip = carriedStrips.get(String(room.id))
       const deep:any = deepByRoom.get(String(room.id))
       const breakfast = breakfastByRoom.get(String(room.id))
 
@@ -231,20 +234,21 @@ export async function GET(req: NextRequest) {
         tubAssignedTo: String(tubStates.get(String(room.id))?.assignedTo||''),
         tubIsMine: Boolean(currentPerson && tubStates.get(String(room.id))?.due && String(tubStates.get(String(room.id))?.assignedTo||'').trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()),
         tubCleanCompleted: Boolean(tubStates.get(String(room.id))?.completed),
-        reservationStatus: savedRow.reservation_status || '',
+        reservationStatus: savedRow.reservation_status ||
+          (carryConditions.get(String(room.id))==='Vacant (Dirty)' ? 'Dirty' : ''),
         serviceType: savedRow.service_type || '',
         requiresQualityCheck:
           ['checkout','out/in'].includes(String(savedRow.reservation_status||'').trim().toLowerCase()) ||
           String(savedRow.service_type||'').trim().toUpperCase().startsWith('OUT'),
         stripHold: savedRow.strip_hold || '',
-        stripStatus: savedRow.strip_status || '',
-        stripRequestedAt: savedRow.strip_requested_at || null,
-        strippedBy: savedRow.stripped_by || null,
-        strippedByName: savedRow.stripped_by
-          ? (peopleById.get(String(savedRow.stripped_by)) as any)?.name || 'Staff'
+        stripStatus: strip?.status || '',
+        stripRequestedAt: strip?.requestedAt || null,
+        strippedBy: strip?.strippedBy || null,
+        strippedByName: strip?.strippedBy
+          ? (peopleById.get(String(strip.strippedBy)) as any)?.name || 'Staff'
           : null,
-        strippedAt: savedRow.stripped_at || null,
-        assignedTo: savedRow.assigned_to || '',
+        strippedAt: strip?.strippedAt || null,
+        assignedTo: savedRow.assigned_to || (strip?.status==='needed' ? strip.assignedTo : '') ,
         claimableRefresh:
           String(savedRow.reservation_status||'').trim().toLowerCase()==='stayover' &&
           String(savedRow.service_type||'').trim().toUpperCase()==='RF' &&
@@ -306,8 +310,10 @@ export async function GET(req: NextRequest) {
         })
       : rows
 
-    const stripTasks = assignedOnlyView
-      ? rows.filter((row:any)=>row.stripStatus==='needed')
+    const stripTasks = assignedOnlyView && currentPerson
+      ? rows.filter((row:any)=>row.stripStatus==='needed' &&
+          String(row.assignedTo||'').split(',').some((name:string)=>
+            name.trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()))
       : []
 
     // Housekeeping-only users receive a deliberately narrow payload. Do not rely on
@@ -507,7 +513,9 @@ export async function PATCH(req: NextRequest) {
         dbPatch.complete=false
         dbPatch.ready_for_inspection=false
         dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
-        dbPatch.assigned_to=''
+        // Keep an assigned strip task when a room is blocked; ordinary cleaning
+        // is still prohibited by the room-service task rules.
+        if(String(existing.strip_status||'')!=='needed') dbPatch.assigned_to=''
         dbPatch.clean_order=null
       }else if(String(existing.reservation_status).toLowerCase()==='blocked'||String(existing.strip_hold||'').toLowerCase().includes('hold')){
         dbPatch.room_condition='Vacant (Dirty)'
@@ -689,7 +697,10 @@ export async function PATCH(req: NextRequest) {
     if(manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')
        && /^OUT(?:-[A-Z]{2,4})?$/i.test(cleanText(requested.serviceType))
        && !Object.prototype.hasOwnProperty.call(requested,'roomCondition')) {
-      dbPatch.room_condition='Vacant (Dirty)'
+      const activity=String(requested.reservationStatus??existing.reservation_status??'').toLowerCase()
+      const hold=String(requested.stripHold??existing.strip_hold??'').toLowerCase()
+      if(activity!=='blocked'&&!hold.includes('hold'))
+        dbPatch.room_condition='Vacant (Dirty)'
       dbPatch.complete=false
       dbPatch.ready_for_inspection=false
       dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
@@ -993,7 +1004,9 @@ export async function POST(req: NextRequest) {
     // next_shift_condition is the dedicated EOS field; room_condition is only
     // retained as a fallback for legacy rows created before Rooms consolidation.
     const dirtyRows = upserts.filter((row:any)=>
-      String(row.next_shift_condition||row.room_condition||'').trim()==='Vacant (Dirty)'
+      String(row.next_shift_condition||row.room_condition||'').trim()==='Vacant (Dirty)' ||
+      String(row.reservation_status||'').trim().toLowerCase()==='blocked' ||
+      String(row.strip_hold||'').toLowerCase().includes('hold')
     )
     if (dirtyRows.length) {
       const tomorrow = nextDate(serviceDate)
@@ -1006,7 +1019,12 @@ export async function POST(req: NextRequest) {
       if (tomorrowError) throw new Error(tomorrowError.message)
 
       const tomorrowByRoom = new Map((tomorrowRows || []).map((row:any)=>[String(row.room_id),row]))
-      const carryRows = dirtyRows.map((row:any)=>{
+      const carryRows = dirtyRows.filter((row:any)=>{
+        const next=tomorrowByRoom.get(String(row.room_id)) as any
+        // Never overwrite an explicit block or a previously completed room.
+        return String(next?.reservation_status||'').toLowerCase()!=='blocked' &&
+          !Boolean(next?.complete)
+      }).map((row:any)=>{
         const existing = tomorrowByRoom.get(String(row.room_id)) || {}
         const currentStatus = String((existing as any).reservation_status || '').trim()
         const nextStatus = !currentStatus || currentStatus === 'Vacant' ? 'Dirty' : currentStatus
