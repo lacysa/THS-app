@@ -12,18 +12,23 @@ function matches(role:string,group:string){
  if(group==='hospitality')return /hospitality assistant|hospitality_assistant|\bha\b/.test(t)
  return /housekeep|\bhsk\b/.test(t)
 }
-const HOUSEKEEPING_FIRST=new Set(['hotel_bathroom','hotel_closets','hotel_first_hall','hotel_trash'])
+const HOUSEKEEPING_BOXES=[
+ ['hotel_bathroom','hotel_closets'],
+ ['hotel_first_hall','hotel_trash'],
+ ['hotel_second_hall','hotel_vacuums'],
+ ['hotel_floors','hotel_closet_trash']
+]
+const HOUSEKEEPING_BOX_NAMES=['housekeeping_first','housekeeping_second','housekeeping_third','housekeeping_fourth']
 function autoAssignee(staff:{id:string;name?:string;role:string}[],group:string,key:string){
  const eligible=staff.filter(p=>matches(p.role,group))
  if(!eligible.length)return null
  if(group==='runner'||group==='laundry'||group==='hospitality')return eligible[0].id
- // Assign one complete housekeeping task box per housekeeper rather than
- // rotating individual tasks, which creates Mixed group assignments.
+ // Reserve runners, laundry and hospitality assistants for their own department.
  const dedicated=eligible.filter(p=>!/runner|laundry|hospitality assistant|hospitality_assistant/i.test(p.role))
  const cleaners=(dedicated.length?dedicated:eligible).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
- const first=HOUSEKEEPING_FIRST.has(key)
- const preferred=cleaners.find(p=>String(p.name||'').toLowerCase()===(first?'chloe':'kiana'))
- return (preferred||cleaners[first?0:Math.min(1,cleaners.length-1)])?.id||null
+ const box=Math.max(0,HOUSEKEEPING_BOXES.findIndex(keys=>keys.includes(key)))
+ const preferred=cleaners.find(p=>String(p.name||'').toLowerCase()===(box===0?'chloe':box===1?'kiana':''))
+ return (preferred||cleaners[box%cleaners.length])?.id||null
 }
 async function context(date:string){
  const admin=createSupabaseAdmin()
@@ -59,7 +64,8 @@ export async function PATCH(req:NextRequest){
   if(!goodDate(date))return NextResponse.json({error:'Invalid date'},{status:400})
   if(!manage(access))return NextResponse.json({error:'Managers only'},{status:403})
   const group=String(body.group||'')
-  const selected=SIDEWORK_TASKS.filter(t=>group==='housekeeping_first'?['hotel_bathroom','hotel_closets','hotel_first_hall','hotel_trash'].includes(t.key):group==='housekeeping_second'?['hotel_second_hall','hotel_vacuums','hotel_floors','hotel_closet_trash'].includes(t.key):t.group===group)
+  const boxIndex=HOUSEKEEPING_BOX_NAMES.indexOf(group)
+  const selected=SIDEWORK_TASKS.filter(t=>boxIndex>=0?HOUSEKEEPING_BOXES[boxIndex].includes(t.key):t.group===group)
   if(!selected.length)return NextResponse.json({error:'Invalid sidework group'},{status:400})
   const personId=body.assignedTo===null?null:String(body.assignedTo||'')
   const {admin,people,existing}=await context(date)
