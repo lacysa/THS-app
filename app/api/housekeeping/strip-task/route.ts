@@ -8,6 +8,9 @@ export async function PATCH(req:NextRequest){
   const access=await getStaffAccess()
   if(!access) return NextResponse.json({error:'Unauthorized'},{status:401})
 
+  if(access.isPreviewMode) return NextResponse.json({error:'Staff preview is read-only.'},{status:403})
+  const isManager=access.isAdmin||(access.capabilities||[]).some(cap=>
+    ['manager','general_manager','operations_manager','owner'].includes(cap))
   const body=await req.json().catch(()=>null)
   const serviceDate=String(body?.serviceDate||'')
   const roomId=String(body?.roomId||'')
@@ -28,6 +31,21 @@ export async function PATCH(req:NextRequest){
     .maybeSingle()
 
   if(!person) return NextResponse.json({error:'Active staff profile not found.'},{status:403})
+
+  if(action!=='complete'&&!isManager)
+    return NextResponse.json({error:'Only management can request or remove strip tasks.'},{status:403})
+
+  const {data:room,error:roomError}=await admin.from('housekeeping_daily_rooms')
+    .select('strip_status,assigned_to').eq('service_date',serviceDate).eq('room_id',roomId).maybeSingle()
+  if(roomError)return NextResponse.json({error:roomError.message},{status:500})
+  if(!room)return NextResponse.json({error:'Room day record does not exist.'},{status:404})
+  if(action==='complete'){
+    if(room.strip_status!=='needed')return NextResponse.json({error:'No pending strip task for this room.'},{status:409})
+    const assigned=String(room.assigned_to||'').split(',').some((name:string)=>
+      name.trim().toLowerCase()===String(person.name||'').trim().toLowerCase())
+    if(!isManager&&!assigned)
+      return NextResponse.json({error:'This strip is not assigned to you.'},{status:403})
+  }
 
   const update:any={updated_at:now}
   if(action==='request'){
