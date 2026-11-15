@@ -306,8 +306,10 @@ export async function GET(req: NextRequest) {
         })
       : rows
 
-    const stripTasks = assignedOnlyView
-      ? rows.filter((row:any)=>row.stripStatus==='needed')
+    const stripTasks = assignedOnlyView && currentPerson
+      ? rows.filter((row:any)=>row.stripStatus==='needed' &&
+          String(row.assignedTo||'').split(',').some((name:string)=>
+            name.trim().toLowerCase()===String(currentPerson.name||'').trim().toLowerCase()))
       : []
 
     // Housekeeping-only users receive a deliberately narrow payload. Do not rely on
@@ -507,7 +509,9 @@ export async function PATCH(req: NextRequest) {
         dbPatch.complete=false
         dbPatch.ready_for_inspection=false
         dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
-        dbPatch.assigned_to=''
+        // Keep an assigned strip task when a room is blocked; ordinary cleaning
+        // is still prohibited by the room-service task rules.
+        if(String(existing.strip_status||'')!=='needed') dbPatch.assigned_to=''
         dbPatch.clean_order=null
       }else if(String(existing.reservation_status).toLowerCase()==='blocked'||String(existing.strip_hold||'').toLowerCase().includes('hold')){
         dbPatch.room_condition='Vacant (Dirty)'
@@ -689,7 +693,10 @@ export async function PATCH(req: NextRequest) {
     if(manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')
        && /^OUT(?:-[A-Z]{2,4})?$/i.test(cleanText(requested.serviceType))
        && !Object.prototype.hasOwnProperty.call(requested,'roomCondition')) {
-      dbPatch.room_condition='Vacant (Dirty)'
+      const activity=String(requested.reservationStatus??existing.reservation_status??'').toLowerCase()
+      const hold=String(requested.stripHold??existing.strip_hold??'').toLowerCase()
+      if(activity!=='blocked'&&!hold.includes('hold'))
+        dbPatch.room_condition='Vacant (Dirty)'
       dbPatch.complete=false
       dbPatch.ready_for_inspection=false
       dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
