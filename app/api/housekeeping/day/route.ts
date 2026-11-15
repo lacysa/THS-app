@@ -1063,8 +1063,15 @@ export async function POST(req: NextRequest) {
         .in('room_id', dirtyRoomIds)
       if (tomorrowError) throw new Error(tomorrowError.message)
 
+      const {data:futureLinks,error:futureLinkError}=await admin.from('reservation_daily_links')
+        .select('room_id,reservation_status').eq('service_date',tomorrow).in('room_id',dirtyRoomIds)
+      if(futureLinkError)throw new Error(futureLinkError.message)
+      const blockedLinkedRooms=new Set((futureLinks||[])
+        .filter((link:any)=>String(link.reservation_status||'').toLowerCase()==='blocked')
+        .map((link:any)=>String(link.room_id)))
       const tomorrowByRoom = new Map((tomorrowRows || []).map((row:any)=>[String(row.room_id),row]))
       const carryRows = dirtyRows.filter((row:any)=>{
+        if(blockedLinkedRooms.has(String(row.room_id)))return false
         const next=tomorrowByRoom.get(String(row.room_id)) as any
         // Future blocks and completed rooms are authoritative, not carryover targets.
         return String(next?.reservation_status||'').toLowerCase()!=='blocked'&&
