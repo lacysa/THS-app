@@ -335,7 +335,7 @@ export default function BreakfastMenu({token}:{token:string}) {
                     <ChoiceGrid category="entree" dietary={g.dietary} value={g.entree} onChange={v=>setGuest(g.guestNumber,{entree:v,meat:'',eggs:''})}/>
                   </div>
 
-                  {g.entree && categoryOptions('meat',g.entree,g.dietary).length>0 && <div className="menu-section"><h3>Meat selection</h3><ChoiceGrid category="meat" dietary={g.dietary} entree={g.entree} value={g.meat} onChange={v=>setGuest(g.guestNumber,{meat:v})}/></div>}
+                  {g.entree && categoryOptions('meat',g.entree,g.dietary).length>0 && <div className="menu-section"><h3>{g.entree === 'Eggs Benedict' ? 'Benedict choice' : 'Meat selection'}</h3><ChoiceGrid category="meat" dietary={g.dietary} entree={g.entree} value={g.meat} onChange={v=>setGuest(g.guestNumber,{meat:v})}/></div>}
                   {g.entree && categoryOptions('eggs',g.entree,g.dietary).length>0 && <div className="menu-section"><h3>Eggs</h3><ChoiceGrid category="eggs" dietary={g.dietary} entree={g.entree} value={g.eggs} onChange={v=>setGuest(g.guestNumber,{eggs:v})}/></div>}
 
                   {g.entree && <>
