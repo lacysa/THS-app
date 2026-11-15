@@ -3,6 +3,16 @@ import Link from 'next/link'
 import { useCallback,useEffect,useMemo,useState } from 'react'
 import { CheckCircle2, LockKeyhole, RefreshCw } from 'lucide-react'
 type Room={roomId:string;roomName:string;assignedTo:string;cleanOrder:number|null;complete:boolean;readyForInspection:boolean;inspected:boolean;reservationStatus:string;serviceType:string;roomCondition:string;checkIssueOpen:boolean;notes?:string;stripStatus?:string;stripHold?:string;hasDailyRecord?:boolean}
+type StaffOption={id:string;name:string;roleLabel:string;onSite:boolean}
+const needsFullClean=(r:Room)=>{
+ const status=(r.reservationStatus||'').trim().toLowerCase()
+ const condition=(r.roomCondition||'').trim().toLowerCase()
+ const service=(r.serviceType||'').trim().toUpperCase()
+ if(status==='blocked'||(r.stripHold||'').toLowerCase().includes('hold')||condition==='blocked'||status==='stayover')return false
+ if(['checkout','out/in','dirty'].includes(status)||/^OUT(?:-[A-Z]{2,4})?$/.test(service))return true
+ if(['vacant','arrival'].includes(status)&&/dirty|cleaning/.test(condition))return true
+ return status==='vacant'&&!r.complete&&!['vacant (clean)','ready','ready for guest','ready for room check'].includes(condition)
+}
 const currentDate=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 const isWaiting=(r:Room)=>['checkout','out/in'].includes((r.reservationStatus||'').toLowerCase())&&!/^out\b/i.test(r.serviceType||'')
 // The badge communicates the room's guest/occupancy status, not whether a
@@ -21,6 +31,8 @@ const inspectionHref=(roomId:string,date:string)=>'/housekeeping?view=inspection
 export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'}){
  const [date,setDate]=useState(currentDate)
  const [rows,setRows]=useState<Room[]>([])
+ const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
+ const [readOnly,setReadOnly]=useState(false)
  const [loading,setLoading]=useState(true)
  const [busy,setBusy]=useState('')
  const [error,setError]=useState('')
@@ -39,6 +51,8 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    const response=await fetch('/api/housekeeping/day?'+(canSeeTeam?'':'scope=mine&')+'date='+encodeURIComponent(date),{cache:'no-store'})
    const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to load your rooms.')
    setRows(data.rows||[])
+   setStaffOptions(data.staffOptions||[])
+   setReadOnly(Boolean(self.access?.isPreviewMode))
    setHospitalityAssistant(caps.includes('hospitality_assistant'))
    setStaffName(String(self.access?.name||self.access?.preferredName||''))
    setManager(Boolean(self.access?.isAdmin || (self.access?.capabilities||[]).some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c))))
@@ -58,23 +72,30 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  const mine=useMemo(()=>rows.filter(r=>{
   const status=(r.reservationStatus||'').trim().toLowerCase()
   const refresh=status==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim())
-  if(mode==='refreshes'&&!refresh)return false
-  if(mode==='cleans'&&status==='stayover')return false
-  if(mode==='cleans'&&(status==='blocked'||String((r as any).stripHold||'').toLowerCase().includes('hold')||r.roomCondition.trim().toLowerCase()==='blocked'))return false
+  if(mode==='refreshes'){if(!refresh)return false}
+  else if(!needsFullClean(r))return false
   const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase()).filter(Boolean)
   const full=staffName.trim().toLowerCase()
   const team=(manager||hospitalityAssistant)&&cleansView==='team'
-  // A previously blocked room can be dirty before anyone has assigned it.
-  // Keep it visible to management, without exposing unassigned tasks to staff.
-  const unassignedDirty=mode==='cleans'&&team&&assigned.length===0&&
-    /dirty|cleaning/i.test(r.roomCondition)&&!r.complete
-  return unassignedDirty||(assigned.length>0&&(team||Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0]))))
+  return team||Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0]))
  }),[rows,staffName,mode,manager,hospitalityAssistant,cleansView])
+ const housekeepingStaff=useMemo(()=>staffOptions.filter(p=>/housekeep|runner/i.test(p.roleLabel||'')),[staffOptions])
+
  const stripCards=mode==='cleans'?rows.filter(r=>['needed','stripped'].includes(r.stripStatus||'')&&((manager||hospitalityAssistant)&&cleansView==='team'||ownRoom(r))):[]
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
  const locked=(r:Room)=>!teamDisplay&&!manager&&mode==='cleans'&&!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
+ async function assignRoom(room:Room,name:string){
+  setBusy(room.roomId);setError('');setMessage('')
+  try{
+   const response=await fetch('/api/housekeeping/day',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({serviceDate:date,roomId:room.roomId,patch:{assignedTo:name}})})
+   const data=await response.json().catch(()=>({}))
+   if(!response.ok)throw new Error(data.error||'Could not assign room.')
+   setMessage(room.roomName+(name?' assigned to '+name:' is unassigned.'))
+   await load(true)
+  }catch(e:any){setError(e.message||'Could not assign room.')}finally{setBusy('')}
+ }
  async function markStripped(room:Room){
   setBusy(room.roomId);setMessage('');setError('')
   try{
@@ -108,13 +129,13 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   }catch(e:any){setError(e.message||'Unable to save the room.')}finally{setBusy('')}
  }
  return <div className="ths-cleans">
-  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'Assigned full cleans, in cleaning order.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
+  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'All unblocked rooms needing a full clean, including unassigned rooms. Assign them here.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
   {mode==='cleans'&&(manager||hospitalityAssistant)&&<nav className="ths-cleans-tabs" aria-label="Today's cleans views"><button type="button" className={cleansView==='team'?'active':''} aria-current={cleansView==='team'?'page':undefined} onClick={()=>setCleansView('team')}>All Cleans</button><button type="button" className={cleansView==='mine'?'active':''} aria-current={cleansView==='mine'?'page':undefined} onClick={()=>setCleansView('mine')}>My Cleans</button></nav>}
-  <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}</div>
+  <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}{mode==='cleans'&&teamDisplay&&<span> · {ordered.filter(r=>!r.complete&&!r.assignedTo.trim()).length} awaiting assignment</span>}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
   {mode==='refreshes'&&!loading&&<section aria-label="Available stayover refreshes" style={{marginBottom:20}}><h2 style={{fontSize:18,margin:'8px 0 12px'}}>Available stayovers</h2>{available.length===0?<p className="ths-cleans-empty">No unassigned stayovers available to claim.</p>:<div className="ths-refresh-claim-list">{available.map(room=><div key={room.roomId} className="ths-refresh-claim-row"><strong>{room.roomName}</strong><button type="button" disabled={Boolean(busy)} onClick={()=>void claim(room)}>{busy===room.roomId?'Claiming…':'Start RF'}</button></div>)}</div>}</section>}
   {mode==='cleans'&&!loading&&stripCards.length>0&&<section aria-label="Room strips" className="ths-strip-section"><h2>Room strips</h2><p>Strip confirmation is separate from the next full clean.</p><div className="ths-strip-grid">{stripCards.map(r=><article className="ths-strip-card" key={r.roomId}><strong>{r.roomName}</strong><small>{r.stripStatus==='stripped'?'Stripped · awaiting full clean':'Strip requested'}{r.assignedTo?' · '+r.assignedTo:''}</small>{r.stripStatus==='needed'&&<button disabled={busy===r.roomId} type="button" onClick={()=>void markStripped(r)}>{busy===r.roomId?'Saving…':'Strip Room'}</button>}</article>)}</div></section>}
-  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned for this date.':'No full room cleans assigned for this date.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
+  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned for this date.':'No unblocked rooms currently need a full clean.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
    const waiting=isWaiting(r),orderLocked=locked(r),done=r.complete
    const failed=r.checkIssueOpen,passed=r.inspected&&!failed
    const inProgress=!done&&r.roomCondition.trim().toLowerCase()==='cleaning'
@@ -123,12 +144,13 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    return <article className={'ths-clean-card '+cardTone+((manager||hospitalityAssistant)?' inspection-entry':'')} key={r.roomId}>
     {passed?<div className="ths-inspection-flag passed"><CheckCircle2 size={16}/> Inspection passed</div>:failed?<div className="ths-inspection-flag failed">Inspection failed · correction required</div>:null}
     <div className="ths-clean-head"><div><small>{mode==='refreshes'?'STAYOVER REFRESH':r.cleanOrder!=null?'CLEAN '+r.cleanOrder:'ROOM ASSIGNMENT'}</small><h2>{(manager||hospitalityAssistant)?<Link className="ths-inspection-link" href={inspectionHref(r.roomId,date)} aria-label={'Open '+r.roomName+' in Inspections'}>{r.roomName} <span aria-hidden="true">↗</span></Link>:r.roomName}</h2></div>{passed?<span className="ths-clean-ready passed">Passed</span>:failed?<span className="ths-clean-ready failed">Needs correction</span>:done?<span className="ths-clean-ready finished">Finished</span>:inProgress?<span className="ths-clean-ready in-progress">In progress</span>:waiting?<span className="ths-clean-ready awaiting"><LockKeyhole size={14}/> Awaiting OUT</span>:orderLocked?<span className="ths-clean-ready queued"><LockKeyhole size={14}/> Queued</span>:<span className={'ths-clean-ready occupancy'+(guestStatusLabel(r)==='OUT'?' out':'')}>{guestStatusLabel(r)}</span>}</div>
-    {(manager||hospitalityAssistant)&&<p className="ths-clean-detail"><strong>Assigned: {r.assignedTo}</strong></p>}
+    {(manager||hospitalityAssistant)&&<p className="ths-clean-detail"><strong>Assigned: {r.assignedTo||'Unassigned'}</strong></p>}
+    {mode==='cleans'&&manager&&teamDisplay&&!done&&<label className="ths-inline-assign">Assign housekeeper<select aria-label={'Assign '+r.roomName+' to housekeeper'} value={r.assignedTo||''} disabled={readOnly||Boolean(busy)} onChange={e=>void assignRoom(r,e.target.value)}><option value="">Unassigned</option>{housekeepingStaff.filter(p=>p.onSite||p.name===r.assignedTo).map(p=><option key={p.id} value={p.name}>{p.name}{p.onSite?' · on shift':''}</option>)}</select></label>}
     <p className="ths-clean-detail">{r.reservationStatus} {r.serviceType?'· '+r.serviceType:''}</p>
     {r.notes&&<p className="ths-clean-notes">{r.notes}</p>}
     {mode==='cleans'&&!r.assignedTo.trim()&&<p className="ths-clean-detail"><strong>Needs housekeeping assignment</strong></p>}
     <p className="ths-clean-status">{failed?(done?'Correction submitted · awaiting reinspection':'Inspection failed · correction needed'):passed?'Inspection passed':done?(mode==='refreshes'?'Refresh complete':'Finished · sent for inspection'):waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':inProgress?'Cleaning in progress':'Ready to clean'}</p>
-    {mode==='cleans'&&manager&&teamDisplay&&!r.assignedTo.trim()&&<Link className="ths-clean-assign" href={'/housekeeping?view=assignments&date='+encodeURIComponent(date)}>Assign room in Housekeeping</Link>}
+
     {canWorkRoom&&!(hospitalityAssistant&&teamDisplay)&&!done&&!waiting&&!orderLocked&&(mode!=='cleans'||Boolean(r.assignedTo.trim()))&&r.hasDailyRecord!==false&&<button type="button" disabled={busy===r.roomId} onClick={()=>void (inProgress||r.reservationStatus.toLowerCase()==='stayover'?finish(r):begin(r))}>{busy===r.roomId?'Saving…':mode==='refreshes'?'Mark refresh complete':inProgress?'Finished · Send for inspection':'Begin cleaning'}</button>}
    </article>
   })}</div>}
@@ -138,7 +160,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    .ths-cleans{max-width:1100px;margin:auto;padding:20px 18px 64px;color:#263b47}
    .ths-cleans-hero{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;padding:24px;border-radius:20px;background:linear-gradient(115deg,#e2f5f4,#edf3fd,#e9e1fb)}
    .ths-cleans-hero small,.ths-clean-head small{letter-spacing:.1em;font-size:11px;font-weight:800;color:#67818e}.ths-cleans-hero h1{font-size:clamp(25px,4vw,34px);margin:7px 0}.ths-cleans-hero p{margin:0;color:#66808b}.ths-cleans-actions{display:flex;gap:8px}.ths-cleans-actions input,.ths-cleans-actions button{background:white;border:1px solid #d4dfe5;border-radius:12px;padding:12px;color:#263b47}
-   .ths-clean-assign{display:block;margin-top:12px;padding:12px;border-radius:12px;text-align:center;background:#e3eff6;color:#294d64;font-weight:750;text-decoration:none}.ths-clean-assign:hover{text-decoration:underline}
+   .ths-inline-assign{display:grid;gap:6px;font-size:12px;font-weight:750;color:#36586b;margin:12px 0}.ths-inline-assign select{width:100%;min-height:42px;background:#fff;border:1px solid #cbdde7;border-radius:10px;padding:9px;color:#263b47}.ths-clean-assign{display:block;margin-top:12px;padding:12px;border-radius:12px;text-align:center;background:#e3eff6;color:#294d64;font-weight:750;text-decoration:none}.ths-clean-assign:hover{text-decoration:underline}
    .ths-strip-section{margin:15px 0 22px}.ths-strip-section h2{font-size:19px;margin:0 0 5px}.ths-strip-section p{font-size:13px;margin:0 0 11px;color:#617885}.ths-strip-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,275px),1fr));gap:10px}.ths-strip-card{display:flex;flex-direction:column;gap:8px;padding:15px;border:1px solid #d2dfea;border-radius:13px;background:#f8fbfd}.ths-strip-card small{color:#617783}.ths-strip-card button{border:0;background:#35566b;color:#fff;font-weight:750;border-radius:9px;padding:12px;cursor:pointer}.ths-strip-card button:disabled{opacity:.6}
    .ths-cleans-summary{padding:20px 4px;font-size:15px}.ths-cleans-summary strong{font-size:23px}.ths-cleans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}.ths-clean-card{background:white;border:1px solid #dde6e9;border-radius:18px;padding:20px;box-shadow:0 5px 20px #142a3d08}.ths-clean-card.done{background:#e0f3e8;border-color:#b7dbc7}.ths-clean-card.in-progress{background:#fff5d5;border-color:#e8d596}.ths-clean-card.inspection-failed{background:#fff0dc;border-color:#e9b77d}.ths-clean-card.locked{background:#f4f5f8}.ths-clean-head{display:flex;justify-content:space-between;align-items:center}.ths-clean-head h2{font-size:22px;margin:7px 0}.ths-clean-detail,.ths-clean-status{font-size:14px;color:#607684}.ths-clean-ready{background:#dbefe5;border-radius:20px;padding:7px 12px;color:#226650;font-weight:700;white-space:nowrap;font-size:13px}.ths-clean-ready.occupancy{background:#e6eff5;color:#31586d}.ths-clean-ready.occupancy.out{background:#dbeaf5;color:#315a78}.ths-clean-ready.awaiting{display:inline-flex;align-items:center;gap:5px;background:#fff0cf;color:#876320}.ths-clean-ready.queued{display:inline-flex;align-items:center;gap:5px;background:#edf0f4;color:#536776}.ths-clean-ready.in-progress{background:#f6e3a4;color:#735510}.ths-clean-ready.finished,.ths-clean-ready.passed{background:#c9e8d5;color:#206048}.ths-clean-ready.failed{background:#f7d2a9;color:#874514}.ths-inspection-flag{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;letter-spacing:.02em;margin:0 0 13px}.ths-inspection-flag.passed{color:#206048}.ths-inspection-flag.failed{color:#874514}.ths-clean-notes{padding:12px;background:#f2f6fb;border-radius:10px;font-size:14px}.ths-clean-card.inspection-entry{position:relative;cursor:pointer}.ths-clean-card.inspection-entry:hover{border-color:#91b6c6;box-shadow:0 7px 24px #142a3d18}.ths-inspection-link{color:inherit;text-decoration:none}.ths-inspection-link span{font-size:.72em;color:#66808b}.ths-inspection-link::after{content:'';position:absolute;inset:0;border-radius:18px}.ths-clean-card.inspection-entry:focus-within{outline:2px solid #567a99;outline-offset:3px}.ths-clean-card.inspection-entry button{position:relative;z-index:1}.ths-clean-card button{width:100%;min-height:48px;border:0;border-radius:12px;color:white;background:#344f69;font-weight:750;cursor:pointer}.ths-clean-card button:disabled{opacity:.5}.ths-cleans-message,.ths-cleans-error,.ths-cleans-empty{padding:14px;border-radius:12px;background:#e5f1fa}.ths-cleans-error{background:#fbe8eb;color:#972c4c}
    @media(max-width:650px){.ths-cleans{padding:12px 10px 45px}.ths-cleans-hero{padding:18px}.ths-cleans-grid{grid-template-columns:1fr}.ths-clean-card{padding:17px}}
