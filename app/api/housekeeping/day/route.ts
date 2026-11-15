@@ -558,7 +558,8 @@ export async function PATCH(req: NextRequest) {
         dbPatch.complete=false
         dbPatch.ready_for_inspection=false
         dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
-        dbPatch.assigned_to=''
+        // Preserve a housekeeper assigned to an outstanding Strip task.
+        if(String(existing.strip_status||'')!=='needed')dbPatch.assigned_to=''
         dbPatch.clean_order=null
       }else if(String(existing.reservation_status).toLowerCase()==='blocked'||String(existing.strip_hold||'').toLowerCase().includes('hold')){
         dbPatch.room_condition='Vacant (Dirty)'
@@ -741,7 +742,9 @@ export async function PATCH(req: NextRequest) {
     if(manager && Object.prototype.hasOwnProperty.call(requested,'serviceType')
        && /^OUT(?:-[A-Z]{2,4})?$/i.test(cleanText(requested.serviceType))
        && !Object.prototype.hasOwnProperty.call(requested,'roomCondition')) {
-      dbPatch.room_condition='Vacant (Dirty)'
+      const activity=String(requested.reservationStatus??existing.reservation_status??'').toLowerCase()
+      const hold=String(requested.stripHold??existing.strip_hold??'').toLowerCase()
+      if(activity!=='blocked'&&!hold.includes('hold'))dbPatch.room_condition='Vacant (Dirty)'
       dbPatch.complete=false
       dbPatch.ready_for_inspection=false
       dbPatch.inspected=false; dbPatch.inspection_signed_by=null; dbPatch.inspection_signed_at=null
@@ -1046,20 +1049,27 @@ export async function POST(req: NextRequest) {
     // next_shift_condition is the dedicated EOS field; room_condition is only
     // retained as a fallback for legacy rows created before Rooms consolidation.
     const dirtyRows = upserts.filter((row:any)=>
-      String(row.next_shift_condition||row.room_condition||'').trim()==='Vacant (Dirty)'
+      String(row.next_shift_condition||row.room_condition||'').trim()==='Vacant (Dirty)'||
+      String(row.reservation_status||'').trim().toLowerCase()==='blocked'||
+      String(row.strip_hold||'').toLowerCase().includes('hold')
     )
     if (dirtyRows.length) {
       const tomorrow = nextDate(serviceDate)
       const dirtyRoomIds = dirtyRows.map((row:any)=>String(row.room_id))
       const { data: tomorrowRows, error: tomorrowError } = await admin
         .from('housekeeping_daily_rooms')
-        .select('room_id,reservation_status,service_type')
+        .select('room_id,reservation_status,service_type,complete,strip_hold')
         .eq('service_date', tomorrow)
         .in('room_id', dirtyRoomIds)
       if (tomorrowError) throw new Error(tomorrowError.message)
 
       const tomorrowByRoom = new Map((tomorrowRows || []).map((row:any)=>[String(row.room_id),row]))
-      const carryRows = dirtyRows.map((row:any)=>{
+      const carryRows = dirtyRows.filter((row:any)=>{
+        const next=tomorrowByRoom.get(String(row.room_id)) as any
+        // Future blocks and completed rooms are authoritative, not carryover targets.
+        return String(next?.reservation_status||'').toLowerCase()!=='blocked'&&
+          !String(next?.strip_hold||'').toLowerCase().includes('hold')&&!Boolean(next?.complete)
+      }).map((row:any)=>{
         const existing = tomorrowByRoom.get(String(row.room_id)) || {}
         const currentStatus = String((existing as any).reservation_status || '').trim()
         const nextStatus = !currentStatus || currentStatus === 'Vacant' ? 'Dirty' : currentStatus
