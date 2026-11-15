@@ -41,7 +41,7 @@ export async function GET(req:NextRequest){
  try{
   const {people,shifts,existing}=await context(date);const isManager=manage(access)
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
-  const staff=shifts.filter((s:any)=>!['unavailable','off','absent'].includes(String(s.work_mode||'').toLowerCase())&&!/^(off|unavailable)$/i.test(String(s.role_label||''))).map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:s.role_label||person.job_title||''}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
+  const staff=shifts.filter((s:any)=>String(s.work_mode||'').toLowerCase()==='onsite'&&!/^(off|unavailable|time off)$/i.test(String(s.role_label||''))).map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:s.role_label||person.job_title||''}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
   const assigned=(group:string,taskKey:string)=>autoAssignee(staff,group,taskKey)
   const items=SIDEWORK_TASKS.map(task=>{
    const saved=existing.find((x:any)=>x.task_key===task.key)
@@ -81,7 +81,7 @@ export async function PATCH(req:NextRequest){
   const task=SIDEWORK_TASKS.find(t=>t.key===key)!
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
   const saved=existing.find((x:any)=>x.task_key===key)
-  const scheduled=shifts.filter((s:any)=>!['unavailable','off','absent'].includes(String(s.work_mode||'').toLowerCase())&&!/^(off|unavailable)$/i.test(String(s.role_label||''))).map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:s.role_label||p.job_title||''}:null}).filter(Boolean) as {id:string;role:string}[]
+  const scheduled=shifts.filter((s:any)=>String(s.work_mode||'').toLowerCase()==='onsite'&&!/^(off|unavailable|time off)$/i.test(String(s.role_label||''))).map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:s.role_label||p.job_title||''}:null}).filter(Boolean) as {id:string;role:string}[]
   const auto=autoAssignee(scheduled.map(p=>({...p,name:String(people.find((q:any)=>q.id===p.id)?.name||'')})),task.group,key)
   const assignedTo=saved?saved.assigned_to:auto
   if(!isManager&&(!self||assignedTo!==self.id))return NextResponse.json({error:'This sidework is not assigned to you'},{status:403})
