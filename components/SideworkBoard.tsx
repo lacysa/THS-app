@@ -4,9 +4,10 @@ import { CheckCircle2,RefreshCw } from 'lucide-react'
 type Task={key:string;group:string;label:string;time:string;assignedTo:string|null;assignedName:string;completedAt:string|null;notes:string}
 type Staff={id:string;name:string;role:string}
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
-const labels:Record<string,string>={runner:'Breakfast / Runner',laundry:'Laundry',housekeeping_first:'Housekeeping · Box 1',housekeeping_second:'Housekeeping · Box 2',hospitality:'Hospitality Assistant · Guest Areas'}
-const displayGroup=(t:Task)=>t.group==='housekeeping'?( ['hotel_bathroom','hotel_closets','hotel_first_hall','hotel_trash'].includes(t.key)?'housekeeping_first':'housekeeping_second'):t.group
-const groups=['runner','laundry','housekeeping_first','housekeeping_second','hospitality']
+const labels:Record<string,string>={runner:'Breakfast / Runner',laundry:'Laundry',housekeeping_first:'Housekeeping · Box 1',housekeeping_second:'Housekeeping · Box 2',housekeeping_third:'Housekeeping · Box 3',housekeeping_fourth:'Housekeeping · Box 4',hospitality:'Hospitality Assistant · Guest Areas'}
+const housekeepingKeys=[['hotel_bathroom','hotel_closets'],['hotel_first_hall','hotel_trash'],['hotel_second_hall','hotel_vacuums'],['hotel_floors','hotel_closet_trash']]
+const displayGroup=(t:Task)=>t.group==='housekeeping'?('housekeeping_'+['first','second','third','fourth'][Math.max(0,housekeepingKeys.findIndex(keys=>keys.includes(t.key)))]):t.group
+const groups=['runner','laundry','housekeeping_first','housekeeping_second','housekeeping_third','housekeeping_fourth','hospitality']
 export default function SideworkBoard({compact=false,initialDate,assignments=false}:{compact?:boolean;initialDate?:string;assignments?:boolean}){
  const [date,setDate]=useState(initialDate||today()),[items,setItems]=useState<Task[]>([]),[staff,setStaff]=useState<Staff[]>([])
  const [selfId,setSelfId]=useState<string|null>(null),[personalView,setPersonalView]=useState(true)
@@ -53,7 +54,7 @@ export default function SideworkBoard({compact=false,initialDate,assignments=fal
   {!showPersonal&&(loading?<p>Loading sidework…</p>:items.length===0?<div className="ths-sidework-empty">No sidework assigned to you for this date.</div>:<div className="ths-sidework-groups">
   {groups.filter(g=>items.some(t=>displayGroup(t)===g)).map(g=><div className="ths-sidework-group" key={g}>
    <div className="ths-sidework-title"><strong>{groupLabel(g)}</strong><span>{items.filter(t=>displayGroup(t)===g&&t.completedAt).length} / {items.filter(t=>displayGroup(t)===g).length} done</span></div>
-   {assignments&&manager&&<div className="ths-group-assign"><label>Assign entire group<select aria-label={'Assign entire '+groupLabel(g)+' group'} disabled={preview||!!busy} value={items.filter(t=>displayGroup(t)===g).every(t=>t.assignedTo===items.find(i=>displayGroup(i)===g)?.assignedTo)?items.find(t=>displayGroup(t)===g)?.assignedTo||'':'mixed'} onChange={e=>void assignGroup(g,e.target.value||null)}><option value="mixed" disabled>{groupNames(g).join(' + ')||'Individual assignments'}</option><option value="">Unassigned</option>{staff.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div>}
+   {assignments&&manager&&<div className="ths-group-assign"><label>Assign entire group<select aria-label={'Assign entire '+groupLabel(g)+' group'} disabled={preview||!!busy} value={items.filter(t=>displayGroup(t)===g).every(t=>t.assignedTo===items.find(i=>displayGroup(i)===g)?.assignedTo)?items.find(t=>displayGroup(t)===g)?.assignedTo||'':'mixed'} onChange={e=>void assignGroup(g,e.target.value||null)}><option value="mixed" disabled>Choose one housekeeper for this box</option><option value="">Unassigned</option>{staff.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div>}
    <details className="ths-group-details" open={assignments?undefined:true}>{assignments&&<summary>Individual tasks · {items.filter(t=>displayGroup(t)===g).length} <span>Customize assignments</span></summary>}
    {items.filter(t=>displayGroup(t)===g).map(t=><article key={t.key} className={'ths-sidework-task '+(t.completedAt?'done':'')}>
     <label className="ths-sidework-check"><input type="checkbox" checked={!!t.completedAt} disabled={preview||busy===t.key||!t.assignedTo} onChange={e=>void change(t,'complete',e.target.checked)}/><span><strong>{t.label}</strong>{t.time&&<small>{t.time}</small>}</span></label>
