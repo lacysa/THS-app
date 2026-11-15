@@ -177,7 +177,12 @@ export async function GET(req: NextRequest) {
     const onsiteIds = new Set(onsiteStaffOptions.map((person:any)=>String(person.id)))
     const staffOptions = [...onsiteStaffOptions, ...allStaffOptions.filter((person:any)=>!onsiteIds.has(String(person.id)) && !(scheduleRows||[]).some((r:any)=>String(r.staff_member_id)===String(person.id) && ['called_off','no_call_no_show','time_off','unavailable'].includes(String(r.work_mode))))]
 
-    const carryConditions=await previousVacantConditions(admin,serviceDate,saved||[])
+    // Future dates may not yet have housekeeping_daily_rooms records. Include
+    // those rooms when resolving the last physical room condition so a blocked
+    // room becomes Vacant (Dirty) on its first unblocked date.
+    const recordedIds = new Set((saved || []).map((row:any) => String(row.room_id)))
+    const conditionRows = [...(saved || []), ...(rooms || []).filter((room:any) => !recordedIds.has(String(room.id))).map((room:any) => ({room_id:room.id,reservation_status:'Vacant'}))]
+    const carryConditions=await previousVacantConditions(admin,serviceDate,conditionRows)
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
 
