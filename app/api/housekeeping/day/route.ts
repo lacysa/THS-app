@@ -250,6 +250,7 @@ export async function GET(req: NextRequest) {
           : null,
         strippedAt: savedRow.stripped_at || null,
         assignedTo: savedRow.assigned_to || '',
+        hasDailyRecord: savedByRoom.has(String(room.id)),
         claimableRefresh:
           String(savedRow.reservation_status||'').trim().toLowerCase()==='stayover' &&
           String(savedRow.service_type||'').trim().toUpperCase()==='RF' &&
