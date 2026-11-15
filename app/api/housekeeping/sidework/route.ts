@@ -12,6 +12,19 @@ function matches(role:string,group:string){
  if(group==='hospitality')return /hospitality assistant|hospitality_assistant|\bha\b/.test(t)
  return /housekeep|\bhsk\b/.test(t)
 }
+const HOUSEKEEPING_FIRST=new Set(['hotel_bathroom','hotel_closets','hotel_first_hall','hotel_trash'])
+function autoAssignee(staff:{id:string;name?:string;role:string}[],group:string,key:string){
+ const eligible=staff.filter(p=>matches(p.role,group))
+ if(!eligible.length)return null
+ if(group==='runner'||group==='laundry'||group==='hospitality')return eligible[0].id
+ // Assign one complete housekeeping task box per housekeeper rather than
+ // rotating individual tasks, which creates Mixed group assignments.
+ const dedicated=eligible.filter(p=>!/runner|laundry|hospitality assistant|hospitality_assistant/i.test(p.role))
+ const cleaners=(dedicated.length?dedicated:eligible).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')))
+ const first=HOUSEKEEPING_FIRST.has(key)
+ const preferred=cleaners.find(p=>String(p.name||'').toLowerCase()===(first?'chloe':'kiana'))
+ return (preferred||cleaners[first?0:Math.min(1,cleaners.length-1)])?.id||null
+}
 async function context(date:string){
  const admin=createSupabaseAdmin()
  const [{data:staff,error:staffError},{data:scheduled,error:scheduleError},{data:saved,error:savedError}]=await Promise.all([
@@ -29,12 +42,7 @@ export async function GET(req:NextRequest){
   const {people,shifts,existing}=await context(date);const isManager=manage(access)
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
   const staff=shifts.filter((s:any)=>!['unavailable','off','absent'].includes(String(s.work_mode||'').toLowerCase())&&!/^(off|unavailable)$/i.test(String(s.role_label||''))).map((s:any)=>{const person=people.find((p:any)=>p.id===s.staff_member_id);return person?{id:person.id,name:person.name,role:s.role_label||person.job_title||''}:null}).filter(Boolean) as {id:string;name:string;role:string}[]
-  const assigned=(group:string,taskKey:string)=>{
-   const eligible=staff.filter(p=>matches(p.role,group))
-   if(!eligible.length)return null
-   const index=SIDEWORK_TASKS.filter(task=>task.group===group).findIndex(task=>task.key===taskKey)
-   return eligible[Math.max(0,index)%eligible.length].id
-  }
+  const assigned=(group:string,taskKey:string)=>autoAssignee(staff,group,taskKey)
   const items=SIDEWORK_TASKS.map(task=>{
    const saved=existing.find((x:any)=>x.task_key===task.key)
    const assignedTo=saved?saved.assigned_to:assigned(task.group,task.key)
@@ -74,9 +82,7 @@ export async function PATCH(req:NextRequest){
   const self=people.find((p:any)=>p.auth_user_id===access.userId)
   const saved=existing.find((x:any)=>x.task_key===key)
   const scheduled=shifts.filter((s:any)=>!['unavailable','off','absent'].includes(String(s.work_mode||'').toLowerCase())&&!/^(off|unavailable)$/i.test(String(s.role_label||''))).map((s:any)=>{const p=people.find((x:any)=>x.id===s.staff_member_id);return p?{id:p.id,role:s.role_label||p.job_title||''}:null}).filter(Boolean) as {id:string;role:string}[]
-  const eligible=scheduled.filter(p=>matches(p.role,task.group))
-  const taskIndex=SIDEWORK_TASKS.filter(t=>t.group===task.group).findIndex(t=>t.key===key)
-  const auto=eligible.length?eligible[Math.max(0,taskIndex)%eligible.length].id:null
+  const auto=autoAssignee(scheduled.map(p=>({...p,name:String(people.find((q:any)=>q.id===p.id)?.name||'')})),task.group,key)
   const assignedTo=saved?saved.assigned_to:auto
   if(!isManager&&(!self||assignedTo!==self.id))return NextResponse.json({error:'This sidework is not assigned to you'},{status:403})
   if(body.action==='assign'&&!isManager)return NextResponse.json({error:'Managers assign sidework'},{status:403})
