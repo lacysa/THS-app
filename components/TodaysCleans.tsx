@@ -55,7 +55,21 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  const available=useMemo(()=>mode==='refreshes'?rows.filter(r=>r.reservationStatus.trim().toLowerCase()==='stayover'&&!r.assignedTo.trim()&&['','RF','REFRESH'].includes(r.serviceType.trim().toUpperCase())):[],[rows,mode])
  const ownRoom=(r:Room)=>{const names=String(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const name=staffName.trim().toLowerCase();return Boolean(name&&names.some(n=>n===name||n===name.split(' ')[0]))}
  const teamDisplay=mode==='cleans'&&(manager||hospitalityAssistant)&&cleansView==='team'
- const mine=useMemo(()=>rows.filter(r=>{const refresh=r.reservationStatus.trim().toLowerCase()==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim());if(mode==='refreshes'&&!refresh)return false;if(mode==='cleans'&&r.reservationStatus.trim().toLowerCase()==='stayover')return false;const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase()).filter(Boolean);const full=staffName.trim().toLowerCase();return assigned.length>0 && ((manager&&cleansView==='team')||(hospitalityAssistant&&cleansView==='team')||Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0])))}),[rows,staffName,mode,manager,hospitalityAssistant,cleansView])
+ const mine=useMemo(()=>rows.filter(r=>{
+  const status=(r.reservationStatus||'').trim().toLowerCase()
+  const refresh=status==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim())
+  if(mode==='refreshes'&&!refresh)return false
+  if(mode==='cleans'&&status==='stayover')return false
+  if(mode==='cleans'&&(status==='blocked'||String((r as any).stripHold||'').toLowerCase().includes('hold')||r.roomCondition.trim().toLowerCase()==='blocked'))return false
+  const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase()).filter(Boolean)
+  const full=staffName.trim().toLowerCase()
+  const team=(manager||hospitalityAssistant)&&cleansView==='team'
+  // A previously blocked room can be dirty before anyone has assigned it.
+  // Keep it visible to management, without exposing unassigned tasks to staff.
+  const unassignedDirty=mode==='cleans'&&team&&assigned.length===0&&
+    /dirty|cleaning/i.test(r.roomCondition)&&!r.complete
+  return unassignedDirty||(assigned.length>0&&(team||Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0]))))
+ }),[rows,staffName,mode,manager,hospitalityAssistant,cleansView])
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
