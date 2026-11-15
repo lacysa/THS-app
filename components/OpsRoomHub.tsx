@@ -1,13 +1,13 @@
 'use client'
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {AlertTriangle,Ban,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,RefreshCw,Pencil,Save,Wallet,X} from 'lucide-react'
+import {AlertTriangle,Ban,BedDouble,Check,ChevronDown,ChevronRight,Clock3,DoorOpen,RefreshCw,Pencil,Save,Wallet,X} from 'lucide-react'
 import OpsActivityLog from '@/components/OpsActivityLog'
 import StaffAssignmentSelect from '@/components/StaffAssignmentSelect'
 import type { AssignmentStaff } from '@/lib/assignment-staff'
 import {derivedLiveCondition,isCheckoutAwaitingOut} from '@/lib/room-state'
 
 type Stay={id:string;reservation_number:string|null;guest_name:string|null;accompanying_guest:string|null;guest_phone:string|null;arrival_date:string|null;checkout_date:string|null;occupancy:number|null;rate_plan:string|null;check_in_time:string|null;products_raw:string|null;dietary_restrictions:string|null;guest_comments:string|null;innkeeper_notes:string|null;reason_for_visit:string|null}
-type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null;foh_signed_by?:string|null;ha_signed_by?:string|null}
+type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;strip_status?:string|null;stripped_at?:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null;foh_signed_by?:string|null;ha_signed_by?:string|null}
 type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
 type Data={roomNoteHistory?:{id:string;note:string;type:string;at:string;author:string}[];checklistNotes?:{id:string;label:string;note:string;stage:string;at:string}[];correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];staff:AssignmentStaff[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean}
@@ -163,6 +163,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  const canInspect=Boolean(data?.permissions.canInspect)
  const blocked=Boolean(daily?.strip_hold?.toLowerCase().includes('hold')||daily?.reservation_status?.toLowerCase()==='blocked'||daily?.room_condition==='Blocked')
  const serviceCode=String(daily?.service_type||'').trim().toUpperCase()
+ const stripStatus=String(daily?.strip_status||'').toLowerCase()
  const markedOut=/^OUT(?:-[A-Z]{2,4})?$/.test(serviceCode)
  const envelopeInitials=/^OUT-([A-Z]{2,4})$/.exec(serviceCode)?.[1]||''
  const envelopeCollected=Boolean(envelopeInitials)
@@ -197,6 +198,10 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  }
  async function toggleLateCheckout(){
   await run('/api/ops/room-details',{roomId,date,action:'lateCheckoutTag',enabled:!Boolean(data?.serviceDetails?.late_checkout)},'Late checkout updated')
+ }
+ async function updateStrip(action:'request'|'clear'){
+  if(!daily||!canManage)return
+  await run('/api/housekeeping/strip-task',{serviceDate:date,roomId,action},action==='request'?'Strip task sent to housekeeping':'Strip task cleared')
  }
  async function serviceAction(action:'trayReturned'|'trayReset'|'tubRequest'|'tubComplete'|'tubReopen'){
   await run('/api/ops/room-details',{roomId,date,action},action==='tubComplete'?'Tub cleaning recorded':action==='tubRequest'?'Tub cleaning requested':action==='tubReopen'?'Tub cleaning reopened':action==='trayReturned'?'Breakfast tray return recorded':'Tray return cleared')
@@ -510,6 +515,9 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
        </button>
        <button type="button" className={'ops-hub-quick-action'+(blocked?' selected warning':'')} aria-pressed={blocked} disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('stripHold')}>
         <span className="ops-hub-quick-icon"><Ban size={18}/></span><span className="ops-hub-quick-name">Block room</span>{blocked&&<Check size={15} className="ops-hub-quick-check"/>}
+       </button>
+       <button type="button" className={'ops-hub-quick-action'+(stripStatus?' selected':'')} disabled={!canManage||!daily||busy} aria-pressed={Boolean(stripStatus)} onClick={()=>void updateStrip(stripStatus?'clear':'request')} aria-label={stripStatus==='stripped'?'Clear stripped status':stripStatus==='needed'?'Cancel room strip':'Request room strip'}>
+        <span className="ops-hub-quick-icon"><BedDouble size={18}/></span><span className="ops-hub-quick-name">Strip Room</span><small>{stripStatus==='stripped'?'Stripped · clear':stripStatus==='needed'?'Requested · cancel':'Request strip'}</small>{Boolean(stripStatus)&&<Check size={14} className="ops-hub-quick-check"/>}
        </button>
        <button type="button" className={'ops-hub-quick-action'+(data.tubCleanDue?' selected':'')+(data.serviceDetails?.tub_clean_completed_at?' ops-hub-complete-card':'')} disabled={!canManage||!daily||busy||blocked} onClick={()=>data.tubCleanDue?setActiveEditor(v=>v==='tub_assignee'?null:'tub_assignee'):void serviceAction(data.serviceDetails?.tub_clean_completed_at?'tubReopen':'tubRequest')}>
         <span className="ops-hub-quick-icon">🛁</span><span className="ops-hub-quick-name">Tub clean</span><small>{data.serviceDetails?.tub_clean_completed_at?'Done · reopen':data.tubCleanDue?(data.serviceDetails?.tub_clean_assigned_to?'Tub only · '+data.serviceDetails.tub_clean_assigned_to:'Assign tub only'):'Request'}</small>
