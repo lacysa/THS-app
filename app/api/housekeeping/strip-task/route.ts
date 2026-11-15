@@ -17,7 +17,18 @@ export async function PATCH(req:NextRequest){
     return NextResponse.json({error:'Invalid strip task update.'},{status:400})
   }
 
+  if(access.isPreviewMode)return NextResponse.json({error:'Staff preview is read-only.'},{status:403})
+  const capabilities=access.capabilities||[]
+  const manager=access.isAdmin||capabilities.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c))
+  const housekeeping=capabilities.some((c:string)=>['housekeeping','hospitality_assistant'].includes(c))
+  if((action==='request'||action==='clear')&&!manager)return NextResponse.json({error:'Management access required.'},{status:403})
+  if(action==='complete'&&!manager&&!housekeeping)return NextResponse.json({error:'Housekeeping access required.'},{status:403})
   const admin=createSupabaseAdmin()
+  const {data:room,error:roomError}=await admin.from('housekeeping_daily_rooms')
+    .select('strip_status').eq('service_date',serviceDate).eq('room_id',roomId).maybeSingle()
+  if(roomError)return NextResponse.json({error:roomError.message},{status:500})
+  if(!room)return NextResponse.json({error:'Room not scheduled for this date.'},{status:404})
+  if(action==='complete'&&room.strip_status!=='needed')return NextResponse.json({error:'There is no outstanding strip task for this room.'},{status:409})
   const now=new Date().toISOString()
 
   const {data:person}=await admin
