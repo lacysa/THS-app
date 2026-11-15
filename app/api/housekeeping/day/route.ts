@@ -178,7 +178,13 @@ export async function GET(req: NextRequest) {
     const onsiteIds = new Set(onsiteStaffOptions.map((person:any)=>String(person.id)))
     const staffOptions = [...onsiteStaffOptions, ...allStaffOptions.filter((person:any)=>!onsiteIds.has(String(person.id)) && !(scheduleRows||[]).some((r:any)=>String(r.staff_member_id)===String(person.id) && ['called_off','no_call_no_show','time_off','unavailable'].includes(String(r.work_mode))))]
 
-    const carryConditions=await previousVacantConditions(admin,serviceDate,saved||[])
+    // Include rooms with no daily record, otherwise a blocked room disappears
+    // from tomorrow's cleaning queue until someone manually creates that day.
+    const carryConditions=await previousVacantConditions(admin,serviceDate,[
+      ...(saved||[]),
+      ...(rooms||[]).filter((room:any)=>!(saved||[]).some((day:any)=>String(day.room_id)===String(room.id)))
+        .map((room:any)=>({room_id:room.id,reservation_status:'',room_condition:''}))
+    ])
     const savedByRoom = new Map<string, any>()
     for (const row of saved || []) savedByRoom.set(String((row as any).room_id), row)
 
