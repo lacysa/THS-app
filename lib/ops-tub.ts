@@ -51,10 +51,9 @@ export async function loadTubTaskStates(admin:ReturnType<typeof createSupabaseAd
    lastCompletion=serviceDate
    const detail=records.find(v=>v.service_date===serviceDate)
    // A completed full clean is an explicit reset, not a change in room status.
-   const fullClean=Boolean(day?.complete)&&(
-    ['checkout','out/in','dirty'].includes(String(day?.reservation_status||'').toLowerCase())||
-    /^OUT(?:-[A-Z]{2,4})?$/i.test(String(day?.service_type||''))||
-    /dirty|cleaning/i.test(String(day?.room_condition||'')))
+   const fullClean=Boolean(day?.complete)&&
+    String(day?.service_type||'').trim().toUpperCase()!=='RF'&&
+    String(day?.reservation_status||'').trim().toLowerCase()!=='stayover'
    if(fullClean||detail?.tub_clean_completed_at){
     pending=false;autoTriggered=false;assignedTo=''
     vacantDays=0
