@@ -52,7 +52,7 @@ export async function PATCH(req:NextRequest){
     update.stripped_by=person.id
     update.stripped_at=now
   }else{
-    update.strip_status=''
+    update.strip_status='cleared'
     update.strip_requested_by=null
     update.strip_requested_at=null
     update.stripped_by=null
