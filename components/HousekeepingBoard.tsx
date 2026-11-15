@@ -173,7 +173,7 @@ function isFullRoomClean(row: RoomRow) {
 
 function usesCleaningAssignment(row: RoomRow) {
   const status=normalize(row.reservationStatus)
-  return status==='checkout' || status==='out/in' || status==='stayover' || status==='dirty'
+  return status==='checkout' || status==='out/in' || status==='stayover' || status==='dirty' || status==='blocked'
 }
 
 function saveStatusLabel(state: SaveState) {
@@ -760,7 +760,7 @@ export default function HousekeepingBoard() {
           <div className="hsk-out-buttons">
             <button type="button" onClick={()=>clearOutRf(row)} className={!outRf?'is-active':''}>—</button>
             <button type="button" onClick={()=>markOut(row)}>OUT</button>
-            <button type="button" onClick={()=>markRefresh(row)}>RF</button>
+            {normalize(row.reservationStatus)!=='blocked'&&<button type="button" onClick={()=>markRefresh(row)}>RF</button>}
           </div>
         </div>}
 
@@ -1363,7 +1363,7 @@ export default function HousekeepingBoard() {
                         <div className="hsk-out-buttons">
                           <button type="button" onClick={() => clearOutRf(row)} className={!outRf ? 'is-active' : ''}>—</button>
                           <button type="button" onClick={() => markOut(row)} className={isOut ? 'is-active' : ''}>OUT</button>
-                          <button type="button" onClick={() => markRefresh(row)} className={isRefresh ? 'is-active' : ''}>RF</button>
+                          {normalize(row.reservationStatus)!=='blocked'&&<button type="button" onClick={() => markRefresh(row)} className={isRefresh ? 'is-active' : ''}>RF</button>}
                         </div>
                         {isOut && (
                           <div className="hsk-envelope-row">
