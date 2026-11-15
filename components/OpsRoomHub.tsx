@@ -163,7 +163,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  const canInspect=Boolean(data?.permissions.canInspect)
  const blocked=Boolean(daily?.strip_hold?.toLowerCase().includes('hold')||daily?.reservation_status?.toLowerCase()==='blocked'||daily?.room_condition==='Blocked')
  const serviceCode=String(daily?.service_type||'').trim().toUpperCase()
- const stripStatus=String(daily?.strip_status||'').toLowerCase()
+ const stripStatus=String(daily?.strip_status||'').toLowerCase()==='cleared'?'':String(daily?.strip_status||'').toLowerCase()
  const markedOut=/^OUT(?:-[A-Z]{2,4})?$/.test(serviceCode)
  const envelopeInitials=/^OUT-([A-Z]{2,4})$/.exec(serviceCode)?.[1]||''
  const envelopeCollected=Boolean(envelopeInitials)
