@@ -192,8 +192,14 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         const stayoverOccupied=effectiveStatus.toLowerCase()==='stayover'&&!onHold
         const carryCondition=noReservation&&!staffCondition&&!outConfirmed?last:''
         const condition=awaitingOut||stayoverOccupied?'Occupied':staffCondition||carryCondition
-        const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'
-        const nextStatus=carryDirty?'Dirty':effectiveStatus
+        // A verified clean retires the temporary Dirty activity. It must not
+        // survive a reservation sync merely because the old daily row said Dirty.
+        // Never override actual PMS Arrival, Checkout, Out/In or Stayover.
+        const confirmedClean=['vacant (clean)','ready','ready for guest'].includes(condition.trim().toLowerCase()) &&
+          (Boolean(current.complete)||Boolean(current.inspected)||Boolean(current.updated_by))
+        const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'&&!confirmedClean
+        const nextStatus=status==='Vacant'&&confirmedClean&&effectiveStatus.toLowerCase()==='dirty'
+          ?'Vacant':carryDirty?'Dirty':effectiveStatus
         const nextBreakfast=manualTags.has(roomKey)
           ? Boolean(manualTags.get(roomKey))
           : Boolean(arriving||staying) && (breakfastIncluded((arriving||staying)?.rate_plan) || morningBreakfastIncluded((arriving||staying)?.innkeeper_notes,addDay(date)))
