@@ -671,6 +671,11 @@ export async function PATCH(req: NextRequest) {
           dbPatch.foh_signed_at=now
         }
         dbPatch.room_condition=chosen
+        // The operational Dirty activity is a pending-clean queue marker,
+        // not a permanent reservation fact. A management-verified clean
+        // retires it while leaving real Arrival / Checkout / Out-In activity
+        // and OUT/tip audit initials intact.
+        if(activity.trim().toLowerCase()==='dirty')dbPatch.reservation_status='Vacant'
       }else if(chosen==='Ready for Room Check'){
         if(blocked||occupied)return NextResponse.json({error:'This room must be vacant and unblocked before inspection.'},{status:409})
         if(existing.check_issue_open&&!existing.ready_for_inspection)return NextResponse.json({error:'Document the correction before resubmitting this room for inspection.'},{status:409})
