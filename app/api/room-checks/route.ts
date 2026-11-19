@@ -194,7 +194,7 @@ export async function POST(req:NextRequest){
         foh_signed_by:null,foh_signed_at:null,updated_at:now
       }:{
         check_issue_open:false,check_issue_note:null,inspected:true,inspected_by:ctx.access.userId,
-        inspected_at:now,ready_for_inspection:false,room_condition:passedCondition,inspection_signed_by:null,inspection_signed_at:null,
+        inspected_at:now,ready_for_inspection:false,room_condition:passedCondition,...(status==='dirty'?{reservation_status:'Vacant'}:{}),inspection_signed_by:null,inspection_signed_at:null,
         ha_signed_by:person.id,ha_signed_at:now,updated_at:now
       }
       const {error:updateError}=await admin.from('housekeeping_daily_rooms').update(patch).eq('service_date',date).eq('room_id',roomId)
@@ -405,6 +405,7 @@ export async function POST(req:NextRequest){
         inspected_at:now,
         ready_for_inspection:false,
         room_condition:passedCondition,
+        ...(status==='dirty'?{reservation_status:'Vacant'}:{}),
         ha_signed_by:person.id,
         ha_signed_at:now,
         updated_at:now
