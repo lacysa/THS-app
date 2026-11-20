@@ -35,6 +35,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  const [readOnly,setReadOnly]=useState(false)
  const [loading,setLoading]=useState(true)
  const [busy,setBusy]=useState('')
+ const [startedTasks,setStartedTasks]=useState<Record<string,boolean>>({})
  const [error,setError]=useState('')
  const [message,setMessage]=useState('')
  const [staffName,setStaffName]=useState('')
@@ -168,10 +169,10 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
     {mode==='cleans'&&!r.assignedTo.trim()&&<p className="ths-clean-detail"><strong>Needs housekeeping assignment</strong></p>}
     <p className="ths-clean-status">{failed?(done?'Correction submitted · awaiting reinspection':'Inspection failed · correction needed'):passed?'Inspection passed':done?(mode==='refreshes'?'Refresh complete':'Finished · sent for inspection'):task==='strip'?'Strip requested · ready to strip':task==='tub'?'Tub clean due · room stays clean':waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':inProgress?'Cleaning in progress':'Ready to clean'}</p>
 
-    {mode==='cleans'&&task==='clean'&&<div className="ths-blanket-inline" style={{borderColor:blankets[r.roomId]?'#79b996':'#dfc17b',background:blankets[r.roomId]?'#edf8ef':'#fff7e6'}}><span>{blankets[r.roomId]?'Blanket changed this week':'Blanket not changed this week'}</span>{!blankets[r.roomId]&&canWorkRoom&&<button type="button" disabled={readOnly||Boolean(busy)} onClick={()=>void markBlanket(r)}>Mark changed</button>}</div>}
+    {mode==='cleans'&&<div className="ths-blanket-inline" style={{borderColor:blankets[r.roomId]?'#79b996':'#dfc17b',background:blankets[r.roomId]?'#edf8ef':'#fff7e6'}}><span>{blankets[r.roomId]?'Blanket changed this week':'Blanket not changed this week'}</span>{!blankets[r.roomId]&&canWorkRoom&&<button type="button" disabled={readOnly||Boolean(busy)} onClick={()=>void markBlanket(r)}>Mark changed</button>}</div>}
     {canWorkRoom&&!(hospitalityAssistant&&teamDisplay)&&!readOnly&&!orderLocked&&r.hasDailyRecord!==false&&(
-      task==='strip'?<button type="button" disabled={Boolean(busy)} onClick={()=>void markStripped(r)}>{busy===r.roomId?'Saving…':'Begin Strip · Mark stripped'}</button>:
-      task==='tub'?<button type="button" disabled={Boolean(busy)} onClick={()=>void markTub(r)}>{busy===r.roomId?'Saving…':'Begin Tub · Mark done'}</button>:
+      task==='strip'?<button type="button" disabled={Boolean(busy)} onClick={()=>startedTasks['strip:'+r.roomId]?void markStripped(r):setStartedTasks(v=>({...v,['strip:'+r.roomId]:true}))}>{busy===r.roomId?'Saving…':startedTasks['strip:'+r.roomId]?'Mark Strip Complete':'Begin Strip'}</button>:
+      task==='tub'?<button type="button" disabled={Boolean(busy)} onClick={()=>startedTasks['tub:'+r.roomId]?void markTub(r):setStartedTasks(v=>({...v,['tub:'+r.roomId]:true}))}>{busy===r.roomId?'Saving…':startedTasks['tub:'+r.roomId]?'Mark Tub Complete':'Begin Tub'}</button>:
       !done&&!waiting&&Boolean(r.assignedTo.trim())?<button type="button" disabled={Boolean(busy)} onClick={()=>void (inProgress||r.reservationStatus.toLowerCase()==='stayover'?finish(r):begin(r))}>{busy===r.roomId?'Saving…':mode==='refreshes'?'Mark refresh complete':inProgress?'Finished · Send for inspection':'Begin cleaning'}</button>:null
     )}
 
