@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useCallback,useEffect,useMemo,useState } from 'react'
 import { CheckCircle2, LockKeyhole, RefreshCw } from 'lucide-react'
-type Room={roomId:string;roomName:string;assignedTo:string;cleanOrder:number|null;complete:boolean;readyForInspection:boolean;inspected:boolean;reservationStatus:string;serviceType:string;roomCondition:string;checkIssueOpen:boolean;notes?:string;stripStatus?:string;stripHold?:string;hasDailyRecord?:boolean}
+type Room={roomId:string;roomName:string;assignedTo:string;cleanOrder:number|null;complete:boolean;readyForInspection:boolean;inspected:boolean;reservationStatus:string;serviceType:string;roomCondition:string;checkIssueOpen:boolean;notes?:string;stripStatus?:string;stripHold?:string;hasDailyRecord?:boolean;tubCleanDue?:boolean;tubAssignedTo?:string}
 type StaffOption={id:string;name:string;roleLabel:string;onSite:boolean}
 const needsFullClean=(r:Room)=>{
  const status=(r.reservationStatus||'').trim().toLowerCase()
@@ -38,6 +38,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  const [error,setError]=useState('')
  const [message,setMessage]=useState('')
  const [staffName,setStaffName]=useState('')
+ const [blankets,setBlankets]=useState<Record<string,{changedAt:string;changedBy:string}>>({})
  const [manager,setManager]=useState(false)
  const [hospitalityAssistant,setHospitalityAssistant]=useState(false)
  const [cleansView,setCleansView]=useState<'team'|'mine'>('team')
@@ -51,6 +52,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    const response=await fetch('/api/housekeeping/day?'+(canSeeTeam?'':'scope=mine&')+'date='+encodeURIComponent(date),{cache:'no-store'})
    const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to load your rooms.')
    setRows(data.rows||[])
+   if(mode==='cleans'){const br=await fetch('/api/housekeeping/blankets?date='+encodeURIComponent(date),{cache:'no-store'});if(br.ok){const bd=await br.json();setBlankets(bd.rooms||{})}}
    setStaffOptions(data.staffOptions||[])
    setReadOnly(Boolean(self.access?.isPreviewMode))
    setHospitalityAssistant(caps.includes('hospitality_assistant'))
@@ -82,6 +84,8 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  const housekeepingStaff=useMemo(()=>staffOptions.filter(p=>/housekeep|runner/i.test(p.roleLabel||'')),[staffOptions])
 
  const stripCards=mode==='cleans'?rows.filter(r=>['needed','stripped'].includes(r.stripStatus||'')&&((manager||hospitalityAssistant)&&cleansView==='team'||ownRoom(r))):[]
+ const tubCards=mode==='cleans'?rows.filter(r=>r.tubCleanDue&&((manager||hospitalityAssistant)&&cleansView==='team'||ownRoom(r)||(r.tubAssignedTo||'').toLowerCase()===staffName.toLowerCase()):[]
+ const blanketRooms=mode==='cleans'?rows.filter(r=>((manager||hospitalityAssistant)&&cleansView==='team'||ownRoom(r))&&r.hasDailyRecord!==false):[]
  const ordered=useMemo(()=>mine.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[mine])
  const pending=ordered.filter(r=>!r.complete)
  const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
@@ -96,6 +100,8 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    await load(true)
   }catch(e:any){setError(e.message||'Could not assign room.')}finally{setBusy('')}
  }
+ async function markBlanket(room:Room){setBusy(room.roomId);setError('');setMessage('');try{const response=await fetch('/api/housekeeping/blankets',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:room.roomId})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Could not record blanket change.');setMessage(room.roomName+' · blanket changed this week.');await load(true)}catch(e:any){setError(e.message||'Unable to save blanket change.')}finally{setBusy('')}}
+ async function markTub(room:Room){setBusy(room.roomId);setError('');setMessage('');try{const response=await fetch('/api/ops/room-details',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:room.roomId,action:'tubComplete'})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Could not complete tub clean.');setMessage(room.roomName+' · tub cleaned, room condition unchanged.');await load(true)}catch(e:any){setError(e.message||'Unable to record tub clean.')}finally{setBusy('')}}
  async function markStripped(room:Room){
   setBusy(room.roomId);setMessage('');setError('')
   try{
@@ -134,7 +140,9 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}{mode==='cleans'&&teamDisplay&&<span> · {ordered.filter(r=>!r.complete&&!r.assignedTo.trim()).length} awaiting assignment</span>}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
   {mode==='refreshes'&&!loading&&<section aria-label="Available stayover refreshes" style={{marginBottom:20}}><h2 style={{fontSize:18,margin:'8px 0 12px'}}>Available stayovers</h2>{available.length===0?<p className="ths-cleans-empty">No unassigned stayovers available to claim.</p>:<div className="ths-refresh-claim-list">{available.map(room=><div key={room.roomId} className="ths-refresh-claim-row"><strong>{room.roomName}</strong><button type="button" disabled={Boolean(busy)} onClick={()=>void claim(room)}>{busy===room.roomId?'Claiming…':'Start RF'}</button></div>)}</div>}</section>}
-  {mode==='cleans'&&!loading&&stripCards.length>0&&<section aria-label="Room strips" className="ths-strip-section"><h2>Room strips</h2><p>Strip confirmation is separate from the next full clean.</p><div className="ths-strip-grid">{stripCards.map(r=><article className="ths-strip-card" key={r.roomId}><strong>{r.roomName}</strong><small>{r.stripStatus==='stripped'?'Stripped · awaiting full clean':'Strip requested'}{r.assignedTo?' · '+r.assignedTo:''}</small>{r.stripStatus==='needed'&&<button disabled={busy===r.roomId} type="button" onClick={()=>void markStripped(r)}>{busy===r.roomId?'Saving…':'Strip Room'}</button>}</article>)}</div></section>}
+  {mode==='cleans'&&!loading&&tubCards.length>0&&<section className="ths-strip-section" aria-label="Tub cleans"><h2>Tub cleans</h2><p>Independent tub tasks; completing one does not change room condition.</p><div className="ths-strip-grid">{tubCards.map(r=><article className="ths-strip-card" key={r.roomId}><strong>{r.roomName}</strong><small>{r.tubAssignedTo?'Assigned: '+r.tubAssignedTo:'Assigned: '+(r.assignedTo||'Unassigned')}</small><button disabled={readOnly||Boolean(busy)||!(manager||ownRoom(r)||(r.tubAssignedTo||'').toLowerCase()===staffName.toLowerCase())} type="button" onClick={()=>void markTub(r)}>{busy===r.roomId?'Saving…':'Begin Tub · Mark done'}</button></article>)}</div></section>}
+  {mode==='cleans'&&!loading&&stripCards.length>0&&<section aria-label="Room strips" className="ths-strip-section"><h2>Room strips</h2><p>Strip confirmation is separate from the next full clean.</p><div className="ths-strip-grid">{stripCards.map(r=><article className="ths-strip-card" key={r.roomId}><strong>{r.roomName}</strong><small>{r.stripStatus==='stripped'?'Stripped · awaiting full clean':'Strip requested'}{r.assignedTo?' · '+r.assignedTo:''}</small>{r.stripStatus==='needed'&&<button disabled={busy===r.roomId} type="button" onClick={()=>void markStripped(r)}>{busy===r.roomId?'Saving…':'Begin Strip · Mark stripped'}</button>}</article>)}</div></section>}
+  {mode==='cleans'&&!loading&&blanketRooms.length>0&&<section className="ths-strip-section" aria-label="Weekly blanket changes"><h2>Weekly blanket changes</h2><p>Resets every Monday (America/Detroit). Green = changed this week; amber = not changed.</p><div className="ths-strip-grid">{blanketRooms.map(r=><article className="ths-strip-card" key={r.roomId} style={{borderColor:blankets[r.roomId]?'#79b996':'#dfc17b',background:blankets[r.roomId]?'#edf8ef':'#fff7e6'}}><strong>{r.roomName}</strong><small>{blankets[r.roomId]?'Changed this week':'Not changed this week'}</small>{!blankets[r.roomId]&&<button type="button" disabled={readOnly||Boolean(busy)||!(manager||ownRoom(r))} onClick={()=>void markBlanket(r)}>{busy===r.roomId?'Saving…':'Mark blanket changed'}</button>}</article>)}</div></section>}
   {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned for this date.':'No unblocked rooms currently need a full clean.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
    const waiting=isWaiting(r),orderLocked=locked(r),done=r.complete
    const failed=r.checkIssueOpen,passed=r.inspected&&!failed
