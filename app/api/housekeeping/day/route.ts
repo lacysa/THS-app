@@ -766,6 +766,23 @@ export async function PATCH(req: NextRequest) {
         dbPatch.room_condition='Occupied'
     }
 
+    // A tub-tagged, already-clean room uses the ordinary housekeeper picker.
+    // Keep the separate tub assignee in sync so Today's Cleans can show one
+    // tub-only task; never turn a clean room dirty or trigger an inspection.
+    if(manager && Object.prototype.hasOwnProperty.call(requested,'assignedTo')){
+      const currentCondition=String(existing.room_condition||'').trim().toLowerCase()
+      const cleanRoom=['vacant (clean)','ready','ready for guest','room ready'].includes(currentCondition)
+      const tubDue=Boolean((await loadTubTaskStates(admin,serviceDate)).get(roomId)?.due)
+      if(tubDue && cleanRoom && !['blocked','stayover'].includes(String(existing.reservation_status||'').trim().toLowerCase())){
+        const assignee=cleanText(requested.assignedTo)
+        const {error:tubAssignError}=await admin.from('room_ops_details').upsert({
+          room_id:roomId,service_date:serviceDate,
+          tub_clean_assigned_to:assignee,updated_at:now,updated_by:access.userId
+        },{onConflict:'room_id,service_date'})
+        if(tubAssignError)throw new Error('Could not link tub assignment: '+tubAssignError.message)
+      }
+    }
+
     const { error:updateError } = await admin
       .from('housekeeping_daily_rooms')
       .update(dbPatch)
