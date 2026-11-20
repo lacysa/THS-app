@@ -36,11 +36,11 @@ export async function POST(req:NextRequest){
  const date=String(body.date||''),roomId=String(body.roomId||'')
  if(!validDate(date)||!validRoom(roomId))return NextResponse.json({error:'Invalid room or date'},{status:400})
  const admin=createSupabaseAdmin()
- const {data:room,error:readError}=await admin.from('housekeeping_daily_rooms').select('inspected,check_issue_open,inspection_signed_by').eq('service_date',date).eq('room_id',roomId).maybeSingle()
+ const {data:room,error:readError}=await admin.from('housekeeping_daily_rooms').select('inspected,check_issue_open,inspection_signed_by,reservation_status').eq('service_date',date).eq('room_id',roomId).maybeSingle()
  if(readError||!room)return NextResponse.json({error:'Room record unavailable'},{status:404})
  if(!room.inspected||room.check_issue_open)return NextResponse.json({error:'Inspection must be passed before management sign-off'},{status:409})
  if(room.inspection_signed_by)return NextResponse.json({error:'Inspection already signed off'},{status:409})
- const {data,error}=await admin.from('housekeeping_daily_rooms').update({inspection_signed_by:auth.userId,inspection_signed_at:new Date().toISOString()}).eq('service_date',date).eq('room_id',roomId).eq('inspected',true).eq('check_issue_open',false).is('inspection_signed_by',null).select('inspection_signed_at').maybeSingle()
+ const {data,error}=await admin.from('housekeeping_daily_rooms').update({inspection_signed_by:auth.userId,inspection_signed_at:new Date().toISOString(),...(String(room.reservation_status||'').trim().toLowerCase()==='dirty'?{reservation_status:'Vacant'}:{})}).eq('service_date',date).eq('room_id',roomId).eq('inspected',true).eq('check_issue_open',false).is('inspection_signed_by',null).select('inspection_signed_at').maybeSingle()
  if(error||!data)return NextResponse.json({error:'Could not sign off inspection. Reload and try again.'},{status:409})
  return NextResponse.json({ok:true,signedAt:data.inspection_signed_at})
 }
