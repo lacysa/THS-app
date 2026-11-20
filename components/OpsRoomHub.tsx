@@ -158,7 +158,8 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  }):'Not recorded'
  const isStayover=String(daily?.reservation_status||'').trim().toLowerCase()==='stayover'
  const currentHousekeeper=String(daily?.assigned_to||'').trim()
- const cleanerDisplay=currentHousekeeper||'Unassigned'
+ const tubOnlyAssignment=Boolean(data?.tubCleanDue)&&['vacant (clean)','ready','room ready'].includes(String(daily?.room_condition||'').trim().toLowerCase())
+ const cleanerDisplay=(tubOnlyAssignment?String(data?.serviceDetails?.tub_clean_assigned_to||currentHousekeeper).trim():currentHousekeeper)||'Unassigned'
  const canManage=Boolean(data?.permissions.canManage)
  const canInspect=Boolean(data?.permissions.canInspect)
  const blocked=Boolean(daily?.strip_hold?.toLowerCase().includes('hold')||daily?.reservation_status?.toLowerCase()==='blocked'||daily?.room_condition==='Blocked')
@@ -240,7 +241,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  }
  async function assignHousekeeper(name:string){
   if(!daily||!canManage)return
-  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{assignedTo:name}},name?'Housekeeper assigned':'Assignment cleared'))setActiveEditor(null)
+  if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{assignedTo:name}},name?(data?.tubCleanDue?'Tub cleaner assigned':'Housekeeper assigned'):'Assignment cleared'))setActiveEditor(null)
  }
  async function inspect(decision:'pass'|'fail'|'fixed'){
   if((decision==='fail'||decision==='fixed')&&!issueNote.trim()){setError(decision==='fixed'?'Describe what was fixed before marking the correction complete.':'Describe the housekeeping issue before failing the inspection.');return}
@@ -453,7 +454,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         <StaffAssignmentSelect staff={data.staff||[]} housekeepingOnly value={data.serviceDetails?.tub_clean_assigned_to||''} label="Assign tub-only cleaner" disabled={busy} onChange={name=>void assignTubOnly(name)} style={{width:'100%',minHeight:46,padding:'10px 12px',borderRadius:11,border:'1px solid #b9d1d7',background:'#fff',color:'#253f4d',fontWeight:600,fontSize:15}}/>
         <button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void serviceAction('tubComplete')}><Check size={15}/> Mark tub cleaned</button>
        </div>}
-       {activeEditor==='housekeeper'&&canManage&&<><StaffAssignmentSelect staff={data.staff||[]} value={daily.assigned_to||''} label="Assign housekeeper" disabled={busy} onChange={name=>void assignHousekeeper(name)} style={{width:'100%',minHeight:46,padding:'10px 12px',borderRadius:11,border:'1px solid #b9d1d7',background:'#fff',color:'#253f4d',fontWeight:600,fontSize:15}}/>{isStayover&&<small>Historical cleaner and date are retained. Assigning staff does not mark a clean complete.</small>}</>}
+       {activeEditor==='housekeeper'&&canManage&&<><StaffAssignmentSelect staff={data.staff||[]} value={tubOnlyAssignment?String(data.serviceDetails?.tub_clean_assigned_to||daily.assigned_to||''):daily.assigned_to||''} label={tubOnlyAssignment?'Assign tub-only cleaner':'Assign housekeeper'} disabled={busy} onChange={name=>void assignHousekeeper(name)} style={{width:'100%',minHeight:46,padding:'10px 12px',borderRadius:11,border:'1px solid #b9d1d7',background:'#fff',color:'#253f4d',fontWeight:600,fontSize:15}}/>{isStayover&&<small>Historical cleaner and date are retained. Assigning staff does not mark a clean complete.</small>}</>}
        {activeEditor==='out'&&canManage&&<div className="ops-hub-inline-form">
         <p className="ops-hub-muted">{envelopeCollected?'Envelope collection is currently recorded under '+envelopeInitials+'. Clearing OUT will also remove its collected indicator.':'The room is marked OUT. You can clear it if this was a mistake.'}</p>
         <button type="button" className="ops-hub-secondary" disabled={busy} onClick={()=>void clearOut()}>Remove OUT{envelopeCollected?' and envelope mark':''}</button>
