@@ -178,10 +178,12 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         // be manually corrected independently (e.g. Arrival -> Stayover).
         const priorImportedStatus=previousLinksByDay.get(roomKey)
         const recordedStatus=String(current.reservation_status||'').trim()
-        const staffActivityOverride=Boolean(recordedStatus)&&(
+        // Only an actual staff edit is an override. Legacy auto-seeded
+        // Dirty rows have no editor; keeping them overrides later verified cleans.
+        const staffActivityOverride=Boolean(recordedStatus)&&Boolean(current.updated_by)&&(
           priorImportedStatus!==undefined
             ? recordedStatus.toLowerCase()!==priorImportedStatus.trim().toLowerCase()
-            : Boolean(current.updated_by)
+            : true
         )
         const effectiveStatus=staffActivityOverride?recordedStatus:status
         const noReservation=effectiveStatus==='Vacant'
@@ -196,7 +198,9 @@ async function rebuildDaily(admin:any,start:string,end:string,rooms:any[]){
         // survive a reservation sync merely because the old daily row said Dirty.
         // Never override actual PMS Arrival, Checkout, Out/In or Stayover.
         const confirmedClean=['vacant (clean)','ready','ready for guest'].includes(condition.trim().toLowerCase()) &&
-          (Boolean(current.complete)||Boolean(current.inspected)||Boolean(current.updated_by))
+          (Boolean(current.complete)||Boolean(current.inspected)||Boolean(current.updated_by)||
+            (noReservation&&!Boolean(current.updated_by)&&Boolean(last)&&
+             ['vacant (clean)','ready','ready for guest'].includes(last.trim().toLowerCase())))
         const carryDirty=noReservation&&condition.toLowerCase()==='vacant (dirty)'&&!confirmedClean
         const nextStatus=status==='Vacant'&&confirmedClean&&effectiveStatus.toLowerCase()==='dirty'
           ?'Vacant':carryDirty?'Dirty':effectiveStatus
