@@ -33,12 +33,13 @@ export async function PATCH(req:NextRequest){
    admin.from('room_ops_details').select('tub_clean_assigned_to').eq('service_date',date).eq('room_id',roomId).maybeSingle()
   ])
   if(assignedResult.error||tubResult.error)return NextResponse.json({error:'Could not verify tub assignment'},{status:500})
-  const tubAssignee=String(tubResult.data?.tub_clean_assigned_to||'').trim().toLowerCase()
+  const tubTask=(await loadTubTaskStates(admin,date)).get(roomId)
+  const tubAssignee=String(tubResult.data?.tub_clean_assigned_to||tubTask?.assignedTo||'').trim().toLowerCase()
   const workerName=String(person?.name||'').trim().toLowerCase()
   const legacyAssigned=String(assignedResult.data?.assigned_to||'').split(',').some((v:string)=>v.trim().toLowerCase()===workerName)
   if(!workerName||(tubAssignee?tubAssignee!==workerName:!legacyAssigned))
    return NextResponse.json({error:'This room is not assigned to you'},{status:403})
-  if(!(await loadTubTaskStates(admin,date)).get(roomId)?.due)return NextResponse.json({error:'No outstanding tub-clean task'},{status:409})
+  if(!tubTask?.due)return NextResponse.json({error:'No outstanding tub-clean task'},{status:409})
  }
  const now=new Date().toISOString()
  const patch:Record<string,unknown>={room_id:roomId,service_date:date,updated_by:access.userId,updated_at:now}
