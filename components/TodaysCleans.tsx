@@ -100,7 +100,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   return result
  },[rows,mine,mode,manager,hospitalityAssistant,cleansView,staffName])
  const ordered=useMemo(()=>taskRows.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[taskRows])
- const pending=ordered.filter(r=>!r.complete)
+ const pending=ordered.filter(r=>r.taskKind!=='clean'||!r.complete)
  const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
  const locked=(r:Room)=>!teamDisplay&&!manager&&mode==='cleans'&&!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
  async function assignRoom(room:Room,name:string){
@@ -148,12 +148,12 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   }catch(e:any){setError(e.message||'Unable to save the room.')}finally{setBusy('')}
  }
  return <div className="ths-cleans">
-  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'All unblocked rooms needing a full clean, including unassigned rooms. Assign them here.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
+  <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'Room cleans, strips, tub cleans and weekly blanket changes in one workflow.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
   {mode==='cleans'&&manager&&<nav className="ths-cleans-tabs" aria-label="Today's cleans views"><button type="button" className={cleansView==='team'?'active':''} aria-current={cleansView==='team'?'page':undefined} onClick={()=>setCleansView('team')}>All Cleans</button><button type="button" className={cleansView==='mine'?'active':''} aria-current={cleansView==='mine'?'page':undefined} onClick={()=>setCleansView('mine')}>My Cleans</button></nav>}
-  <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}{mode==='cleans'&&teamDisplay&&<span> · {ordered.filter(r=>!r.complete&&!r.assignedTo.trim()).length} awaiting assignment</span>}</div>
+  <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.taskKind==='clean'&&r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':" tasks finished"}{mode==='cleans'&&teamDisplay&&<span> · {ordered.filter(r=>!r.complete&&!r.assignedTo.trim()).length} awaiting assignment</span>}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
   {mode==='refreshes'&&!loading&&<section aria-label="Available stayover refreshes" style={{marginBottom:20}}><h2 style={{fontSize:18,margin:'8px 0 12px'}}>Available stayovers</h2>{available.length===0?<p className="ths-cleans-empty">No unassigned stayovers available to claim.</p>:<div className="ths-refresh-claim-list">{available.map(room=><div key={room.roomId} className="ths-refresh-claim-row"><strong>{room.roomName}</strong><button type="button" disabled={Boolean(busy)} onClick={()=>void claim(room)}>{busy===room.roomId?'Claiming…':'Start RF'}</button></div>)}</div>}</section>}
-  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned for this date.':'No unblocked rooms currently need a full clean.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
+  {loading?<p>Loading assignments…</p>:ordered.length===0?<div className="ths-cleans-empty">{mode==='refreshes'?'No stayover refreshes assigned for this date.':'No assigned room, strip or tub tasks for this date.'} If you expect rooms, ask management to check the day's assignments.</div>:<div className="ths-cleans-grid">{ordered.map(r=>{
    const task=r.taskKind,waiting=task==='clean'&&isWaiting(r),orderLocked=task==='clean'&&locked(r),done=task==='clean'&&r.complete
    const failed=r.checkIssueOpen,passed=r.inspected&&!failed
    const inProgress=task==='clean'&&!done&&r.roomCondition.trim().toLowerCase()==='cleaning'
