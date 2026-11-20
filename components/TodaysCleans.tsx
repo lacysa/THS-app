@@ -71,7 +71,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  },[load])
  const available=useMemo(()=>mode==='refreshes'?rows.filter(r=>r.reservationStatus.trim().toLowerCase()==='stayover'&&!r.assignedTo.trim()&&['','RF','REFRESH'].includes(r.serviceType.trim().toUpperCase())):[],[rows,mode])
  const ownRoom=(r:Room)=>{const names=String(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase());const name=staffName.trim().toLowerCase();return Boolean(name&&names.some(n=>n===name||n===name.split(' ')[0]))}
- const teamDisplay=mode==='cleans'&&(manager||hospitalityAssistant)&&cleansView==='team'
+ const teamDisplay=mode==='cleans'&&manager&&cleansView==='team'
  const mine=useMemo(()=>rows.filter(r=>{
   const status=(r.reservationStatus||'').trim().toLowerCase()
   const refresh=status==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim())
@@ -79,14 +79,14 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   else if(!needsFullClean(r)||r.tubCleanDue&&Boolean(r.tubAssignedTo)||r.stripStatus==='needed')return false
   const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase()).filter(Boolean)
   const full=staffName.trim().toLowerCase()
-  const team=(manager||hospitalityAssistant)&&cleansView==='team'
+  const team=manager&&cleansView==='team'
   return team||Boolean(full&&assigned.some(n=>n===full||n===full.split(' ')[0]))
  }),[rows,staffName,mode,manager,hospitalityAssistant,cleansView])
  const housekeepingStaff=useMemo(()=>staffOptions.filter(p=>/housekeep|runner/i.test(p.roleLabel||'')),[staffOptions])
 
  const taskRows=useMemo(()=>{
   if(mode!=='cleans')return mine.map(r=>({...r,taskKind:'clean' as const}))
-  const showTeam=(manager||hospitalityAssistant)&&cleansView==='team'
+  const showTeam=manager&&cleansView==='team'
   const same=(assigned:string)=>assigned.split(',').some(n=>{const part=n.trim().toLowerCase();const staff=staffName.trim().toLowerCase();return Boolean(part&&staff&&(part===staff||part===staff.split(' ')[0]))})
   const result:Array<Room&{taskKind:'clean'|'strip'|'tub'}>=[]
   for(const r of rows){
@@ -149,7 +149,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  }
  return <div className="ths-cleans">
   <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'All unblocked rooms needing a full clean, including unassigned rooms. Assign them here.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
-  {mode==='cleans'&&(manager||hospitalityAssistant)&&<nav className="ths-cleans-tabs" aria-label="Today's cleans views"><button type="button" className={cleansView==='team'?'active':''} aria-current={cleansView==='team'?'page':undefined} onClick={()=>setCleansView('team')}>All Cleans</button><button type="button" className={cleansView==='mine'?'active':''} aria-current={cleansView==='mine'?'page':undefined} onClick={()=>setCleansView('mine')}>My Cleans</button></nav>}
+  {mode==='cleans'&&manager&&<nav className="ths-cleans-tabs" aria-label="Today's cleans views"><button type="button" className={cleansView==='team'?'active':''} aria-current={cleansView==='team'?'page':undefined} onClick={()=>setCleansView('team')}>All Cleans</button><button type="button" className={cleansView==='mine'?'active':''} aria-current={cleansView==='mine'?'page':undefined} onClick={()=>setCleansView('mine')}>My Cleans</button></nav>}
   <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':' rooms finished'}{mode==='cleans'&&teamDisplay&&<span> · {ordered.filter(r=>!r.complete&&!r.assignedTo.trim()).length} awaiting assignment</span>}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
   {mode==='refreshes'&&!loading&&<section aria-label="Available stayover refreshes" style={{marginBottom:20}}><h2 style={{fontSize:18,margin:'8px 0 12px'}}>Available stayovers</h2>{available.length===0?<p className="ths-cleans-empty">No unassigned stayovers available to claim.</p>:<div className="ths-refresh-claim-list">{available.map(room=><div key={room.roomId} className="ths-refresh-claim-row"><strong>{room.roomName}</strong><button type="button" disabled={Boolean(busy)} onClick={()=>void claim(room)}>{busy===room.roomId?'Claiming…':'Start RF'}</button></div>)}</div>}</section>}
