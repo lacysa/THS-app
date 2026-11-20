@@ -25,9 +25,21 @@ export async function loadTubTaskStates(admin:ReturnType<typeof createSupabaseAd
   const records=details.get(id)||[]
   const current=records.find(v=>v.service_date===date)
   const lastDone=records.find(v=>Boolean(v.tub_clean_completed_at))
+  const lastRequest=records.find(v=>Boolean(v.tub_clean_requested_at))
+  // A manually requested tub service stays outstanding across service dates
+  // until a later tub completion. Ordinary room cleaning/inspection must not
+  // dismiss it, and previous-day assignee must not be lost on a new date.
+  const manuallyOutstanding=Boolean(lastRequest)&&(!lastDone||
+    String(lastRequest?.tub_clean_requested_at||'')>String(lastDone?.tub_clean_completed_at||''))
   const autoDue=date<=today&&vacantDays>=3&&(!lastDone||lastDone.service_date<oldest)
   const completed=Boolean(current?.tub_clean_completed_at)
-  result.set(id,{due:!completed&&(Boolean(current?.tub_clean_requested_at)||autoDue),completed,vacantDays,autoDue,assignedTo:String(current?.tub_clean_assigned_to||'')})
+  const carriedAssignment=manuallyOutstanding?records.find(v=>Boolean(v.tub_clean_assigned_to)&&
+    String(v.service_date)>=String(lastRequest?.service_date||''))?.tub_clean_assigned_to:''
+  result.set(id,{
+    due:!completed&&(manuallyOutstanding||autoDue),
+    completed,vacantDays,autoDue,
+    assignedTo:String(current?.tub_clean_assigned_to||carriedAssignment||'')
+  })
  }
  return result
 }
