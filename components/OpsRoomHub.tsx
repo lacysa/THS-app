@@ -10,7 +10,7 @@ type Stay={id:string;reservation_number:string|null;guest_name:string|null;accom
 type Daily={assigned_to:string|null;notes:string|null;reservation_status:string|null;service_type:string|null;clean_order:number|null;room_condition:string|null;strip_hold:string|null;strip_status?:string|null;stripped_at?:string|null;complete:boolean|null;ready_for_inspection:boolean|null;inspected:boolean|null;inspection_signed_by?:string|null;inspected_at:string|null;check_issue_open:boolean|null;check_issue_note:string|null;breakfast_tag:boolean|null;late_arrival:boolean|null;housekeeper_attested_by:string|null;refresh_completed_initials:string|null;foh_signed_by?:string|null;ha_signed_by?:string|null}
 type ServiceDetails={late_checkout?:boolean;expected_arrival_time:string|null;actual_arrival_time:string|null;late_checkout_time:string|null;tray_returned_at:string|null;tub_clean_requested_at:string|null;tub_clean_completed_at:string|null;tub_clean_assigned_to?:string|null}
 type PackageOption={id:string;name:string;available:boolean}
-type Data={roomNoteHistory?:{id:string;note:string;type:string;at:string;author:string}[];checklistNotes?:{id:string;label:string;note:string;stage:string;at:string}[];correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean};inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];staff:AssignmentStaff[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean;tubCleanPending:boolean}
+type Data={roomNoteHistory?:{id:string;note:string;type:string;at:string;author:string}[];checklistNotes?:{id:string;label:string;note:string;stage:string;at:string}[];correctionHistory?:{id:string;type:string;note:string;at:string}[];room:{id:string;name:string};date:string;daily:Daily|null;stay:Stay|null;permissions:{canManage:boolean;canInspect:boolean;canEditBlankets:boolean};blanketWeekStart:string;blanketChange:{changedAt:string;changedBy:string;changedByName:string}|null;inspectionEligible:boolean;inspectionReady:boolean;staffNames:string[];staff:AssignmentStaff[];mentionableStaff:{name:string;userId:string}[];lastAssigned:{name:string;date:string}|null;lastCleaned:{name:string;date:string;serviceDate:string}|null;packageOptions:PackageOption[];manualPackageIds:string[];importedPackageIds:string[];managerInitials:string;pmsActivity:string;serviceDetails:ServiceDetails|null;autoTubDue:boolean;vacancyDays:number;tubCleanDue:boolean;tubCleanPending:boolean}
 type View='room'|'guest'|'log'
 type Editor='condition'|'activity'|'housekeeper'|'inspection'|'service'|'out'|'tip_envelope'|'packages'|'room_notes'|'clean_order'|'tub_assignee'|null
 const conditions=['Occupied','Vacant (Clean)','Vacant (Dirty)','Cleaning','Ready for Room Check','Ready','Blocked']
@@ -162,6 +162,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  const cleanerDisplay=(tubOnlyAssignment?String(data?.serviceDetails?.tub_clean_assigned_to||currentHousekeeper).trim():currentHousekeeper)||'Unassigned'
  const canManage=Boolean(data?.permissions.canManage)
  const canInspect=Boolean(data?.permissions.canInspect)
+ const canEditBlankets=Boolean(data?.permissions.canEditBlankets)
  const blocked=Boolean(daily?.strip_hold?.toLowerCase().includes('hold')||daily?.reservation_status?.toLowerCase()==='blocked'||daily?.room_condition==='Blocked')
  const serviceCode=String(daily?.service_type||'').trim().toUpperCase()
  const stripStatus=String(daily?.strip_status||'').toLowerCase()==='cleared'?'':String(daily?.strip_status||'').toLowerCase()
@@ -203,6 +204,12 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
  async function updateStrip(action:'request'|'clear'){
   if(!daily||!canManage)return
   await run('/api/housekeeping/strip-task',{serviceDate:date,roomId,action},action==='request'?'Strip task sent to housekeeping':'Strip task cleared')
+ }
+ async function updateBlankets(action:'confirm'|'undo'){
+  if(!canEditBlankets||!daily||busy)return
+  if(action==='undo'&&!window.confirm("Undo this week's blanket confirmation? This corrects the record; it does not mean the blankets were not changed."))return
+  await run('/api/housekeeping/blankets',{date,roomId,action},
+   action==='undo'?'Weekly blanket confirmation removed':'Weekly blanket replacement confirmed')
  }
  async function serviceAction(action:'trayReturned'|'trayReset'|'tubRequest'|'tubComplete'|'tubReopen'|'tubCancel'){
   await run('/api/ops/room-details',{roomId,date,action},action==='tubComplete'?'Tub cleaning recorded':action==='tubRequest'?'Tub cleaning requested':action==='tubReopen'?'Tub cleaning reopened':action==='tubCancel'?'Tub task removed without recording a clean':action==='trayReturned'?'Breakfast tray return recorded':'Tray return cleared')
@@ -378,6 +385,20 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
         {data.serviceDetails?.tray_returned_at&&<span className="ops-hub-context-positive"><Check size={12}/> Tray returned</span>}
         <span className={daily?.breakfast_tag?'ops-hub-context-positive':''}><button type="button" className="ops-hub-context-control" disabled={!canManage||!daily||busy} onClick={()=>void toggleTag('breakfastTag')} aria-pressed={Boolean(daily?.breakfast_tag)} aria-label={daily?.breakfast_tag?'Remove breakfast tag':'Add breakfast tag'}>{daily?.breakfast_tag&&<Check size={12}/>} Breakfast {daily?.breakfast_tag?'included':'not tagged'}{canManage&&daily&&<Pencil size={12}/>}</button></span>
         {selectedPackageNames.length>0&&<span className="ops-hub-context-package"><strong>Packages</strong> {selectedPackageNames.join(', ')}</span>}
+       </div>
+       <div aria-label="Weekly blanket replacement" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginTop:12,padding:'11px 12px',background:'#fff',border:'1px solid #d9e6e9',borderRadius:12}}>
+        <div style={{minWidth:0,flex:'1 1 180px',display:'grid',gap:3}}>
+         <strong style={{fontSize:13,color:'#36576a'}}>Weekly blankets</strong>
+         <span style={{fontSize:13,fontWeight:650,color:data.blanketChange?'#2c7255':'#99713f'}}>
+          {data.blanketChange?'Confirmed · '+new Date(data.blanketChange.changedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'America/Detroit'})+(data.blanketChange.changedByName?' · '+data.blanketChange.changedByName:''):'Not confirmed'}
+         </span>
+         <small style={{fontSize:11,color:'#647b88'}}>Week of {dateLabel(data.blanketWeekStart)}</small>
+        </div>
+        {canEditBlankets&&daily&&<button type="button" disabled={busy} onClick={()=>void updateBlankets(data.blanketChange?'undo':'confirm')}
+         aria-label={data.blanketChange?'Undo this week’s blanket confirmation':'Confirm blankets replaced this week'}
+         style={{border:'1px solid #bed3dc',borderRadius:9,padding:'9px 11px',background:data.blanketChange?'#fff':'#e6f3eb',color:data.blanketChange?'#7b5660':'#29654c',fontWeight:700,fontSize:12,cursor:'pointer'}}>
+         {data.blanketChange?'Undo confirmation':'Confirm changed'}
+        </button>}
        </div>
       </div>
       {daily&&(Boolean(daily.notes?.trim())||Boolean(data.roomNoteHistory?.length)||Boolean(data.checklistNotes?.length)||Boolean(data.correctionHistory?.length))&&

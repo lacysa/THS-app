@@ -8,6 +8,7 @@ import {loadAssignmentStaff} from '@/lib/assignment-staff'
 
 export const dynamic='force-dynamic'
 const validDate=(value:string)=>/^20\d{2}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+'T12:00:00Z'))
+const blanketWeekStart=(date:string)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return d.toISOString().slice(0,10)}
 const validId=(value:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 
 export async function GET(req:NextRequest){
@@ -99,6 +100,7 @@ export async function GET(req:NextRequest){
  const caps=gate.access.capabilities||[]
  const canManage=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner'].includes(c)))
  const canInspect=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['room_checks','ha_signoff','ha_signoff_override','manager','operations_manager','owner'].includes(c)))
+ const canEditBlankets=!gate.access.isPreviewMode&&(gate.access.isAdmin||caps.some((c:string)=>['manager','general_manager','operations_manager','owner','foh_manager','foh_signoff','foh_signoff_override','hospitality_assistant'].includes(c)))
  let staff:Awaited<ReturnType<typeof loadAssignmentStaff>>=[]
  try{if(canManage)staff=await loadAssignmentStaff(admin,date)}catch{
   return NextResponse.json({error:'Unable to load staff schedule'},{status:500})
@@ -210,8 +212,21 @@ export async function GET(req:NextRequest){
   id:String(event.id),note:String(event.message||''),type:String(event.event_type),
   at:String(event.created_at),author:String(nameByUser.get(String(event.actor_user_id))||event.actor_name||'Room team')
  }))
+ const blanketWeek=blanketWeekStart(date)
+ const {data:blanketRecord,error:blanketError}=await admin.from('housekeeping_blanket_changes')
+  .select('changed_at,changed_by').eq('room_id',roomId).eq('week_start',blanketWeek).maybeSingle()
+ if(blanketError)return NextResponse.json({error:'Unable to load weekly blanket status'},{status:500})
+ let blanketActor=''
+ if(blanketRecord?.changed_by){
+  const {data:member,error:memberError}=await admin.from('staff_members')
+   .select('name').eq('auth_user_id',blanketRecord.changed_by).maybeSingle()
+  if(memberError)return NextResponse.json({error:'Unable to identify blanket confirmation author'},{status:500})
+  blanketActor=String(member?.name||'')
+ }
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
-  permissions:{canManage,canInspect},staffNames,staff,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
+  blanketWeekStart:blanketWeek,
+  blanketChange:blanketRecord?{changedAt:String(blanketRecord.changed_at),changedBy:String(blanketRecord.changed_by||''),changedByName:blanketActor}:null,
+  permissions:{canManage,canInspect,canEditBlankets},staffNames,staff,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
   serviceDetails,autoTubDue,vacancyDays,tubCleanDue,tubCleanPending,correctionHistory,roomNoteHistory,checklistNotes,
   inspectionEligible:eligible,
   inspectionReady:checkState==='ready'||checkState==='recheck'
