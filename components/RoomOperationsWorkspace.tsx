@@ -115,6 +115,9 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  const router=useRouter()
  const [isChangingDate,startDateTransition]=useTransition()
  const [dateInput,setDateInput]=useState(serviceDate)
+ const [dayAction,setDayAction]=useState<'reset_eod'|'clear_assignments'|''>('')
+ const [dayActionError,setDayActionError]=useState('')
+ const [dayActionMessage,setDayActionMessage]=useState('')
  const [selected,setSelected]=useState<{roomId:string;reservationId?:string;view?:'room'|'guest'|'log';action?:string;editor?:'room_notes'|'packages'|'inspection'|'tub_assignee'}|null>(null)
  const [category,setCategory]=useState<Category>('all')
  const [showFilters,setShowFilters]=useState(false)
@@ -204,11 +207,31 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  },[serviceDate])
 
  useEffect(()=>{setDateInput(serviceDate)},[serviceDate])
+ async function updateRoomDay(action:'reset_eod'|'clear_assignments'){
+  if(!canManageRooms||dayAction)return
+  const isReset=action==='reset_eod'
+  const previous=shiftDate(serviceDate,-1)
+  const description=isReset
+   ?'Reset room service/activity and live conditions for '+serviceDate+' from '+previous+' EOD? Current guest reservations, OUT/tip initials, notes, holds and recorded inspections will be preserved. Current-day checkouts still await OUT.'
+   :'Clear room-cleaning housekeeper assignments and clean order for '+serviceDate+'? Room status, notes, OUT/tips, and guest records will remain unchanged.'
+  if(!window.confirm(description))return
+  setDayAction(action);setDayActionError('');setDayActionMessage('')
+  try{
+   const response=await fetch('/api/ops/day-reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({date:serviceDate,action})})
+   const payload=await response.json().catch(()=>({}))
+   if(!response.ok)throw new Error(payload.error||'Unable to update day')
+   setDayActionMessage((isReset?'Reset ':'Cleared ')+payload.updated+' room'+(payload.updated===1?'':'s')+' for '+serviceDate+'.')
+   window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+   router.refresh()
+  }catch(error:any){setDayActionError(error?.message||'Unable to update room day')}
+  finally{setDayAction('')}
+ }
  function chooseDate(date:string){
   if(!/^20\d{2}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date+'T12:00:00Z')))return
   setDateInput(date)
   if(date===serviceDate)return
   setSelected(null)
+  setDayActionMessage('');setDayActionError('')
   startDateTransition(()=>router.replace('/reservations?date='+encodeURIComponent(date),{scroll:false}))
  }
  useEffect(()=>{
@@ -262,6 +285,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     </div>
     {isChangingDate&&<span className="ths-room-operations-date-loading" role="status">Updating rooms…</span>}
    </div>
+   {canManageRooms&&<div style={{display:'flex',flexDirection:'column',gap:7,margin:'12px 0',alignItems:'flex-end'}}>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
+     <button type="button" disabled={!!dayAction||isChangingDate} onClick={()=>void updateRoomDay('reset_eod')} style={{border:'1px solid #bdd5df',borderRadius:10,padding:'10px 13px',background:'#fff',color:'#31596b',fontWeight:700,cursor:'pointer'}}>{dayAction==='reset_eod'?'Resetting…':'Reset from previous EOD'}</button>
+     <button type="button" disabled={!!dayAction||isChangingDate} onClick={()=>void updateRoomDay('clear_assignments')} style={{border:'1px solid #bdd5df',borderRadius:10,padding:'10px 13px',background:'#fff',color:'#31596b',fontWeight:700,cursor:'pointer'}}>{dayAction==='clear_assignments'?'Clearing…':'Clear housekeeper assignments'}</button>
+    </div>
+    {dayActionMessage&&<small role="status" style={{color:'#236850',fontWeight:650}}>{dayActionMessage}</small>}
+    {dayActionError&&<small role="alert" style={{color:'#ae3c47',fontWeight:650}}>{dayActionError}</small>}
+   </div>}
    <div style={{display:'flex',justifyContent:'flex-end',margin:'10px 0 6px'}}>
     <button type="button" aria-expanded={showFilters} aria-controls="room-operations-filters" onClick={()=>setShowFilters(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'8px 12px',border:'1px solid #d7e5e9',borderRadius:10,background:showFilters||category!=='all'?'#e0f2ef':'#fff',color:'#315a67',fontWeight:700,fontSize:12,cursor:'pointer'}}>
      <SlidersHorizontal size={15}/> Filter{category!=='all'?' · '+(category==='Arrival'?'Arrivals':category):''}
