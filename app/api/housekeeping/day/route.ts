@@ -381,7 +381,7 @@ export async function GET(req: NextRequest) {
     // Dated issue and fix notes belong beside the room task, including for
     // housekeeping-only staff. The rows are already filtered to their assignments
     // above; do not return corrections for unrelated rooms.
-    const roomIdsForNotes=[...new Set(responseRows.map((row:any)=>String(row.roomId||'')).filter(Boolean))]
+    const roomIdsForNotes=assignedOnlyView&&!currentPerson?[]:[...new Set(responseRows.map((row:any)=>String(row.roomId||'')).filter(Boolean))]
     const correctionHistoryByRoom:Record<string,{id:string;type:string;note:string;at:string}[]>={}
     if(roomIdsForNotes.length){
       const result=await admin.from('housekeeping_correction_events')
