@@ -45,7 +45,12 @@ export async function POST(req:NextRequest){
   const now=new Date().toISOString()
   if(action==='clear_assignments'){
    // Preserve cleaning order, inspection, room status, strip/tub/deep task assignees and all guest data.
-   const assigned=current.filter((r:any)=>clean(r.assigned_to)||r.clean_order!=null)
+   const assigned=current.filter((r:any)=>{
+    // An assigned Strip remains actionable even when normal housekeeping
+    // assignments are cleared for this date.
+    if(['needed','stripped'].includes(clean(r.strip_status).toLowerCase()))return false
+    return Boolean(clean(r.assigned_to)||r.clean_order!=null)
+   })
    const results=await Promise.all(assigned.map((r:any)=>admin.from('housekeeping_daily_rooms')
     .update({assigned_to:'',clean_order:null,updated_at:now,updated_by:access.userId})
     .eq('service_date',date).eq('room_id',r.room_id)))
@@ -82,6 +87,12 @@ export async function POST(req:NextRequest){
    const outToday=isOut(r.service_type)&&['checkout','out/in'].includes(pms.toLowerCase())
    const condition=guestStillIn?'Occupied':outToday?'Vacant (Dirty)':
       priorCondition==='Occupied'&&pms.toLowerCase()==='vacant'?'Vacant (Dirty)':priorCondition
+   // Do not turn a room with an actual current-day cleaning/inspection
+   // sign-off into Dirty without also erasing its audit trail.
+   if(['vacant (dirty)','occupied'].includes(condition.toLowerCase())&&
+      (r.complete||r.inspected||r.foh_signed_by||r.ha_signed_by||r.check_issue_open)){
+     skipped++;continue
+   }
    const patch:Record<string,unknown>={updated_at:now,updated_by:access.userId}
    if(clean(r.reservation_status)!==activity)patch.reservation_status=activity
    if(clean(r.room_condition)!==condition)patch.room_condition=condition
