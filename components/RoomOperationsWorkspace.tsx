@@ -195,7 +195,25 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
  }
 
  const [liveRows,setLiveRows]=useState<OpsRow[]>(rows)
+ const [blanketStatus,setBlanketStatus]=useState<Record<string,{changedAt:string;changedBy:string}>>({})
+ const [blanketWeekStart,setBlanketWeekStart]=useState('')
+ const [blanketError,setBlanketError]=useState('')
  useEffect(()=>{setLiveRows(rows)},[rows])
+ useEffect(()=>{
+  let active=true
+  const refresh=async()=>{
+   try{
+    const response=await fetch('/api/housekeeping/blankets?date='+encodeURIComponent(serviceDate),{cache:'no-store'})
+    const result=await response.json().catch(()=>({}))
+    if(!response.ok)throw new Error(result.error||'Unable to load weekly blanket changes')
+    if(active){setBlanketStatus(result.rooms||{});setBlanketWeekStart(result.weekStart||'');setBlanketError('')}
+   }catch(error:any){if(active){setBlanketError(error?.message||'Unable to load weekly blanket changes');setBlanketStatus({})}}
+  }
+  setBlanketStatus({});setBlanketWeekStart('')
+  void refresh()
+  window.addEventListener('ths:live-data-refresh',refresh)
+  return()=>{active=false;window.removeEventListener('ths:live-data-refresh',refresh)}
+ },[serviceDate])
  useEffect(()=>{
   let active=true
   setPackageNamesByRoom({})
@@ -312,10 +330,14 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
    </div>
    <label className="ths-ops-search"><Search size={18}/><input aria-label="Find room or guest" placeholder="Find room or guest" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button type="button" aria-label="Clear search" onClick={()=>setQuery('')}><X size={16}/></button>}</label>
    </>}
+   <div className="ths-blankets-week-summary" style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8,padding:'10px 13px',margin:'8px 0 12px',border:'1px solid #dce5e9',borderRadius:12,background:'#f6fafb',color:'#355468',fontSize:13}}>
+    <strong>Weekly blanket replacements</strong><span>{liveRows.filter(row=>Boolean(blanketStatus[row.roomId])).length} of {liveRows.length} rooms confirmed{blanketWeekStart?' · week of '+blanketWeekStart:''}</span>
+    {blanketError&&<span role="alert" style={{color:'#9b3c43'}}>{blanketError}</span>}
+   </div>
    {effectiveDisplayMode==='table'&&<div className="ths-ops-table-scroll" style={{overflowX:'auto',width:'100%',WebkitOverflowScrolling:'touch',borderRadius:16,border:'1px solid #dce5e9',background:'white'}}>
     <table className="ths-ops-full-table" style={{width:'100%',borderCollapse:'collapse',minWidth:910,textAlign:'left',fontSize:14}}>
      <thead><tr style={{background:'#f0f6f8'}}>
-      {['Room','Service','Guest','Housekeeper','Live condition','Details'].map(label=><th key={label} scope="col" style={{padding:'12px 14px',whiteSpace:'nowrap',borderBottom:'1px solid #dce5e9'}}>{label}</th>)}
+      {['Room','Service','Guest','Housekeeper','Live condition','Blankets','Details'].map(label=><th key={label} scope="col" style={{padding:'12px 14px',whiteSpace:'nowrap',borderBottom:'1px solid #dce5e9'}}>{label}</th>)}
      </tr></thead>
      <tbody>{filtered.map(row=>{
       const type=reservationType(row)
@@ -334,6 +356,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <td style={{padding:'12px 14px'}}>{guest?.guest_name||'—'}</td>
        <td style={{padding:'12px 14px',whiteSpace:'nowrap',cursor:'pointer'}} tabIndex={0} role="button" aria-label={'View room cleaned history for '+row.roomName} title="View room cleaned history" onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'log',action:'clean_completed'})}} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'log',action:'clean_completed'})}}}>{row.assignedTo?.trim()||'—'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</td>
        <td style={{padding:'12px 14px'}}><button type="button" className={`ths-ops-condition ths-ops-pill-action ${conditionTone(condition)}`} onClick={history("condition_changed")} title="View room condition history">{condition}</button></td>
+       <td style={{padding:'12px 14px',whiteSpace:'nowrap',fontSize:12,color:blanketStatus[row.roomId]?'#306950':'#8b704c'}}>{blanketStatus[row.roomId]?'Confirmed · '+new Date(blanketStatus[row.roomId].changedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'America/Detroit'}):'Not confirmed'}</td>
        <td style={{padding:'12px 14px',minWidth:180}}>
         <span className="ths-ops-tags">
          {row.breakfastTag&&<button type="button" className="ths-tag-service ths-ops-pill-action" onClick={breakfast}>Breakfast</button>}
@@ -374,6 +397,7 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
        <span className="ths-ops-card-summary">
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Guest</span><span className="ths-ops-card-value">{guest?.guest_name||'No active reservation'}</span></span>
         <span className="ths-ops-card-field"><span className="ths-ops-card-label">Housekeeper</span><span className="ths-ops-card-value">{row.assignedTo?.trim()||'Unassigned'}{row.assignedTo?.trim()&&row.cleanOrder!=null&&<sup style={{marginLeft:1,fontWeight:700}}>{row.cleanOrder}</sup>}</span></span>
+        <span className="ths-ops-card-field"><span className="ths-ops-card-label">Weekly blankets</span><span className="ths-ops-card-value">{blanketStatus[row.roomId]?'Confirmed · '+new Date(blanketStatus[row.roomId].changedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'America/Detroit'}):'Not confirmed'}</span></span>
        </span>
        <span className="ths-ops-tags">
         {canManageRooms&&row.inspected&&!row.checkIssueOpen&&<span role="button" tabIndex={0} className="ths-tag-inspection-sign" aria-label={'Review inspection for '+row.roomName} onClick={event=>{event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();setSelected({roomId:row.roomId,reservationId:guest?.id||undefined,view:'room',editor:'inspection'})}}}>Review inspection</span>}
