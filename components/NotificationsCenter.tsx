@@ -95,17 +95,20 @@ export default function NotificationsCenter({initialFocus}:{initialFocus?:string
    </div>
    <button type="button" className="ths-notifications-refresh" onClick={()=>void refresh(view)} disabled={loading}><RefreshCw size={16}/>Refresh</button>
   </div>
-  <div className="ths-notifications-summary">
-   <div><Bell size={18}/><span>Unread</span><strong>{counts.unread}</strong></div>
-   <div><CheckCheck size={18}/><span>In inbox</span><strong>{counts.inbox}</strong></div>
-   <div><Archive size={18}/><span>Archived</span><strong>{counts.archived}</strong></div>
+  <div className="ths-notifications-summary" role="group" aria-label="Notification inbox status">
+   {([
+    {key:'unread' as View,label:'Unread',count:counts.unread,icon:Bell},
+    {key:'inbox' as View,label:'In inbox',count:counts.inbox,icon:CheckCheck},
+    {key:'archived' as View,label:'Archived',count:counts.archived,icon:Archive}
+   ]).map(item=><button key={item.key} type="button" className={view===item.key?'active':''}
+    aria-pressed={view===item.key} aria-label={'Show '+item.label.toLowerCase()+' notifications'}
+    onClick={()=>{setView(item.key);setFocus(null);setFocusNotes([])}}>
+     <item.icon size={18}/><span>{item.label}</span><strong>{item.count}</strong>
+    </button>)}
   </div>
-  <div className="ths-notifications-tools">
-   <div className="ths-notifications-tabs" role="group" aria-label="Notification filters">
-    {(['inbox','unread','archived'] as View[]).map(key=><button key={key} type="button" aria-pressed={view===key} className={view===key?'active':''} onClick={()=>{setView(key);setFocus(null)}}>{key==='inbox'?'Inbox':key==='unread'?'Unread':'Archived'} <span>{counts[key]}</span></button>)}
-   </div>
-   {counts.unread>0&&<button type="button" className="ths-notifications-mark-all" disabled={busyId!==''} onClick={()=>void update('','markAllRead')}><CheckCheck size={15}/>Mark all read</button>}
-  </div>
+  {counts.unread>0&&<div className="ths-notifications-tools">
+   <button type="button" className="ths-notifications-mark-all" disabled={busyId!==''} onClick={()=>void update('','markAllRead')}><CheckCheck size={15}/>Mark all read</button>
+  </div>}
   <div className="ths-notifications-kind-filter" role="group" aria-label="Notification type">
    {([{key:'all',label:'All types'},{key:'mentions',label:'Mentions'},{key:'inspections',label:'Inspections'},{key:'fixes',label:'Fixes & corrections'}] as {key:Kind;label:string}[]).map(option=>
     <button key={option.key} type="button" aria-pressed={kind===option.key} className={kind===option.key?'active':''}
