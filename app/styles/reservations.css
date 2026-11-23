@@ -1402,3 +1402,16 @@ button.ths-ops-condition{cursor:pointer;font:inherit;font-weight:750}
 .ops-hub-guest-edit-title button{border:0;background:#f2f5f9;border-radius:9px;padding:8px;cursor:pointer;color:#42596b}
 .ops-hub-guest-edit-dialog input,.ops-hub-guest-edit-dialog textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #cadbe5;font:500 14px/1.5 Arial,sans-serif;color:#244454;background:#fff;resize:vertical}
 @media(max-width:540px){.ops-hub-guest-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-hub-guest-grid .ops-hub-guest-card-trigger>span{font-size:10px}.ops-hub-guest-grid .ops-hub-guest-card-trigger>strong{font-size:12px}}
+
+
+/* Compact room-day actions: one consistent row instead of stacked reset, clear and filter. */
+.ths-ops-day-toolbar{display:flex;flex-direction:column;align-items:flex-end;gap:7px;margin:12px 0 6px}
+.ths-ops-day-toolbar-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:min(100%,390px)}
+.ths-ops-day-toolbar-buttons:has(>button:only-child){grid-template-columns:1fr;width:min(100%,130px)}
+.ths-ops-day-toolbar-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;min-width:0;min-height:38px;padding:8px 10px;border:1px solid #d7e5e9;border-radius:10px;background:#fff;color:#315a67;font:700 12px/1.2 Arial,Helvetica,sans-serif;white-space:nowrap;cursor:pointer}
+.ths-ops-day-toolbar-button:hover:not(:disabled){background:#f3fafb;border-color:#9dc4cf}
+.ths-ops-day-toolbar-button.active{background:#e0f2ef;border-color:#a7d4ca}
+.ths-ops-day-toolbar-button:focus-visible{outline:2px solid #41889e;outline-offset:2px}
+.ths-ops-day-toolbar-button:disabled{opacity:.55;cursor:wait}
+.ths-ops-day-toolbar-feedback{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;text-align:right}
+@media(max-width:450px){.ths-ops-day-toolbar-buttons{width:100%;gap:6px}.ths-ops-day-toolbar-button{padding:8px 5px;font-size:11px;min-height:36px}}

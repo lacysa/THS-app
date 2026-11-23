@@ -303,18 +303,29 @@ export default function RoomOperationsWorkspace({serviceDate,todayDate,rows,canM
     </div>
     {isChangingDate&&<span className="ths-room-operations-date-loading" role="status">Updating rooms…</span>}
    </div>
-   {canManageRooms&&<div style={{display:'flex',flexDirection:'column',gap:7,margin:'12px 0',alignItems:'flex-end'}}>
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
-     <button type="button" disabled={!!dayAction||isChangingDate} onClick={()=>void updateRoomDay('reset_eod')} style={{border:'1px solid #bdd5df',borderRadius:10,padding:'10px 13px',background:'#fff',color:'#31596b',fontWeight:700,cursor:'pointer'}}>{dayAction==='reset_eod'?'Resetting…':'Reset from previous EOD'}</button>
-     <button type="button" disabled={!!dayAction||isChangingDate} onClick={()=>void updateRoomDay('clear_assignments')} style={{border:'1px solid #bdd5df',borderRadius:10,padding:'10px 13px',background:'#fff',color:'#31596b',fontWeight:700,cursor:'pointer'}}>{dayAction==='clear_assignments'?'Clearing…':'Clear housekeeper assignments'}</button>
+   <div className="ths-ops-day-toolbar">
+    <div className="ths-ops-day-toolbar-buttons" role="group" aria-label="Room day actions and filters">
+     {canManageRooms&&<>
+      <button type="button" className="ths-ops-day-toolbar-button" disabled={!!dayAction||isChangingDate}
+       aria-label="Reset from previous EOD" title="Reset from previous EOD" onClick={()=>void updateRoomDay('reset_eod')}>
+       {dayAction==='reset_eod'?'Resetting…':'Reset EOD'}
+      </button>
+      <button type="button" className="ths-ops-day-toolbar-button" disabled={!!dayAction||isChangingDate}
+       aria-label="Clear housekeeper assignments" title="Clear housekeeper assignments" onClick={()=>void updateRoomDay('clear_assignments')}>
+       {dayAction==='clear_assignments'?'Clearing…':'Clear HSK'}
+      </button>
+     </>}
+     <button type="button" className={'ths-ops-day-toolbar-button'+(showFilters||category!=='all'?' active':'')}
+      aria-expanded={showFilters} aria-controls="room-operations-filters"
+      aria-label={category==='all'?'Filter rooms':'Filter rooms, '+(category==='Arrival'?'Arrivals':category)+' selected'}
+      onClick={()=>setShowFilters(v=>!v)}>
+      <SlidersHorizontal size={15}/> Filter
+     </button>
     </div>
-    {dayActionMessage&&<small role="status" style={{color:'#236850',fontWeight:650}}>{dayActionMessage}</small>}
-    {dayActionError&&<small role="alert" style={{color:'#ae3c47',fontWeight:650}}>{dayActionError}</small>}
-   </div>}
-   <div style={{display:'flex',justifyContent:'flex-end',margin:'10px 0 6px'}}>
-    <button type="button" aria-expanded={showFilters} aria-controls="room-operations-filters" onClick={()=>setShowFilters(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'8px 12px',border:'1px solid #d7e5e9',borderRadius:10,background:showFilters||category!=='all'?'#e0f2ef':'#fff',color:'#315a67',fontWeight:700,fontSize:12,cursor:'pointer'}}>
-     <SlidersHorizontal size={15}/> Filter{category!=='all'?' · '+(category==='Arrival'?'Arrivals':category):''}
-    </button>
+    {(dayActionMessage||dayActionError)&&<div className="ths-ops-day-toolbar-feedback">
+     {dayActionMessage&&<small role="status" style={{color:'#236850',fontWeight:650}}>{dayActionMessage}</small>}
+     {dayActionError&&<small role="alert" style={{color:'#ae3c47',fontWeight:650}}>{dayActionError}</small>}
+    </div>}
    </div>
    {showFilters&&<div id="room-operations-filters" className="ths-ops-stats" aria-label="Filter by daily room activity">
     {(['Arrival','Stayover','Checkout','Out/In','Vacant'] as const).map(type=><button key={type} type="button" aria-pressed={category===type} onClick={()=>setCategory(category===type?'all':type)}><strong>{counts[type]}</strong><span>{type==='Arrival'?'Arrivals':type==='Stayover'?'Stayovers':type==='Checkout'?'Checkouts':type==='Vacant'?'Vacant':'Out / In'}</span></button>)}
