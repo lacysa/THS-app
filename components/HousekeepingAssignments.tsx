@@ -123,6 +123,19 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
     }catch(err:any){setError(err.message||'Unable to save deep clean')}
     finally{setDeepBusy(false)}
   }
+  async function cancelTub(task:TubTask){
+    if(tubBusy||data?.readOnly||!window.confirm('Remove the pending tub-only task for '+task.roomName+'? This will not mark it cleaned.'))return
+    setTubBusy(task.roomId);setError('')
+    try{
+      const response=await fetch('/api/ops/room-details',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({date,roomId:task.roomId,action:'tubCancel'})})
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.error||'Could not remove tub task.')
+      setData(current=>current?{...current,tubTasks:(current.tubTasks||[]).filter(item=>item.roomId!==task.roomId)}:current)
+      setMessage(task.roomName+' tub-only task removed without recording a cleaning.')
+      window.dispatchEvent(new CustomEvent('ths:live-data-refresh'))
+    }catch(err:any){setError(err.message||'Unable to remove tub task.')}
+    finally{setTubBusy('')}
+  }
   async function assignTub(task:TubTask,name:string){
     if(tubBusy||data?.readOnly)return
     setTubBusy(task.roomId);setError('')
@@ -383,7 +396,7 @@ export default function HousekeepingAssignments({initialDate,selectedDate,onDate
        <div className="hka-person-rooms">{(data?.tubTasks||[]).map(task=>
         <div className="hka-person-room" key={task.roomId} style={{gap:12,flexWrap:'wrap'}}>
           <div style={{flex:'1 1 170px'}}><strong>{task.roomName} · Tub only</strong><small>{task.assignedTo?'Assigned to '+task.assignedTo:'Needs tub-only assignment'}</small></div>
-          <StaffAssignmentSelect staff={staff} housekeepingOnly label={'Assign tub-only cleaning for '+task.roomName} value={task.assignedTo} disabled={data?.readOnly||Boolean(tubBusy)} onChange={name=>void assignTub(task,name)} style={{maxWidth:220}}/>
+          <StaffAssignmentSelect staff={staff} housekeepingOnly label={'Assign tub-only cleaning for '+task.roomName} value={task.assignedTo} disabled={data?.readOnly||Boolean(tubBusy)} onChange={name=>void assignTub(task,name)} style={{maxWidth:220}}/><button type="button" disabled={data?.readOnly||Boolean(tubBusy)} onClick={()=>void cancelTub(task)} style={{border:'1px solid #d6bdc0',borderRadius:9,padding:'8px 12px',background:'#fff',color:'#8c444c',fontWeight:700}}>Remove task</button>
         </div>)}</div>}
     </section>
     <section className="hka-person hka-deep-clean hka-planner-panel">

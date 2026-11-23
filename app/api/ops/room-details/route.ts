@@ -24,7 +24,7 @@ export async function PATCH(req:NextRequest){
  const admin=createSupabaseAdmin()
  const {data:room,error:roomError}=await admin.from('rooms').select('id').eq('id',roomId).eq('active',true).maybeSingle()
  if(roomError||!room)return NextResponse.json({error:'Room not found'},{status:404})
- const {data:daily,error:dayError}=await admin.from('housekeeping_daily_rooms').select('room_id,strip_hold,reservation_status').eq('room_id',roomId).eq('service_date',date).maybeSingle()
+ const {data:daily,error:dayError}=await admin.from('housekeeping_daily_rooms').select('room_id,strip_hold,reservation_status,room_condition').eq('room_id',roomId).eq('service_date',date).maybeSingle()
  if(dayError||!daily)return NextResponse.json({error:'Room date not scheduled'},{status:404})
  if(!manager){
   const {data:person}=await admin.from('staff_members').select('name').eq('auth_user_id',access.userId).eq('active',true).maybeSingle()
@@ -69,19 +69,30 @@ export async function PATCH(req:NextRequest){
   if(!(await loadTubTaskStates(admin,date)).get(roomId)?.due)return NextResponse.json({error:'No outstanding tub-clean task'},{status:409})
   patch.tub_clean_assigned_to=trimmed
  }else if(action==='tubRequest'){
-  if(String(daily.strip_hold||'').toLowerCase().includes('hold')||String(daily.reservation_status||'').toLowerCase()==='blocked')
+  if(String(daily.strip_hold||'').toLowerCase().includes('hold')||['blocked','stayover'].includes(String(daily.reservation_status||'').toLowerCase())||['blocked','occupied'].includes(String(daily.room_condition||'').toLowerCase()))
    return NextResponse.json({error:'A blocked room cannot be assigned a tub-clean task'},{status:400})
   patch.tub_clean_requested_at=now
   patch.tub_clean_completed_at=null
   patch.tub_clean_completed_by=null
+  patch.tub_clean_cancelled_at=null
+  patch.tub_clean_cancelled_by=null
   patch.tub_clean_assigned_to=''
  }else if(action==='tubComplete'){
+  if(!(await loadTubTaskStates(admin,date)).get(roomId)?.due)return NextResponse.json({error:'No actionable tub-clean task for this date'},{status:409})
   patch.tub_clean_completed_at=now
   patch.tub_clean_completed_by=access.userId
+ }else if(action==='tubCancel'){
+  if(!manager)return NextResponse.json({error:'Management access required'},{status:403})
+  if(!(await loadTubTaskStates(admin,date)).get(roomId)?.pending)return NextResponse.json({error:'No pending tub-clean task to remove'},{status:409})
+  patch.tub_clean_cancelled_at=now
+  patch.tub_clean_cancelled_by=access.userId
+  patch.tub_clean_assigned_to=''
  }else if(action==='tubReopen'){
   patch.tub_clean_requested_at=now
   patch.tub_clean_completed_at=null
   patch.tub_clean_completed_by=null
+  patch.tub_clean_cancelled_at=null
+  patch.tub_clean_cancelled_by=null
  }else{
   return NextResponse.json({error:'Unknown room task'},{status:400})
  }

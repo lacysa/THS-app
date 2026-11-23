@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from 'next/server'
-import {getStaffAccess} from '@/lib/access'
+import {getStaffAccess,canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 export const dynamic='force-dynamic'
 const validDate=(v:unknown)=>typeof v==='string'&&/^20\d{2}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T12:00:00Z'))
@@ -8,13 +8,18 @@ const permitted=(caps:string[])=>caps.some(c=>['housekeeping','runner','hospital
 export async function GET(req:NextRequest){
  const access=await getStaffAccess()
  if(!access)return NextResponse.json({error:'Unauthorized'},{status:401})
- if(!permitted(access.capabilities||[])&&!access.isAdmin)return NextResponse.json({error:'Forbidden'},{status:403})
+ const reservations=await canUseModule('reservations')
+ if(!permitted(access.capabilities||[])&&!access.isAdmin&&!reservations.allowed)return NextResponse.json({error:'Forbidden'},{status:403})
  const date=req.nextUrl.searchParams.get('date')
  if(!validDate(date))return NextResponse.json({error:'Invalid date'},{status:400})
  const {data,error}=await createSupabaseAdmin().from('housekeeping_blanket_changes').select('room_id,changed_at,changed_by').eq('week_start',weekStart(date as string))
  if(error)return NextResponse.json({error:error.message},{status:500})
- const rooms:Record<string,{changedAt:string;changedBy:string}>={}
- for(const item of data||[])rooms[item.room_id]={changedAt:item.changed_at,changedBy:item.changed_by||''}
+ const ids=[...new Set((data||[]).map(item=>String(item.changed_by||'')).filter(Boolean))]
+ const staff=ids.length?await createSupabaseAdmin().from('staff_members').select('auth_user_id,name').in('auth_user_id',ids):null
+ if(staff?.error)return NextResponse.json({error:'Could not resolve blanket change staff'},{status:500})
+ const names=new Map((staff?.data||[]).map(item=>[String(item.auth_user_id),String(item.name||'')]))
+ const rooms:Record<string,{changedAt:string;changedBy:string;changedByName:string}>={}
+ for(const item of data||[])rooms[item.room_id]={changedAt:item.changed_at,changedBy:item.changed_by||'',changedByName:names.get(String(item.changed_by||''))||''}
  return NextResponse.json({weekStart:weekStart(date as string),rooms},{headers:{'cache-control':'private, no-store'}})
 }
 export async function PATCH(req:NextRequest){
@@ -25,6 +30,8 @@ export async function PATCH(req:NextRequest){
  if(!permitted(caps)&&!access.isAdmin)return NextResponse.json({error:'Forbidden'},{status:403})
  const body=await req.json().catch(()=>null)
  const date=body?.date,roomId=body?.roomId
+ const hotelToday=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+ if(validDate(date)&&date>hotelToday)return NextResponse.json({error:'Cannot confirm a future blanket change.'},{status:400})
  if(!validDate(date)||typeof roomId!=='string'||!/^[0-9a-f-]{36}$/i.test(roomId))return NextResponse.json({error:'Invalid room or date'},{status:400})
  const admin=createSupabaseAdmin()
  const {data:person}=await admin.from('staff_members').select('name').eq('auth_user_id',access.userId).eq('active',true).maybeSingle()
