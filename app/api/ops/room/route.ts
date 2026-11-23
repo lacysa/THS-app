@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
+import {loadTubTaskStates} from '@/lib/ops-tub'
 import {conditionForDay,previousVacantConditions} from '@/lib/room-condition-carry'
 import {roomCheckStage} from '@/lib/room-check-queue'
 import {loadAssignmentStaff} from '@/lib/assignment-staff'
@@ -141,11 +142,11 @@ export async function GET(req:NextRequest){
   yesterday.setUTCDate(yesterday.getUTCDate()-1)
   expectedDate=yesterday.toISOString().slice(0,10)
  }
- const todayLocal=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
- const latestTubDate=String(tubHistoryResult.data?.[0]?.service_date||'')
- const autoTubDue=date<=todayLocal&&vacancyDays>=3&&(!latestTubDate||latestTubDate<oldestVacancyDay)
+ const tubState=(await loadTubTaskStates(admin,date)).get(roomId)
+ const autoTubDue=Boolean(tubState?.autoDue)
  const serviceDetails=detailResult.data||null
- const tubCleanDue=!serviceDetails?.tub_clean_completed_at&&(Boolean(serviceDetails?.tub_clean_requested_at)||autoTubDue)
+ const tubCleanDue=Boolean(tubState?.due)
+ const tubCleanPending=Boolean(tubState?.pending)
  const status=String(daily?.reservation_status||'').toLowerCase()
  const blocked=status==='blocked'||String(daily?.strip_hold||'').toLowerCase().includes('hold')
  // Keep the popup in sync with the actual inspection API and queue.
@@ -211,7 +212,7 @@ export async function GET(req:NextRequest){
  }))
  return NextResponse.json({room:{id:roomResult.data.id,name:roomResult.data.name},date,daily,stay,
   permissions:{canManage,canInspect},staffNames,staff,mentionableStaff,lastAssigned,lastCleaned,packageOptions,manualPackageIds,importedPackageIds,managerInitials,pmsActivity:String(link?.reservation_status||'Vacant'),
-  serviceDetails,autoTubDue,vacancyDays,tubCleanDue,correctionHistory,roomNoteHistory,checklistNotes,
+  serviceDetails,autoTubDue,vacancyDays,tubCleanDue,tubCleanPending,correctionHistory,roomNoteHistory,checklistNotes,
   inspectionEligible:eligible,
   inspectionReady:checkState==='ready'||checkState==='recheck'
  },{headers:{'cache-control':'private, no-store'}})
