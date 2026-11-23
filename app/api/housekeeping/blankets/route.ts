@@ -25,6 +25,8 @@ export async function PATCH(req:NextRequest){
  if(!permitted(caps)&&!access.isAdmin)return NextResponse.json({error:'Forbidden'},{status:403})
  const body=await req.json().catch(()=>null)
  const date=body?.date,roomId=body?.roomId
+ const hotelToday=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Detroit',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+ if(validDate(date)&&date>hotelToday)return NextResponse.json({error:'Cannot confirm a future blanket change.'},{status:400})
  if(!validDate(date)||typeof roomId!=='string'||!/^[0-9a-f-]{36}$/i.test(roomId))return NextResponse.json({error:'Invalid room or date'},{status:400})
  const admin=createSupabaseAdmin()
  const {data:person}=await admin.from('staff_members').select('name').eq('auth_user_id',access.userId).eq('active',true).maybeSingle()
