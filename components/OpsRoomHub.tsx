@@ -271,7 +271,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:code}},'Service updated'))setActiveEditor(null)
  }
  async function markOut(){
-  if(!daily||!canManage||busy||markedOut||blocked)return
+  if(!daily||!canManage||busy||markedOut)return
   if(await run('/api/housekeeping/day',{serviceDate:date,roomId,patch:{serviceType:'OUT'}},'Room marked OUT'))setActiveEditor(null)
  }
  async function clearOut(){
@@ -501,7 +501,7 @@ export default function OpsRoomHub({roomId,date,reservationId,onClose,onUpdate,i
       <div className="ops-hub-quick-section">
        <span className="ops-hub-overline">Services & quick actions</span>
        <div className="ops-hub-quick-actions">
-       <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(markedOut?' ops-hub-complete-card':'')+(activeEditor==='out'?' is-selected':'')} disabled={!canManage||!daily||busy||(blocked&&!markedOut)||((isStayover||serviceCode==='RF')&&!markedOut)} onClick={()=>markedOut?setActiveEditor(v=>v==='out'?null:'out'):void markOut()} aria-label={markedOut?'Room marked OUT; tap to manage OUT':'Mark room OUT'}>
+       <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(markedOut?' ops-hub-complete-card':'')+(activeEditor==='out'?' is-selected':'')} disabled={!canManage||!daily||busy||((isStayover||serviceCode==='RF')&&!markedOut)} onClick={()=>markedOut?setActiveEditor(v=>v==='out'?null:'out'):void markOut()} aria-label={markedOut?'Room marked OUT; tap to manage OUT':'Mark room OUT'}>
         <span className="ops-hub-quick-icon"><DoorOpen size={18}/></span><span className="ops-hub-quick-name">OUT</span><small>{markedOut?'Marked':'Mark room'}</small>{markedOut&&<Check size={14} className="ops-hub-quick-check"/>}
        </button>
        <button type="button" className={'ops-hub-quick-action '+'ops-hub-field ops-hub-action-card'+(envelopeCollected?' ops-hub-complete-card':'')+(activeEditor==='tip_envelope'?' is-selected':'')} disabled={!canManage||!daily||busy} onClick={()=>setActiveEditor(v=>v==='tip_envelope'?null:'tip_envelope')} aria-label={envelopeCollected?'Tip envelope collected by '+envelopeInitials:'Tip envelope not collected'}>
