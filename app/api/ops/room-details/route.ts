@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server'
 import {canUseModule} from '@/lib/access'
 import {loadTubTaskStates} from '@/lib/ops-tub'
+import {roomServiceTask} from '@/lib/room-state'
 import {createSupabaseAdmin} from '@/lib/supabase/admin'
 
 export const dynamic='force-dynamic'
@@ -24,7 +25,7 @@ export async function PATCH(req:NextRequest){
  const admin=createSupabaseAdmin()
  const {data:room,error:roomError}=await admin.from('rooms').select('id').eq('id',roomId).eq('active',true).maybeSingle()
  if(roomError||!room)return NextResponse.json({error:'Room not found'},{status:404})
- const {data:daily,error:dayError}=await admin.from('housekeeping_daily_rooms').select('room_id,strip_hold,reservation_status,room_condition').eq('room_id',roomId).eq('service_date',date).maybeSingle()
+ const {data:daily,error:dayError}=await admin.from('housekeeping_daily_rooms').select('room_id,strip_hold,reservation_status,room_condition,service_type,complete').eq('room_id',roomId).eq('service_date',date).maybeSingle()
  if(dayError||!daily)return NextResponse.json({error:'Room date not scheduled'},{status:404})
  if(!manager){
   const {data:person}=await admin.from('staff_members').select('name').eq('auth_user_id',access.userId).eq('active',true).maybeSingle()
@@ -69,6 +70,8 @@ export async function PATCH(req:NextRequest){
   if(!(await loadTubTaskStates(admin,date)).get(roomId)?.due)return NextResponse.json({error:'No outstanding tub-clean task'},{status:409})
   patch.tub_clean_assigned_to=trimmed
  }else if(action==='tubRequest'){
+  if(roomServiceTask({reservationStatus:daily.reservation_status,serviceType:daily.service_type,stripHold:daily.strip_hold,roomCondition:daily.room_condition})==='full'&&!daily.complete)
+   return NextResponse.json({error:'Tub cleaning is included in the scheduled full room clean; no separate tub task is needed.'},{status:409})
   if(String(daily.strip_hold||'').toLowerCase().includes('hold')||['blocked','stayover'].includes(String(daily.reservation_status||'').toLowerCase())||['blocked','occupied'].includes(String(daily.room_condition||'').toLowerCase()))
    return NextResponse.json({error:'A blocked room cannot be assigned a tub-clean task'},{status:400})
   patch.tub_clean_requested_at=now
@@ -88,6 +91,8 @@ export async function PATCH(req:NextRequest){
   patch.tub_clean_cancelled_by=access.userId
   patch.tub_clean_assigned_to=''
  }else if(action==='tubReopen'){
+  if(roomServiceTask({reservationStatus:daily.reservation_status,serviceType:daily.service_type,stripHold:daily.strip_hold,roomCondition:daily.room_condition})==='full'&&!daily.complete)
+   return NextResponse.json({error:'Tub cleaning is included in the scheduled full room clean.'},{status:409})
   patch.tub_clean_requested_at=now
   patch.tub_clean_completed_at=null
   patch.tub_clean_completed_by=null

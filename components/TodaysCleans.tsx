@@ -78,7 +78,7 @@ export default function TodaysCleans({mode='cleans',initialDate,initialRoomId}:{
   const status=(r.reservationStatus||'').trim().toLowerCase()
   const refresh=status==='stayover' && /^(RF|REFRESH)$/i.test((r.serviceType||'').trim())
   if(mode==='refreshes'){if(!refresh)return false}
-  else if(!needsFullClean(r)||r.tubCleanDue&&Boolean(r.tubAssignedTo)||r.stripStatus==='needed')return false
+  else if(!needsFullClean(r)||r.stripStatus==='needed')return false
   const assigned=(r.assignedTo||'').split(',').map(n=>n.trim().toLowerCase()).filter(Boolean)
   const full=staffName.trim().toLowerCase()
   const team=manager&&cleansView==='team'
@@ -96,8 +96,8 @@ export default function TodaysCleans({mode='cleans',initialDate,initialRoomId}:{
    const tub=Boolean(r.tubCleanDue)
    const tubAssigned=String(r.tubAssignedTo||'').trim()
    if(strip&&(showTeam||same(r.assignedTo||'')))result.push({...r,taskKind:'strip'})
-   if(tub&&(showTeam?true:Boolean(tubAssigned&&same(tubAssigned))))result.push({...r,taskKind:'tub'})
-   if(needsFullClean(r)&&!strip&&!(tub&&tubAssigned)&&(showTeam||same(r.assignedTo||'')))result.push({...r,taskKind:'clean'})
+   if(tub&&!needsFullClean(r)&&(showTeam?true:Boolean(tubAssigned&&same(tubAssigned))))result.push({...r,taskKind:'tub'})
+   if(needsFullClean(r)&&!strip&&(showTeam||same(r.assignedTo||'')))result.push({...r,taskKind:'clean'})
   }
   return result
  },[rows,mine,mode,manager,hospitalityAssistant,cleansView,staffName])
