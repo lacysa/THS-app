@@ -1,5 +1,6 @@
 import { NextRequest,NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/admin'
 
 export const dynamic='force-dynamic'
 
@@ -23,13 +24,33 @@ export async function GET(req:NextRequest){
   const {data,error}=await db.from('notifications').select('id,notification_type,title,message,room_id,service_date,created_at,read_at,archived_at').eq('recipient_user_id',user.id).eq('id',focusedId).maybeSingle()
   if(error)return response({error:error.message},400)
   if(!data)return response({error:'Notification not found'},404)
-  return response({notification:data})
+  // Recipient ownership was verified above. Staff can read their own dated
+  // correction trail without opening the manager-only room workspace.
+  let corrections:{id:string;type:string;note:string;at:string}[]=[]
+  if(data.room_id&&data.service_date){
+   const result=await createSupabaseAdmin().from('housekeeping_correction_events')
+    .select('id,event_type,note,created_at')
+    .eq('room_id',data.room_id).eq('service_date',data.service_date)
+    .in('event_type',['found','fixed']).order('created_at',{ascending:true})
+   if(result.error)return response({error:'Unable to load inspection and fix notes'},500)
+   corrections=(result.data||[]).filter(item=>String(item.note||'').trim()).map(item=>({
+    id:String(item.id),type:String(item.event_type),note:String(item.note),at:String(item.created_at)
+   }))
+  }
+  return response({notification:data,corrections})
  }
  const status=req.nextUrl.searchParams.get('view')||'inbox'
  if(!['inbox','unread','archived'].includes(status))return response({error:'Invalid filter'},400)
+ const kind=req.nextUrl.searchParams.get('kind')||'all'
+ const kinds:Record<string,string[]>={
+  all:[],mentions:['room_mention'],inspections:['room_ready_for_inspection'],
+  fixes:['housekeeping_correction','housekeeping_recheck_passed','housekeeping_fix_recorded']
+ }
+ if(!Object.prototype.hasOwnProperty.call(kinds,kind))return response({error:'Invalid notification type'},400)
  const limit=Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')||100)||100,1),200)
  let query=db.from('notifications').select('id,notification_type,title,message,room_id,service_date,created_at,read_at,archived_at')
   .eq('recipient_user_id',user.id).order('created_at',{ascending:false}).limit(limit)
+ if(kind!=='all')query=query.in('notification_type',kinds[kind])
  if(status==='archived')query=query.not('archived_at','is',null)
  else{
   query=query.is('archived_at',null)

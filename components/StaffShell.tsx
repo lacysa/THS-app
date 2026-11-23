@@ -381,9 +381,12 @@ export default function StaffShell({
       if(!ok)return
     }
     setNotificationsOpen(false)
-    const canOpenRooms=modules.some(module=>module.module_key==='housekeeping'&&module.active!==false&&module.enabled!==false)
-    // A room correction opens the dated room card; other roles see its
-    // recipient-only detail in the notification center.
+    const caps=access?.capabilities||[]
+    const canOpenRooms=Boolean(access?.isAdmin||
+      caps.some(cap=>['manager','general_manager','operations_manager','owner','hospitality_assistant','room_checks','ha_signoff','ha_signoff_override'].includes(cap))||
+      (access?.permissions||[]).includes('room_checks.perform'))
+    // Only staff authorized for the room workspace use its dated deep link.
+    // Housekeepers open their recipient-only notification with original fix notes.
     window.location.assign(notificationHref(n,canOpenRooms))
   }
 

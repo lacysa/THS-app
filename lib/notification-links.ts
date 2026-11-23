@@ -26,6 +26,7 @@ export function notificationKind(n:RoomNotification){
   case 'room_mention':return 'Mention'
   case 'housekeeping_correction':return 'Room correction'
   case 'housekeeping_recheck_passed':return 'Room re-check'
+  case 'housekeeping_fix_recorded':return 'Fix recorded'
   default:return 'Notification'
  }
 }
