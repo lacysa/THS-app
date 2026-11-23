@@ -378,6 +378,31 @@ export async function GET(req: NextRequest) {
         }))
       : visibleRows
 
+    // Dated issue and fix notes belong beside the room task, including for
+    // housekeeping-only staff. The rows are already filtered to their assignments
+    // above; do not return corrections for unrelated rooms.
+    const roomIdsForNotes=[...new Set(responseRows.map((row:any)=>String(row.roomId||'')).filter(Boolean))]
+    const correctionHistoryByRoom:Record<string,{id:string;type:string;note:string;at:string}[]>={}
+    if(roomIdsForNotes.length){
+      const result=await admin.from('housekeeping_correction_events')
+        .select('id,room_id,event_type,note,created_at')
+        .eq('service_date',serviceDate).in('room_id',roomIdsForNotes)
+        .in('event_type',['found','fixed']).order('created_at',{ascending:true})
+      if(result.error)throw result.error
+      for(const item of result.data||[]){
+        const roomId=String(item.room_id)
+        if(!String(item.note||'').trim())continue
+        if(!correctionHistoryByRoom[roomId])correctionHistoryByRoom[roomId]=[]
+        correctionHistoryByRoom[roomId].push({
+          id:String(item.id),type:String(item.event_type),
+          note:String(item.note),at:String(item.created_at)
+        })
+      }
+    }
+    const rowsWithCorrections=responseRows.map((row:any)=>({
+      ...row,correctionHistory:correctionHistoryByRoom[String(row.roomId)]||[]
+    }))
+
     const menuNeededRooms = assignedOnlyView
       ? []
       : visibleRows.filter((row: any) => row.breakfast.status === 'needed').map((row: any) => row.roomName)
@@ -403,7 +428,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       dailyOverview: req.nextUrl.searchParams.get('scope') === 'mine' ? [] : dailyOverview,
-      rows: responseRows,
+      rows: rowsWithCorrections,
       stripTasks: req.nextUrl.searchParams.get('scope') === 'mine' ? [] : stripTasks,
       blockingRoomId: blockingRoom?.roomId || null,
       blockingRoomName: blockingRoom?.roomName || null,

@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useCallback,useEffect,useMemo,useState } from 'react'
 import { CheckCircle2, LockKeyhole, RefreshCw } from 'lucide-react'
-type Room={roomId:string;roomName:string;assignedTo:string;cleanOrder:number|null;complete:boolean;readyForInspection:boolean;inspected:boolean;reservationStatus:string;serviceType:string;roomCondition:string;checkIssueOpen:boolean;notes?:string;stripStatus?:string;stripHold?:string;hasDailyRecord?:boolean;tubCleanDue?:boolean;tubAssignedTo?:string}
+type Room={roomId:string;roomName:string;assignedTo:string;cleanOrder:number|null;complete:boolean;readyForInspection:boolean;inspected:boolean;reservationStatus:string;serviceType:string;roomCondition:string;checkIssueOpen:boolean;notes?:string;correctionHistory?:{id:string;type:string;note:string;at:string}[];stripStatus?:string;stripHold?:string;hasDailyRecord?:boolean;tubCleanDue?:boolean;tubAssignedTo?:string}
 type StaffOption={id:string;name:string;roleLabel:string;onSite:boolean}
 const needsFullClean=(r:Room)=>{
  const status=(r.reservationStatus||'').trim().toLowerCase()
@@ -30,8 +30,8 @@ function guestStatusLabel(room:Room){
  return room.reservationStatus?.trim()||'Not recorded'
 }
 const inspectionHref=(roomId:string,date:string)=>'/housekeeping?view=inspections&date='+encodeURIComponent(date)+'&inspectionRoom='+encodeURIComponent(roomId)
-export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'}){
- const [date,setDate]=useState(currentDate)
+export default function TodaysCleans({mode='cleans',initialDate,initialRoomId}:{mode?:'cleans'|'refreshes';initialDate?:string;initialRoomId?:string}){
+ const [date,setDate]=useState(initialDate||currentDate)
  const [rows,setRows]=useState<Room[]>([])
  const [staffOptions,setStaffOptions]=useState<StaffOption[]>([])
  const [readOnly,setReadOnly]=useState(false)
@@ -102,6 +102,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
   return result
  },[rows,mine,mode,manager,hospitalityAssistant,cleansView,staffName])
  const ordered=useMemo(()=>taskRows.slice().sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999)||a.roomName.localeCompare(b.roomName)),[taskRows])
+ const selectedRoom=initialRoomId?rows.find(row=>row.roomId===initialRoomId):null
  const pending=ordered.filter(r=>r.taskKind!=='clean'||!r.complete)
  const nextOrdered=pending.filter(r=>!manager&&r.cleanOrder!=null).sort((a,b)=>(a.cleanOrder??999)-(b.cleanOrder??999))[0]
  const locked=(r:Room)=>!teamDisplay&&!manager&&mode==='cleans'&&!!nextOrdered&&r.cleanOrder!=null&&r.cleanOrder> (nextOrdered.cleanOrder??0) 
@@ -151,6 +152,16 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
  }
  return <div className="ths-cleans">
   <header className="ths-cleans-hero"><div><small>THE HOTEL SAUGATUCK · HOUSEKEEPING</small><h1>{mode==='refreshes'?"Today's Refreshes":"Today's Cleans"}</h1><p>{mode==='refreshes'?'Assigned stayover refreshes, separate from full room cleans.':'Room cleans, strips, tub cleans and weekly blanket changes in one workflow.'}</p></div><div className="ths-cleans-actions"><input aria-label="Date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load()} title="Refresh" aria-label="Refresh rooms"><RefreshCw size={17}/></button></div></header>
+  {mode==='cleans'&&initialRoomId&&!loading&&<section className="ths-cleans-deep-link" aria-label="Selected room correction history">
+   {selectedRoom?<><h2>{selectedRoom.roomName} · {date}</h2>
+    {selectedRoom.checkIssueOpen&&<p><strong>Correction needed:</strong> Review the inspector's notes below before resubmitting this room.</p>}
+    {selectedRoom.correctionHistory?.length?<div className="ths-cleans-correction-history">
+     {selectedRoom.correctionHistory.map(item=><div key={item.id}>
+      <strong>{item.type==='fixed'?'Fix recorded':'Inspection issue'}</strong><p>{item.note}</p>
+     </div>)}
+    </div>:<p>No inspection or fix notes were recorded for this room on this date.</p>}
+   </>:<p>This room is not among your assigned rooms for {date}. Open the original notification to review any notes addressed to you.</p>}
+  </section>}
   {mode==='cleans'&&manager&&<nav className="ths-cleans-tabs" aria-label="Today's cleans views"><button type="button" className={cleansView==='team'?'active':''} aria-current={cleansView==='team'?'page':undefined} onClick={()=>setCleansView('team')}>All Cleans</button><button type="button" className={cleansView==='mine'?'active':''} aria-current={cleansView==='mine'?'page':undefined} onClick={()=>setCleansView('mine')}>My Cleans</button></nav>}
   <div className="ths-cleans-summary"><strong>{ordered.filter(r=>r.taskKind==='clean'&&r.complete).length} of {ordered.length}</strong> {mode==='refreshes'?' refreshes finished':" tasks finished"}{mode==='cleans'&&teamDisplay&&<span> · {ordered.filter(r=>!r.complete&&!r.assignedTo.trim()).length} awaiting assignment</span>}</div>
   {message&&<p role="status" className="ths-cleans-message">{message}</p>}{error&&<p role="alert" className="ths-cleans-error">{error}</p>}
@@ -168,6 +179,7 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
     {mode==='cleans'&&manager&&teamDisplay&&!done&&task==='clean'&&<label className="ths-inline-assign">Assign housekeeper<select aria-label={'Assign '+r.roomName+' to housekeeper'} value={r.assignedTo||''} disabled={readOnly||Boolean(busy)} onChange={e=>void assignRoom(r,e.target.value)}><option value="">Unassigned</option>{housekeepingStaff.filter(p=>p.onSite||p.name===r.assignedTo).map(p=><option key={p.id} value={p.name}>{p.name}{p.onSite?' · on shift':''}</option>)}</select></label>}
     <p className="ths-clean-detail">{r.reservationStatus} {r.serviceType?'· '+r.serviceType:''}</p>
     {r.notes&&<p className="ths-clean-notes">{r.notes}</p>}
+    {r.correctionHistory?.length? <div className="ths-cleans-correction-history"><strong>Inspection issues &amp; fixes</strong>{r.correctionHistory.map(item=><div key={item.id}><strong>{item.type==='fixed'?'Fix recorded':'Inspection issue'}</strong><p>{item.note}</p></div>)}</div>:null}
     {mode==='cleans'&&!(task==='tub'?r.tubAssignedTo:r.assignedTo)?.trim()&&<p className="ths-clean-detail"><strong>Needs housekeeping assignment</strong></p>}
     <p className="ths-clean-status">{task==='tub'?'Tub clean due · room stays clean':task==='strip'?'Strip requested · ready to strip':failed?(done?'Correction submitted · awaiting reinspection':'Inspection failed · correction needed'):passed?'Inspection passed':done?(mode==='refreshes'?'Refresh complete':'Finished · sent for inspection'):waiting?'Waiting for guest OUT and room strip':orderLocked?'Finish your earlier numbered room first':inProgress?'Cleaning in progress':'Ready to clean'}</p>
 
@@ -181,6 +193,14 @@ export default function TodaysCleans({mode='cleans'}:{mode?:'cleans'|'refreshes'
    </article>
   })}</div>}
   <style jsx>{`
+   .ths-cleans-deep-link{background:#eff7fb;border:1px solid #afcfde;border-radius:14px;padding:15px;margin:12px 0}
+   .ths-cleans-deep-link h2{margin:0 0 9px;font-size:17px;color:#244e68}
+   .ths-cleans-deep-link>p{font-size:13px;color:#506e82;line-height:1.5}
+   .ths-cleans-correction-history{display:grid;gap:8px;padding:10px 12px;border:1px solid #d8e6ed;border-radius:10px;margin:10px 0;background:#fff}
+   .ths-cleans-correction-history>strong{font-size:13px;color:#355d73}
+   .ths-cleans-correction-history>div{padding:7px 3px;border-top:1px solid #e4edf1;font-size:12px}
+   .ths-cleans-correction-history>div strong{color:#375f77}
+   .ths-cleans-correction-history>div p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;margin:5px 0 0;color:#4a6579}
    .ths-blanket-inline{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;border:1px solid;border-radius:10px;padding:9px;margin:10px 0;font-size:12px;font-weight:700}.ths-blanket-inline button{width:auto;min-height:34px;padding:7px 11px}
    .ths-cleans-tabs{display:flex;gap:6px;margin:16px 0 6px;padding:4px;background:#e7f0f5;border-radius:13px;width:fit-content}.ths-cleans-tabs button{border:0;background:transparent;padding:10px 18px;border-radius:10px;font-weight:750;color:#365669;cursor:pointer}.ths-cleans-tabs button.active{background:white;box-shadow:0 2px 8px #203a491c;color:#173a50}
    .ths-refresh-claim-list{display:grid;gap:9px}.ths-refresh-claim-row{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#fff;border:1px solid #dce5e9;border-radius:12px;padding:12px 15px}.ths-refresh-claim-row button{background:#34566a;color:white;border:0;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer;white-space:nowrap}.ths-refresh-claim-row button:disabled{opacity:.55}
